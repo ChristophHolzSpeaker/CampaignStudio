@@ -1,1 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap');
 @import 'tailwindcss';
+
+@theme {
+	--font-sans:
+		'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+		'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+	--color-surface: #ffffff;
+	--color-surface-container-low: #f4f4f5;
+	--color-surface-container-lowest: #e4e4e7;
+
+	--color-primary: #e2183b;
+	--color-secondary: #0ea5e9;
+	--color-tertiary: #52525b;
+	--color-on-surface: #09090b;
+}
+
+@layer base {
+	body {
+		background-color: #fafafa;
+		color: var(--color-on-surface);
+	}
+
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6,
+	button {
+		font-weight: 700;
+		text-transform: uppercase;
+		font-stretch: condensed;
+		letter-spacing: -0.02em;
+	}
+}
+
+@layer components {
+	.btn-primary {
+		@apply rounded-sm bg-primary px-6 py-3 text-white transition-all duration-200 hover:-translate-y-[2px];
+		box-shadow: 0 4px 14px rgba(226, 24, 59, 0.4);
+	}
+
+	.btn-secondary {
+		@apply rounded-sm border border-on-surface/20 bg-transparent px-6 py-3 text-on-surface transition-all duration-200 hover:-translate-y-[2px] hover:bg-surface-container-low;
+	}
+
+	.input-kinetic {
+		@apply w-full border-b border-on-surface/30 bg-transparent px-0 py-2 text-on-surface transition-colors outline-none focus:border-b-2 focus:border-primary sm:text-sm;
+	}
+}

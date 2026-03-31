@@ -1,16 +1,12 @@
-import type { User, Session } from 'better-auth/minimal';
-
-// See https://svelte.dev/docs/kit/types#app.d.ts
+import type { SupabaseClient } from '@supabase/supabase-js';
+// See https://kit.svelte.dev/docs/types#app
 // for information about these interfaces
 declare global {
 	namespace App {
-		interface Locals {
-			user?: User;
-			session?: Session;
-		}
-
 		// interface Error {}
-		// interface PageData {}
+		interface Locals {
+			supabase: SupabaseClient;
+		}
 		// interface PageState {}
 		// interface Platform {}
 	}

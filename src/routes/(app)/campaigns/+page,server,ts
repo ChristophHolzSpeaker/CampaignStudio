@@ -1,0 +1,18 @@
+import { db } from '$lib/server/db';
+import { campaigns } from '$lib/server/db/schema';
+export const load: PageServerLoad = async () => {
+	const campaignList = await loadCampaigns();
+
+	return {
+		campaignList
+	};
+};
+async function loadCampaigns() {
+	try {
+		return await db.select().from(campaigns).orderBy(campaigns.created_at.desc());
+	} catch (err) {
+		//error = err instanceof Error ? err.message : 'Failed to load campaigns';
+		console.error('Error loading campaigns:', err);
+	} finally {
+	}
+}
