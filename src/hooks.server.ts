@@ -1,17 +1,32 @@
+// src/hooks.server.ts
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
+import { createServerClient } from '@supabase/ssr';
 import type { Handle } from '@sveltejs/kit';
-import { building } from '$app/environment';
-import { auth } from '$lib/server/auth';
-import { svelteKitHandler } from 'better-auth/svelte-kit';
 
-const handleBetterAuth: Handle = async ({ event, resolve }) => {
-	const session = await auth.api.getSession({ headers: event.request.headers });
+export const handle: Handle = async ({ event, resolve }) => {
+	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+		cookies: {
+			getAll: () => event.cookies.getAll(),
+			/**
+			 * Note: You have to add the `path` variable to the
+			 * set and remove method due to sveltekit's cookie API
+			 * requiring this to be set, setting the path to `/`
+			 * will replicate previous/standard behaviour (https://kit.svelte.dev/docs/types#public-types-cookies)
+			 */
+			setAll: (cookiesToSet, headers) => {
+				cookiesToSet.forEach(({ name, value, options }) => {
+					event.cookies.set(name, value, { ...options, path: '/' });
+				});
+				if (Object.keys(headers).length > 0) {
+					event.setHeaders(headers);
+				}
+			}
+		}
+	});
 
-	if (session) {
-		event.locals.session = session.session;
-		event.locals.user = session.user;
-	}
-
-	return svelteKitHandler({ event, resolve, auth, building });
+	return resolve(event, {
+		filterSerializedResponseHeaders(name: string) {
+			return name === 'content-range' || name === 'x-supabase-api-version';
+		}
+	});
 };
-
-export const handle: Handle = handleBetterAuth;

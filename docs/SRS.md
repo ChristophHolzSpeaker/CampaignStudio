@@ -40,33 +40,33 @@ Success for the MVP means this loop works reliably for real campaigns.
 
 ### In Scope
 
-* Internal campaign management app
-* Structured campaign intake
-* AI-generated landing page content
-* Structured page rendering using predefined components
-* One landing page per campaign for initial MVP release
-* Publish / unpublish workflow
-* Public page routes
-* Basic attribution capture
-* Basic visit logging
-* Basic campaign reporting
-* Internal authenticated access
+- Internal campaign management app
+- Structured campaign intake
+- AI-generated landing page content
+- Structured page rendering using predefined components
+- One landing page per campaign for initial MVP release
+- Publish / unpublish workflow
+- Public page routes
+- Basic attribution capture
+- Basic visit logging
+- Basic campaign reporting
+- Internal authenticated access
 
 ### Out of Scope
 
-* Multi-variant generation
-* A/B testing
-* Advanced AI conversational editing UI
-* Full production-grade SEO engine
-* Full 100 percent attribution across all channels
-* Advanced analytics dashboards
-* Multi-tenant architecture
-* Sophisticated RBAC
-* Custom domains
-* Agency/external collaboration workflows
-* Automated briefing call booking integrations
-* CRM / HubSpot deal syncing
-* Production-grade email ingestion and signature parsing
+- Multi-variant generation
+- A/B testing
+- Advanced AI conversational editing UI
+- Full production-grade SEO engine
+- Full 100 percent attribution across all channels
+- Advanced analytics dashboards
+- Multi-tenant architecture
+- Sophisticated RBAC
+- Custom domains
+- Agency/external collaboration workflows
+- Automated briefing call booking integrations
+- CRM / HubSpot deal syncing
+- Production-grade email ingestion and signature parsing
 
 ---
 
@@ -75,28 +75,22 @@ Success for the MVP means this loop works reliably for real campaigns.
 Campaign Studio MVP consists of:
 
 1. **Internal App**
-
-   * authenticated interface for creating and managing campaigns
+   - authenticated interface for creating and managing campaigns
 
 2. **AI Generation Pipeline**
-
-   * takes structured campaign input and generates page content and page structure
+   - takes structured campaign input and generates page content and page structure
 
 3. **Page Renderer**
-
-   * renders generated structured data into predefined frontend components
+   - renders generated structured data into predefined frontend components
 
 4. **Publishing Layer**
-
-   * exposes public landing pages through a stable URL
+   - exposes public landing pages through a stable URL
 
 5. **Tracking Layer**
-
-   * captures basic source/referrer/UTM data and logs visits
+   - captures basic source/referrer/UTM data and logs visits
 
 6. **Reporting View**
-
-   * displays basic campaign performance data
+   - displays basic campaign performance data
 
 ---
 
@@ -108,12 +102,12 @@ Primary MVP user.
 
 Responsibilities:
 
-* create campaigns
-* edit campaign metadata
-* generate landing pages
-* preview pages
-* publish/unpublish pages
-* view basic tracking/reporting
+- create campaigns
+- edit campaign metadata
+- generate landing pages
+- preview pages
+- publish/unpublish pages
+- view basic tracking/reporting
 
 ### 5.2 Public Visitor
 
@@ -121,9 +115,9 @@ Visitor arriving on a published landing page.
 
 Responsibilities:
 
-* view page
-* interact with CTA paths
-* generate trackable visit/session data
+- view page
+- interact with CTA paths
+- generate trackable visit/session data
 
 ---
 
@@ -155,12 +149,12 @@ The system shall allow an internal user to create a campaign.
 
 A campaign shall contain at minimum:
 
-* campaign name
-* audience
-* format
-* topic
-* optional freeform notes or prompt instructions
-* status
+- campaign name
+- audience
+- format
+- topic
+- optional freeform notes or prompt instructions
+- status
 
 ### FR-012
 
@@ -178,11 +172,11 @@ The system shall allow the internal user to edit campaign metadata before genera
 
 The system shall allow a campaign to exist in one of the following states:
 
-* draft
-* generated
-* published
-* unpublished
-* archived
+- draft
+- generated
+- published
+- unpublished
+- archived
 
 ---
 
@@ -196,18 +190,18 @@ The system shall allow an internal user to trigger AI generation for a campaign.
 
 The generation input shall include at minimum:
 
-* audience
-* format
-* topic
-* optional freeform campaign notes
+- audience
+- format
+- topic
+- optional freeform campaign notes
 
 ### FR-022
 
 The AI pipeline shall generate:
 
-* landing page content
-* structured page representation for rendering
-* metadata required for storage and preview
+- landing page content
+- structured page representation for rendering
+- metadata required for storage and preview
 
 ### FR-023
 
@@ -309,18 +303,18 @@ Public pages shall render server-side or through a fast delivery path suitable f
 
 Public pages shall include:
 
-* headline and supporting copy
-* page sections based on generated structure
-* at least one CTA path
-* campaign metadata where required for tracking
+- headline and supporting copy
+- page sections based on generated structure
+- at least one CTA path
+- campaign metadata where required for tracking
 
 ### FR-063
 
 The public page shall support at least the following CTA types in MVP:
 
-* contact form CTA placeholder or form
-* external booking CTA link or placeholder
-* email CTA link or placeholder
+- contact form CTA placeholder or form
+- external booking CTA link or placeholder
+- email CTA link or placeholder
 
 ### FR-064
 
@@ -346,15 +340,15 @@ The system shall log page visits associated with a campaign.
 
 Visit records should include, where available:
 
-* campaign ID
-* page slug
-* timestamp
-* referrer
-* utm_source
-* utm_medium
-* utm_campaign
-* utm_term
-* utm_content
+- campaign ID
+- page slug
+- timestamp
+- referrer
+- utm_source
+- utm_medium
+- utm_campaign
+- utm_term
+- utm_content
 
 ### FR-074
 
@@ -376,10 +370,10 @@ The system shall provide a basic reporting view for internal users.
 
 The reporting view shall display at minimum:
 
-* campaign name
-* campaign status
-* page URL
-* visit count
+- campaign name
+- campaign status
+- page URL
+- visit count
 
 ### FR-082
 
@@ -505,74 +499,74 @@ This is a recommended MVP baseline, not a final schema.
 
 Fields:
 
-* id
-* name
-* audience
-* format
-* topic
-* notes
-* status
-* created_at
-* updated_at
-* created_by
+- id
+- name
+- audience
+- format
+- topic
+- notes
+- status
+- created_at
+- updated_at
+- created_by
 
 ## 9.2 campaign_pages
 
 Fields:
 
-* id
-* campaign_id
-* version_number
-* structured_content_json
-* rendered_snapshot_html (optional)
-* slug
-* is_published
-* published_at
-* created_at
-* updated_at
+- id
+- campaign_id
+- version_number
+- structured_content_json
+- rendered_snapshot_html (optional)
+- slug
+- is_published
+- published_at
+- created_at
+- updated_at
 
 ## 9.3 campaign_visits
 
 Fields:
 
-* id
-* campaign_id
-* campaign_page_id
-* slug
-* visited_at
-* referrer
-* utm_source
-* utm_medium
-* utm_campaign
-* utm_term
-* utm_content
-* user_agent
-* ip_hash_or_session_identifier_if_used
+- id
+- campaign_id
+- campaign_page_id
+- slug
+- visited_at
+- referrer
+- utm_source
+- utm_medium
+- utm_campaign
+- utm_term
+- utm_content
+- user_agent
+- ip_hash_or_session_identifier_if_used
 
 ## 9.4 generation_jobs (optional but recommended)
 
 Fields:
 
-* id
-* campaign_id
-* status
-* input_payload
-* output_payload
-* error_message
-* created_at
-* completed_at
+- id
+- campaign_id
+- status
+- input_payload
+- output_payload
+- error_message
+- created_at
+- completed_at
 
 ---
 
 ## 10. Assumptions
 
-* MVP is internal-admin driven, not self-serve for external clients
-* Only one campaign page output per campaign is required for initial release
-* Multi-variant workflows are deferred
-* SEO strategy at scale is deferred
-* Attribution is basic and best-effort, not absolute
-* Prompt-based surgical updates may fall back to full regeneration if needed
-* UI polish is secondary to workflow completion
+- MVP is internal-admin driven, not self-serve for external clients
+- Only one campaign page output per campaign is required for initial release
+- Multi-variant workflows are deferred
+- SEO strategy at scale is deferred
+- Attribution is basic and best-effort, not absolute
+- Prompt-based surgical updates may fall back to full regeneration if needed
+- UI polish is secondary to workflow completion
 
 ---
 
@@ -580,19 +574,19 @@ Fields:
 
 Deferred to later phases:
 
-* multi-user RBAC
-* campaign collaboration workflows
-* advanced prompt editing UI
-* visual drag-and-drop editing
-* multi-page campaigns
-* full programmatic SEO rule engine
-* structured schema library at large scale
-* split testing
-* advanced source-to-conversion reporting
-* CRM and deal sync
-* booking platform integration depth
-* email ingestion and automatic lead extraction
-* production-grade marketing analytics stack
+- multi-user RBAC
+- campaign collaboration workflows
+- advanced prompt editing UI
+- visual drag-and-drop editing
+- multi-page campaigns
+- full programmatic SEO rule engine
+- structured schema library at large scale
+- split testing
+- advanced source-to-conversion reporting
+- CRM and deal sync
+- booking platform integration depth
+- email ingestion and automatic lead extraction
+- production-grade marketing analytics stack
 
 ---
 
@@ -646,13 +640,13 @@ It is **not** intended to fulfill the full production ambition of Module 0 as de
 
 The MVP must prioritize:
 
-* end-to-end usability
-* simplicity
-* speed of delivery
-* real-world testability
+- end-to-end usability
+- simplicity
+- speed of delivery
+- real-world testability
 
 over:
 
-* platform completeness
-* enterprise polish
-* feature breadth
+- platform completeness
+- enterprise polish
+- feature breadth

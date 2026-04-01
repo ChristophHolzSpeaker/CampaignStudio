@@ -62,7 +62,9 @@ This project uses OpenCode skills.
 Agents MUST:
 
 ## Svelte Skill
+
 Use for:
+
 - components
 - routes
 - rendering logic
@@ -70,7 +72,9 @@ Use for:
 - form actions
 
 ## Supabase Skill
+
 Use for:
+
 - database schema
 - migrations
 - local Supabase setup
@@ -111,14 +115,17 @@ Rules:
 The system uses a **multi-step generation pipeline**:
 
 ## Step 1 — Content Generation
+
 - Model: lightweight (e.g. Gemini Flash)
 - Output: structured marketing content
 
 ## Step 2 — JSON Layout Generation
+
 - Model: structured model (e.g. Nemotron)
 - Output: strict JSON schema
 
 ## Step 3 — Mutation (Edits)
+
 - Input:
   - existing JSON
   - user instruction
@@ -218,34 +225,34 @@ After changes ALWAYS run:
 pnpm run format
 pnpm run check
 pnpm run build
-````
+```
 
 ---
 
 # 🎯 SvelteKit Conventions
 
-* Use runes (`$state`, `$derived`, `$props`)
-* Prefer server load functions
-* Prefer form actions over custom APIs
-* Keep AI calls server-side only
+- Use runes (`$state`, `$derived`, `$props`)
+- Prefer server load functions
+- Prefer form actions over custom APIs
+- Keep AI calls server-side only
 
 ---
 
 # 🔐 Security
 
-* Never expose API keys to client
-* Use `$env/dynamic/private`
-* Validate all inputs
-* Treat AI output as untrusted until validated
+- Never expose API keys to client
+- Use `$env/dynamic/private`
+- Validate all inputs
+- Treat AI output as untrusted until validated
 
 ---
 
 # 📏 Code Style
 
-* TypeScript strict mode
-* No `any`
-* Use explicit types
-* Use `$lib` imports (avoid deep relative paths)
+- TypeScript strict mode
+- No `any`
+- Use explicit types
+- Use `$lib` imports (avoid deep relative paths)
 
 ---
 
@@ -253,11 +260,11 @@ pnpm run build
 
 Agents MUST NOT:
 
-* regenerate full pages unnecessarily
-* bypass schema validation
-* mix client/server logic incorrectly
-* introduce new architecture without justification
-* store unvalidated AI output
+- regenerate full pages unnecessarily
+- bypass schema validation
+- mix client/server logic incorrectly
+- introduce new architecture without justification
+- store unvalidated AI output
 
 ---
 
@@ -267,8 +274,8 @@ Testing is not yet implemented.
 
 If adding tests:
 
-* use Vitest
-* colocate tests or use `/tests`
+- use Vitest
+- colocate tests or use `/tests`
 
 ---
 
@@ -291,16 +298,16 @@ This is a **controlled AI system**, not a freeform generator.
 
 Always prioritize:
 
-* structure over creativity
-* safety over flexibility
-* consistency over speed
+- structure over creativity
+- safety over flexibility
+- consistency over speed
 
 ---
 
 # 📌 Summary
 
-* Use skills
-* Respect schema
-* Keep changes minimal
-* Keep AI controlled
-* Follow SvelteKit + Supabase best practices
+- Use skills
+- Respect schema
+- Keep changes minimal
+- Keep AI controlled
+- Follow SvelteKit + Supabase best practices
