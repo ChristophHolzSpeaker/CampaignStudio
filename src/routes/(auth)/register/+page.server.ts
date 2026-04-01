@@ -4,11 +4,12 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
 	const {
-		data: { session }
-	} = await supabase.auth.getSession();
+		data: { user },
+		error
+	} = await supabase.auth.getUser();
 
 	// if the user is already logged in return them to the account page
-	if (session) {
+	if (user && !error) {
 		redirect(303, '/account');
 	}
 

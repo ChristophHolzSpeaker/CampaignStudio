@@ -4,9 +4,15 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const {
-		data: { session }
-	} = await supabase.auth.getSession();
-	return { session };
+		data: { user },
+		error
+	} = await supabase.auth.getUser();
+
+	if (error) {
+		return { user: null };
+	}
+
+	return { user };
 };
 
 export const actions: Actions = {
