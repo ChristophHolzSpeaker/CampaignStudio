@@ -1,10 +1,61 @@
-@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&display=swap');
 @import 'tailwindcss';
+
+@font-face {
+	font-family: 'Bureau Grot';
+	src: url('/src/lib/assets/fonts/Bureau Grot Light.otf') format('opentype');
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Bureau Grot';
+	src: url('/src/lib/assets/fonts/Bureau Grot Book.otf') format('opentype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Bureau Grot Compressed';
+	src: url('/src/lib/assets/fonts/Bureau Grot Compressed Light.otf') format('opentype');
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+	font-stretch: condensed;
+}
+
+@font-face {
+	font-family: 'Bureau Grot Compressed';
+	src: url('/src/lib/assets/fonts/Bureau Grot Compressed Book.otf') format('opentype');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+	font-stretch: condensed;
+}
+
+@font-face {
+	font-family: 'Bureau Grot Compressed';
+	src: url('/src/lib/assets/fonts/Bureau_Grot-Compressed_Medium.otf') format('opentype');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+	font-stretch: condensed;
+}
+
+@font-face {
+	font-family: 'Bureau Grot Compressed';
+	src: url('/src/lib/assets/fonts/Bureau Grot Compressed Bold.otf') format('opentype');
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+	font-stretch: condensed;
+}
 
 @theme {
 	--font-sans:
-		'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
-		'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+		'Bureau Grot', 'Bureau Grot Compressed', ui-sans-serif, system-ui, sans-serif,
+		'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
 	--color-surface: #ffffff;
 	--color-surface-container-low: #f4f4f5;
@@ -16,10 +67,31 @@
 	--color-on-surface: #09090b;
 }
 
+:root {
+	--surface: #f9f9f9;
+	--surface-card: #ffffff;
+	--text-primary: #1a1c1c;
+	--text-muted: #242734;
+	--accent: #b8002a;
+	--accent-mid: #d11733;
+	--accent-strong: #e2183b;
+	--accent-rgb: 184, 0, 42;
+	--accent-strong-rgb: 226, 24, 59;
+	--divider: #e2e2e2;
+	--status-surface: #fdecea;
+	--shadow-card: 0 35px 80px rgba(0, 0, 0, 0.1);
+	--shadow-card-strong: 0 35px 80px rgba(0, 0, 0, 0.15);
+}
+
 @layer base {
 	body {
 		background-color: #fafafa;
 		color: var(--color-on-surface);
+		font-family: var(--font-sans);
+		font-weight: 400;
+		line-height: 1.6;
+		text-transform: none;
+		letter-spacing: 0.01em;
 	}
 
 	h1,
@@ -29,6 +101,7 @@
 	h5,
 	h6,
 	button {
+		font-family: 'Bureau Grot Compressed', 'Bureau Grot', sans-serif;
 		font-weight: 700;
 		text-transform: uppercase;
 		font-stretch: condensed;
@@ -48,5 +121,23 @@
 
 	.input-kinetic {
 		@apply w-full border-b border-on-surface/30 bg-transparent px-0 py-2 text-on-surface transition-colors outline-none focus:border-b-2 focus:border-primary sm:text-sm;
+	}
+
+	.container {
+		grid-column-gap: 16px;
+		grid-row-gap: 16px;
+		text-align: left;
+		grid-template-rows: auto auto;
+		grid-template-columns: 1fr 1fr;
+		width: 100%;
+		max-width: 1210px;
+		height: 100%;
+		margin-left: auto;
+		margin-right: auto;
+		padding-left: 25px;
+		padding-right: 25px;
+		display: block;
+		position: relative;
+		overflow: visible;
 	}
 }
