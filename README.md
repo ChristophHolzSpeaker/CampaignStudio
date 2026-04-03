@@ -1,42 +1,47 @@
-# sv
+# Campaign Studio
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Fully configured SvelteKit (runes mode) project that uses Drizzle ORM on the server and Supabase as the Postgres provider + auth layer.
 
-## Creating a project
+## Getting started
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+1. Install dependencies (this repo uses `pnpm`):
 
 ```sh
-# recreate this project
-pnpm dlx sv@0.13.0 create --template minimal --types ts --add prettier tailwindcss="plugins:none" drizzle="database:postgresql+postgresql:postgres.js+docker:no" better-auth="demo:password" --install pnpm ./
+pnpm install
 ```
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+2. Start the Supabase-local stack (requires Docker Desktop running so the Supabase CLI can spin up Postgres, Studio, etc.). From the repository root:
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+supabase start
 ```
 
-## Building
-
-To create a production version of your app:
+3. Launch the dev server:
 
 ```sh
-npm run build
+pnpm run dev -- --open
 ```
 
-You can preview the production build with `npm run preview`.
+4. When your session is done, stop the Supabase services:
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+```sh
+supabase stop
+```
+
+## Architecture notes
+
+- All server-side database access (including campaign reads and writes) uses Drizzle via `src/lib/server/db`, keeping schema definitions and migrations in sync with Postgres. Treat Drizzle as the primary server data layer.
+- Supabase SDK lives in the root-level Supabase project (`/supabase`) and is used for auth/session-aware helpers under `src/hooks.server.ts` + the layout. Reserve the SDK for auth, storage, realtime, or any client-side interactions that must respect row-level security.
+- For this MVP you can think of Supabase as "Postgres + auth provider," while Drizzle is the typed query layer that runs inside SvelteKit server actions.
+
+## Quality / build commands
+
+Run these regularly (or before committing) to keep the project healthy:
+
+```sh
+pnpm run format
+pnpm run check
+pnpm run build
+```
+
+The Supabase schema is rooted in `/supabase`, so use the Supabase CLI from the repo root when you need migrations, Studio, or other platform tools.

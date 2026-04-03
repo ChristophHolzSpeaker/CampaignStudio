@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-export const audienceOptions = ['IT Companies', 'Banks', 'Associations'] as const;
+export const audienceOptions = ['IT Companies', 'Banks', 'Associations (Verbände)'] as const;
 export const formatOptions = [
-	'Morning Keynote',
-	'Endnote',
-	'Business Breakfast',
-	'Panel Moderation',
-	'Dinner Speech'
+	'Morning Keynotes',
+	'Endnotes',
+	'Business Breakfasts',
+	'Panel Moderations',
+	'Dinner Speeches'
 ] as const;
 
 export const campaignFormSchema = z.object({
