@@ -15,6 +15,13 @@
       "when": 1775201907206,
       "tag": "0001_add_prompts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775202000000,
+      "tag": "0002_prompts_topic_not_null",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 <script lang="ts">
 	type Props = {
-		isSubmitting: undefined | boolean;
-		children: any;
+		isSubmitting?: undefined | boolean;
+		children?: any;
 	};
 
 	let { children, isSubmitting = false }: Props = $props();

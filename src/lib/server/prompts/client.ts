@@ -1,16 +1,23 @@
 import { db } from '$lib/server/db';
 import { prompts } from '$lib/server/db/schema';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
+import { audienceOptions, formatOptions, purposeOptions } from '$lib/constants/prompts';
 
 export type PromptPurpose = 'intermediate' | 'final' | 'edit_plan' | 'apply_plan';
 
-export interface PromptTemplate {
+export const promptOptions = {
+	audiences: audienceOptions,
+	formats: formatOptions,
+	purposes: purposeOptions
+};
+
+export interface PromptRecord {
 	id: number;
 	name: string;
 	purpose: PromptPurpose;
 	audience: string;
 	format: string;
-	topic: string | null;
+	topic: string;
 	model: string;
 	system_prompt: string;
 	user_prompt_template: string;
@@ -20,16 +27,28 @@ export interface PromptTemplate {
 	updated_at: Date;
 }
 
+export interface PromptInput {
+	name: string;
+	purpose: PromptPurpose;
+	audience: string;
+	format: string;
+	model: string;
+	system_prompt: string;
+	user_prompt_template: string;
+	metadata?: Record<string, unknown> | null;
+	topic?: string | null;
+	is_active?: boolean;
+}
+
 export interface StagePromptDefaults {
 	model: string;
 	systemPrompt: string;
 	userPromptTemplate: string;
 }
 
-export const defaultPromptLibrary: Record<PromptPurpose, StagePromptDefaults> = {
-	intermediate: {
-		model: 'google/gemini-3.1-flash-lite-preview',
-		systemPrompt: `You are an expert direct-response landing page strategist and conversion copywriter.
+const normalizeTopic = (topic?: string | null) => topic?.trim() ?? '';
+
+const intermediateSystemPrompt = `You are an expert direct-response landing page strategist and conversion copywriter.
 
 Your task is to turn a user's free-text request into a small, structured landing-page content plan for a prototype landing page generator.
 
@@ -100,12 +119,9 @@ Rules:
 * prefer confident, professional language
 * keep copy suitable for a premium service business
 * avoid generic filler like "we are passionate about"
-* return JSON only`,
-		userPromptTemplate: `Generate the intermediate landing-page content object for this request:\n\n{{prompt}}`
-	},
-	final: {
-		model: 'nvidia/nemotron-3-super-120b-a12b:free',
-		systemPrompt: `You are a strict JSON transformation engine.
+* return JSON only`;
+
+const finalSystemPrompt = `You are a strict JSON transformation engine.
 
 Your task is to convert a validated intermediate landing-page content object into the exact final page schema required by the application.
 
@@ -176,12 +192,9 @@ Transformation rules:
 * do not include offer_summary in the final output
 * if the input cannot be mapped cleanly, still return valid JSON using the closest valid mapping possible
 * never return null for required fields
-* return valid JSON only`,
-		userPromptTemplate: `Transform this intermediate landing-page content object into the exact final application schema.\n\nInput JSON:\n{{intermediate_json}}`
-	},
-	edit_plan: {
-		model: 'google/gemini-3.1-flash-lite-preview',
-		systemPrompt: `You are an expert landing page editor and conversion copy strategist.
+* return valid JSON only`;
+
+const editPlanSystemPrompt = `You are an expert landing page editor and conversion copy strategist.
 
 Your task is to interpret a user's requested change to an existing landing page and convert that request into a concise structured edit plan.
 
@@ -239,12 +252,9 @@ Rules:
 * preserve the existing page intent unless the user explicitly changes it
 * do not invent claims, testimonials, numbers, or credentials
 * use professional, believable language
-* return JSON only`,
-		userPromptTemplate: `Create an edit plan for this existing page and requested change.\n\nCurrent page JSON:\n{{current_page_json}}\n\nRequested change:\n{{change_prompt}}`
-	},
-	apply_plan: {
-		model: 'nvidia/nemotron-3-super-120b-a12b:free',
-		systemPrompt: `You are a strict landing page JSON editor.
+* return JSON only`;
+
+const applyPlanSystemPrompt = `You are a strict landing page JSON editor.
 
 Your task is to update an existing landing page JSON object using a structured edit plan.
 
@@ -313,10 +323,99 @@ Editing rules:
 * do not remove required fields
 * do not return null for required fields
 * do not invent testimonials, customer names, statistics, or unverifiable claims
-* return valid JSON only`,
+* return valid JSON only`;
+
+export const defaultPromptLibrary: Record<PromptPurpose, StagePromptDefaults> = {
+	intermediate: {
+		model: 'google/gemini-3.1-flash-lite-preview',
+		systemPrompt: intermediateSystemPrompt,
+		userPromptTemplate: `Generate the intermediate landing-page content object for this request:\n\n{{prompt}}`
+	},
+	final: {
+		model: 'nvidia/nemotron-3-super-120b-a12b:free',
+		systemPrompt: finalSystemPrompt,
+		userPromptTemplate: `Transform this intermediate landing-page content object into the exact final application schema.\n\nInput JSON:\n{{intermediate_json}}`
+	},
+	edit_plan: {
+		model: 'google/gemini-3.1-flash-lite-preview',
+		systemPrompt: editPlanSystemPrompt,
+		userPromptTemplate: `Create an edit plan for this existing page and requested change.\n\nCurrent page JSON:\n{{current_page_json}}\n\nRequested change:\n{{change_prompt}}`
+	},
+	apply_plan: {
+		model: 'nvidia/nemotron-3-super-120b-a12b:free',
+		systemPrompt: applyPlanSystemPrompt,
 		userPromptTemplate: `Update this page JSON using the structured edit plan.\n\nCurrent page JSON:\n{{current_page_json}}\n\nEdit plan JSON:\n{{edit_plan_json}}`
 	}
 };
+
+export async function listPrompts(): Promise<PromptRecord[]> {
+	const rows = await db
+		.select()
+		.from(prompts)
+		.orderBy(asc(prompts.purpose), asc(prompts.audience), asc(prompts.format));
+
+	return rows as PromptRecord[];
+}
+
+export async function getPromptById(id: number): Promise<PromptRecord | null> {
+	const [record] = await db.select().from(prompts).where(eq(prompts.id, id)).limit(1);
+	return (record as PromptRecord) ?? null;
+}
+
+export async function createPrompt(input: PromptInput): Promise<PromptRecord> {
+	const normalizedTopic = normalizeTopic(input.topic);
+	const [created] = await db
+		.insert(prompts)
+		.values({
+			name: input.name,
+			purpose: input.purpose,
+			audience: input.audience,
+			format: input.format,
+			topic: normalizedTopic,
+			model: input.model,
+			system_prompt: input.system_prompt,
+			user_prompt_template: input.user_prompt_template,
+			metadata: input.metadata ?? null,
+			is_active: input.is_active ?? true
+		})
+		.returning();
+
+	if (!created) {
+		throw new Error('Unable to create prompt');
+	}
+
+	return created as PromptRecord;
+}
+
+export async function updatePrompt(id: number, input: PromptInput): Promise<PromptRecord> {
+	const normalizedTopic = normalizeTopic(input.topic);
+	const [updated] = await db
+		.update(prompts)
+		.set({
+			name: input.name,
+			purpose: input.purpose,
+			audience: input.audience,
+			format: input.format,
+			topic: normalizedTopic,
+			model: input.model,
+			system_prompt: input.system_prompt,
+			user_prompt_template: input.user_prompt_template,
+			metadata: input.metadata ?? null,
+			is_active: input.is_active ?? true
+		})
+		.where(eq(prompts.id, id))
+		.returning();
+
+	if (!updated) {
+		throw new Error('Unable to update prompt');
+	}
+
+	return updated as PromptRecord;
+}
+
+export async function togglePromptActive(id: number, active: boolean): Promise<void> {
+	await db.update(prompts).set({ is_active: active }).where(eq(prompts.id, id));
+}
 
 export interface PromptLookupOptions {
 	purpose: PromptPurpose;
@@ -327,38 +426,22 @@ export interface PromptLookupOptions {
 
 export async function findPromptTemplate(
 	options: PromptLookupOptions
-): Promise<PromptTemplate | null> {
+): Promise<PromptRecord | null> {
+	const topicValue = normalizeTopic(options.topic);
 	const filters = [
 		eq(prompts.purpose, options.purpose),
 		eq(prompts.audience, options.audience),
 		eq(prompts.format, options.format),
-		eq(prompts.is_active, true)
+		eq(prompts.is_active, true),
+		eq(prompts.topic, topicValue)
 	];
 
-	const topicMatch = async (topicValue: string | null) => {
-		const topicCondition = topicValue ? eq(prompts.topic, topicValue) : isNull(prompts.topic);
-		const rows = await db
-			.select()
-			.from(prompts)
-			.where(and(...filters, topicCondition))
-			.limit(1);
-		return rows[0] ?? null;
-	};
-
-	try {
-		if (options.topic) {
-			const exactMatch = await topicMatch(options.topic);
-			if (exactMatch) {
-				return exactMatch as PromptTemplate;
-			}
-		}
-
-		const fallback = await topicMatch(null);
-		return fallback as PromptTemplate | null;
-	} catch (error) {
-		console.error('Failed to load prompt template:', error);
-		return null;
-	}
+	const [record] = await db
+		.select()
+		.from(prompts)
+		.where(and(...filters))
+		.limit(1);
+	return (record as PromptRecord) ?? null;
 }
 
 export function renderPromptTemplate(template: string, values: Record<string, string>): string {
