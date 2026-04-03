@@ -129,6 +129,12 @@
 		padding: 0.9rem 2.2rem;
 	}
 
+	.nav-link {
+		@apply text-lg capitalize;
+		font-family: 'Bureau Grot', 'Space Grotesk', sans-serif;
+		font-stretch: normal;
+	}
+
 	.outline-link {
 		color: #1a1c1c;
 		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
