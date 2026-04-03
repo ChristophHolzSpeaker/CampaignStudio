@@ -58,6 +58,22 @@ export const generation_jobs = pgTable('generation_jobs', {
 	completed_at: timestamp('completed_at')
 });
 
+export const prompts = pgTable('prompts', {
+	id: serial('id').primaryKey(),
+	name: text('name').notNull(),
+	purpose: text('purpose').notNull(),
+	audience: text('audience').notNull(),
+	format: text('format').notNull(),
+	topic: text('topic'),
+	model: text('model').notNull(),
+	system_prompt: text('system_prompt').notNull(),
+	user_prompt_template: text('user_prompt_template').notNull(),
+	metadata: jsonb('metadata'),
+	is_active: boolean('is_active').notNull().default(true),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
+});
+
 // Keep the old task table for now (can be removed later)
 export const task = pgTable('task', {
 	id: serial('id').primaryKey(),
