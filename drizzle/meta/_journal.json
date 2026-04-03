@@ -8,6 +8,13 @@
       "when": 1774962523520,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775201907206,
+      "tag": "0001_add_prompts",
+      "breakpoints": true
     }
   ]
 }
