@@ -8,7 +8,7 @@
 </script>
 
 <header class="admin-shell-header">
-	<h2 class="text-2xl">Christoph Campaign Studio</h2>
+	<h2 class="text-4xl">Christoph Campaign Studio</h2>
 	<nav class="header-nav">
 		{#each navLinks as link (link.label)}
 			<a class="nav-link" href={link.href} class:active={link.active}>{link.label}</a>

@@ -106,7 +106,7 @@
 		</p>
 	{/if}
 
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+	<div class="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-12">
 		<div class="lg:col-span-7">
 			<section class="flex flex-col gap-4">
 				<header class="flex items-center gap-4 text-base uppercase">

@@ -13,6 +13,6 @@
 	};
 </script>
 
-<a {href} class={variants[variant]}>
+<a {href} class="text-center {variants[variant]}">
 	{@render children?.()}
 </a>

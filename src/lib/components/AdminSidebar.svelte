@@ -1,137 +1,76 @@
-<script>
+<script lang="ts">
+	import NavButton from './elements/NavButton.svelte';
+
 	const navItems = [
-		{ label: 'Editor', icon: 'edit_note', active: true, href: '/admin/prompts' },
-		{ label: 'Templates', icon: 'auto_awesome_motion', active: false, href: '/admin/templates' },
-		{ label: 'Variables', icon: 'variables', active: false, href: '/admin/variables' },
-		{ label: 'History', icon: 'history', active: false, href: '/admin/history' },
-		{ label: 'Library', icon: 'book_5', active: false, href: '/admin/library' }
+		{ label: 'Editor', icon: 'material-symbols--edit-note', active: true, href: '/admin/prompts' },
+		{ label: 'Library', icon: 'material-symbols--book', active: false, href: '/admin/library' }
 	];
 </script>
 
-<aside class="admin-shell-sidebar">
-	<div class="sidebar-brand">
-		<div class="brand-icon">
+<aside
+	class="sticky top-[74px] flex h-[calc(100vh-72px)] w-[280px] flex-col gap-8 self-start bg-[#f4f4f4] px-6 py-8"
+>
+	<div class="flex items-center gap-3">
+		<div class="grid h-10 w-10 place-items-center bg-[#b8002a] text-white">
 			<span class="material-symbols-outlined">precision_manufacturing</span>
 		</div>
 		<div>
-			<p class="brand-label">Prompt Engine</p>
-			<p class="brand-note">V2.4 Architectural</p>
+			<p class="m-0 text-[0.8rem] tracking-[0.3em]">Prompt Engine</p>
+			<p class="m-0 text-[0.65rem] tracking-[0.15em] text-[#4a4a4a]">V2.4 Architectural</p>
 		</div>
 	</div>
-
-	<nav class="sidebar-nav">
+	{#snippet navItem(item: { label: string; href: string; icon: string; active: boolean })}
+		<a
+			href={item.href}
+			class={`flex items-center gap-3 px-2 py-3 text-base uppercase no-underline transition ${
+				item.active
+					? 'border-l-4 border-[var(--accent)] bg-white pl-3 text-[var(--accent)]'
+					: 'hover:text-[var(--accent)]'
+			}`}
+		>
+			<span class={item.icon}></span>
+			{item.label}
+		</a>
+	{/snippet}
+	<nav class="flex flex-col gap-2">
 		{#each navItems as item (item.label)}
-			<a href={item.href} class:active={item.active}>
-				<span class="material-symbols-outlined">{item.icon}</span>
-				{item.label}
-			</a>
+			{@render navItem(item)}
 		{/each}
 	</nav>
 
-	<button class="new-prompt-btn" type="button">New Prompt</button>
+	<NavButton href="/admin/prompts/new">New Prompt</NavButton>
 
-	<div class="sidebar-footer">
-		<a href="/admin/docs">Documentation</a>
-		<a href="/logout">Log Out</a>
+	<div class="mt-auto flex flex-col gap-2 text-[0.65rem] tracking-[0.25em] uppercase">
+		<a class="text-[#5d3f3f] no-underline" href="/admin/docs">Documentation</a>
+		<a class="text-[#5d3f3f] no-underline" href="/logout">Log Out</a>
 	</div>
 </aside>
 
 <style>
-	aside {
-		width: 280px;
-		background: #f4f4f4;
-		padding: 2rem 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 2rem;
-		height: calc(100vh - 72px);
-		position: sticky;
-		top: 74px;
-		align-self: flex-start;
+	.material-symbols--edit-note {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 14v-2h7v2zm0-4V8h11v2zm0-4V4h11v2zm9 14v-3.075l5.525-5.5q.225-.225.5-.325t.55-.1q.3 0 .575.113t.5.337l.925.925q.2.225.313.5t.112.55t-.1.563t-.325.512l-5.5 5.5zm6.575-5.6l.925-.975l-.925-.925l-.95.95z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
 	}
-
-	.sidebar-brand {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.brand-icon {
-		width: 42px;
-		height: 42px;
-		background: #b8002a;
-		display: grid;
-		place-items: center;
-		color: white;
-	}
-
-	.brand-label {
-		font-size: 0.8rem;
-		letter-spacing: 0.3em;
-		margin: 0;
-	}
-
-	.brand-note {
-		font-size: 0.65rem;
-		letter-spacing: 0.15em;
-		margin: 0;
-		color: #4a4a4a;
-	}
-
-	.sidebar-nav {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-	}
-
-	.sidebar-nav a {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.85rem 0.5rem;
-		text-transform: uppercase;
-		letter-spacing: 0.25em;
-		font-size: 0.72rem;
-		color: #4a4a4a;
-		text-decoration: none;
-	}
-
-	.sidebar-nav a.active {
-		background: #ffffff;
-		color: #b8002a;
-		border-left: 3px solid #b8002a;
-		padding-left: 0.25rem;
-	}
-
-	.new-prompt-btn {
-		border: none;
-		background: linear-gradient(135deg, #b8002a, #e2183b);
-		color: #fff;
-		text-transform: uppercase;
-		letter-spacing: 0.2em;
-		padding: 0.9rem 1.2rem;
-		font-size: 0.75rem;
-		display: block;
-	}
-
-	.sidebar-footer {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-top: auto;
-	}
-
-	.sidebar-footer a {
-		text-transform: uppercase;
-		letter-spacing: 0.25em;
-		font-size: 0.65rem;
-		color: #5d3f3f;
-		text-decoration: none;
-	}
-
-	@media (max-width: 1024px) {
-		aside {
-			display: none;
-		}
+	.material-symbols--book {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M6 22q-.825 0-1.412-.587T4 20V4q0-.825.588-1.412T6 2h12q.825 0 1.413.588T20 4v16q0 .825-.587 1.413T18 22zm5-11l2.5-1.5L16 11V4h-5z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
 	}
 </style>
