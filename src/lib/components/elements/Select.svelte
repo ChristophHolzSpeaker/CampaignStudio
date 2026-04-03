@@ -33,7 +33,7 @@
 			{id}
 			{...props}
 			bind:value
-			class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-slate-100 pb-3 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none"
+			class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-sky-50 p-3 font-light text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none"
 			aria-invalid={Boolean(error)}
 		>
 			{#if placeholder}

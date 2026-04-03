@@ -70,26 +70,26 @@
 	<title>Edit prompt</title>
 </svelte:head>
 
-<div class="sidebar-column">
+<div class="hidden self-start lg:block">
 	<AdminSidebar />
 </div>
-<form method="POST" class="editor-form">
-	<div class="hero-panel">
-		<div>
-			<div class="breadcrumb flex items-center">
+<form method="POST" class="flex flex-col gap-6 bg-white p-6 lg:p-10">
+	<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+		<div class="space-y-2">
+			<div class="flex items-center gap-1 text-[0.7rem] tracking-[0.3em] text-[#777] uppercase">
 				<span>Prompt Library</span>
-				<span class="chevron">›</span>
-				<span class="active">Editor</span>
+				<span class="text-[1rem] text-[var(--accent)]">›</span>
+				<span>Editor</span>
 			</div>
-			<h1>
-				Edit Prompt<span>.</span>
+			<h1 class="mt-1 text-[3.5rem] tracking-[-0.03em]">
+				Edit Prompt<span class="text-[var(--accent)]">.</span>
 			</h1>
-			<p class="subtitle">
+			<p class="max-w-[32rem] text-[0.95rem] text-[#5d3f3f]">
 				Fine-tune the audience + story guide. Changes go straight into the campaign generator.
 			</p>
 		</div>
-		<div class="hero-actions">
-			<div class="action-buttons items-center">
+		<div class="self-start">
+			<div class="flex items-center gap-4">
 				<NavButton variant="outline" href="/admin/prompts">Cancel</NavButton>
 				<Button>Save changes</Button>
 			</div>
@@ -97,435 +97,113 @@
 	</div>
 
 	{#if displayMessage()}
-		<p class={`status-pill ${getForm()?.success ? 'success' : 'error'}`}>{displayMessage()}</p>
+		<p
+			class={`self-start px-3 py-1 text-[0.7rem] tracking-[0.25em] uppercase ${
+				getForm()?.success ? 'bg-[#f1f6f1] text-[#007a3d]' : 'bg-[#fdecea] text-[#b8002a]'
+			}`}
+		>
+			{displayMessage()}
+		</p>
 	{/if}
 
-	<div class="editor-grid">
-		<div class="primary-column">
-			<section class="panel">
-				<header class="panel-head">
-					<span class="material-symbols-outlined">info</span>
-					<div>
-						<p>Core Information</p>
-						<small>Dial in the essentials</small>
-					</div>
+	<div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+		<div class="lg:col-span-7">
+			<section class="flex flex-col gap-4">
+				<header class="flex items-center gap-4 text-base uppercase">
+					<span class="material-symbols--info-outline text-[var(--accent)]"></span>
+					<div>Core Information</div>
 				</header>
-				<div class="panel-body">
+				<div class="bg-white">
 					<PromptFormFields values={values()} errors={getForm()?.fieldErrors ?? {}} />
 				</div>
 			</section>
 		</div>
 
-		<div class="secondary-column">
-			<section class="panel metadata-panel">
-				<header class="panel-head">
-					<span class="material-symbols-outlined">settings_input_component</span>
-					<div>
-						<p>Metadata</p>
-						<small>Contextual cues</small>
-					</div>
+		<div class="flex flex-col gap-6 lg:col-span-5">
+			<section class="flex flex-col gap-4 bg-stone-100 p-7">
+				<header class="text-accent flex items-center gap-4 text-base uppercase">
+					<span
+						class="material-symbols--settings-input-component-outline-rounded text-[var(--accent)]"
+					></span>
+					<div>Metadata</div>
 				</header>
-				<div class="prompt-card-wrapper">
+				<div class="pt-4">
 					<PromptCard {prompt} />
-				</div>
-				<div class="tag-row">
-					{#if audienceTags.length}
-						{#each audienceTags as tag (tag)}
-							<span>{tag}</span>
-						{/each}
-					{:else}
-						<span>Audience TBD</span>
-					{/if}
-				</div>
-				<div class="meta-grid">
-					{#each metadataList as item (item.label)}
-						<div class="meta-row">
-							<p>{item.label}</p>
-							<strong>{item.value}</strong>
-						</div>
-					{/each}
-				</div>
-				{#if metadataValue}
-					<p class="metadata-note">{metadataValue}</p>
-				{/if}
-				<div class="summary-block">
-					<p>System prompt summary</p>
-					<p>{prompt.system_prompt ?? 'No system prompt provided yet.'}</p>
 				</div>
 			</section>
 
-			<section class="panel live-panel">
-				<div class="live-header">
-					<div class="live-dots">
-						<span></span>
-						<span></span>
-						<span></span>
+			<!--	<section class="flex flex-col gap-4 bg-[#191c1e] p-7 text-white">
+				<div class="flex items-center justify-between gap-4">
+					<div class="flex gap-1">
+						<span class="h-2 w-2 bg-[#4f4f52]"></span>
+						<span class="h-2 w-2 bg-[#4f4f52]"></span>
+						<span class="h-2 w-2 bg-[#4f4f52]"></span>
 					</div>
 					<div>
 						<p>Live Preview</p>
-						<p class="live-caption">{prompt.name}</p>
+						<p class="text-[0.85rem] text-white/70">{prompt.name}</p>
 					</div>
 					<span class="material-symbols-outlined">terminal</span>
 				</div>
-				<div class="live-body">
+				<div class="font-[family:'Bureau Grot',monospace] mt-4 text-[0.85rem] leading-[1.8]">
 					{#each previewLines as line (line.id)}
-						<p>{line.text}</p>
+						<p class="my-2">{line.text}</p>
 					{/each}
-					<div class="live-footer">
-						<button type="button" class="ghost-link">
+					<div
+						class="mt-4 flex items-center justify-between text-[0.7rem] tracking-[0.3em] uppercase"
+					>
+						<button
+							type="button"
+							class="inline-flex items-center gap-1 text-[0.65rem] tracking-[0.3em] text-white uppercase"
+						>
 							<span class="material-symbols-outlined">refresh</span>
 							Re-Generate
 						</button>
-						<span class="token-count">Tokens: {tokensUsed.toLocaleString()}</span>
+						<span class="text-white/70">Tokens: {tokensUsed.toLocaleString()}</span>
 					</div>
 				</div>
-			</section>
+			</section>-->
 
-			<div class="health-grid">
-				<article>
+			<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+				<article class="bg-stone-50 p-4 text-[0.8rem] tracking-[0.15em] uppercase">
 					<p>Clarity Score</p>
-					<strong>{clarityScore}%</strong>
+					<strong class="mt-2 block text-[1.5rem] text-indigo-500">{clarityScore}%</strong>
 				</article>
-				<article>
+				<article class="bg-stone-50 p-4 text-[0.8rem] tracking-[0.15em] uppercase">
 					<p>Bias Risk</p>
-					<strong>{biasRisk}</strong>
+					<strong class="mt-2 block text-[1.5rem] text-indigo-500">{biasRisk}</strong>
 				</article>
 			</div>
 		</div>
 	</div>
-
-	<div class="autosave-toast">
-		<span></span>
-		<p>Autosaved moments ago</p>
-		<button type="button" class="toast-dismiss">Dismiss</button>
-	</div>
 </form>
 
 <style>
-	.sidebar-column {
-		align-self: start;
+	.material-symbols--info-outline {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M11 17h2v-6h-2zm1.713-8.287Q13 8.425 13 8t-.288-.712T12 7t-.712.288T11 8t.288.713T12 9t.713-.288M12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22m0-2q3.35 0 5.675-2.325T20 12t-2.325-5.675T12 4T6.325 6.325T4 12t2.325 5.675T12 20m0-8'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
 	}
 
-	.editor-form {
-		background: #ffffff;
-		padding: 2.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.hero-panel {
-		display: flex;
-		justify-content: space-between;
-		gap: 2rem;
-		align-items: flex-end;
-	}
-
-	.hero-panel h1 {
-		font-size: 3.5rem;
-		letter-spacing: -0.03em;
-		margin: 0.4rem 0 0;
-	}
-
-	.hero-panel h1 span {
-		color: var(--accent);
-	}
-
-	.eyebrow {
-		text-transform: uppercase;
-		letter-spacing: 0.3em;
-		font-size: 0.7rem;
-		margin-bottom: 0.4rem;
-	}
-
-	.subtitle {
-		max-width: 32rem;
-		color: #5d3f3f;
-		font-size: 0.95rem;
-	}
-
-	.breadcrumb {
-		display: flex;
-		align-items: center;
-		gap: 0.35rem;
-		font-size: 0.7rem;
-		letter-spacing: 0.3em;
-		text-transform: uppercase;
-		color: #777;
-	}
-
-	.breadcrumb .chevron {
-		font-size: 1rem;
-		color: var(--accent);
-	}
-
-	.hero-actions {
-		align-self: flex-start;
-	}
-
-	.action-buttons {
-		display: flex;
-		gap: 1rem;
-	}
-
-	.ghost-action {
-		border: 1px solid rgba(0, 0, 0, 0.2);
-		padding: 0.8rem 1.3rem;
-		text-transform: uppercase;
-		letter-spacing: 0.2em;
-		text-decoration: none;
-		color: #1a1c1c;
-		background: none;
-	}
-
-	.primary-action {
-		background: linear-gradient(135deg, #b8002a, #e2183b);
-		border: none;
-		padding: 0.8rem 1.7rem;
-		text-transform: uppercase;
-		letter-spacing: 0.2em;
-		color: #fff;
-	}
-
-	.status-pill {
-		text-transform: uppercase;
-		letter-spacing: 0.25em;
-		font-size: 0.7rem;
-		padding: 0.35rem 0.75rem;
-		align-self: flex-start;
-	}
-
-	.status-pill.success {
-		color: #007a3d;
-		background: #f1f6f1;
-	}
-
-	.status-pill.error {
-		color: #b8002a;
-		background: #fdecea;
-	}
-
-	.editor-grid {
-		display: grid;
-		grid-template-columns: repeat(12, minmax(0, 1fr));
-		gap: 1.5rem;
-	}
-
-	.primary-column {
-		grid-column: span 7 / span 7;
-	}
-
-	.secondary-column {
-		grid-column: span 5 / span 5;
-		display: flex;
-		flex-direction: column;
-		gap: 1.5rem;
-	}
-
-	.panel {
-		background: #f3f3f3;
-		padding: 1.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.panel-head {
-		display: flex;
-		gap: 1rem;
-		align-items: center;
-		text-transform: uppercase;
-		letter-spacing: 0.25em;
-		font-size: 0.8rem;
-	}
-
-	.panel-body {
-		background: #ffffff;
-		padding: 1.5rem;
-	}
-
-	.prompt-card-wrapper {
-		border-top: 1px solid rgba(0, 0, 0, 0.1);
-		padding-top: 1rem;
-	}
-
-	.tag-row {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.5rem;
-	}
-
-	.tag-row span {
-		background: #ffffff;
-		padding: 0.45rem 0.9rem;
-		font-size: 0.65rem;
-		letter-spacing: 0.25em;
-		text-transform: uppercase;
-	}
-
-	.meta-grid {
-		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
-		gap: 0.75rem;
-	}
-
-	.meta-row p {
-		margin: 0;
-		font-size: 0.6rem;
-		letter-spacing: 0.2em;
-	}
-
-	.meta-row strong {
-		display: block;
-		margin-top: 0.25rem;
-		font-size: 1rem;
-	}
-
-	.metadata-note {
-		font-size: 0.85rem;
-		color: #555;
-		margin: 0;
-	}
-
-	.summary-block {
-		margin-top: 1rem;
-		font-size: 0.85rem;
-		color: #333;
-		border-top: 1px solid rgba(0, 0, 0, 0.05);
-		padding-top: 1rem;
-	}
-
-	.summary-block p:last-of-type {
-		font-family: 'Bureau Grot', sans-serif;
-		font-size: 0.9rem;
-		margin: 0.3rem 0 0;
-	}
-
-	.live-panel {
-		background: #191c1e;
-		color: #f8f9fb;
-	}
-
-	.live-header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.live-dots {
-		display: flex;
-		gap: 0.35rem;
-	}
-
-	.live-dots span {
-		width: 0.65rem;
-		height: 0.65rem;
-		background: #4f4f52;
-	}
-
-	.live-caption {
-		font-size: 0.85rem;
-		color: rgba(255, 255, 255, 0.7);
-	}
-
-	.live-body {
-		margin-top: 1rem;
-		font-family: 'Bureau Grot', monospace;
-		font-size: 0.85rem;
-		line-height: 1.8;
-	}
-
-	.live-body p {
-		margin: 0.45rem 0;
-	}
-
-	.live-footer {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-top: 1rem;
-		font-size: 0.7rem;
-		letter-spacing: 0.3em;
-		text-transform: uppercase;
-	}
-
-	.ghost-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.3rem;
-		border: none;
-		background: transparent;
-		color: #f8f9fb;
-		text-transform: uppercase;
-		letter-spacing: 0.3em;
-		font-size: 0.65rem;
-	}
-
-	.token-count {
-		color: rgba(255, 255, 255, 0.5);
-	}
-
-	.health-grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0.75rem;
-	}
-
-	.health-grid article {
-		background: #eceef0;
-		padding: 1rem;
-		text-transform: uppercase;
-		letter-spacing: 0.15em;
-	}
-
-	.health-grid article strong {
-		display: block;
-		font-size: 1.5rem;
-		color: var(--accent);
-	}
-
-	.autosave-toast {
-		margin-top: 1.5rem;
-		padding: 0.8rem 1rem;
-		background: #f3f3f3;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		text-transform: uppercase;
-		letter-spacing: 0.2em;
-	}
-
-	.autosave-toast span {
-		width: 0.5rem;
-		height: 0.5rem;
-		background: #0f6d45;
-	}
-
-	.toast-dismiss {
-		border: none;
-		background: transparent;
-		color: #b8002a;
-		font-size: 0.65rem;
-		letter-spacing: 0.3em;
-	}
-
-	@media (max-width: 1200px) {
-		.editor-form {
-			padding: 1.5rem;
-		}
-
-		.sidebar-column {
-			display: none;
-		}
-
-		.editor-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.primary-column,
-		.secondary-column {
-			grid-column: span 12;
-		}
+	.material-symbols--settings-input-component-outline-rounded {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M3 22v-3.2q-.875-.3-1.437-1.062T1 16V7q0-.425.288-.712T2 6h1V2q0-.425.288-.712T4 1t.713.288T5 2v4h1q.425 0 .713.288T7 7v9q0 .975-.562 1.738T5 18.8V22q0 .425-.288.713T4 23t-.712-.288T3 22m8 0v-3.2q-.875-.3-1.437-1.062T9 16V7q0-.425.288-.712T10 6h1V2q0-.425.288-.712T12 1t.713.288T13 2v4h1q.425 0 .713.288T15 7v9q0 .975-.562 1.738T13 18.8V22q0 .425-.288.713T12 23t-.712-.288T11 22m8 0v-3.2q-.875-.3-1.437-1.062T17 16V7q0-.425.288-.712T18 6h1V2q0-.425.288-.712T20 1t.713.288T21 2v4h1q.425 0 .713.288T23 7v9q0 .975-.562 1.738T21 18.8V22q0 .425-.288.713T20 23t-.712-.288T19 22M3 8v4h2V8zm8 0v4h2V8zm8 0v4h2V8zM4 17q.425 0 .713-.288T5 16v-2H3v2q0 .425.288.713T4 17m8 0q.425 0 .713-.288T13 16v-2h-2v2q0 .425.288.713T12 17m8 0q.425 0 .713-.288T21 16v-2h-2v2q0 .425.288.713T20 17m0-4'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
 	}
 </style>
