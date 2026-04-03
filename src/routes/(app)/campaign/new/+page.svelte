@@ -104,6 +104,12 @@
 			>
 				<p class="text-[0.6rem] text-[var(--accent)] uppercase">Campaign brief</p>
 
+				<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
+					Reasoning: A "Dinner Speech on AI for Bankers" requires fundamentally different copy, pain
+					points, and tech riders than an "Endnote on Ethics for IT"; the database dynamically
+					assembles pages from those relations.
+				</p>
+
 				{#if getStatusMessage()}
 					<div
 						role="status"
@@ -144,15 +150,26 @@
 					></Select>
 				</div>
 
+				<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
+					Formats exclude slides—these speech-first moments keep the narrative tight for every
+					audience-format pair.
+				</p>
+
 				<Input
 					id="topic"
 					name="topic"
 					type="text"
 					value={getValues().topic}
 					error={getFieldError('topic')}
+					placeholder="AI, Digital Ethics, Robotics, Space Technology, ..."
 					autocomplete="off"
 					label="Topic"
 				></Input>
+
+				<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
+					Trending topics help the AI pick the right stance—AI, Digital Ethics, Robotics, Space
+					Technology, or whatever feels timely.
+				</p>
 
 				<TextArea
 					id="notes"
