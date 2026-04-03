@@ -6,6 +6,9 @@
 		type CampaignFormSubmission
 	} from '$lib/validation/campaign';
 	import Button from '$lib/components/elements/Button.svelte';
+	import Input from '$lib/components/elements/Input.svelte';
+	import Select from '$lib/components/elements/Select.svelte';
+	import TextArea from '$lib/components/elements/TextArea.svelte';
 
 	let { form }: { form?: ActionData } = $props();
 	const defaultValues: CampaignFormSubmission = {
@@ -110,130 +113,55 @@
 					</div>
 				{/if}
 
-				<div class="space-y-1">
-					<label for="name" class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-						Campaign name
-					</label>
-					<input
-						id="name"
-						name="name"
-						type="text"
-						value={getValues().name}
-						class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-transparent pb-3 text-lg font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
-						aria-invalid={Boolean(getFieldError('name'))}
-						autocomplete="off"
-					/>
-					{#if getFieldError('name')}
-						<p class="text-xs font-semibold text-[var(--accent)] uppercase">
-							{getFieldError('name')}
-						</p>
-					{/if}
-				</div>
+				<Input
+					id="name"
+					name="name"
+					type="text"
+					value={getValues().name}
+					error={getFieldError('name')}
+					autocomplete="off"
+					label="Campaign name"
+				></Input>
 
 				<div class="grid gap-6 md:grid-cols-2">
-					<div class="space-y-1">
-						<label for="audience" class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-							Audience
-						</label>
-						<div class="relative">
-							<select
-								id="audience"
-								name="audience"
-								class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-transparent pb-3 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none"
-								aria-invalid={Boolean(getFieldError('audience'))}
-							>
-								<option value="" disabled selected={!getValues().audience}>
-									Select an audience
-								</option>
-								{#each audienceOptions as option}
-									<option value={option} selected={getValues().audience === option}>
-										{option}
-									</option>
-								{/each}
-							</select>
-							<span
-								class="pointer-events-none absolute top-3 right-0 text-sm text-[var(--text-muted)]"
-								>⌄</span
-							>
-						</div>
-						{#if getFieldError('audience')}
-							<p class="text-xs font-semibold text-[var(--accent)] uppercase">
-								{getFieldError('audience')}
-							</p>
-						{/if}
-					</div>
-
-					<div class="space-y-1">
-						<label for="format" class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-							Format
-						</label>
-						<div class="relative">
-							<select
-								id="format"
-								name="format"
-								class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-transparent pb-3 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none"
-								aria-invalid={Boolean(getFieldError('format'))}
-							>
-								<option value="" disabled selected={!getValues().format}> Select format </option>
-								{#each formatOptions as option}
-									<option value={option} selected={getValues().format === option}>
-										{option}
-									</option>
-								{/each}
-							</select>
-							<span
-								class="pointer-events-none absolute top-3 right-0 text-sm text-[var(--text-muted)]"
-								>⌄</span
-							>
-						</div>
-						{#if getFieldError('format')}
-							<p class="text-xs font-semibold text-[var(--accent)] uppercase">
-								{getFieldError('format')}
-							</p>
-						{/if}
-					</div>
+					<Select
+						id="audience"
+						name="audience"
+						label="Audience"
+						options={audienceOptions}
+						placeholder="Select an audience"
+						value={getValues().audience}
+						error={getFieldError('audience')}
+					></Select>
+					<Select
+						id="format"
+						name="format"
+						label="Format"
+						options={formatOptions}
+						placeholder="Select format"
+						value={getValues().format}
+						error={getFieldError('format')}
+					></Select>
 				</div>
 
-				<div class="space-y-1">
-					<label for="topic" class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-						Topic
-					</label>
-					<input
-						id="topic"
-						name="topic"
-						type="text"
-						value={getValues().topic}
-						class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-transparent pb-3 text-lg font-semibold text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
-						aria-invalid={Boolean(getFieldError('topic'))}
-						autocomplete="off"
-					/>
-					{#if getFieldError('topic')}
-						<p class="text-xs font-semibold text-[var(--accent)] uppercase">
-							{getFieldError('topic')}
-						</p>
-					{/if}
-				</div>
+				<Input
+					id="topic"
+					name="topic"
+					type="text"
+					value={getValues().topic}
+					error={getFieldError('topic')}
+					autocomplete="off"
+					label="Topic"
+				></Input>
 
-				<div class="space-y-1">
-					<label for="notes" class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-						Notes (optional)
-					</label>
-					<textarea
-						id="notes"
-						name="notes"
-						class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-transparent pb-3 font-light text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
-						aria-invalid={Boolean(getFieldError('notes'))}
-						value={getValues().notes}
-					></textarea>
-					<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-						Frame the tone, references, or constraints you want the AI to honor.
-					</p>
-					{#if getFieldError('notes')}
-						<p class="text-xs font-semibold text-[var(--accent)] uppercase">
-							{getFieldError('notes')}
-						</p>
-					{/if}
-				</div>
+				<TextArea
+					id="notes"
+					name="notes"
+					label="Notes (optional)"
+					value={getValues().notes}
+					error={getFieldError('notes')}
+					helper="Frame the tone, references, or constraints you want the AI to honor."
+				></TextArea>
 
 				<div class="space-y-2">
 					<Button {isSubmitting}>
