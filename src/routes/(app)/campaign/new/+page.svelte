@@ -33,7 +33,7 @@
 </script>
 
 <section
-	class="relative min-h-screen overflow-hidden bg-[var(--surface)] px-6 py-16 text-[var(--text-primary)]"
+	class="horizontal-md vertical-xxl relative min-h-screen overflow-hidden bg-[var(--surface)] text-[var(--text-primary)]"
 >
 	<div
 		class="pointer-events-none absolute -top-12 right-10 h-56 w-56 rounded-full blur-3xl"
@@ -67,7 +67,7 @@
 
 		<div class="relative grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
 			<div
-				class="relative overflow-hidden rounded-none bg-[var(--surface-card)] px-10 py-10 shadow-[var(--shadow-card)]"
+				class="horizontal-lg vertical-lg relative overflow-hidden rounded-none bg-[var(--surface-card)] shadow-[var(--shadow-card)]"
 			>
 				<div
 					class="pointer-events-none absolute -top-8 right-10 h-24 w-24 rounded-full blur-3xl"
@@ -99,7 +99,7 @@
 
 			<form
 				method="POST"
-				class="space-y-6 rounded-none bg-[var(--surface-card)]/90 px-10 py-10 shadow-[var(--shadow-card-strong)]"
+				class="horizontal-lg vertical-lg space-y-6 rounded-none bg-[var(--surface-card)]/90 shadow-[var(--shadow-card-strong)]"
 				onsubmit={handleSubmit}
 			>
 				<p class="text-[0.6rem] text-[var(--accent)] uppercase">Campaign brief</p>
@@ -113,7 +113,7 @@
 				{#if getStatusMessage()}
 					<div
 						role="status"
-						class="bg-[var(--status-surface)] px-4 py-3 text-xs font-semibold text-[var(--accent)] uppercase"
+						class="horizontal-xs vertical-xs bg-[var(--status-surface)] text-xs font-semibold text-[var(--accent)] uppercase"
 					>
 						{getStatusMessage()}
 					</div>

@@ -33,15 +33,10 @@
 </section>
 
 <style>
-	:global(body) {
-		background: #ffffff;
-	}
-
 	.panel {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 		gap: 2rem;
-		background: #f3f3f3;
 		padding: 3rem;
 	}
 
@@ -66,24 +61,6 @@
 		justify-content: space-between;
 		align-items: center;
 		margin-top: 1.5rem;
-	}
-
-	.primary-cta {
-		background: linear-gradient(135deg, #b8002a, #e2183b);
-		border: 0;
-		color: #ffffff;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
-		padding: 0.9rem 2.2rem;
-	}
-
-	.outline-link {
-		color: #1a1c1c;
-		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		text-decoration: none;
 	}
 
 	.error {

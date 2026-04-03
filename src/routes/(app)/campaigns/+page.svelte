@@ -20,7 +20,7 @@
 	</div>
 
 	{#if isLoading}
-		<div class="py-8 text-center">
+		<div class="vertical-xl text-center">
 			<div class="loading loading-spinner loading-lg mx-auto"></div>
 			<p>Loading campaigns...</p>
 		</div>
@@ -30,7 +30,7 @@
 			<button class="btn btn-xs"> Retry </button>
 		</div>
 	{:else if data.campaignList.length === 0}
-		<div class="py-8 text-center">
+		<div class="vertical-xl text-center">
 			<p class="text-muted-foreground">
 				No campaigns found. Create your first campaign to get started.
 			</p>

@@ -12,7 +12,6 @@
 
 <section class="hero">
 	<div class="hero-copy">
-		<p class="eyebrow">The Living Manuscript</p>
 		<h1>Prompt library</h1>
 		<p>
 			Manage the system prompts that keep each audience and format aligned with the Campaign Studio
@@ -30,7 +29,7 @@
 			<input type="hidden" name="id" value={prompt.id} />
 			<input type="hidden" name="active" value={prompt.is_active ? 'true' : 'false'} />
 			<PromptCard {prompt} />
-			<div class="card-actions">
+			<div class="card-actions px-6">
 				<button type="submit" class="toggle-button">
 					{prompt.is_active ? 'Deactivate' : 'Activate'}
 				</button>
@@ -41,16 +40,11 @@
 </section>
 
 <style>
-	:global(body) {
-		background: #f9f9f9;
-		color: #1a1c1c;
-	}
-
 	.hero {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		background: #f3f3f3;
+
 		padding: 3rem 2rem;
 		gap: 1.5rem;
 		margin-bottom: 2rem;
@@ -58,14 +52,6 @@
 
 	.hero-copy {
 		max-width: 720px;
-	}
-
-	.eyebrow {
-		margin: 0;
-		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: #b8002a;
 	}
 
 	h1 {
@@ -84,16 +70,6 @@
 	.hero-actions {
 		display: flex;
 		align-items: center;
-	}
-
-	.primary-cta {
-		background: linear-gradient(135deg, #b8002a, #e2183b);
-		color: #ffffff;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
-		padding: 1rem 2.5rem;
-		text-decoration: none;
 	}
 
 	.prompt-grid {

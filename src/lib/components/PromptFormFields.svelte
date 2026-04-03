@@ -55,39 +55,41 @@
 	</label>
 </div>
 
-<label class="field field--full">
-	<span>Model</span>
-	<input name="model" value={values().model ?? 'google/gemini-3.1-flash-lite-preview'} />
-	{#if errors().model}
-		<small>{errors().model}</small>
-	{/if}
-</label>
+<div class="grid gap-4">
+	<label class="field field--full">
+		<span>Model</span>
+		<input name="model" value={values().model ?? 'google/gemini-3.1-flash-lite-preview'} />
+		{#if errors().model}
+			<small>{errors().model}</small>
+		{/if}
+	</label>
 
-<label class="field field--full">
-	<span>System Prompt</span>
-	<textarea name="system_prompt" rows="5">{values().system_prompt ?? ''}</textarea>
-	{#if errors().system_prompt}
-		<small>{errors().system_prompt}</small>
-	{/if}
-</label>
+	<label class="field field--full">
+		<span>System Prompt</span>
+		<textarea name="system_prompt" rows="5">{values().system_prompt ?? ''}</textarea>
+		{#if errors().system_prompt}
+			<small>{errors().system_prompt}</small>
+		{/if}
+	</label>
 
-<label class="field field--full">
-	<span>User Prompt Template</span>
-	<textarea name="user_prompt_template" rows="4">{values().user_prompt_template ?? ''}</textarea>
-	{#if errors().user_prompt_template}
-		<small>{errors().user_prompt_template}</small>
-	{/if}
-</label>
+	<label class="field field--full">
+		<span>User Prompt Template</span>
+		<textarea name="user_prompt_template" rows="4">{values().user_prompt_template ?? ''}</textarea>
+		{#if errors().user_prompt_template}
+			<small>{errors().user_prompt_template}</small>
+		{/if}
+	</label>
 
-<label class="field field--full">
-	<span>Metadata (optional)</span>
-	<textarea name="metadata" rows="3">{values().metadata ?? ''}</textarea>
-</label>
+	<label class="field field--full">
+		<span>Metadata (optional)</span>
+		<textarea name="metadata" rows="3">{values().metadata ?? ''}</textarea>
+	</label>
 
-<label class="field field--stretch">
-	<input type="checkbox" name="is_active" checked={isActive()} />
-	<span>Activate prompt</span>
-</label>
+	<label class="field field--stretch mt-4">
+		<input type="checkbox" name="is_active" checked={isActive()} />
+		<span>Activate prompt</span>
+	</label>
+</div>
 
 <style>
 	.field-grid {

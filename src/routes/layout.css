@@ -58,7 +58,7 @@
 		'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
 	--color-surface: #ffffff;
-	--color-surface-container-low: #f4f4f5;
+	--color-surface-container-low: #97ddea33;
 	--color-surface-container-lowest: #e4e4e7;
 
 	--color-primary: #e2183b;
@@ -85,7 +85,7 @@
 
 @layer base {
 	body {
-		background-color: #fafafa;
+		background-color: var(--color-surface-container-low);
 		color: var(--color-on-surface);
 		font-family: var(--font-sans);
 		font-weight: 400;
@@ -100,9 +100,10 @@
 	h4,
 	h5,
 	h6,
-	button {
+	button,
+	a {
 		font-family: 'Bureau Grot Compressed', 'Bureau Grot', sans-serif;
-		font-weight: 700;
+		font-weight: 500;
 		text-transform: uppercase;
 		font-stretch: condensed;
 		letter-spacing: -0.02em;
@@ -111,16 +112,72 @@
 
 @layer components {
 	.btn-primary {
-		@apply rounded-sm bg-primary px-6 py-3 text-white transition-all duration-200 hover:-translate-y-[2px];
-		box-shadow: 0 4px 14px rgba(226, 24, 59, 0.4);
+		@apply rounded-none bg-primary uppercase transition-all duration-200 hover:-translate-y-[2px];
+		padding-inline: 1.5rem;
+		padding-block: 0.5rem;
+		color: #ffffff;
+		font-size: 1.25rem;
 	}
 
+	.primary-cta {
+		background: linear-gradient(135deg, #b8002a, #e2183b);
+		border: 0;
+		color: #ffffff;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
+		padding: 0.9rem 2.2rem;
+	}
+
+	.outline-link {
+		color: #1a1c1c;
+		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		text-decoration: none;
+	}
 	.btn-secondary {
-		@apply rounded-sm border border-on-surface/20 bg-transparent px-6 py-3 text-on-surface transition-all duration-200 hover:-translate-y-[2px] hover:bg-surface-container-low;
+		@apply rounded-none border border-on-surface/20 bg-transparent text-on-surface transition-all duration-200 hover:-translate-y-[2px] hover:bg-surface-container-low;
+		padding-inline: 1.5rem;
+		padding-block: 0.5rem;
+	}
+
+	.horizontal-gutter {
+		padding-inline: 1.5rem;
+	}
+
+	.horizontal-xs {
+		padding-inline: 1rem;
+	}
+
+	.horizontal-md {
+		padding-inline: 1.5rem;
+	}
+
+	.horizontal-lg {
+		padding-inline: 2.5rem;
+	}
+
+	.vertical-xs {
+		padding-block: 0.75rem;
+	}
+
+	.vertical-lg {
+		padding-block: 2.5rem;
+	}
+
+	.vertical-xl {
+		padding-block: 2rem;
+	}
+
+	.vertical-xxl {
+		padding-block: 4rem;
 	}
 
 	.input-kinetic {
-		@apply w-full border-b border-on-surface/30 bg-transparent px-0 py-2 text-on-surface transition-colors outline-none focus:border-b-2 focus:border-primary sm:text-sm;
+		@apply w-full border-b border-on-surface/30 bg-transparent text-on-surface transition-colors outline-none focus:border-b-2 focus:border-primary sm:text-sm;
+		padding-inline: 0;
+		padding-block: 0.5rem;
 	}
 
 	.container {
