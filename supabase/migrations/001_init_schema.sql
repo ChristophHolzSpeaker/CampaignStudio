@@ -8,6 +8,8 @@ create table campaigns (
 	audience text not null,
 	format text not null,
 	topic text not null,
+	language text not null,
+	geography text not null,
 	notes text,
 	status text not null default 'draft',
 	created_at timestamp with time zone default now() not null,

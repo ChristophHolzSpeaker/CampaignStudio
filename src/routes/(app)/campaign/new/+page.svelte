@@ -17,6 +17,8 @@
 		audience: '',
 		format: '',
 		topic: '',
+		language: '',
+		geography: '',
 		notes: ''
 	};
 
@@ -26,7 +28,7 @@
 
 	let isSubmitting = $state(false);
 
-	const getFieldError = (field: keyof CampaignFormSubmission) => getErrors()[field?.[0]];
+	const getFieldError = (field: keyof CampaignFormSubmission) => getErrors()[field]?.[0];
 
 	function handleSubmit() {
 		isSubmitting = true;
@@ -165,6 +167,34 @@
 				<p class="text-[0.6rem text-(--text-muted) uppercase">
 					Trending topics help the AI pick the right stance—AI, Digital Ethics, Robotics, Space
 					Technology, or whatever feels timely.
+				</p>
+
+				<div class="grid gap-6 md:grid-cols-2">
+					<Input
+						id="language"
+						name="language"
+						type="text"
+						value={getValues().language}
+						error={getFieldError('language')}
+						placeholder="English, German, French"
+						autocomplete="off"
+						label="Language"
+					></Input>
+					<Input
+						id="geography"
+						name="geography"
+						type="text"
+						value={getValues().geography}
+						error={getFieldError('geography')}
+						placeholder="Germany, DACH, Global"
+						autocomplete="off"
+						label="Geography"
+					></Input>
+				</div>
+
+				<p class="text-[0.6rem text-(--text-muted) uppercase">
+					Language and geography keep every output grounded in the right locale, register, and
+					cultural cues.
 				</p>
 
 				<TextArea

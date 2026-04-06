@@ -32,6 +32,8 @@ CREATE TABLE "campaigns" (
 	"audience" text NOT NULL,
 	"format" text NOT NULL,
 	"topic" text NOT NULL,
+	"language" text NOT NULL,
+	"geography" text NOT NULL,
 	"notes" text,
 	"status" text DEFAULT 'draft' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,

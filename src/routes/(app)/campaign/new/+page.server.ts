@@ -24,6 +24,8 @@ export const actions: Actions = {
 			audience: getTrimmedField(formData, 'audience'),
 			format: getTrimmedField(formData, 'format'),
 			topic: getTrimmedField(formData, 'topic'),
+			language: getTrimmedField(formData, 'language'),
+			geography: getTrimmedField(formData, 'geography'),
 			notes: formData.get('notes')?.toString().trim() ?? ''
 		};
 
@@ -48,6 +50,8 @@ export const actions: Actions = {
 				audience: campaignData.audience,
 				format: campaignData.format,
 				topic: campaignData.topic,
+				language: campaignData.language,
+				geography: campaignData.geography,
 				notes: campaignData.notes?.length ? campaignData.notes : null,
 				status: 'draft',
 				created_by: createdBy
