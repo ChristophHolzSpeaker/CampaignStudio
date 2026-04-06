@@ -9,6 +9,7 @@
 	import Input from '$lib/components/elements/Input.svelte';
 	import Select from '$lib/components/elements/Select.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
+	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 
 	let { form }: { form?: ActionData } = $props();
 	const defaultValues: CampaignFormSubmission = {
@@ -25,73 +26,68 @@
 
 	let isSubmitting = $state(false);
 
-	const getFieldError = (field: keyof CampaignFormSubmission) => getErrors()[field]?.[0];
+	const getFieldError = (field: keyof CampaignFormSubmission) => getErrors()[field?.[0]];
 
 	function handleSubmit() {
 		isSubmitting = true;
 	}
 </script>
 
+<div class="hidden self-start lg:block">
+	<AdminSidebar />
+</div>
+
 <section
-	class="relative min-h-screen overflow-hidden bg-[var(--surface)] px-6 py-16 text-[var(--text-primary)]"
+	class="horizontal-md vertical-xxl relative min-h-screen overflow-hidden bg-(--surface) text-(--text-primary)"
 >
-	<div
-		class="pointer-events-none absolute -top-12 right-10 h-56 w-56 rounded-full blur-3xl"
-		style="background: radial-gradient(circle, rgba(var(--accent-rgb), 0.3) 0%, transparent 70%);"
-	></div>
-	<div
-		class="pointer-events-none absolute bottom-12 left-6 h-52 w-52 rounded-full blur-3xl"
-		style="background: radial-gradient(circle, rgba(var(--accent-strong-rgb), 0.2) 0%, transparent 70%);"
-	></div>
-
 	<div class="relative mx-auto max-w-6xl space-y-14">
-		<header class="space-y-6">
-			<p class="text-xs text-[var(--accent)] uppercase">Campaign Intake Studio</p>
-			<div class="flex flex-col gap-2">
-				<div class="flex flex-wrap items-end gap-6">
-					<h1
-						class="text-[clamp(2.75rem,4vw,5rem)] leading-[0.9] font-bold text-[var(--text-primary)] uppercase"
-					>
-						New Campaign
-					</h1>
+		<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+			<div class="space-y-2">
+				<div class="flex items-center gap-1 text-[0.7rem] tracking-[0.3em] text-[#777] uppercase">
+					<span>Prompt Library</span>
+					<span class="text-[1rem] text-(--accent)">›</span>
+					<span>Editor</span>
 				</div>
+				<h1 class="mt-1 text-[3.5rem] tracking-[-0.03em]">
+					New Campaign<span class="text-(--accent)">.</span>
+				</h1>
+				<p class="max-w-lg text-[0.95rem] text-[#5d3f3f]">
+					Capture the briefing essentials before the AI generation pipeline takes over. Keep an eye
+					on the tone, treat every field as a paragraph, and let the system translate your editorial
+					intent.
+				</p>
 			</div>
-			<p class="max-w-3xl text-sm leading-7 text-[var(--text-muted)] uppercase">
-				Capture the briefing essentials before the AI generation pipeline takes over. Keep an eye on
-				the tone, treat every field as a paragraph, and let the system translate your editorial
-				intent.
-			</p>
-		</header>
+		</div>
 
-		<div class="h-[4px] w-24 bg-[var(--divider)]"></div>
+		<div class="h-[4px w-24 bg-(--divider)"></div>
 
-		<div class="relative grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+		<div class="lg:grid-cols-[1.05fr_0.95fr relative grid gap-10">
 			<div
-				class="relative overflow-hidden rounded-none bg-[var(--surface-card)] px-10 py-10 shadow-[var(--shadow-card)]"
+				class="horizontal-lg vertical-lg relative overflow-hidden rounded-none bg-(--surface-card) shadow-(--shadow-card)"
 			>
 				<div
 					class="pointer-events-none absolute -top-8 right-10 h-24 w-24 rounded-full blur-3xl"
 					style="background: radial-gradient(circle, rgba(var(--accent-rgb), 0.3) 0%, transparent 70%);"
 				></div>
 				<div class="flex items-center justify-between gap-4">
-					<p class="text-[0.6rem] text-[var(--accent)] uppercase">Pulse checklist</p>
-					<div class="h-[4px] w-28 bg-[var(--divider)]"></div>
+					<p class="text-[0.6rem text-(--accent) uppercase">Pulse checklist</p>
+					<div class="h-[4px w-28 bg-(--divider)"></div>
 				</div>
-				<ul class="mt-8 space-y-4 text-sm leading-7 text-[var(--text-muted)]">
+				<ul class="mt-8 space-y-4 text-sm leading-7 text-(--text-muted)">
 					<li class="flex items-start gap-3">
-						<span class="text-[var(--accent)]">•</span>
+						<span class="text-(--accent)">•</span>
 						Keep each field concise—the AI engine relies on sharp, intentional prompts.
 					</li>
 					<li class="flex items-start gap-3">
-						<span class="text-[var(--accent)]">•</span>
+						<span class="text-(--accent)">•</span>
 						Audience and format establish tone. Choose the precise match, not the generic option.
 					</li>
 					<li class="flex items-start gap-3">
-						<span class="text-[var(--accent)]">•</span>
+						<span class="text-(--accent)">•</span>
 						Topic is your headline. Let it feel like a display treatise—direct, bold, layered.
 					</li>
 					<li class="flex items-start gap-3">
-						<span class="text-[var(--accent)]">•</span>
+						<span class="text-(--accent)">•</span>
 						Notes are optional, but they anchor references, constraints, and tonal nuances.
 					</li>
 				</ul>
@@ -99,12 +95,12 @@
 
 			<form
 				method="POST"
-				class="space-y-6 rounded-none bg-[var(--surface-card)]/90 px-10 py-10 shadow-[var(--shadow-card-strong)]"
+				class="horizontal-lg vertical-lg space-y-6 rounded-none bg-(--surface-card)/90 shadow-(--shadow-card-strong)"
 				onsubmit={handleSubmit}
 			>
-				<p class="text-[0.6rem] text-[var(--accent)] uppercase">Campaign brief</p>
+				<p class="text-[0.6rem text-(--accent) uppercase">Campaign brief</p>
 
-				<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
+				<p class="text-[0.6rem text-(--text-muted) uppercase">
 					Reasoning: A "Dinner Speech on AI for Bankers" requires fundamentally different copy, pain
 					points, and tech riders than an "Endnote on Ethics for IT"; the database dynamically
 					assembles pages from those relations.
@@ -113,7 +109,7 @@
 				{#if getStatusMessage()}
 					<div
 						role="status"
-						class="bg-[var(--status-surface)] px-4 py-3 text-xs font-semibold text-[var(--accent)] uppercase"
+						class="horizontal-xs vertical-xs bg-(--status-surface) text-xs font-semibold text-(--accent) uppercase"
 					>
 						{getStatusMessage()}
 					</div>
@@ -150,7 +146,7 @@
 					></Select>
 				</div>
 
-				<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
+				<p class="text-[0.6rem text-(--text-muted) uppercase">
 					Formats exclude slides—these speech-first moments keep the narrative tight for every
 					audience-format pair.
 				</p>
@@ -166,7 +162,7 @@
 					label="Topic"
 				></Input>
 
-				<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
+				<p class="text-[0.6rem text-(--text-muted) uppercase">
 					Trending topics help the AI pick the right stance—AI, Digital Ethics, Robotics, Space
 					Technology, or whatever feels timely.
 				</p>
@@ -194,8 +190,8 @@
 						{/if}
 					</Button>
 
-					<p class="text-[0.6rem] text-[var(--text-muted)] uppercase">
-						New campaigns are saved with <span class="font-semibold text-[var(--text-primary)]"
+					<p class="text-[0.6rem text-(--text-muted) uppercase">
+						New campaigns are saved with <span class="font-semibold text-(--text-primary)"
 							>draft</span
 						> status.
 					</p>

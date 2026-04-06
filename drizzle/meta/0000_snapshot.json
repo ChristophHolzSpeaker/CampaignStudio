@@ -399,7 +399,8 @@
           "name": "topic",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "''"
         },
         "model": {
           "name": "model",

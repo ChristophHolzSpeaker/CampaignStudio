@@ -64,7 +64,7 @@ export const prompts = pgTable('prompts', {
 	purpose: text('purpose').notNull(),
 	audience: text('audience').notNull(),
 	format: text('format').notNull(),
-	topic: text('topic'),
+	topic: text('topic').notNull().default(''),
 	model: text('model').notNull(),
 	system_prompt: text('system_prompt').notNull(),
 	user_prompt_template: text('user_prompt_template').notNull(),

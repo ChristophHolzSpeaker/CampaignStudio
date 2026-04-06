@@ -23,7 +23,7 @@
 		{id}
 		{...props}
 		bind:value
-		class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-transparent pb-3 font-light text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
+		class="w-full border-b-[2px] border-[color:var(--text-primary)]/30 bg-sky-50 p-3 font-light text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none"
 		aria-invalid={Boolean(error)}
 		autocomplete="off"
 	/>

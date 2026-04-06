@@ -1,24 +1,22 @@
 import type { Actions, PageServerLoad } from './$types';
-import { listCampaigns, setCampaignStatus } from '$lib/server/campaigns/client';
+import { listPrompts, togglePromptActive } from '$lib/server/prompts/client';
 
 export const load: PageServerLoad = async () => {
-	const campaignList = await listCampaigns();
+	const prompts = await listPrompts();
 	return {
-		campaignList
+		prompts
 	};
 };
 
 export const actions: Actions = {
-	publish: async ({ request }) => {
+	toggle: async ({ request }) => {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
-		const targetStatus = formData.get('target_status')?.toString() ?? 'draft';
-
+		const active = (formData.get('active') ?? 'true') === 'true';
 		if (!id) {
 			return { success: false };
 		}
-
-		await setCampaignStatus(id, targetStatus);
+		await togglePromptActive(id, !active);
 		return { success: true };
 	}
 };

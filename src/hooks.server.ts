@@ -1,6 +1,7 @@
 // src/hooks.server.ts
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 import { createServerClient } from '@supabase/ssr';
+import type { SetAllCookies } from '@supabase/ssr';
 import type { Handle } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -13,7 +14,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 			 * requiring this to be set, setting the path to `/`
 			 * will replicate previous/standard behaviour (https://kit.svelte.dev/docs/types#public-types-cookies)
 			 */
-			setAll: (cookiesToSet, headers) => {
+			setAll: (
+				cookiesToSet: Parameters<SetAllCookies>[0],
+				headers: Parameters<SetAllCookies>[1]
+			) => {
 				cookiesToSet.forEach(({ name, value, options }) => {
 					event.cookies.set(name, value, { ...options, path: '/' });
 				});

@@ -1,65 +1,70 @@
-<!-- src/routes/(auth)/login/+page.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import type { PageData, ActionData } from './$types';
+	import type { ActionData } from './$types';
+	import Button from '$lib/components/elements/Button.svelte';
+	import Input from '$lib/components/elements/Input.svelte';
 
-	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+	let { form } = $props<{ form: ActionData }>();
 </script>
 
 <svelte:head>
 	<title>Sign in</title>
 </svelte:head>
 
-<form class="row flex-center flex" method="POST" use:enhance>
-	<div class="form-widget col-6">
-		<h1 class="header">Sign in to your account</h1>
-		<p class="description">Enter your email and password to continue</p>
-		{#if form?.message !== undefined}
-			<div class="success {form?.success ? '' : 'fail'}">
-				{form?.message}
+<div class="min-h-screen bg-sky-50 py-12">
+	<div class="mx-auto flex w-full max-w-5xl flex-col gap-10 px-4">
+		<div class="mx-auto w-full max-w-md">
+			<div class="space-y-6 bg-white p-8 shadow-lg">
+				<p class="text-[0.6rem] tracking-[0.5em] text-slate-500 uppercase">Campaign studio</p>
+				<h1 class="text-4xl font-semibold text-slate-900">Christoph Campaign Studio</h1>
+				<p class="text-sm leading-relaxed text-slate-500">
+					Enter your work email and password to unlock guided AI campaigns for your team.
+				</p>
+
+				<form method="POST" class="space-y-6" use:enhance>
+					{#if form?.message}
+						<div
+							class={`rounded-2xl border px-4 py-3 text-xs font-semibold tracking-[0.4em] uppercase ${
+								form?.success
+									? 'border-emerald-400/70 bg-emerald-50 text-emerald-600'
+									: 'border-rose-400/70 bg-rose-50 text-rose-600'
+							}`}
+						>
+							{form.message}
+						</div>
+					{/if}
+
+					<Input
+						id="email"
+						name="email"
+						label="Email address"
+						type="email"
+						placeholder="you@example.com"
+						value={form?.email ?? ''}
+						error={form?.errors?.email}
+						autocomplete="username"
+					/>
+
+					<Input
+						id="password"
+						name="password"
+						label="Password"
+						type="password"
+						placeholder="Enter your password"
+						value={form?.password ?? ''}
+						error={form?.errors?.password}
+						autocomplete="current-password"
+					/>
+
+					<Button isSubmitting={form?.pending}>
+						{form?.pending ? 'Signing in...' : 'Sign in'}
+					</Button>
+
+					<p class="text-center text-xs text-slate-400 uppercase">
+						Need an account? <a class="font-semibold" href="/register">Sign up</a>
+					</p>
+				</form>
 			</div>
-		{/if}
-		<div>
-			<label for="email">Email address</label>
-			<input
-				id="email"
-				name="email"
-				class="input input-kinetic"
-				type="email"
-				placeholder="Your email"
-				value={form?.email ?? ''}
-			/>
-		</div>
-		{#if form?.errors?.email}
-			<span class="error flex items-center text-sm">
-				{form?.errors?.email}
-			</span>
-		{/if}
-		<div>
-			<label for="password">Password</label>
-			<input
-				id="password"
-				name="password"
-				class="input input-kinetic"
-				type="password"
-				placeholder="Enter your password"
-				value={form?.password ?? ''}
-			/>
-		</div>
-		{#if form?.errors?.password}
-			<span class="error flex items-center text-sm">
-				{form?.errors?.password}
-			</span>
-		{/if}
-		<div>
-			<button class="btn-primary" disabled={form?.pending}>
-				{form?.pending ? 'Signing in...' : 'Sign in'}
-			</button>
-		</div>
-		<div class="form-footer">
-			<p>
-				Don't have an account? <a href="/register">Sign up</a>
-			</p>
 		</div>
 	</div>
-</form>
+</div>

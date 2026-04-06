@@ -4,16 +4,16 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const {
-		data: { user },
+		data: { session },
 		error
-	} = await supabase.auth.getUser();
+	} = await supabase.auth.getSession();
+	const user = session?.user ?? null;
 
-	// if the user is already logged in return them to the account page
 	if (user && !error) {
-		redirect(303, '/account');
+		throw redirect(303, '/campaigns');
 	}
 
-	return { url: '/' }; // or could return empty object
+	return {};
 };
 
 export const actions: Actions = {
@@ -51,6 +51,6 @@ export const actions: Actions = {
 			});
 		}
 
-		throw redirect(303, '/account');
+		throw redirect(303, '/campaigns');
 	}
 };
