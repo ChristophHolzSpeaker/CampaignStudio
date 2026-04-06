@@ -1,143 +1,112 @@
 <script lang="ts">
-	let { data } = $props();
+	import NavButton from '$lib/components/elements/NavButton.svelte';
+	import CampaignCard from '$lib/components/CampaignCard.svelte';
+	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 
-	let isLoading = $state<boolean>(true);
-	let error = $state<string | null>(null);
+	const { data } = $props();
+
+	const campaigns = $derived.by(() => data?.campaignList ?? []);
+
+	const publishLabel = (status?: string) =>
+		status === 'published' ? 'Revert to draft' : 'Publish campaign';
+	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
 </script>
 
-<div class="space-y-6">
-	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">Campaigns</h1>
-		<button
-			onclick={() => {
-				// TODO: Navigate to campaign creation form
-				alert('Campaign creation form coming soon');
-			}}
-			class="btn btn-primary"
-		>
-			New Campaign
-		</button>
-	</div>
-
-	{#if isLoading}
-		<div class="vertical-xl text-center">
-			<div class="loading loading-spinner loading-lg mx-auto"></div>
-			<p>Loading campaigns...</p>
-		</div>
-	{:else if error}
-		<div class="alert alert-error">
-			{error}
-			<button class="btn btn-xs"> Retry </button>
-		</div>
-	{:else if data.campaignList.length === 0}
-		<div class="vertical-xl text-center">
-			<p class="text-muted-foreground">
-				No campaigns found. Create your first campaign to get started.
-			</p>
-			<button
-				onclick={() => {
-					// TODO: Navigate to campaign creation form
-					alert('Campaign creation form coming soon');
-				}}
-				class="btn btn-primary"
-			>
-				Create First Campaign
-			</button>
-		</div>
-	{:else}
-		<div class="overflow-x-auto">
-			<table class="table w-full">
-				<thead>
-					<tr>
-						<th>Campaign Name</th>
-						<th>Audience</th>
-						<th>Format</th>
-						<th>Topic</th>
-						<th>Status</th>
-						<th>Created</th>
-						<th>Actions</th>
-					</tr>
-				</thead>
-				<tbody>
-					{#each data.campaignList as campaign (campaign.id)}
-						<tr>
-							<td>{campaign.name}</td>
-							<td>{campaign.audience}</td>
-							<td>{campaign.format}</td>
-							<td>{campaign.topic}</td>
-							<td>
-								<span
-									class={`badge 
-										${
-											campaign.status === 'published'
-												? 'badge-success'
-												: campaign.status === 'generated'
-													? 'badge-info'
-													: campaign.status === 'draft'
-														? 'badge-warning'
-														: 'badge-secondary'
-										}`}
-								>
-									{campaign.status}
-								</span>
-							</td>
-							<td>{new Date(campaign.created_at).toLocaleDateString()}</td>
-							<td class="flex space-x-2">
-								<button
-									onclick={() => {
-										// TODO: Navigate to campaign detail view
-										alert(`View campaign: ${campaign.name}`);
-									}}
-									class="btn btn-sm btn-outline"
-								>
-									View
-								</button>
-								<button
-									onclick={() => {
-										// TODO: Navigate to campaign edit form
-										alert(`Edit campaign: ${campaign.name}`);
-									}}
-									class="btn btn-sm btn-outline"
-								>
-									Edit
-								</button>
-								<button
-									onclick={() => {
-										if (confirm(`Delete campaign "${campaign.name}"? This cannot be undone.`)) {
-											// TODO: Implement campaign deletion
-											alert(`Delete campaign: ${campaign.name}`);
-										}
-									}}
-									class="btn btn-sm btn-outline btn-error"
-								>
-									Delete
-								</button>
-							</td>
-						</tr>
-					{/each}
-				</tbody>
-			</table>
-		</div>
-	{/if}
+<svelte:head>
+	<title>Campaign Studio • Campaigns</title>
+</svelte:head>
+<div class="hidden self-start lg:block">
+	<AdminSidebar />
 </div>
 
+<section class="flex flex-col gap-6 p-6 lg:p-10">
+	<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+		<div class="space-y-2">
+			<div class="flex items-center gap-1 text-[0.7rem] tracking-[0.3em] text-[#777] uppercase">
+				<span>Campaigns</span>
+				<span class="text-[1rem] text-[var(--accent)]">›</span>
+				<span>Studio</span>
+			</div>
+			<h1 class="mt-1 text-[3.5rem] tracking-[-0.03em]">
+				Campaigns<span class="text-[var(--accent)]">.</span>
+			</h1>
+			<p class="max-w-[32rem] text-[0.95rem] text-[#5d3f3f]">
+				Track every named campaign and keep each audience, format, and topic aligned with the brand
+				voice. Publish what’s ready, keep drafts private, and preview work before it goes live.
+			</p>
+		</div>
+		<div class="self-start">
+			<div class="flex items-center gap-4">
+				<NavButton href="/campaign/new">New campaign</NavButton>
+			</div>
+		</div>
+	</div>
+
+	{#if campaigns.length === 0}
+		<div class="vertical-xl text-center">
+			<p class="text-muted-foreground">
+				You haven’t created any campaigns yet. Start a new campaign to begin capturing briefs,
+				audience insights, and launch content.
+			</p>
+			<NavButton href="/campaign/new">Create first campaign</NavButton>
+		</div>
+	{:else}
+		<section class="campaign-grid">
+			{#each campaigns as campaign (campaign.id)}
+				<form method="POST" action="?/publish" class="campaign-shell">
+					<input type="hidden" name="id" value={campaign.id} />
+					<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
+					<CampaignCard {campaign} />
+					<div class="card-actions px-6">
+						<button type="submit" class="toggle-button">{publishLabel(campaign.status)}</button>
+						<button
+							type="button"
+							class="outline-link"
+							onclick={() => window.location.assign(`/campaigns/${campaign.id}`)}
+						>
+							Edit
+						</button>
+					</div>
+				</form>
+			{/each}
+		</section>
+	{/if}
+</section>
+
 <style>
-	/* Custom styles for the campaigns page */
-	.badge-success {
-		--btn-bg: hsl(142 76% 36%);
-		--btn-hover-bg: hsl(142 76% 30%);
-		--btn-color: hsl(0 0% 100%);
+	.campaign-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+		gap: 1rem;
+		padding: 0 0 3rem;
 	}
 
-	.badge-info {
-		--btn-bg: hsl(217 91% 60%);
-		--btn-hover-bg: hsl(217 91% 50%);
-		--btn-color: hsl(0 0% 100%);
+	.campaign-shell {
+		background: #ffffff;
+		padding: 0.75rem;
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
 	}
 
-	.badge-warning {
-		--btn-bg: hsl(47 100% 67%);
-		--btn-hover-bg: hsl(47 100% 57%);
-		--btn-color: hsl(0 0% 0%);
+	.toggle-button {
+		background: transparent;
+		color: #b8002a;
+		border: 0;
+		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		cursor: pointer;
+	}
+
+	.card-actions {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.campaign-shell .outline-link {
+		color: inherit;
+		text-decoration: underline;
 	}
 </style>

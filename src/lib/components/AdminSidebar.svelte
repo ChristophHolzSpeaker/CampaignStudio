@@ -1,10 +1,59 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
+	import { goto, invalidate } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
+	import { createBrowserClient } from '@supabase/ssr';
 	import NavButton from './elements/NavButton.svelte';
 
-	const navItems = [
-		{ label: 'Editor', icon: 'material-symbols--edit-note', active: true, href: '/admin/prompts' },
-		{ label: 'Library', icon: 'material-symbols--book', active: false, href: '/admin/library' }
+	const browserSupabase = browser
+		? createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+				global: {
+					fetch
+				}
+			})
+		: null;
+
+	type NavItemHref = '/(app)/admin/prompts' | '/(app)/admin/library';
+
+	type NavItem = {
+		label: string;
+		icon: string;
+		active: boolean;
+		href: NavItemHref;
+	};
+
+	const navItems: readonly NavItem[] = [
+		{
+			label: 'Editor',
+			icon: 'material-symbols--edit-note',
+			active: true,
+			href: '/(app)/admin/prompts'
+		},
+		{
+			label: 'Library',
+			icon: 'material-symbols--book',
+			active: false,
+			href: '/(app)/admin/library'
+		}
 	];
+
+	const handleSignOut = async () => {
+		const loginPath = resolve('/(auth)/login');
+
+		if (!browserSupabase) {
+			await goto(loginPath, { replaceState: true });
+			return;
+		}
+
+		const { error } = await browserSupabase.auth.signOut();
+		if (error) {
+			console.error('Failed to sign out', error);
+		}
+
+		await invalidate('supabase:auth');
+		await goto(loginPath, { replaceState: true });
+	};
 </script>
 
 <aside
@@ -19,9 +68,9 @@
 			<p class="m-0 text-[0.65rem] tracking-[0.15em] text-[#4a4a4a]">V2.4 Architectural</p>
 		</div>
 	</div>
-	{#snippet navItem(item: { label: string; href: string; icon: string; active: boolean })}
+	{#snippet navItem(item: NavItem)}
 		<a
-			href={item.href}
+			href={resolve(item.href)}
 			class={`flex items-center gap-3 px-2 py-3 text-base uppercase no-underline transition ${
 				item.active
 					? 'border-l-4 border-[var(--accent)] bg-white pl-3 text-[var(--accent)]'
@@ -38,11 +87,13 @@
 		{/each}
 	</nav>
 
-	<NavButton href="/admin/prompts/new">New Prompt</NavButton>
+	<NavButton href={resolve('/(app)/admin/prompts/new')}>New Prompt</NavButton>
 
 	<div class="mt-auto flex flex-col gap-2 uppercase">
-		<a class="text-[#5d3f3f] no-underline" href="/admin/docs">Documentation</a>
-		<a class="text-[#5d3f3f] no-underline" href="/logout">Log Out</a>
+		<a class="text-[#5d3f3f] no-underline" href={resolve('/(app)/admin/docs')}>Documentation</a>
+		<button type="button" class="text-left text-[#5d3f3f] no-underline" onclick={handleSignOut}>
+			Log Out
+		</button>
 	</div>
 </aside>
 

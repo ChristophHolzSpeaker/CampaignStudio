@@ -25,11 +25,11 @@
 		<div class="space-y-2">
 			<div class="flex items-center gap-1 text-[0.7rem] tracking-[0.3em] text-[#777] uppercase">
 				<span>Prompt Library</span>
-				<span class="text-[1rem] text-[var(--accent)]">›</span>
+				<span class="text-[1rem] text-(--accent)">›</span>
 				<span>Editor</span>
 			</div>
 			<h1 class="mt-1 text-[3.5rem] tracking-[-0.03em]">
-				Create Prompt<span class="text-[var(--accent)]">.</span>
+				Create Prompt<span class="text-(--accent)">.</span>
 			</h1>
 			<p class="max-w-[32rem] text-[0.95rem] text-[#5d3f3f]">
 				Seed the system prompt that will serve future campaigns with this audience and format

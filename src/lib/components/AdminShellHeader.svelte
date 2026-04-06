@@ -1,17 +1,25 @@
-<script>
-	const navLinks = [
-		{ label: 'Campaigns', href: '/campaigns', active: false },
-		{ label: 'Prompt Library', href: '/admin/prompts', active: true },
-		{ label: 'Analytics', href: '#', active: false },
-		{ label: 'Settings', href: '#', active: false }
+<script lang="ts">
+	import { page } from '$app/stores';
+	type HeaderRoute = '/campaigns' | '/admin/prompts' | '/campaigns/analytics' | '/admin/settings';
+
+	const navLinks: { label: string; href: HeaderRoute }[] = [
+		{ label: 'Campaigns', href: '/campaigns' },
+		{ label: 'Prompt Library', href: '/admin/prompts' },
+		{ label: 'Analytics', href: '/campaigns/analytics' },
+		{ label: 'Settings', href: '/admin/settings' }
 	];
+
+	const currentPath = $derived.by(() => $page.url.pathname);
+	const isActive = (href?: string) => !!href && currentPath.startsWith(href);
 </script>
 
 <header class="admin-shell-header">
 	<h2 class="text-4xl">Christoph Campaign Studio</h2>
 	<nav class="header-nav">
 		{#each navLinks as link (link.label)}
-			<a class="nav-link" href={link.href} class:active={link.active}>{link.label}</a>
+			<a class="nav-link" href={link.href} class:active={isActive(link.href)}>
+				{link.label}
+			</a>
 		{/each}
 	</nav>
 	<div class="header-tools">
@@ -60,14 +68,6 @@
 		display: flex;
 		align-items: center;
 		gap: 0.75rem;
-	}
-
-	.icon-btn {
-		background: transparent;
-		border: none;
-		color: #4a4a4a;
-		font-size: 1.2rem;
-		padding: 0.3rem;
 	}
 
 	.avatar {

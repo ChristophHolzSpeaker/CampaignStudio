@@ -4,10 +4,11 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 	const {
-		data: { user },
+		data: { session },
 		error
-	} = await supabase.auth.getUser();
-	console.log(user);
+	} = await supabase.auth.getSession();
+	const user = session?.user ?? null;
+
 	if (user && !error) {
 		throw redirect(303, '/campaigns');
 	}

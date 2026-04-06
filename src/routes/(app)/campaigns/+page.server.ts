@@ -1,20 +1,24 @@
-import { db } from '$lib/server/db';
-import { campaigns } from '$lib/server/db/schema';
-import type { PageServerLoad } from './$types';
-import { desc } from 'drizzle-orm';
+import type { Actions, PageServerLoad } from './$types';
+import { listCampaigns, setCampaignStatus } from '$lib/server/campaigns/client';
 
 export const load: PageServerLoad = async () => {
-	const campaignList = await loadCampaigns();
-
+	const campaignList = await listCampaigns();
 	return {
 		campaignList
 	};
 };
-async function loadCampaigns() {
-	try {
-		return await db.select().from(campaigns).orderBy(desc(campaigns.created_at));
-	} catch (err) {
-		console.error('Error loading campaigns:', err);
-		return [];
+
+export const actions: Actions = {
+	publish: async ({ request }) => {
+		const formData = await request.formData();
+		const id = Number(formData.get('id'));
+		const targetStatus = formData.get('target_status')?.toString() ?? 'draft';
+
+		if (!id) {
+			return { success: false };
+		}
+
+		await setCampaignStatus(id, targetStatus);
+		return { success: true };
 	}
-}
+};
