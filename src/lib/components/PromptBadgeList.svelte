@@ -16,7 +16,7 @@
 	}
 
 	.badge {
-		font-family: 'Bureau Grot Compressed', 'Space Grotesk', system-ui, sans-serif;
+		font-family: 'Bureau Grot', 'Space Grotesk', sans-serif;
 		font-size: 0.75rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;

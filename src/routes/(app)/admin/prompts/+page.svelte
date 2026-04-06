@@ -1,4 +1,5 @@
 <script>
+	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 	import Button from '$lib/components/elements/Button.svelte';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import PromptCard from '$lib/components/PromptCard.svelte';
@@ -9,34 +10,47 @@
 <svelte:head>
 	<title>Prompt Library</title>
 </svelte:head>
+<div class="hidden self-start lg:block">
+	<AdminSidebar />
+</div>
 
-<section class="hero">
-	<div class="hero-copy">
-		<h1>Prompt library</h1>
-		<p>
-			Manage the system prompts that keep each audience and format aligned with the Campaign Studio
-			voice. Each entry is a single source of truth for future campaigns.
-		</p>
-	</div>
-	<div class="hero-actions">
-		<NavButton href="/admin/prompts/new">New prompt</NavButton>
-	</div>
-</section>
-
-<section class="prompt-grid">
-	{#each data.prompts as prompt}
-		<form method="POST" action="?/toggle" class="prompt-shell">
-			<input type="hidden" name="id" value={prompt.id} />
-			<input type="hidden" name="active" value={prompt.is_active ? 'true' : 'false'} />
-			<PromptCard {prompt} />
-			<div class="card-actions px-6">
-				<button type="submit" class="toggle-button">
-					{prompt.is_active ? 'Deactivate' : 'Activate'}
-				</button>
-				<a class="outline-link" href={`/admin/prompts/${prompt.id}`}>Edit</a>
+<section class="flex flex-col gap-6 p-6 lg:p-10">
+	<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+		<div class="space-y-2">
+			<div class="flex items-center gap-1 text-[0.7rem] tracking-[0.3em] text-[#777] uppercase">
+				<span>Prompt Library</span>
+				<span class="text-[1rem] text-[var(--accent)]">›</span>
+				<span>Editor</span>
 			</div>
-		</form>
-	{/each}
+			<h1 class="mt-1 text-[3.5rem] tracking-[-0.03em]">
+				Prompt library<span class="text-[var(--accent)]">.</span>
+			</h1>
+			<p class="max-w-[32rem] text-[0.95rem] text-[#5d3f3f]">
+				Manage the system prompts that keep each audience and format aligned with the Campaign
+				Studio voice. Each entry is a single source of truth for future campaigns.
+			</p>
+		</div>
+		<div class="self-start">
+			<div class="flex items-center gap-4">
+				<NavButton href="/admin/prompts/new">New prompt</NavButton>
+			</div>
+		</div>
+	</div>
+	<section class="prompt-grid">
+		{#each data.prompts as prompt}
+			<form method="POST" action="?/toggle" class="prompt-shell">
+				<input type="hidden" name="id" value={prompt.id} />
+				<input type="hidden" name="active" value={prompt.is_active ? 'true' : 'false'} />
+				<PromptCard {prompt} />
+				<div class="card-actions px-6">
+					<button type="submit" class="toggle-button">
+						{prompt.is_active ? 'Deactivate' : 'Activate'}
+					</button>
+					<a class="outline-link" href={`/admin/prompts/${prompt.id}`}>Edit</a>
+				</div>
+			</form>
+		{/each}
+	</section>
 </section>
 
 <style>
@@ -76,7 +90,7 @@
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 		gap: 1rem;
-		padding: 0 2rem 3rem;
+		padding: 0 0 3rem;
 	}
 
 	.prompt-shell {
