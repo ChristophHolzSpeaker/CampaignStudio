@@ -7,13 +7,12 @@ export const load: PageServerLoad = async ({ locals: { supabase } }) => {
 		data: { user },
 		error
 	} = await supabase.auth.getUser();
-
-	// if the user is already logged in return them to the account page
+	console.log(user);
 	if (user && !error) {
-		redirect(303, '/account');
+		throw redirect(303, '/campaigns');
 	}
 
-	return { url: '/' }; // or could return empty object
+	return {};
 };
 
 export const actions: Actions = {
@@ -51,6 +50,6 @@ export const actions: Actions = {
 			});
 		}
 
-		throw redirect(303, '/account');
+		throw redirect(303, '/campaigns');
 	}
 };

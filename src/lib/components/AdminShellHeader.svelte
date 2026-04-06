@@ -1,6 +1,6 @@
 <script>
 	const navLinks = [
-		{ label: 'Dashboard', href: '#', active: false },
+		{ label: 'Campaigns', href: '/campaigns', active: false },
 		{ label: 'Prompt Library', href: '/admin/prompts', active: true },
 		{ label: 'Analytics', href: '#', active: false },
 		{ label: 'Settings', href: '#', active: false }
