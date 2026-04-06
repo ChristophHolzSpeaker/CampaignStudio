@@ -78,6 +78,6 @@ export const actions: Actions = {
 			});
 		}
 
-		throw redirect(303, '/campaigns');
+		throw redirect(303, '/campaigns/' + createdCampaign.id);
 	}
 };
