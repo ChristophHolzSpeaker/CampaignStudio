@@ -10,7 +10,7 @@
 	const getForm = () => form;
 	const clarityScore = 94;
 	const biasRisk = 'Low';
-	const displayMessage = () => (getForm()?.success ? 'Prompt updated' : getForm()?.formError);
+	const displayMessage = () => getForm()?.formError;
 </script>
 
 <svelte:head>
@@ -45,9 +45,7 @@
 
 	{#if displayMessage()}
 		<p
-			class={`self-start px-3 py-1 text-[0.7rem] tracking-[0.25em] uppercase ${
-				getForm()?.success ? 'bg-[#f1f6f1] text-[#007a3d]' : 'bg-[#fdecea] text-[#b8002a]'
-			}`}
+			class="self-start bg-[#fdecea] px-3 py-1 text-[0.7rem] tracking-[0.25em] text-[#b8002a] uppercase"
 		>
 			{displayMessage()}
 		</p>

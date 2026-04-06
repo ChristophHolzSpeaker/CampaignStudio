@@ -6,6 +6,8 @@ export const campaigns = pgTable('campaigns', {
 	audience: text('audience').notNull(),
 	format: text('format').notNull(),
 	topic: text('topic').notNull(),
+	language: text('language').notNull(),
+	geography: text('geography').notNull(),
 	notes: text('notes'),
 	status: text('status').notNull().default('draft'),
 	created_at: timestamp('created_at').notNull().defaultNow(),
@@ -56,6 +58,60 @@ export const generation_jobs = pgTable('generation_jobs', {
 	error_message: text('error_message'),
 	created_at: timestamp('created_at').notNull().defaultNow(),
 	completed_at: timestamp('completed_at')
+});
+
+export const campaign_ad_packages = pgTable('campaign_ad_packages', {
+	id: serial('id').primaryKey(),
+	campaign_id: integer('campaign_id')
+		.notNull()
+		.references(() => campaigns.id),
+	version_number: integer('version_number').notNull().default(1),
+	channel: text('channel').notNull().default('google_ads_search'),
+	status: text('status').notNull().default('draft'),
+	strategy_json: jsonb('strategy_json').notNull().default({}),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
+});
+
+export const campaign_ad_groups = pgTable('campaign_ad_groups', {
+	id: serial('id').primaryKey(),
+	ad_package_id: integer('ad_package_id')
+		.notNull()
+		.references(() => campaign_ad_packages.id),
+	campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id),
+	name: text('name').notNull(),
+	intent_summary: text('intent_summary'),
+	position: integer('position').notNull().default(0),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
+});
+
+export const campaign_keywords = pgTable('campaign_keywords', {
+	id: serial('id').primaryKey(),
+	ad_group_id: integer('ad_group_id')
+		.notNull()
+		.references(() => campaign_ad_groups.id),
+	keyword_text: text('keyword_text').notNull(),
+	match_type: text('match_type').notNull(),
+	is_negative: boolean('is_negative').notNull().default(false),
+	rationale: text('rationale'),
+	position: integer('position').notNull().default(0),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
+});
+
+export const campaign_ads = pgTable('campaign_ads', {
+	id: serial('id').primaryKey(),
+	ad_group_id: integer('ad_group_id')
+		.notNull()
+		.references(() => campaign_ad_groups.id),
+	ad_type: text('ad_type').notNull().default('responsive_search_ad'),
+	headlines_json: jsonb('headlines_json').notNull().default([]),
+	descriptions_json: jsonb('descriptions_json').notNull().default([]),
+	path_1: text('path_1'),
+	path_2: text('path_2'),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
 
 export const prompts = pgTable('prompts', {

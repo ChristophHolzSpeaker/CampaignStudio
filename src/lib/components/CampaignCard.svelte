@@ -5,6 +5,8 @@
 		[
 			{ label: campaign?.audience ?? '', tone: 'muted' },
 			{ label: campaign?.format ?? '', tone: 'muted' },
+			{ label: campaign?.language ?? '', tone: 'muted' },
+			{ label: campaign?.geography ?? '', tone: 'muted' },
 			{
 				label: campaign?.status ?? '',
 				tone: campaign?.status === 'published' ? 'accent' : 'muted'

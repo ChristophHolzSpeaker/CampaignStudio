@@ -14,6 +14,8 @@ export const campaignFormSchema = z.object({
 	audience: z.enum(audienceOptions),
 	format: z.enum(formatOptions),
 	topic: z.string().trim().min(2),
+	language: z.string().trim().min(2),
+	geography: z.string().trim().min(2),
 	notes: z.string().trim().optional()
 });
 
@@ -25,5 +27,7 @@ export type CampaignFormSubmission = {
 	audience: string;
 	format: string;
 	topic: string;
+	language: string;
+	geography: string;
 	notes: string;
 };
