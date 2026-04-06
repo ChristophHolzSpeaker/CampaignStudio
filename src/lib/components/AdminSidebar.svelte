@@ -40,7 +40,7 @@
 
 	<NavButton href="/admin/prompts/new">New Prompt</NavButton>
 
-	<div class="mt-auto flex flex-col gap-2 text-[0.65rem] tracking-[0.25em] uppercase">
+	<div class="mt-auto flex flex-col gap-2 uppercase">
 		<a class="text-[#5d3f3f] no-underline" href="/admin/docs">Documentation</a>
 		<a class="text-[#5d3f3f] no-underline" href="/logout">Log Out</a>
 	</div>

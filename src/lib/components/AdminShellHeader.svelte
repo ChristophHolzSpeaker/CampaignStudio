@@ -1,7 +1,7 @@
 <script>
 	const navLinks = [
 		{ label: 'Dashboard', href: '#', active: false },
-		{ label: 'Prompt Library', href: '#', active: true },
+		{ label: 'Prompt Library', href: '/admin/prompts', active: true },
 		{ label: 'Analytics', href: '#', active: false },
 		{ label: 'Settings', href: '#', active: false }
 	];
@@ -15,12 +15,6 @@
 		{/each}
 	</nav>
 	<div class="header-tools">
-		<button class="icon-btn" type="button" aria-label="Notifications">
-			<span class="material-symbols-outlined">notifications</span>
-		</button>
-		<button class="icon-btn" type="button" aria-label="Help">
-			<span class="material-symbols-outlined">help_outline</span>
-		</button>
 		<img
 			class="avatar"
 			src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=64&q=80"
