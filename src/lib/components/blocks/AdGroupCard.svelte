@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { CampaignAdGroupWithDetails } from '$lib/server/campaigns/ads';
 	import { slide } from 'svelte/transition';
+	import { formatAdwordsKeyword } from '$lib/utils/keywords';
 
 	interface Props extends CampaignAdGroupWithDetails {
 		open?: boolean;
@@ -64,7 +65,7 @@
 							<div class="flex items-center justify-between rounded-lg bg-stone-100 p-4">
 								<div class="flex items-center gap-6">
 									<code class="font-['Space_Grotesk'] font-bold">
-										{keyword.keyword_text}
+										{formatAdwordsKeyword(keyword.keyword_text, keyword.match_type)}
 									</code>
 									<span
 										class="bg-secondary-container text-on-secondary-container rounded px-2 py-0.5 font-['Space_Grotesk'] text-[9px] font-bold uppercase"

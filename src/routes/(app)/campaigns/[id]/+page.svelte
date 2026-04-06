@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 	import AdGroupCard from '$lib/components/blocks/AdGroupCard.svelte';
+	import { strategyEntries } from '$lib/utils/strategy';
 	import type {
 		CampaignAdGroupWithDetails,
 		CampaignAdPackageWithDetails,
@@ -34,6 +35,7 @@
 		const pkg = getAdPackage();
 		return pkg ? `v${pkg.version_number}` : '—';
 	};
+	const getStrategyEntries = () => strategyEntries(getAdPackage()?.strategy_json ?? null);
 </script>
 
 <div class="hidden self-start lg:block">
@@ -66,6 +68,29 @@
 					</p>
 				</header>
 				<div class="space-y-8 rounded-xl bg-stone-100 p-8">
+					<div>
+						<span
+							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold tracking-widest text-primary uppercase"
+						>
+							Campaign Strategy
+						</span>
+						{#if getStrategyEntries().length === 0}
+							<p class="text-xs text-slate-500 italic">
+								Strategy data will appear here once it is available.
+							</p>
+						{:else}
+							<div class="space-y-2 text-sm text-slate-600">
+								{#each getStrategyEntries() as entry (entry.key)}
+									<p class="flex items-start justify-between gap-4 text-xs">
+										<span class="font-semibold text-slate-500">{entry.key}</span>
+										<span class="font-['Space_Grotesk'] text-[11px] text-slate-900"
+											>{entry.value}</span
+										>
+									</p>
+								{/each}
+							</div>
+						{/if}
+					</div>
 					<div>
 						<span
 							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold tracking-widest text-primary uppercase"
