@@ -6,6 +6,7 @@ import {
 	campaign_keywords,
 	campaign_ads
 } from '$lib/server/db/schema';
+import type { PostgresJsTransaction } from 'drizzle-orm/postgres-js/session';
 
 export interface CampaignAdPackage {
 	id: number;
@@ -70,8 +71,13 @@ export interface CreateAdPackageInput {
 	status?: string;
 }
 
-export async function createAdPackage(input: CreateAdPackageInput): Promise<CampaignAdPackage> {
-	const [created] = await db
+type DrizzleClient = typeof db | PostgresJsTransaction<any, any>;
+
+export async function createAdPackage(
+	input: CreateAdPackageInput,
+	dbClient: DrizzleClient = db
+): Promise<CampaignAdPackage> {
+	const [created] = await dbClient
 		.insert(campaign_ad_packages)
 		.values({
 			campaign_id: input.campaign_id,
@@ -95,8 +101,11 @@ export interface CreateAdGroupInput {
 	position?: number;
 }
 
-export async function createAdGroup(input: CreateAdGroupInput): Promise<CampaignAdGroupRecord> {
-	const [created] = await db
+export async function createAdGroup(
+	input: CreateAdGroupInput,
+	dbClient: DrizzleClient = db
+): Promise<CampaignAdGroupRecord> {
+	const [created] = await dbClient
 		.insert(campaign_ad_groups)
 		.values({
 			ad_package_id: input.ad_package_id,
@@ -121,8 +130,11 @@ export interface CreateKeywordInput {
 	position?: number;
 }
 
-export async function createKeyword(input: CreateKeywordInput): Promise<CampaignKeyword> {
-	const [created] = await db
+export async function createKeyword(
+	input: CreateKeywordInput,
+	dbClient: DrizzleClient = db
+): Promise<CampaignKeyword> {
+	const [created] = await dbClient
 		.insert(campaign_keywords)
 		.values({
 			ad_group_id: input.ad_group_id,
@@ -148,8 +160,11 @@ export interface CreateCampaignAdInput {
 	path_2?: string;
 }
 
-export async function createCampaignAd(input: CreateCampaignAdInput): Promise<CampaignAd> {
-	const [created] = await db
+export async function createCampaignAd(
+	input: CreateCampaignAdInput,
+	dbClient: DrizzleClient = db
+): Promise<CampaignAd> {
+	const [created] = await dbClient
 		.insert(campaign_ads)
 		.values({
 			ad_group_id: input.ad_group_id,

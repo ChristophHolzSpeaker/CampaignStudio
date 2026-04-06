@@ -39,6 +39,43 @@ export async function listCampaigns(): Promise<CampaignRecord[]> {
 	return await db.select().from(campaigns).orderBy(desc(campaigns.created_at));
 }
 
+export async function getCampaignById(id: number): Promise<CampaignRecord | null> {
+	const [record] = await db.select().from(campaigns).where(eq(campaigns.id, id)).limit(1);
+	return (record as CampaignRecord) ?? null;
+}
+
+export async function createCampaign(input: {
+	name: string;
+	audience: string;
+	format: string;
+	topic: string;
+	language: string;
+	geography: string;
+	notes: string | null;
+	created_by: string | null;
+}): Promise<CampaignRecord> {
+	const [created] = await db
+		.insert(campaigns)
+		.values({
+			name: input.name,
+			audience: input.audience,
+			format: input.format,
+			topic: input.topic,
+			language: input.language,
+			geography: input.geography,
+			notes: input.notes,
+			status: 'draft',
+			created_by: input.created_by
+		})
+		.returning();
+
+	if (!created) {
+		throw new Error('Failed to create campaign');
+	}
+
+	return created as CampaignRecord;
+}
+
 export {
 	createAdPackage,
 	createAdGroup,
