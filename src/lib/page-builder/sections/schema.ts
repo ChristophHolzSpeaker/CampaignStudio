@@ -3,6 +3,22 @@ import { pageSectionTypes } from './types';
 
 export const pageSectionTypeSchema = z.enum(pageSectionTypes);
 
+export const ogTypeSchema = z.enum(['website', 'article']);
+
+export const twitterCardTypeSchema = z.enum(['summary', 'summary_large_image']);
+
+export const seoPropsSchema = z.object({
+	title: z.string().trim().min(1),
+	description: z.string().trim().min(1),
+	canonicalUrl: z.string().trim().url().optional(),
+	robots: z.string().trim().min(1).optional(),
+	ogImageUrl: z.string().trim().url().optional(),
+	ogImageAlt: z.string().trim().min(1).optional(),
+	ogType: ogTypeSchema.optional(),
+	twitterCard: twitterCardTypeSchema.optional(),
+	twitterSite: z.string().trim().min(1).optional()
+});
+
 export const immediateAuthorityHeroPropsSchema = z
 	.object({
 		headline: z.string().trim().min(1),
@@ -137,7 +153,13 @@ export const complianceTransparencyFooterSectionSchema = z.object({
 	props: complianceTransparencyFooterPropsSchema
 });
 
+export const seoSectionSchema = z.object({
+	type: z.literal('seo'),
+	props: seoPropsSchema
+});
+
 export const pageSectionSchema = z.discriminatedUnion('type', [
+	seoSectionSchema,
 	immediateAuthorityHeroSectionSchema,
 	logosOfTrustRibbonSectionSchema,
 	hybridContentSectionSchema,
@@ -158,4 +180,5 @@ export type FrictionlessFunnelBookingSection = z.infer<
 export type ComplianceTransparencyFooterSection = z.infer<
 	typeof complianceTransparencyFooterSectionSchema
 >;
+export type SeoSection = z.infer<typeof seoSectionSchema>;
 export type PageSectionSchemaType = z.infer<typeof pageSectionSchema>;

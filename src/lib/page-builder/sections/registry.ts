@@ -5,6 +5,7 @@ import HybridContentSection from '$lib/components/page-sections/HybridContentSec
 import ImmediateAuthorityHero from '$lib/components/page-sections/ImmediateAuthorityHero.svelte';
 import LogosOfTrustRibbon from '$lib/components/page-sections/LogosOfTrustRibbon.svelte';
 import ProofOfPerformanceSection from '$lib/components/page-sections/ProofOfPerformanceSection.svelte';
+import SEO from '$lib/components/page-sections/SEO.svelte';
 import { sectionSpecs } from './specs';
 import type { PageSectionSpec, PageSectionType } from './types';
 
@@ -21,6 +22,7 @@ export type SectionRegistry = {
 };
 
 export const sectionComponentRegistry: SectionComponentRegistry = {
+	seo: SEO,
 	immediate_authority_hero: ImmediateAuthorityHero,
 	logos_of_trust_ribbon: LogosOfTrustRibbon,
 	hybrid_content_section: HybridContentSection,
@@ -30,6 +32,10 @@ export const sectionComponentRegistry: SectionComponentRegistry = {
 };
 
 export const sectionRegistry: SectionRegistry = {
+	seo: {
+		...sectionSpecs.seo,
+		component: sectionComponentRegistry.seo
+	},
 	immediate_authority_hero: {
 		...sectionSpecs.immediate_authority_hero,
 		component: sectionComponentRegistry.immediate_authority_hero
