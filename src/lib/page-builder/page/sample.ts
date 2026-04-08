@@ -6,6 +6,21 @@ export const christophSampleLandingPage: LandingPageDocument = {
 	slug: 'christoph-keynote-preview',
 	sections: [
 		{
+			type: 'seo',
+			props: {
+				title: 'Christoph Holz Keynote Speaker | AI Leadership for Executive Teams',
+				description:
+					'Preview page for booking Christoph Holz: practical AI leadership keynote content, event fit guidance, and a clear inquiry path for organizers.',
+				canonicalUrl: 'https://christophholz.com/keynotes/ai-leadership',
+				robots: 'noindex,nofollow',
+				ogImageUrl: 'https://images.unsplash.com/photo-1475721027785-f74eccf877e2',
+				ogImageAlt: 'Stage lighting and conference audience before a keynote session',
+				ogType: 'website',
+				twitterCard: 'summary_large_image',
+				twitterSite: '@christophholz'
+			}
+		},
+		{
 			type: 'immediate_authority_hero',
 			props: {
 				eyebrow: 'Leadership Keynote Speaker',

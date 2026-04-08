@@ -2,6 +2,7 @@ import type { Component } from 'svelte';
 import type { ZodType } from 'zod';
 
 export const pageSectionTypes = [
+	'seo',
 	'immediate_authority_hero',
 	'logos_of_trust_ribbon',
 	'hybrid_content_section',
@@ -111,7 +112,24 @@ export interface ComplianceTransparencyFooterProps {
 	additionalLinks?: ComplianceLinkItem[];
 }
 
+export type OgType = 'website' | 'article';
+
+export type TwitterCardType = 'summary' | 'summary_large_image';
+
+export interface SeoProps {
+	title: string;
+	description: string;
+	canonicalUrl?: string;
+	robots?: string;
+	ogImageUrl?: string;
+	ogImageAlt?: string;
+	ogType?: OgType;
+	twitterCard?: TwitterCardType;
+	twitterSite?: string;
+}
+
 export interface SectionPropsByType {
+	seo: SeoProps;
 	immediate_authority_hero: ImmediateAuthorityHeroProps;
 	logos_of_trust_ribbon: LogosOfTrustRibbonProps;
 	hybrid_content_section: HybridContentSectionProps;

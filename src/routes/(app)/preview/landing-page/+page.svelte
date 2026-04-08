@@ -5,8 +5,4 @@
 	let { data }: { data: { page: LandingPageDocument } } = $props();
 </script>
 
-<svelte:head>
-	<title>{data.page.title} | Preview</title>
-</svelte:head>
-
 <PageRenderer page={data.page} />

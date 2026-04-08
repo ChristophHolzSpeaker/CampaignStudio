@@ -4,11 +4,34 @@ import {
 	hybridContentSectionPropsSchema,
 	immediateAuthorityHeroPropsSchema,
 	logosOfTrustRibbonPropsSchema,
-	proofOfPerformancePropsSchema
+	proofOfPerformancePropsSchema,
+	seoPropsSchema
 } from './schema';
 import type { PageSectionSpecMap } from './types';
 
 export const sectionSpecs: PageSectionSpecMap = {
+	seo: {
+		type: 'seo',
+		label: 'SEO Metadata',
+		description:
+			'Head metadata section for title, description, canonical, and social sharing tags.',
+		whenToUse: [
+			'Use once near the top of every page section array.',
+			'Use when campaign pages need stable metadata for search and link previews.',
+			'Use when Open Graph and Twitter cards should be explicitly controlled.'
+		],
+		whenNotToUse: [
+			'Do not place multiple SEO sections on one page.',
+			'Do not include unverified or misleading metadata claims.',
+			'Do not omit title and description.'
+		],
+		contentGuidance: [
+			'Title should stay concise and intent-driven.',
+			'Description should reflect real page value and audience fit.',
+			'Canonical URL should be absolute and stable when available.'
+		],
+		propsSchema: seoPropsSchema
+	},
 	immediate_authority_hero: {
 		type: 'immediate_authority_hero',
 		label: 'Immediate Authority Hero',
