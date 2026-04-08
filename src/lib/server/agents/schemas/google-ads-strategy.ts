@@ -15,7 +15,7 @@ export const googleAdsStrategySchema = z.object({
 	targetingSummary: z.string(),
 	messagingAngle: z.string(),
 	conversionGoal: z.string(),
-	adGroups: z.array(googleAdsStrategyAdGroup).min(2).max(5)
+	adGroups: z.array(googleAdsStrategyAdGroup).min(1).max(5)
 });
 
 export type GoogleAdsStrategy = z.infer<typeof googleAdsStrategySchema>;

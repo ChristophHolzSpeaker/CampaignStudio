@@ -37,7 +37,7 @@ export const googleAdsPackageDraftSchema = z.object({
 			notes: z.array(z.string()).optional()
 		})
 	}),
-	adGroups: z.array(adGroupSchema).min(2).max(5)
+	adGroups: z.array(adGroupSchema).min(1).max(5)
 });
 
 export type GoogleAdsPackageDraft = z.infer<typeof googleAdsPackageDraftSchema>;
