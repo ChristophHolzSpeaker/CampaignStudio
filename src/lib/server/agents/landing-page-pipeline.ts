@@ -6,6 +6,7 @@ import type { PostgresJsTransaction } from 'drizzle-orm/postgres-js/session';
 import { generateLandingPagePlan } from './landing-page-strategist';
 import { loadLandingPageGenerationInput } from './landing-page-input';
 import { generateLandingPageDocument } from './landing-page-writer';
+import { createRunId, traceLlm } from '$lib/server/telemetry/llm-trace';
 
 type DrizzleClient = typeof db | PostgresJsTransaction<any, any>;
 
@@ -74,14 +75,20 @@ export async function attachLandingPageToAdGroup(
 export async function runLandingPageGenerationForCampaign(
 	campaignId: number
 ): Promise<{ campaignPageId: number }> {
+	const runId = createRunId('landing_page');
+	const traceContext = { runId, campaignId, pipeline: 'landing_page' };
+	traceLlm('pipeline_start', traceContext);
 	console.log(`Landing page pipeline: start campaign ${campaignId}`);
 	const input = await loadLandingPageGenerationInput(campaignId);
+	traceLlm('pipeline_step', traceContext, { step: 'input_normalized', input });
 	console.log('Landing page pipeline: generation input normalized');
 
-	const plan = await generateLandingPagePlan(input);
+	const plan = await generateLandingPagePlan(input, traceContext);
+	traceLlm('pipeline_step', traceContext, { step: 'plan_generated', plan });
 	console.log('Landing page pipeline: plan generated');
 
-	const pageDocument = await generateLandingPageDocument(input, plan);
+	const pageDocument = await generateLandingPageDocument(input, plan, traceContext);
+	traceLlm('pipeline_step', traceContext, { step: 'document_generated', pageDocument });
 	console.log('Landing page pipeline: landing page document generated');
 
 	const result = await db.transaction(async (tx) => {
@@ -91,6 +98,7 @@ export async function runLandingPageGenerationForCampaign(
 		return persistedPage;
 	});
 
+	traceLlm('pipeline_success', traceContext, { campaignPageId: result.campaignPageId });
 	console.log(`Landing page pipeline: persisted page ${result.campaignPageId}`);
 	return result;
 }

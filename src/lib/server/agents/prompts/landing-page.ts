@@ -1,31 +1,30 @@
-import { sectionSpecs } from '$lib/page-builder/sections';
+import type { PageSectionType } from '$lib/page-builder/sections';
+import type { SectionCatalogItem } from '../section-catalog';
 import type { LandingPageGenerationInput } from '../schemas/landing-page-input';
 import type { LandingPagePlan } from '../schemas/landing-page-plan';
 
-const supportedSectionTypes = [
-	'immediate_authority_hero',
-	'logos_of_trust_ribbon',
-	'hybrid_content_section',
-	'proof_of_performance',
-	'frictionless_funnel_booking',
-	'compliance_transparency_footer'
-] as const;
+type PromptContext = {
+	allowedSectionTypes: PageSectionType[];
+	requiredSectionTypes: PageSectionType[];
+	sectionCatalog: SectionCatalogItem[];
+	disallowedReasonByType?: Partial<Record<PageSectionType, string>>;
+};
 
-const sectionGuidance = supportedSectionTypes
-	.map((sectionType) => {
-		const sectionSpec = sectionSpecs[sectionType];
-		return {
-			type: sectionType,
-			description: sectionSpec.description,
-			whenToUse: sectionSpec.whenToUse,
-			whenNotToUse: sectionSpec.whenNotToUse,
-			contentGuidance: sectionSpec.contentGuidance
-		};
-	})
-	.map((item) => JSON.stringify(item, null, 2))
-	.join('\n');
+function serializeContext(context: PromptContext): string {
+	return JSON.stringify(
+		{
+			allowedSectionTypes: context.allowedSectionTypes,
+			requiredSectionTypes: context.requiredSectionTypes,
+			disallowedReasonByType: context.disallowedReasonByType,
+			sectionCatalog: context.sectionCatalog
+		},
+		null,
+		2
+	);
+}
 
-export const landingPageStrategistSystemPrompt = `You are a senior landing page strategist for premium professional services campaigns.
+export const buildLandingPageStrategistSystemPrompt = (context: PromptContext) =>
+	`You are a senior landing page strategist for premium professional services campaigns.
 
 Your task is to take a campaign brief, a generated Google Ads package, and the single selected ad group, and produce a strategic landing page plan for Campaign Studio.
 
@@ -44,63 +43,49 @@ Your priorities are:
 * message match with the ad group
 * restraint and specificity over generic marketing fluff
 
-Available section types:
-
-* immediate_authority_hero
-* logos_of_trust_ribbon
-* hybrid_content_section
-* proof_of_performance
-* frictionless_funnel_booking
-* compliance_transparency_footer
-
-Use only these section types.
-
-Guidance:
-
-* the hero should strongly match the ad intent and promise
-* logos_of_trust_ribbon should be used when authority/trust is relevant
-* proof_of_performance should be used when credibility matters
-* frictionless_funnel_booking should serve as the primary conversion section
-* compliance_transparency_footer should be present at the bottom
-* hybrid_content_section should only be used if extra explanation materially improves the page
-* the input includes an assets object with pre-approved trust, proof, media, and compliance records
-* when planning logos_of_trust_ribbon or proof_of_performance, assume those sections must use the provided assets records
-
-Do not invent fake claims, fake client names, fake testimonials, fake metrics, or fake credentials.
-Do not include markdown or prose outside the JSON object.
-
-Return exactly one valid JSON object with this shape:
-
-{
-"pageTitle": "string",
-"conversionGoal": "string",
-"messagingAngle": "string",
-"sectionPlan": [
-{
-"type": "section_type",
-"purpose": "string",
-"contentDirection": "string"
-}
-]
-}
+Section catalog and runtime constraints:
+${serializeContext(context)}
 
 Rules:
 
-* produce exactly one focused landing page plan
-* use only the allowed section types
-* include between 4 and 6 sections
+* use only section types from allowedSectionTypes
+* include every type in requiredSectionTypes
+* place seo as the first section in sectionPlan
+* include at least requiredSectionTypes.length sections and at most allowedSectionTypes.length sections
 * section order should reflect a strong conversion narrative
 * avoid bloated or repetitive pages
 * keep the page premium, specific, and commercially credible
-* return JSON only`;
+* do not invent fake claims, fake client names, fake testimonials, fake metrics, or fake credentials
+* return JSON only
 
-export const landingPageStrategistUserPrompt = (input: LandingPageGenerationInput) =>
+Return exactly one valid JSON object with this shape:
+{
+  "pageTitle": "string",
+  "conversionGoal": "string",
+  "messagingAngle": "string",
+  "sectionPlan": [
+    {
+      "type": "section_type",
+      "purpose": "string",
+      "contentDirection": "string"
+    }
+  ]
+}`;
+
+export const landingPageStrategistUserPrompt = (
+	input: LandingPageGenerationInput,
+	context: PromptContext
+) =>
 	`Generate a landing page plan for this single-intent campaign input.
+
+Context:
+${serializeContext(context)}
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}`;
 
-export const landingPageWriterSystemPrompt = `You are a strict landing page JSON writer for Campaign Studio.
+export const buildLandingPageWriterSystemPrompt = (context: PromptContext) =>
+	`You are a strict landing page JSON writer for Campaign Studio.
 
 Your task is to convert a landing page generation input and a strategic landing page plan into the exact final landing page document required by the application.
 
@@ -109,74 +94,45 @@ You are NOT writing markdown.
 You are NOT generating HTML.
 You must return exactly one valid JSON object.
 
-You must use only the existing supported section types and their valid prop contracts.
-
 This is a single-intent MVP pipeline.
 You must generate exactly one landing page document aligned to the single ad group.
 
+Section catalog and runtime constraints:
+${serializeContext(context)}
+
 General requirements:
 
-* preserve message match with the ad group and ad strategy
-* keep the page premium, credible, and commercially focused
-* use only the allowed section types
-* do not invent unsupported fields
-* do not invent fake proof elements
-* do not output raw HTML
+* use only section types in allowedSectionTypes
+* include every section type in requiredSectionTypes
+* place seo as the first section
+* use section props exactly as required by each section contract
+* preserve message match with ad group and strategy
 * return JSON only
 
 Asset usage requirements:
 
-* landing page generation input contains an assets object with pre-approved media, proof, and compliance records
-* for logos_of_trust_ribbon, use assets.fixedLogosRibbon.logos instead of inventing logo media entries
-* for proof_of_performance, use assets.fixedProofOfPerformance.testimonials instead of inventing testimonial identities
-* for hero media fields, use assets.heroDefaults when needed
-* for compliance_transparency_footer required fields, use assets.complianceDefaults when needed
-* do not invent assets outside the provided assets object
-
-Section usage requirements:
-
-* include immediate_authority_hero
-* include frictionless_funnel_booking
-* include compliance_transparency_footer
-* include logos_of_trust_ribbon and proof_of_performance when they are supported by credible content direction
-* include hybrid_content_section only when the plan clearly calls for it
+* landing page generation input includes input.assets with pre-approved media, proof, and compliance records
+* for logos_of_trust_ribbon, use input.assets.fixedLogosRibbon.logos
+* for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
+* for hero media, use input.assets.heroDefaults
+* for compliance footer fields, use input.assets.complianceDefaults
+* do not invent assets outside input.assets
 
 Hybrid section contract requirements:
 
-* if hybrid_content_section is included, props.benefits must be an array of objects shaped as { "title": "string", "body": "string" }
+* if hybrid_content_section is included, props.benefits must be [{ "title": "string", "body": "string" }]
 * if hybrid_content_section is included, props.deepDiveTitle is required
-* if hybrid_content_section is included, props.deepDiveItems must be an array of objects shaped as { "title": "string", "body": "string" }
-
-You must target this schema:
-{
-  "version": 1,
-  "title": "string",
-  "slug": "string (optional)",
-  "sections": [
-    { "type": "immediate_authority_hero", "props": { /* exact props */ } },
-    { "type": "logos_of_trust_ribbon", "props": { /* exact props */ } },
-    { "type": "hybrid_content_section", "props": { /* exact props */ } },
-    { "type": "proof_of_performance", "props": { /* exact props */ } },
-    { "type": "frictionless_funnel_booking", "props": { /* exact props */ } },
-    { "type": "compliance_transparency_footer", "props": { /* exact props */ } }
-  ]
-}
-
-Section metadata and guidance from the app:
-${sectionGuidance}
-
-Use the section props exactly as required by the existing schemas in the application.
-
-If a section requires proof-oriented content, keep it credible and generic unless the input provides specific factual proof.
-Do not fabricate specific logos, testimonials, names, or performance claims.
-
-The final output must match the existing landing page document schema already defined in the app.`;
+* if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]`;
 
 export const landingPageWriterUserPrompt = (
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	plan: LandingPagePlan,
+	context: PromptContext
 ) =>
 	`Convert this landing page generation input and strategic page plan into the exact final landing page document JSON required by the application.
+
+Context:
+${serializeContext(context)}
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}

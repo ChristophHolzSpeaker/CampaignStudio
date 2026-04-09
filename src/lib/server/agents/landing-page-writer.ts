@@ -1,19 +1,17 @@
 import { landingPageDocumentSchema, type LandingPageDocument } from '$lib/page-builder/page';
+import type { PageSectionType } from '$lib/page-builder/sections';
 import { callOpenRouter } from '$lib/server/openrouter/client';
 import type { PageSection } from '$lib/page-builder/sections';
+import { traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace';
 import type { ZodIssue } from 'zod';
-import { landingPageWriterSystemPrompt, landingPageWriterUserPrompt } from './prompts/landing-page';
+import {
+	buildLandingPageWriterSystemPrompt,
+	landingPageWriterUserPrompt
+} from './prompts/landing-page';
+import { buildSectionCatalog } from './section-catalog';
+import { getSectionEligibility } from './section-eligibility';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 import type { LandingPagePlan } from './schemas/landing-page-plan';
-
-const allowedSectionTypes = new Set([
-	'immediate_authority_hero',
-	'logos_of_trust_ribbon',
-	'hybrid_content_section',
-	'proof_of_performance',
-	'frictionless_funnel_booking',
-	'compliance_transparency_footer'
-]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -262,6 +260,93 @@ function removeHybridSections(response: unknown): { result: unknown; removed: bo
 	};
 }
 
+function ensureSeoSection(
+	sections: PageSection[],
+	fallbackTitle: string,
+	fallbackDescription: string
+): PageSection[] {
+	const seoIndex = sections.findIndex((section) => section.type === 'seo');
+	const existingSeo = seoIndex >= 0 ? sections[seoIndex] : null;
+	const existingSeoProps =
+		existingSeo && isRecord(existingSeo.props)
+			? existingSeo.props
+			: ({} as Record<string, unknown>);
+
+	const seoSection: PageSection = {
+		type: 'seo',
+		props: {
+			title: getString(existingSeoProps.title) ?? fallbackTitle,
+			description: getString(existingSeoProps.description) ?? fallbackDescription,
+			canonicalUrl: getString(existingSeoProps.canonicalUrl),
+			robots: getString(existingSeoProps.robots),
+			ogImageUrl: getString(existingSeoProps.ogImageUrl),
+			ogImageAlt: getString(existingSeoProps.ogImageAlt),
+			ogType:
+				existingSeoProps.ogType === 'website' || existingSeoProps.ogType === 'article'
+					? existingSeoProps.ogType
+					: undefined,
+			twitterCard:
+				existingSeoProps.twitterCard === 'summary' ||
+				existingSeoProps.twitterCard === 'summary_large_image'
+					? existingSeoProps.twitterCard
+					: undefined,
+			twitterSite: getString(existingSeoProps.twitterSite)
+		}
+	};
+
+	const withoutSeo = sections.filter((section) => section.type !== 'seo');
+	return [seoSection, ...withoutSeo];
+}
+
+function normalizeRootResponse(response: unknown): unknown {
+	if (Array.isArray(response)) {
+		const sectionCandidates = response
+			.filter((item): item is Record<string, unknown> => isRecord(item))
+			.filter((item) => typeof item.type === 'string')
+			.map((item) => {
+				if (isRecord(item.props)) {
+					return {
+						type: item.type,
+						props: item.props
+					};
+				}
+
+				const { type, ...rest } = item;
+				return {
+					type,
+					props: rest
+				};
+			});
+
+		if (sectionCandidates.length > 0) {
+			traceLlm(
+				'writer_normalized_shape',
+				{ stage: 'landing_page_writer' },
+				{
+					inputShape: 'array_of_sections',
+					sectionCount: sectionCandidates.length
+				}
+			);
+			return {
+				version: 1,
+				sections: sectionCandidates
+			};
+		}
+
+		traceLlm(
+			'writer_normalized_shape',
+			{ stage: 'landing_page_writer' },
+			{
+				inputShape: 'array_non_section',
+				sectionCount: 0
+			}
+		);
+		return {};
+	}
+
+	return response;
+}
+
 function validateWithHydration(
 	response: unknown,
 	input: LandingPageGenerationInput,
@@ -269,7 +354,8 @@ function validateWithHydration(
 ):
 	| { success: true; data: LandingPageDocument }
 	| { success: false; issues: ZodIssue[]; hydratedResponse: unknown } {
-	const hydratedResponse = hydrateLandingPageWithAssets(response, input, plan);
+	const normalizedResponse = normalizeRootResponse(response);
+	const hydratedResponse = hydrateLandingPageWithAssets(normalizedResponse, input, plan);
 	const parsed = landingPageDocumentSchema.safeParse(hydratedResponse);
 	if (parsed.success) {
 		return { success: true, data: parsed.data };
@@ -294,7 +380,9 @@ function buildWriterRepairPrompt(
 	input: LandingPageGenerationInput,
 	plan: LandingPagePlan,
 	invalidResponse: unknown,
-	issues: ZodIssue[]
+	issues: ZodIssue[],
+	allowedSectionTypes: readonly PageSectionType[],
+	requiredSectionTypes: readonly PageSectionType[]
 ): string {
 	return `Your previous JSON failed schema validation. Return a corrected JSON object only.
 
@@ -303,6 +391,12 @@ Corrective rules:
 - Do not output commentary.
 - Do not output markdown.
 - Use assets from input.assets for proof, media, and compliance values.
+- Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
+- Include these required section types: ${requiredSectionTypes.join(', ')}.
+- Top-level JSON must be a single object, never an array.
+- Place seo as the first section.
+- Root title is required.
+- seo.props.title and seo.props.description are required.
 - For hybrid_content_section, benefits must be an array of objects with title and body fields.
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 
@@ -333,8 +427,21 @@ function hydrateLandingPageWithAssets(
 		hydrated.version = 1;
 	}
 
+	const fallbackPageTitle = getString(hydrated.title) ?? plan.pageTitle ?? input.campaign.name;
+	hydrated.title = fallbackPageTitle;
+
+	const fallbackSeoDescription =
+		input.adGroup.intentSummary ||
+		plan.messagingAngle ||
+		input.adPackage.messagingAngle ||
+		input.adPackage.targetingSummary ||
+		input.campaign.topic;
+
 	if (!Array.isArray(hydrated.sections)) {
-		return hydrated;
+		return {
+			...hydrated,
+			sections: ensureSeoSection([], fallbackPageTitle, fallbackSeoDescription)
+		};
 	}
 
 	const sections = hydrated.sections
@@ -355,97 +462,179 @@ function hydrateLandingPageWithAssets(
 		})
 		.map((section) => hydrateSectionWithAssets(section, input, plan));
 
+	const sectionsWithSeo = ensureSeoSection(sections, fallbackPageTitle, fallbackSeoDescription);
+
 	return {
 		...hydrated,
-		sections
+		sections: sectionsWithSeo
 	};
 }
 
-function validateLandingPageDocumentForMvp(page: LandingPageDocument): void {
-	if (page.sections.length < 4 || page.sections.length > 6) {
-		throw new Error('Landing page must include between 4 and 6 sections for this MVP.');
+function validateLandingPageDocumentForMvp(
+	page: LandingPageDocument,
+	allowedSectionTypes: readonly PageSectionType[],
+	requiredSectionTypes: readonly PageSectionType[]
+): void {
+	const minSections = requiredSectionTypes.length;
+	const maxSections = allowedSectionTypes.length;
+
+	if (maxSections < minSections) {
+		throw new Error(
+			`Invalid section policy: maxSections (${maxSections}) is less than minSections (${minSections}).`
+		);
 	}
 
+	if (page.sections.length < minSections || page.sections.length > maxSections) {
+		throw new Error(
+			`Landing page must include between ${minSections} and ${maxSections} sections for this MVP.`
+		);
+	}
+
+	const allowedTypes = new Set<string>(allowedSectionTypes);
 	const sectionTypes = page.sections.map((section) => section.type);
 	for (const sectionType of sectionTypes) {
-		if (!allowedSectionTypes.has(sectionType)) {
+		if (!allowedTypes.has(sectionType)) {
 			throw new Error(`Unsupported section type for MVP landing page: ${sectionType}`);
 		}
 	}
 
-	if (!sectionTypes.includes('immediate_authority_hero')) {
-		throw new Error('Landing page must include immediate_authority_hero section.');
+	for (const requiredSectionType of requiredSectionTypes) {
+		if (!sectionTypes.includes(requiredSectionType)) {
+			throw new Error(`Landing page must include ${requiredSectionType} section.`);
+		}
 	}
 
-	if (!sectionTypes.includes('frictionless_funnel_booking')) {
-		throw new Error('Landing page must include frictionless_funnel_booking section.');
-	}
-
-	if (!sectionTypes.includes('compliance_transparency_footer')) {
-		throw new Error('Landing page must include compliance_transparency_footer section.');
+	if (sectionTypes[0] !== 'seo') {
+		throw new Error('Landing page must place seo as the first section.');
 	}
 }
 
 export async function generateLandingPageDocument(
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	plan: LandingPagePlan,
+	traceContext: LlmTraceContext = {}
 ): Promise<LandingPageDocument> {
-	const userPrompt = landingPageWriterUserPrompt(input, plan);
+	const eligibility = getSectionEligibility(input);
+	const sectionCatalog = buildSectionCatalog(eligibility.allowedSectionTypes);
+	const promptContext = {
+		allowedSectionTypes: eligibility.allowedSectionTypes,
+		requiredSectionTypes: eligibility.requiredSectionTypes,
+		sectionCatalog,
+		disallowedReasonByType: eligibility.disallowedReasonByType
+	};
+
+	const userPrompt = landingPageWriterUserPrompt(input, plan, promptContext);
+	const systemPrompt = buildLandingPageWriterSystemPrompt(promptContext);
 
 	let response;
 	try {
 		console.log('Landing page writer: calling OpenRouter');
+		traceLlm(
+			'agent_stage_start',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				model: 'google/gemini-3.1-flash-lite-preview'
+			}
+		);
 		response = await callOpenRouter({
 			model: 'google/gemini-3.1-flash-lite-preview',
-			systemPrompt: landingPageWriterSystemPrompt,
+			systemPrompt,
 			userPrompt,
-			responseFormat: 'json_object'
+			responseFormat: 'json_object',
+			traceContext: { ...traceContext, stage: 'landing_page_writer' }
 		});
 		console.log('Landing page writer: OpenRouter responded');
+		traceLlm(
+			'agent_stage_response',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				responsePreview: JSON.stringify(response)
+			}
+		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error('Landing page writer: OpenRouter error', message);
+		traceLlm('agent_stage_error', { ...traceContext, stage: 'landing_page_writer' }, { message });
 		throw new Error(`Landing page writer failed: ${message}`);
 	}
 
 	const firstValidation = validateWithHydration(response, input, plan);
 	if (firstValidation.success) {
-		validateLandingPageDocumentForMvp(firstValidation.data);
+		validateLandingPageDocumentForMvp(
+			firstValidation.data,
+			eligibility.allowedSectionTypes,
+			eligibility.requiredSectionTypes
+		);
 		console.log('Landing page writer: document validated');
 		return firstValidation.data;
 	}
 
 	console.error('Landing page writer: validation failed', firstValidation.issues);
+	traceLlm(
+		'agent_stage_validation_error',
+		{ ...traceContext, stage: 'landing_page_writer' },
+		{
+			issues: firstValidation.issues,
+			phase: 'initial_validation'
+		}
+	);
 
 	let repairedResponse;
 	try {
 		console.log('Landing page writer: requesting repair pass');
 		repairedResponse = await callOpenRouter({
-			model: 'nvidia/nemotron-3-super-120b-a12b:free',
-			systemPrompt: landingPageWriterSystemPrompt,
+			model: 'google/gemini-3.1-flash-lite-preview',
+			systemPrompt,
 			userPrompt: buildWriterRepairPrompt(
 				input,
 				plan,
 				firstValidation.hydratedResponse,
-				firstValidation.issues
+				firstValidation.issues,
+				eligibility.allowedSectionTypes,
+				eligibility.requiredSectionTypes
 			),
-			responseFormat: 'json_object'
+			responseFormat: 'json_object',
+			traceContext: { ...traceContext, stage: 'landing_page_writer_repair' }
 		});
 		console.log('Landing page writer: repair response received');
+		traceLlm(
+			'agent_stage_response',
+			{ ...traceContext, stage: 'landing_page_writer_repair' },
+			{
+				responsePreview: JSON.stringify(repairedResponse)
+			}
+		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
+		traceLlm(
+			'agent_stage_error',
+			{ ...traceContext, stage: 'landing_page_writer_repair' },
+			{ message }
+		);
 		throw new Error(`Landing page writer repair failed: ${message}`);
 	}
 
 	const secondValidation = validateWithHydration(repairedResponse, input, plan);
 	if (!secondValidation.success) {
 		console.error('Landing page writer: repair validation failed', secondValidation.issues);
+		traceLlm(
+			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: secondValidation.issues,
+				phase: 'repair_validation'
+			}
+		);
 		throw new Error(
 			`Invalid landing page document: ${JSON.stringify(secondValidation.issues, null, 2)}`
 		);
 	}
 
-	validateLandingPageDocumentForMvp(secondValidation.data);
+	validateLandingPageDocumentForMvp(
+		secondValidation.data,
+		eligibility.allowedSectionTypes,
+		eligibility.requiredSectionTypes
+	);
 	console.log('Landing page writer: document validated');
 	return secondValidation.data;
 }
