@@ -3,6 +3,7 @@ import type { Actions } from './$types';
 import { campaignFormSchema, type CampaignFormSubmission } from '$lib/validation/campaign';
 import { createCampaign } from '$lib/server/campaigns/client';
 import { runGoogleAdsGenerationForCampaign } from '$lib/server/agents/google-ads-pipeline';
+import { runLandingPageGenerationForCampaign } from '$lib/server/agents/landing-page-pipeline';
 
 type FieldErrors = Record<string, string[] | undefined>;
 
@@ -73,6 +74,18 @@ export const actions: Actions = {
 			console.error('Google Ads generation failed:', error);
 			return fail<CampaignFormActionData>(500, {
 				message: 'Campaign saved, but Google Ads generation failed. Please retry.',
+				pipelineMessage: error instanceof Error ? error.message : String(error),
+				values
+			});
+		}
+
+		try {
+			await runLandingPageGenerationForCampaign(createdCampaign.id);
+			console.log('Landing page generation completed for campaign', createdCampaign.id);
+		} catch (error) {
+			console.error('Landing page generation failed:', error);
+			return fail<CampaignFormActionData>(500, {
+				message: 'Campaign saved, but landing page generation failed. Please retry.',
 				pipelineMessage: error instanceof Error ? error.message : String(error),
 				values
 			});
