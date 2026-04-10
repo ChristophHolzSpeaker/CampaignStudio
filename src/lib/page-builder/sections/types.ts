@@ -56,6 +56,7 @@ export interface HybridSupportingVisualItem {
 
 export interface HybridContentSectionProps {
 	title: string;
+	intro: string;
 	benefits: HybridBenefitItem[];
 	deepDiveTitle: string;
 	deepDiveItems: HybridDeepDiveItem[];

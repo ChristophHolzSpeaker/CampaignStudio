@@ -93,6 +93,7 @@ export const sectionSpecs: PageSectionSpecMap = {
 			'Do not include deep-dive entries that repeat benefit copy verbatim.'
 		],
 		contentGuidance: [
+			'Intro should bridge audience pain to practical event outcomes.',
 			'Benefits should stay concise and outcome-focused.',
 			'Deep-dive items should add context, mechanism, or proof.',
 			'Supporting visuals should clarify content, not decorate it.'

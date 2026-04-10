@@ -179,6 +179,10 @@ function hydrateSectionWithAssets(
 
 			const title = getString(props.title) || 'Why this approach fits your event goals';
 
+			const intro =
+				getString(props.intro) ||
+				'Most talks stay abstract. This section translates AI shifts into practical competitive moves your audience can execute.';
+
 			const deepDiveTitle = getString(props.deepDiveTitle) || 'Why this approach works';
 
 			return {
@@ -186,6 +190,7 @@ function hydrateSectionWithAssets(
 				props: {
 					...props,
 					title,
+					intro,
 					benefits: fallbackBenefits,
 					deepDiveTitle,
 					deepDiveItems
@@ -397,6 +402,7 @@ Corrective rules:
 - Place seo as the first section.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
+- For hybrid_content_section, intro is required.
 - For hybrid_content_section, benefits must be an array of objects with title and body fields.
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 
