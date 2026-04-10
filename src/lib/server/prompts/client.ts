@@ -332,7 +332,7 @@ export const defaultPromptLibrary: Record<PromptPurpose, StagePromptDefaults> = 
 		userPromptTemplate: `Generate the intermediate landing-page content object for this request:\n\n{{prompt}}`
 	},
 	final: {
-		model: 'nvidia/nemotron-3-super-120b-a12b:free',
+		model: 'google/gemini-3.1-flash-lite-preview',
 		systemPrompt: finalSystemPrompt,
 		userPromptTemplate: `Transform this intermediate landing-page content object into the exact final application schema.\n\nInput JSON:\n{{intermediate_json}}`
 	},
@@ -342,7 +342,7 @@ export const defaultPromptLibrary: Record<PromptPurpose, StagePromptDefaults> = 
 		userPromptTemplate: `Create an edit plan for this existing page and requested change.\n\nCurrent page JSON:\n{{current_page_json}}\n\nRequested change:\n{{change_prompt}}`
 	},
 	apply_plan: {
-		model: 'nvidia/nemotron-3-super-120b-a12b:free',
+		model: 'google/gemini-3.1-flash-lite-preview',
 		systemPrompt: applyPlanSystemPrompt,
 		userPromptTemplate: `Update this page JSON using the structured edit plan.\n\nCurrent page JSON:\n{{current_page_json}}\n\nEdit plan JSON:\n{{edit_plan_json}}`
 	}

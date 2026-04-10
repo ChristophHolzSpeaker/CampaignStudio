@@ -11,6 +11,7 @@ import type { GoogleAdsPackageDraft } from './schemas/google-ads-package';
 import { normalizeCampaignBrief } from './campaign-brief';
 import { generateGoogleAdsStrategy } from './google-ads-strategist';
 import { generateGoogleAdsPackage } from './google-ads-structurer';
+import { createRunId, traceLlm } from '$lib/server/telemetry/llm-trace';
 
 export async function persistGoogleAdsPackage(
 	campaignId: number,
@@ -76,19 +77,27 @@ export async function persistGoogleAdsPackage(
 export async function runGoogleAdsGenerationForCampaign(
 	campaignId: number
 ): Promise<{ adPackageId: number; packageName: string }> {
+	const runId = createRunId('google_ads');
+	const traceContext = { runId, campaignId, pipeline: 'google_ads' };
+	traceLlm('pipeline_start', traceContext);
 	console.log(`Google Ads pipeline: start campaign ${campaignId}`);
 	const campaign = await getCampaignById(campaignId);
 	if (!campaign) {
+		traceLlm('pipeline_error', traceContext, { message: `Campaign ${campaignId} not found` });
 		throw new Error(`Campaign ${campaignId} not found`);
 	}
 
 	const brief: CampaignBrief = normalizeCampaignBrief(campaign);
+	traceLlm('pipeline_step', traceContext, { step: 'brief_normalized', brief });
 	console.log('Google Ads pipeline: brief normalized');
-	const strategy = await generateGoogleAdsStrategy(brief);
+	const strategy = await generateGoogleAdsStrategy(brief, traceContext);
+	traceLlm('pipeline_step', traceContext, { step: 'strategy_generated', strategy });
 	console.log('Google Ads pipeline: strategy generated');
-	const draft = await generateGoogleAdsPackage(brief, strategy);
+	const draft = await generateGoogleAdsPackage(brief, strategy, traceContext);
+	traceLlm('pipeline_step', traceContext, { step: 'draft_generated', draft });
 	console.log('Google Ads pipeline: package draft generated');
 	const result = await persistGoogleAdsPackage(campaignId, draft);
+	traceLlm('pipeline_success', traceContext, { adPackageId: result.adPackageId });
 	console.log(`Google Ads pipeline: persisted package ${result.adPackageId}`);
 
 	return { adPackageId: result.adPackageId, packageName: strategy.packageName };
