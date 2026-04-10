@@ -44,6 +44,7 @@
 	@media (max-width: 1200px) {
 		.layout-body {
 			grid-template-columns: 1fr;
+			padding: 0.5rem 0.5rem;
 		}
 	}
 </style>

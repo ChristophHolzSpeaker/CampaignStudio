@@ -3,7 +3,8 @@ import { landingPageAssetsSchema, type LandingPageAssets } from '../schemas/land
 export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.parse({
 	heroDefaults: {
 		videoEmbedUrl: 'https://player.vimeo.com/video/76979871',
-		videoThumbnailUrl: 'https://images.unsplash.com/photo-1552664730-d307ca884978',
+		videoThumbnailUrl:
+			'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6130408552ea140d707aab8e_christoph-contact-bg.jpg',
 		videoThumbnailAlt: 'Keynote speaker presenting to a business audience',
 		primaryCtaLabelDefault: 'Request Speaking Availability',
 		primaryCtaHref: 'https://christophholz.com/contact'
