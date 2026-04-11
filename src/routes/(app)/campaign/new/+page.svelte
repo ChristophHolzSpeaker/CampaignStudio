@@ -9,6 +9,7 @@
 	import Input from '$lib/components/elements/Input.svelte';
 	import Select from '$lib/components/elements/Select.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
+	import MarkdownText from '$lib/components/elements/MarkdownText.svelte';
 	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 
 	type PlannerMessage = {
@@ -102,10 +103,10 @@
 		<div class="flex gap-2">
 			<button
 				type="button"
-				class="horizontal-sm vertical-xs text-[0.65rem] tracking-[0.18em] uppercase"
-				class:bg-(--accent)={mode === 'planner'}
+				class="horizontal-sm vertical-xs cursor-pointer px-3 uppercase"
+				class:bg-primary={mode === 'planner'}
 				class:text-white={mode === 'planner'}
-				class:bg-(--surface-card)={mode !== 'planner'}
+				class:bg-white={mode !== 'planner'}
 				class:text-(--text-primary)={mode !== 'planner'}
 				onclick={() => (selectedMode = 'planner')}
 			>
@@ -113,10 +114,10 @@
 			</button>
 			<button
 				type="button"
-				class="horizontal-sm vertical-xs text-[0.65rem] tracking-[0.18em] uppercase"
-				class:bg-(--accent)={mode === 'manual'}
+				class="horizontal-sm vertical-xs cursor-pointer px-3 uppercase"
+				class:bg-primary={mode === 'manual'}
 				class:text-white={mode === 'manual'}
-				class:bg-(--surface-card)={mode !== 'manual'}
+				class:bg-white={mode !== 'manual'}
 				class:text-(--text-primary)={mode !== 'manual'}
 				onclick={() => (selectedMode = 'manual')}
 			>
@@ -135,6 +136,61 @@
 
 		{#if mode === 'planner'}
 			<div class="relative grid gap-10 lg:grid-cols-[1fr_1fr]">
+				<div class="horizontal-lg vertical-lg bg-(--surface-card) shadow-(--shadow-card-strong)">
+					<p class="text-[0.6rem] text-(--accent) uppercase">Current plan</p>
+
+					{#if getPlanner().planMarkdown}
+						<div class="mt-6 bg-(--surface) p-4 text-sm leading-7 marker:text-primary">
+							<MarkdownText content={getPlanner().planMarkdown} />
+						</div>
+					{/if}
+
+					<div class="mt-6 space-y-3 bg-[#fbecee] p-3 text-sm text-(--text-muted)">
+						<p class="text-[0.6rem] text-(--text-muted) uppercase">Missing information</p>
+						{#if getPlanner().missingFields.length === 0}
+							<p>All required fields are resolved.</p>
+						{:else}
+							<p>{getPlanner().missingFields.join(', ')}</p>
+						{/if}
+					</div>
+
+					{#if getPlanner().questions.length > 0}
+						<div class="mt-6 space-y-2 text-sm">
+							<p class="text-[0.6rem] text-(--text-muted) uppercase">Planner questions</p>
+							<ul class="space-y-2">
+								{#each getPlanner().questions as question, index (`question-${index}`)}
+									<li class="horizontal-sm vertical-xs bg-(--surface) p-3">{question}</li>
+								{/each}
+							</ul>
+						</div>
+					{/if}
+
+					<div class="mt-8 space-y-2">
+						<form method="POST" action="?/create" onsubmit={handleSubmit}>
+							<input type="hidden" name="mode" value="planner" />
+							<input type="hidden" name="plannerState" value={plannerStateSerialized} />
+							<input type="hidden" name="name" value={getPlanner().resolvedFields.name} />
+							<input type="hidden" name="audience" value={getPlanner().resolvedFields.audience} />
+							<input type="hidden" name="format" value={getPlanner().resolvedFields.format} />
+							<input type="hidden" name="topic" value={getPlanner().resolvedFields.topic} />
+							<input type="hidden" name="language" value={getPlanner().resolvedFields.language} />
+							<input type="hidden" name="geography" value={getPlanner().resolvedFields.geography} />
+							<input type="hidden" name="notes" value={getPlanner().resolvedFields.notes} />
+							{#if getPlanner().readyToCreate}
+								<Button isSubmitting={isSubmitting || !getPlanner().readyToCreate}>
+									Create Campaign
+								</Button>
+							{/if}
+						</form>
+						<p class="text-[0.6rem] text-(--text-muted) uppercase">
+							{#if getPlanner().readyToCreate}
+								Brief complete. Creation uses the same generation pipeline as manual mode.
+							{:else}
+								Answer the planner questions to unlock campaign creation.
+							{/if}
+						</p>
+					</div>
+				</div>
 				<div class="horizontal-lg vertical-lg bg-(--surface-card) shadow-(--shadow-card)">
 					<p class="text-[0.6rem] text-(--accent) uppercase">Planner chat</p>
 
@@ -148,14 +204,20 @@
 
 						{#each getPlanner().messages as message, index (`${message.role}-${index}`)}
 							<div
-								class="horizontal-sm vertical-sm text-sm whitespace-pre-wrap"
+								class="horizontal-sm vertical-sm border-l-2 p-3 text-sm whitespace-pre-wrap text-stone-600"
 								class:bg-(--surface)={message.role === 'assistant'}
 								class:bg-[#fbecee]={message.role === 'user'}
+								class:border-slate-400={message.role === 'assistant'}
+								class:border-primary={message.role === 'user'}
 							>
 								<p class="mb-2 text-[0.6rem] text-(--text-muted) uppercase">
 									{message.role === 'assistant' ? 'Planner' : 'Christoph'}
 								</p>
-								{message.content}
+								{#if message.role === 'assistant'}
+									<MarkdownText content={message.content} />
+								{:else}
+									{message.content}
+								{/if}
 							</div>
 						{/each}
 					</div>
@@ -179,60 +241,6 @@
 							{/if}
 						</Button>
 					</form>
-				</div>
-
-				<div class="horizontal-lg vertical-lg bg-(--surface-card) shadow-(--shadow-card-strong)">
-					<p class="text-[0.6rem] text-(--accent) uppercase">Current plan</p>
-
-					{#if getPlanner().planMarkdown}
-						<div class="mt-6 bg-(--surface) p-4 text-sm leading-7 whitespace-pre-wrap">
-							{getPlanner().planMarkdown}
-						</div>
-					{/if}
-
-					<div class="mt-6 space-y-3 text-sm text-(--text-muted)">
-						<p class="text-[0.6rem] text-(--text-muted) uppercase">Missing information</p>
-						{#if getPlanner().missingFields.length === 0}
-							<p>All required fields are resolved.</p>
-						{:else}
-							<p>{getPlanner().missingFields.join(', ')}</p>
-						{/if}
-					</div>
-
-					{#if getPlanner().questions.length > 0}
-						<div class="mt-6 space-y-2 text-sm">
-							<p class="text-[0.6rem] text-(--text-muted) uppercase">Planner questions</p>
-							<ul class="space-y-2">
-								{#each getPlanner().questions as question, index (`question-${index}`)}
-									<li class="horizontal-sm vertical-xs bg-(--surface)">{question}</li>
-								{/each}
-							</ul>
-						</div>
-					{/if}
-
-					<div class="mt-8 space-y-2">
-						<form method="POST" action="?/create" onsubmit={handleSubmit}>
-							<input type="hidden" name="mode" value="planner" />
-							<input type="hidden" name="plannerState" value={plannerStateSerialized} />
-							<input type="hidden" name="name" value={getPlanner().resolvedFields.name} />
-							<input type="hidden" name="audience" value={getPlanner().resolvedFields.audience} />
-							<input type="hidden" name="format" value={getPlanner().resolvedFields.format} />
-							<input type="hidden" name="topic" value={getPlanner().resolvedFields.topic} />
-							<input type="hidden" name="language" value={getPlanner().resolvedFields.language} />
-							<input type="hidden" name="geography" value={getPlanner().resolvedFields.geography} />
-							<input type="hidden" name="notes" value={getPlanner().resolvedFields.notes} />
-							<Button isSubmitting={isSubmitting || !getPlanner().readyToCreate}>
-								Create Campaign
-							</Button>
-						</form>
-						<p class="text-[0.6rem] text-(--text-muted) uppercase">
-							{#if getPlanner().readyToCreate}
-								Brief complete. Creation uses the same generation pipeline as manual mode.
-							{:else}
-								Answer the planner questions to unlock campaign creation.
-							{/if}
-						</p>
-					</div>
 				</div>
 			</div>
 		{:else}
