@@ -67,6 +67,7 @@ export const hybridSupportingVisualItemSchema = z.object({
 
 export const hybridContentSectionPropsSchema = z.object({
 	title: z.string().trim().min(1),
+	intro: z.string().trim().min(1),
 	benefits: z.array(hybridBenefitItemSchema).min(1),
 	deepDiveTitle: z.string().trim().min(1),
 	deepDiveItems: z.array(hybridDeepDiveItemSchema).min(1),

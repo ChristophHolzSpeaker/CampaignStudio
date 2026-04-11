@@ -120,6 +120,7 @@ Asset usage requirements:
 
 Hybrid section contract requirements:
 
+* if hybrid_content_section is included, props.intro is required
 * if hybrid_content_section is included, props.benefits must be [{ "title": "string", "body": "string" }]
 * if hybrid_content_section is included, props.deepDiveTitle is required
 * if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]`;
