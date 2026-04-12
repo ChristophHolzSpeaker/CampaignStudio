@@ -10,7 +10,6 @@
 	import Select from '$lib/components/elements/Select.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import MarkdownText from '$lib/components/elements/MarkdownText.svelte';
-	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 
 	type PlannerMessage = {
 		role: 'user' | 'assistant';
@@ -72,10 +71,6 @@
 		isSubmitting = true;
 	}
 </script>
-
-<div class="hidden self-start lg:block">
-	<AdminSidebar />
-</div>
 
 <section
 	class="horizontal-md vertical-xxl relative min-h-screen overflow-hidden bg-(--surface) text-(--text-primary)"

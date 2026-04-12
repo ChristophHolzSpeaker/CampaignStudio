@@ -1,6 +1,5 @@
 <script lang="ts">
 	import AdminHeader from '$lib/components/AdminShellHeader.svelte';
-	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 	import Button from '$lib/components/elements/Button.svelte';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import PromptCard from '$lib/components/PromptCard.svelte';
@@ -70,9 +69,6 @@
 	<title>Edit prompt</title>
 </svelte:head>
 
-<div class="hidden self-start lg:block">
-	<AdminSidebar />
-</div>
 <form method="POST" class="flex flex-col gap-6 bg-white p-6 lg:p-10">
 	<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
 		<div class="space-y-2">

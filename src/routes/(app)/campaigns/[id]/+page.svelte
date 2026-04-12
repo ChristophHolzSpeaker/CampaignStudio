@@ -1,5 +1,4 @@
 <script lang="ts">
-	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 	import AdGroupCard from '$lib/components/blocks/AdGroupCard.svelte';
 	import { strategyEntries } from '$lib/utils/strategy';
 	import type {
@@ -7,8 +6,6 @@
 		CampaignAdPackageWithDetails,
 		CampaignRecord
 	} from '$lib/server/campaigns/client';
-	import Button from '$lib/components/elements/Button.svelte';
-	import { enhance } from '$app/forms';
 
 	let { data } = $props();
 
@@ -38,12 +35,8 @@
 		return pkg ? `v${pkg.version_number}` : '—';
 	};
 	const getStrategyEntries = () => strategyEntries(getAdPackage()?.strategy_json ?? null);
-	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
 </script>
 
-<div class="hidden self-start lg:block">
-	<AdminSidebar />
-</div>
 <section class="flex flex-col gap-6 p-6 lg:p-10">
 	<div class="mx-auto grid max-w-7xl grid-cols-12 gap-10">
 		<!-- Left Column: Campaign Summary -->
@@ -136,19 +129,6 @@
 								>
 							</div>
 						</div>
-					</div>
-					<div class="pt-4">
-						<form method="POST" action="?/publish" use:enhance class="campaign-shell">
-							<input type="hidden" name="id" value={getCampaign()?.id} />
-							<input
-								type="hidden"
-								name="target_status"
-								value={targetStatus(getCampaign()?.status)}
-							/>
-							<Button variant="dark"
-								>{getCampaign()?.status === 'draft' ? 'Publish Campaign' : 'Unpublish'}</Button
-							>
-						</form>
 					</div>
 				</div>
 			</div>

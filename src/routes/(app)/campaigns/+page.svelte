@@ -1,7 +1,6 @@
 <script lang="ts">
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import CampaignCard from '$lib/components/CampaignCard.svelte';
-	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 	import { browser } from '$app/environment';
 	import { enhance } from '$app/forms';
 	import { flip } from 'svelte/animate';
@@ -64,10 +63,6 @@
 <svelte:head>
 	<title>Campaign Studio • Campaigns</title>
 </svelte:head>
-<div class="hidden self-start lg:block">
-	<AdminSidebar />
-</div>
-
 <section class="flex flex-col gap-6 p-6 lg:p-10">
 	<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
 		<div class="space-y-2">

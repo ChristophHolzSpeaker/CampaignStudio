@@ -12,7 +12,9 @@ export const load: PageServerLoad = async ({ url }) => {
 		const page = parseLandingPageDocument(christophSampleLandingPage);
 
 		return {
-			page
+			page,
+			campaignId: null,
+			campaignPageId: null
 		};
 	}
 
@@ -22,7 +24,11 @@ export const load: PageServerLoad = async ({ url }) => {
 	}
 
 	const [pageRecord] = await db
-		.select({ structuredContentJson: campaign_pages.structured_content_json })
+		.select({
+			structuredContentJson: campaign_pages.structured_content_json,
+			campaignId: campaign_pages.campaign_id,
+			campaignPageId: campaign_pages.id
+		})
 		.from(campaign_pages)
 		.where(eq(campaign_pages.id, campaignPageId))
 		.limit(1);
@@ -34,6 +40,8 @@ export const load: PageServerLoad = async ({ url }) => {
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
 
 	return {
-		page
+		page,
+		campaignId: pageRecord.campaignId,
+		campaignPageId: pageRecord.campaignPageId
 	};
 };

@@ -2,9 +2,10 @@
 	import { browser } from '$app/environment';
 	import { goto, invalidate } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/stores';
 	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 	import { createBrowserClient } from '@supabase/ssr';
-	import NavButton from './elements/NavButton.svelte';
+	import type { Snippet } from 'svelte';
 
 	const browserSupabase = browser
 		? createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
@@ -14,29 +15,53 @@
 			})
 		: null;
 
-	type NavItemHref = '/(app)/admin/prompts' | '/(app)/admin/library';
-
-	type NavItem = {
+	export type AdminSidebarNavItem = {
 		label: string;
-		icon: string;
-		active: boolean;
-		href: NavItemHref;
+		href?: string;
+		icon?: string;
+		disabled?: boolean;
+		match?: 'exact' | 'prefix';
 	};
 
-	const navItems: readonly NavItem[] = [
+	type SidebarProps = {
+		navItems?: readonly AdminSidebarNavItem[];
+		primaryAction?: Snippet;
+		title?: string;
+		subtitle?: string;
+	};
+
+	const defaultNavItems: readonly AdminSidebarNavItem[] = [
 		{
 			label: 'Editor',
 			icon: 'material-symbols--edit-note',
-			active: true,
+			match: 'prefix',
 			href: '/(app)/admin/prompts'
 		},
 		{
 			label: 'Library',
 			icon: 'material-symbols--book',
-			active: false,
+			match: 'prefix',
 			href: '/(app)/admin/library'
 		}
 	];
+
+	let {
+		navItems = defaultNavItems,
+		primaryAction,
+		title = 'Prompt Engine',
+		subtitle = 'V2.4 Architectural'
+	}: SidebarProps = $props();
+
+	const currentPath = $derived($page.url.pathname);
+	const toHref = (href: string) => href.replace(/\/\([^/]+\)/g, '');
+	const toMatchPath = (href: string) => toHref(href).split('?')[0]?.split('#')[0] ?? '';
+
+	const isActive = (item: AdminSidebarNavItem) => {
+		if (!item.href || item.disabled) return false;
+		const hrefPath = toMatchPath(item.href);
+		if (item.match === 'exact') return currentPath === hrefPath;
+		return currentPath.startsWith(hrefPath);
+	};
 
 	const handleSignOut = async () => {
 		const loginPath = resolve('/(auth)/login');
@@ -64,22 +89,37 @@
 			<span class="material-symbols-outlined">precision_manufacturing</span>
 		</div>
 		<div>
-			<p class="m-0 text-[0.8rem] tracking-[0.3em]">Prompt Engine</p>
-			<p class="m-0 text-[0.65rem] tracking-[0.15em] text-[#4a4a4a]">V2.4 Architectural</p>
+			<p class="m-0 text-[0.8rem] tracking-[0.3em]">{title}</p>
+			<p class="m-0 text-[0.65rem] tracking-[0.15em] text-[#4a4a4a]">{subtitle}</p>
 		</div>
 	</div>
-	{#snippet navItem(item: NavItem)}
-		<a
-			href={resolve(item.href)}
-			class={`flex items-center gap-3 px-2 py-3 text-base uppercase no-underline transition ${
-				item.active
-					? 'border-l-4 border-[var(--accent)] bg-white pl-3 text-[var(--accent)]'
-					: 'hover:text-[var(--accent)]'
-			}`}
-		>
-			<span class={item.icon}></span>
-			{item.label}
-		</a>
+	{#snippet navItem(item: AdminSidebarNavItem)}
+		{#if item.disabled || !item.href}
+			<div
+				class="flex items-center gap-3 px-2 py-3 text-base text-[#9f9f9f] uppercase opacity-70"
+				aria-disabled="true"
+			>
+				{#if item.icon}
+					<span class={item.icon}></span>
+				{/if}
+				<span>{item.label}</span>
+				<span class="ml-auto text-[0.58rem] tracking-[0.2em]">SOON</span>
+			</div>
+		{:else}
+			<a
+				href={toHref(item.href)}
+				class={`flex items-center gap-3 px-2 py-3 text-base uppercase no-underline transition ${
+					isActive(item)
+						? 'border-l-4 border-[var(--accent)] bg-white pl-3 text-[var(--accent)]'
+						: 'hover:text-[var(--accent)]'
+				}`}
+			>
+				{#if item.icon}
+					<span class={item.icon}></span>
+				{/if}
+				{item.label}
+			</a>
+		{/if}
 	{/snippet}
 	<nav class="flex flex-col gap-2">
 		{#each navItems as item (item.label)}
@@ -87,7 +127,9 @@
 		{/each}
 	</nav>
 
-	<NavButton href={resolve('/(app)/admin/prompts/new')}>New Prompt</NavButton>
+	{#if primaryAction}
+		{@render primaryAction()}
+	{/if}
 
 	<div class="mt-auto flex flex-col gap-2 uppercase">
 		<a class="text-[#5d3f3f] no-underline" href={resolve('/(app)/admin/docs')}>Documentation</a>
