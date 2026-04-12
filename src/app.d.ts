@@ -7,7 +7,9 @@ declare global {
 		interface Locals {
 			supabase: SupabaseClient;
 		}
-		// interface PageState {}
+		interface PageState {
+			modal?: { kind: 'youtube'; url: string } | null;
+		}
 		// interface Platform {}
 	}
 }
