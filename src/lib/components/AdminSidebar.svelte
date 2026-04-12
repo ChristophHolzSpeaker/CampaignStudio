@@ -57,7 +57,7 @@
 </script>
 
 <aside
-	class="sticky top-[74px] flex h-[calc(100vh-72px)] w-[280px] flex-col gap-8 self-start bg-[#f4f4f4] px-6 py-8"
+	class="fixed top-[72px] bottom-0 left-0 z-20 flex w-[280px] flex-col gap-8 overflow-y-auto bg-[#f4f4f4] px-6 py-8"
 >
 	<div class="flex items-center gap-3">
 		<div class="grid h-10 w-10 place-items-center bg-[#b8002a] text-white">

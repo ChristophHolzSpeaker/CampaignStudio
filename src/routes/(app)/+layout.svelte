@@ -38,7 +38,7 @@
 		display: grid;
 		grid-template-columns: 280px 1fr;
 		gap: 2rem;
-		padding: 2rem 3rem 3rem;
+		padding: 0 3rem 3rem;
 	}
 
 	@media (max-width: 1200px) {
