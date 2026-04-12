@@ -9,6 +9,8 @@ import {
 	getCampaignAdPackages,
 	getCampaignById
 } from '$lib/server/campaigns/client';
+import { setCampaignStatus } from '$lib/server/campaigns/client';
+import type { Actions } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const candidateId = Number(params.id);
@@ -42,4 +44,20 @@ export const load: PageServerLoad = async ({ params }) => {
 		adGroups,
 		adPackage
 	};
+};
+
+export const actions: Actions = {
+	publish: async ({ request }) => {
+		const formData = await request.formData();
+		const id = Number(formData.get('id'));
+		const targetStatus = formData.get('target_status')?.toString() ?? 'draft';
+		console.log('publishing campaign', { id, targetStatus });
+		if (!id) {
+			return { success: false };
+		}
+
+		await setCampaignStatus(id, targetStatus);
+
+		return { success: true };
+	}
 };

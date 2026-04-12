@@ -112,7 +112,20 @@
 
 @layer components {
 	.btn-primary {
-		@apply rounded-none bg-primary uppercase transition-all duration-200 hover:-translate-y-[2px];
+		@apply rounded-none bg-primary uppercase transition-all duration-200 hover:-translate-y-0.5 cursor-pointer;
+		padding-inline: 1.5rem;
+		padding-block: 0.5rem;
+		color: #ffffff;
+		font-size: 1.25rem;
+	}
+		.btn-secondary {
+		@apply rounded-none bg-sky-200 uppercase transition-all duration-200 hover:-translate-y-0.5 cursor-pointer;
+		padding-inline: 1.5rem;
+		padding-block: 0.5rem;
+		font-size: 1.25rem;
+	}
+		.btn-dark {
+		@apply rounded-none bg-stone-900 uppercase transition-all duration-200 hover:-translate-y-0.5 cursor-pointer;
 		padding-inline: 1.5rem;
 		padding-block: 0.5rem;
 		color: #ffffff;
@@ -142,7 +155,7 @@
 		text-transform: uppercase;
 		text-decoration: none;
 	}
-	.btn-secondary {
+	.btn-outline {
 		@apply rounded-none border border-on-surface/20 bg-transparent text-on-surface transition-all duration-200 hover:-translate-y-[2px] hover:bg-surface-container-low;
 		padding-inline: 1.5rem;
 		padding-block: 0.5rem;

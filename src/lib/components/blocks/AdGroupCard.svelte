@@ -63,12 +63,12 @@
 					{:else}
 						{#each keywords as keyword (keyword.id)}
 							<div class="flex items-center justify-between rounded-lg bg-stone-100 p-4">
-								<div class="flex items-center gap-6">
+								<div class="flex items-center gap-2">
 									<code class="font-['Space_Grotesk'] font-bold">
 										{formatAdwordsKeyword(keyword.keyword_text, keyword.match_type)}
 									</code>
 									<span
-										class="bg-secondary-container text-on-secondary-container rounded px-2 py-0.5 font-['Space_Grotesk'] text-[9px] font-bold uppercase"
+										class="rounded bg-sky-100 px-2 py-0.5 font-['Space_Grotesk'] text-[9px] font-bold uppercase"
 									>
 										{keyword.match_type?.toUpperCase() ?? 'MATCH'}
 									</span>

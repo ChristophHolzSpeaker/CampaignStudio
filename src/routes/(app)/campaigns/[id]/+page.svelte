@@ -7,6 +7,8 @@
 		CampaignAdPackageWithDetails,
 		CampaignRecord
 	} from '$lib/server/campaigns/client';
+	import Button from '$lib/components/elements/Button.svelte';
+	import { enhance } from '$app/forms';
 
 	let { data } = $props();
 
@@ -36,6 +38,7 @@
 		return pkg ? `v${pkg.version_number}` : '—';
 	};
 	const getStrategyEntries = () => strategyEntries(getAdPackage()?.strategy_json ?? null);
+	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
 </script>
 
 <div class="hidden self-start lg:block">
@@ -49,13 +52,13 @@
 				<header class="mb-10">
 					<div class="mb-4 flex items-center gap-2">
 						<span
-							class="bg-primary-fixed text-on-primary-fixed-variant rounded py-1 font-['Space_Grotesk'] text-[10px] font-bold tracking-widest uppercase"
+							class="rounded px-3 py-1 font-['Space_Grotesk'] text-[10px] font-bold text-white uppercase"
+							class:bg-sky-400={getCampaign()?.status === 'draft'}
+							class:bg-green-400={getCampaign()?.status === 'published'}
 						>
 							{(getCampaign()?.status ?? 'draft').toUpperCase()}
 						</span>
-						<span
-							class="font-['Space_Grotesk'] text-[10px] font-medium tracking-widest text-slate-400 uppercase"
-						>
+						<span class="font-['Space_Grotesk'] text-[10px] font-medium text-slate-400 uppercase">
 							Created {formatFriendlyDate(getCampaign()?.created_at)}
 						</span>
 					</div>
@@ -70,7 +73,7 @@
 				<div class="space-y-8 rounded-xl bg-stone-100 p-8">
 					<div>
 						<span
-							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold tracking-widest text-primary uppercase"
+							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
 						>
 							Campaign Strategy
 						</span>
@@ -81,9 +84,9 @@
 						{:else}
 							<div class="space-y-2 text-sm text-slate-600">
 								{#each getStrategyEntries() as entry (entry.key)}
-									<p class="flex items-start justify-between gap-4 text-xs">
+									<p class="grid grid-cols-3 gap-4 text-xs">
 										<span class="font-semibold text-slate-500">{entry.key}</span>
-										<span class="font-['Space_Grotesk'] text-[11px] text-slate-900"
+										<span class="col-span-2 font-['Space_Grotesk'] text-[11px] text-slate-900"
 											>{entry.value}</span
 										>
 									</p>
@@ -93,28 +96,21 @@
 					</div>
 					<div>
 						<span
-							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold tracking-widest text-primary uppercase"
+							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
 						>
 							Campaign Metadata
 						</span>
 						<div class="grid grid-cols-2 gap-4">
-							<div
-								class="rounded bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
-							>
-								<span
-									class="mb-1 block text-[9px] font-bold tracking-widest text-slate-400 uppercase"
+							<div class="rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
 									>Package ID</span
 								>
 								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
 									{getPackageId()}
 								</span>
 							</div>
-							<div
-								class="rounded bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
-							>
-								<span
-									class="mb-1 block text-[9px] font-bold tracking-widest text-slate-400 uppercase"
-									>Version</span
+							<div class="rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase">Version</span
 								>
 								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
 									{getPackageVersionLabel()}
@@ -124,35 +120,35 @@
 					</div>
 					<div>
 						<span
-							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold tracking-widest text-primary uppercase"
+							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
 							>Primary Channel</span
 						>
 						<div
-							class="flex items-center gap-4 rounded bg-surface-container-lowest p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
+							class="flex items-center gap-4 rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]"
 						>
 							<span class="material-symbols--search-rounded"></span>
 							<div>
 								<span class="block leading-tight font-bold text-on-surface">
 									{getAdPackage()?.channel ?? 'Google Ads Search'}
 								</span>
-								<span
-									class="font-['Space_Grotesk'] text-[10px] tracking-widest text-slate-400 uppercase"
+								<span class="font-['Space_Grotesk'] text-[10px] text-slate-400 uppercase"
 									>{getCampaign()?.format ?? 'Text & Dynamic Search'}</span
 								>
 							</div>
 						</div>
 					</div>
 					<div class="pt-4">
-						<button
-							class="w-full rounded-md bg-on-surface py-4 font-['Space_Grotesk'] text-sm font-bold tracking-widest text-surface uppercase transition-colors hover:bg-slate-800"
-						>
-							Publish Campaign
-						</button>
-						<button
-							class="mt-3 w-full py-2 font-['Space_Grotesk'] text-xs font-bold tracking-widest text-primary uppercase transition-opacity hover:opacity-80"
-						>
-							Export Draft (.json)
-						</button>
+						<form method="POST" action="?/publish" use:enhance class="campaign-shell">
+							<input type="hidden" name="id" value={getCampaign()?.id} />
+							<input
+								type="hidden"
+								name="target_status"
+								value={targetStatus(getCampaign()?.status)}
+							/>
+							<Button variant="dark"
+								>{getCampaign()?.status === 'draft' ? 'Publish Campaign' : 'Unpublish'}</Button
+							>
+						</form>
 					</div>
 				</div>
 			</div>
