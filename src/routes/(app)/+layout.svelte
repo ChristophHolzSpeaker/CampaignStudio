@@ -35,16 +35,6 @@
 	}
 
 	.layout-body {
-		display: grid;
-		grid-template-columns: 280px 1fr;
-		gap: 2rem;
-		padding: 2rem 3rem 3rem;
-	}
-
-	@media (max-width: 1200px) {
-		.layout-body {
-			grid-template-columns: 1fr;
-			padding: 0.5rem 0.5rem;
-		}
+		padding: 0;
 	}
 </style>

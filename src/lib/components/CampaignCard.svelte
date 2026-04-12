@@ -9,7 +9,7 @@
 			{ label: campaign?.geography ?? '', tone: 'muted' },
 			{
 				label: campaign?.status ?? '',
-				tone: campaign?.status === 'published' ? 'accent' : 'muted'
+				tone: campaign?.status === 'published' ? 'published' : 'draft'
 			}
 		].filter((badge) => badge.label)
 	);
@@ -34,22 +34,21 @@
 <article class="campaign-card">
 	<div class="card-head">
 		<p class="purpose" aria-label="campaign topic">{campaign?.topic ?? 'Campaign'}</p>
-		<div class="badge-row">
-			{#each badges as badge (badge.label)}
-				<span class={`badge ${badge.tone ?? ''}`}>{badge.label}</span>
-			{/each}
-		</div>
 	</div>
-
-	<h3>{campaign?.name}</h3>
+	<h3 class="text-4xl uppercase">{campaign?.name}</h3>
 	<p class="meta">
 		{campaign?.created_by ? `By ${campaign.created_by}` : ''}
 		{campaign?.created_by && campaign?.created_at ? ' · ' : ''}
 		{formatDate(campaign?.created_at)}
 	</p>
+	<div class="badge-row">
+		{#each badges as badge (badge.label)}
+			<span class={`badge ${badge.tone ?? ''}`}>{badge.label}</span>
+		{/each}
+	</div>
 
 	{#if snippet}
-		<p class="snippet">{snippet}</p>
+		<p class=" rounded-xs bg-stone-100 p-3 text-stone-600 italic">{snippet}</p>
 	{/if}
 </article>
 
@@ -62,10 +61,10 @@
 
 	.badge {
 		font-family: 'Bureau Grot', 'Space Grotesk', sans-serif;
-		font-size: 0.75rem;
+		font-size: 0.65rem;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
-		padding: 0.4rem 0.85rem;
+		padding: 0.2rem 0.4rem;
 		background: #ffffff;
 		color: #5d3f3f;
 		border-radius: 0;
@@ -83,8 +82,17 @@
 		color: #5d3f3f;
 	}
 
+	.badge.published {
+		background: #4ade80;
+		color: #fff;
+	}
+
+	.badge.draft {
+		background: #38bdf8;
+		color: #fff;
+	}
+
 	.campaign-card {
-		background: #ffffff;
 		padding: 1.5rem;
 		display: flex;
 		flex-direction: column;
@@ -107,13 +115,6 @@
 		text-transform: uppercase;
 		color: #b8002a;
 		margin: 0;
-	}
-
-	h3 {
-		margin: 0;
-		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
-		font-size: 1.25rem;
-		text-transform: uppercase;
 	}
 
 	.meta {

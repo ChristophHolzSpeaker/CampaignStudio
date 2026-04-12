@@ -9,6 +9,11 @@ import {
 	getCampaignAdPackages,
 	getCampaignById
 } from '$lib/server/campaigns/client';
+import { setCampaignStatus } from '$lib/server/campaigns/client';
+import type { Actions } from '@sveltejs/kit';
+import { db } from '$lib/server/db';
+import { campaign_pages } from '$lib/server/db/schema';
+import { desc, eq } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const candidateId = Number(params.id);
@@ -37,9 +42,40 @@ export const load: PageServerLoad = async ({ params }) => {
 		}
 	}
 
+	const adGroupPageId = adGroups.find((group) => group.campaign_page_id)?.campaign_page_id ?? null;
+	let campaignPageId = adGroupPageId;
+
+	if (!campaignPageId) {
+		const [latestCampaignPage] = await db
+			.select({ id: campaign_pages.id })
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, candidateId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(1);
+
+		campaignPageId = latestCampaignPage?.id ?? null;
+	}
+
 	return {
 		campaign,
 		adGroups,
-		adPackage
+		adPackage,
+		campaignPageId
 	};
+};
+
+export const actions: Actions = {
+	publish: async ({ request }) => {
+		const formData = await request.formData();
+		const id = Number(formData.get('id'));
+		const targetStatus = formData.get('target_status')?.toString() ?? 'draft';
+		console.log('publishing campaign', { id, targetStatus });
+		if (!id) {
+			return { success: false };
+		}
+
+		await setCampaignStatus(id, targetStatus);
+
+		return { success: true };
+	}
 };

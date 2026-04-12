@@ -1,5 +1,4 @@
 <script>
-	import AdminSidebar from '$lib/components/AdminSidebar.svelte';
 	import Button from '$lib/components/elements/Button.svelte';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import PromptCard from '$lib/components/PromptCard.svelte';
@@ -10,10 +9,6 @@
 <svelte:head>
 	<title>Prompt Library</title>
 </svelte:head>
-<div class="hidden self-start lg:block">
-	<AdminSidebar />
-</div>
-
 <section class="flex flex-col gap-6 p-6 lg:p-10">
 	<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
 		<div class="space-y-2">
