@@ -111,21 +111,29 @@
 }
 
 @layer components {
+	.btn {
+		@apply cursor-pointer;
+		font-family: 'Bureau Grot Compressed', 'Bureau Grot', sans-serif;
+		font-weight: 500;
+		text-transform: uppercase;
+		font-stretch: condensed;
+		letter-spacing: -0.02em;
+	}
 	.btn-primary {
-		@apply rounded-none bg-primary uppercase transition-all duration-200 hover:-translate-y-0.5 cursor-pointer;
+		@apply cursor-pointer rounded-none bg-primary uppercase transition-all duration-200 hover:-translate-y-0.5;
 		padding-inline: 1.5rem;
 		padding-block: 0.5rem;
 		color: #ffffff;
 		font-size: 1.25rem;
 	}
-		.btn-secondary {
-		@apply rounded-none bg-sky-200 uppercase transition-all duration-200 hover:-translate-y-0.5 cursor-pointer;
+	.btn-secondary {
+		@apply cursor-pointer rounded-none bg-sky-200 uppercase transition-all duration-200 hover:-translate-y-0.5;
 		padding-inline: 1.5rem;
 		padding-block: 0.5rem;
 		font-size: 1.25rem;
 	}
-		.btn-dark {
-		@apply rounded-none bg-stone-900 uppercase transition-all duration-200 hover:-translate-y-0.5 cursor-pointer;
+	.btn-dark {
+		@apply cursor-pointer rounded-none bg-stone-900 uppercase transition-all duration-200 hover:-translate-y-0.5;
 		padding-inline: 1.5rem;
 		padding-block: 0.5rem;
 		color: #ffffff;
