@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { pushState } from '$app/navigation';
+	import { page } from '$app/state';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
 
@@ -21,6 +23,43 @@
 	);
 	const thumbnailAlt = $derived(props?.videoThumbnailAlt ?? 'Christoph Holz on stage');
 	const supportingBullets = $derived(props?.supportingBullets ?? []);
+
+	function extractYouTubeVideoId(input: string): string | null {
+		try {
+			const parsed = new URL(input);
+			const hostname = parsed.hostname.replace('www.', '');
+
+			if (hostname === 'youtu.be') {
+				return parsed.pathname.split('/').filter(Boolean)[0] ?? null;
+			}
+
+			if (hostname.endsWith('youtube.com') || hostname.endsWith('youtube-nocookie.com')) {
+				if (parsed.pathname === '/watch') {
+					return parsed.searchParams.get('v');
+				}
+
+				if (parsed.pathname.startsWith('/embed/')) {
+					return parsed.pathname.split('/').filter(Boolean)[1] ?? null;
+				}
+			}
+
+			return null;
+		} catch {
+			return null;
+		}
+	}
+
+	const isYouTubeUrl = $derived(!!extractYouTubeVideoId(videoEmbedUrl));
+
+	function openYouTubeModal() {
+		pushState('', {
+			...page.state,
+			modal: {
+				kind: 'youtube',
+				url: videoEmbedUrl
+			}
+		});
+	}
 </script>
 
 <section
@@ -65,15 +104,26 @@
 				data-cta-action={props?.primaryCtaAction}
 			>
 				<NavButton href={ctaHref}>{ctaLabel}</NavButton>
-				<a
-					class="outline-link inline-flex items-center justify-center gap-2 px-6 py-2"
-					href={videoEmbedUrl}
-					target="_blank"
-					rel="noreferrer"
-				>
-					<span class="material-symbols--play-circle"></span>
-					View Showreel
-				</a>
+				{#if isYouTubeUrl}
+					<button
+						type="button"
+						class="outline-link inline-flex items-center justify-center gap-2 px-6 py-2"
+						onclick={openYouTubeModal}
+					>
+						<span class="material-symbols--play-circle"></span>
+						View Showreel
+					</button>
+				{:else}
+					<a
+						class="outline-link inline-flex items-center justify-center gap-2 px-6 py-2"
+						href={videoEmbedUrl}
+						target="_blank"
+						rel="noreferrer"
+					>
+						<span class="material-symbols--play-circle"></span>
+						View Showreel
+					</a>
+				{/if}
 			</div>
 		</div>
 
