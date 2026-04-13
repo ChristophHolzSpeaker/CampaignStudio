@@ -33,6 +33,16 @@ class OpenRouterHttpError extends Error {
 	}
 }
 
+class OpenRouterJsonParseError extends Error {
+	rawContent: string;
+
+	constructor(message: string, rawContent: string) {
+		super(message);
+		this.name = 'OpenRouterJsonParseError';
+		this.rawContent = rawContent;
+	}
+}
+
 function getErrorMessage(error: unknown): string {
 	if (error instanceof Error) {
 		const cause =
@@ -50,6 +60,10 @@ function getErrorMessage(error: unknown): string {
 function isRetriableError(error: unknown): boolean {
 	if (error instanceof OpenRouterHttpError) {
 		return RETRYABLE_STATUS_CODES.has(error.status);
+	}
+
+	if (error instanceof OpenRouterJsonParseError) {
+		return true;
 	}
 
 	if (error instanceof Error) {
@@ -140,8 +154,16 @@ async function callOpenRouterOnce({
 		const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
 		const jsonString = jsonMatch ? jsonMatch[1] : content;
 
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(jsonString);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new OpenRouterJsonParseError(`Invalid JSON from model: ${message}`, content);
+		}
+
 		return {
-			parsed: JSON.parse(jsonString),
+			parsed,
 			rawContent: content,
 			durationMs: Date.now() - requestStart
 		};
@@ -204,13 +226,16 @@ export async function callOpenRouter({
 			} catch (error) {
 				const retriable = isRetriableError(error);
 				const finalAttempt = attempt === MAX_ATTEMPTS;
+				const parseErrorRawContentPreview =
+					error instanceof OpenRouterJsonParseError ? error.rawContent : undefined;
 
 				traceLlm('openrouter_attempt_error', traceContext, {
 					model: modelToTry,
 					attempt,
 					retriable,
 					finalAttempt,
-					error: getErrorMessage(error)
+					error: getErrorMessage(error),
+					parseErrorRawContentPreview
 				});
 
 				if (!retriable) {
