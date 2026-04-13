@@ -13,6 +13,35 @@ import {
 	validateLandingPagePlanSections
 } from './schemas/landing-page-plan';
 
+function buildStrategistRepairPrompt(
+	input: LandingPageGenerationInput,
+	invalidResponse: unknown,
+	issues: unknown,
+	allowedSectionTypes: readonly string[],
+	requiredSectionTypes: readonly string[]
+): string {
+	return `Your previous JSON failed validation. Return one corrected JSON object only.
+
+Corrective rules:
+- keep the same campaign intent and conversion goal
+- keep a single-intent page plan aligned to the selected ad group
+- use only these allowed section types: ${allowedSectionTypes.join(', ')}
+- include these required section types: ${requiredSectionTypes.join(', ')}
+- sectionPlan must not contain duplicate section types
+- place seo as the first section in sectionPlan
+- do not output commentary or markdown
+- return JSON only
+
+Landing page generation input:
+${JSON.stringify(input, null, 2)}
+
+Previous invalid JSON:
+${JSON.stringify(invalidResponse, null, 2)}
+
+Validation issues:
+${JSON.stringify(issues, null, 2)}`;
+}
+
 export async function generateLandingPagePlan(
 	input: LandingPageGenerationInput,
 	traceContext: LlmTraceContext = {}
@@ -27,6 +56,7 @@ export async function generateLandingPagePlan(
 	};
 
 	const userPrompt = landingPageStrategistUserPrompt(input, promptContext);
+	const systemPrompt = buildLandingPageStrategistSystemPrompt(promptContext);
 
 	let response;
 	try {
@@ -40,7 +70,7 @@ export async function generateLandingPagePlan(
 		);
 		response = await callOpenRouter({
 			model: 'google/gemini-3.1-flash-lite-preview',
-			systemPrompt: buildLandingPageStrategistSystemPrompt(promptContext),
+			systemPrompt,
 			userPrompt,
 			responseFormat: 'json_object',
 			traceContext: { ...traceContext, stage: 'landing_page_strategist' }
@@ -74,7 +104,61 @@ export async function generateLandingPagePlan(
 				issues: parsed.error.issues
 			}
 		);
-		throw new Error(`Invalid strategist output: ${parsed.error.message}`);
+
+		let repairedResponse;
+		try {
+			console.log('Landing page strategist: requesting repair pass');
+			repairedResponse = await callOpenRouter({
+				model: 'google/gemini-3.1-flash-lite-preview',
+				systemPrompt,
+				userPrompt: buildStrategistRepairPrompt(
+					input,
+					response,
+					parsed.error.issues,
+					eligibility.allowedSectionTypes,
+					eligibility.requiredSectionTypes
+				),
+				responseFormat: 'json_object',
+				traceContext: { ...traceContext, stage: 'landing_page_strategist_repair' }
+			});
+			console.log('Landing page strategist: repair response received');
+			traceLlm(
+				'agent_stage_response',
+				{ ...traceContext, stage: 'landing_page_strategist_repair' },
+				{
+					responsePreview: JSON.stringify(repairedResponse)
+				}
+			);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			traceLlm(
+				'agent_stage_error',
+				{ ...traceContext, stage: 'landing_page_strategist_repair' },
+				{ message }
+			);
+			throw new Error(`Landing page strategist repair failed: ${message}`);
+		}
+
+		const repairedParsed = landingPagePlanSchema.safeParse(repairedResponse);
+		if (!repairedParsed.success) {
+			traceLlm(
+				'agent_stage_validation_error',
+				{ ...traceContext, stage: 'landing_page_strategist_repair' },
+				{
+					issues: repairedParsed.error.issues
+				}
+			);
+			throw new Error(`Invalid strategist output after repair: ${repairedParsed.error.message}`);
+		}
+
+		validateLandingPagePlanSections(
+			repairedParsed.data,
+			eligibility.allowedSectionTypes,
+			eligibility.requiredSectionTypes
+		);
+
+		console.log('Landing page strategist: repaired plan validated');
+		return repairedParsed.data;
 	}
 
 	validateLandingPagePlanSections(

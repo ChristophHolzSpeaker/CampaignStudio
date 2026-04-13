@@ -482,18 +482,9 @@ function validateLandingPageDocumentForMvp(
 	requiredSectionTypes: readonly PageSectionType[]
 ): void {
 	const minSections = requiredSectionTypes.length;
-	const maxSections = allowedSectionTypes.length;
 
-	if (maxSections < minSections) {
-		throw new Error(
-			`Invalid section policy: maxSections (${maxSections}) is less than minSections (${minSections}).`
-		);
-	}
-
-	if (page.sections.length < minSections || page.sections.length > maxSections) {
-		throw new Error(
-			`Landing page must include between ${minSections} and ${maxSections} sections for this MVP.`
-		);
+	if (page.sections.length < minSections) {
+		throw new Error(`Landing page must include at least ${minSections} sections for this MVP.`);
 	}
 
 	const allowedTypes = new Set<string>(allowedSectionTypes);
@@ -530,7 +521,8 @@ export async function generateLandingPageDocument(
 	};
 
 	const userPrompt = landingPageWriterUserPrompt(input, plan, promptContext);
-	const systemPrompt = buildLandingPageWriterSystemPrompt(promptContext);
+	const selectedSectionTypes = plan.sectionPlan.map((section) => section.type);
+	const systemPrompt = buildLandingPageWriterSystemPrompt(promptContext, selectedSectionTypes);
 
 	let response;
 	try {
