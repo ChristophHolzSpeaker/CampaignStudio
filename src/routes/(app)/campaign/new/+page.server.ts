@@ -10,6 +10,7 @@ import { createCampaign } from '$lib/server/campaigns/client';
 import { runCampaignPlanner } from '$lib/server/agents/campaign-planner';
 import { runGoogleAdsGenerationForCampaign } from '$lib/server/agents/google-ads-pipeline';
 import { runLandingPageGenerationForCampaign } from '$lib/server/agents/landing-page-pipeline';
+import { publishCampaignPipelineEvent } from '$lib/server/campaign-pipeline-progress';
 import { createRunId } from '$lib/server/telemetry/llm-trace';
 
 type FieldErrors = Record<string, string[] | undefined>;
@@ -35,6 +36,7 @@ export type CampaignFormActionData = {
 	errors?: FieldErrors;
 	message?: string;
 	pipelineMessage?: string;
+	pipelineRunId?: string;
 	planner?: PlannerState;
 	mode?: 'manual' | 'planner';
 };
@@ -253,16 +255,31 @@ export const actions: Actions = {
 		const mode = getTrimmedField(formData, 'mode') === 'planner' ? 'planner' : 'manual';
 		const planner =
 			mode === 'planner' ? parsePlannerState(formData.get('plannerState')) : undefined;
+		const pipelineRunId =
+			getTrimmedField(formData, 'pipelineRunId') || createRunId('campaign_create');
 
 		const values = getSubmittedValues(formData);
+
+		publishCampaignPipelineEvent(pipelineRunId, {
+			step: 'queued',
+			level: 'info',
+			message: 'Request received. Validating campaign brief.'
+		});
 
 		const parseResult = campaignFormSchema.safeParse(values);
 
 		if (!parseResult.success) {
 			const { fieldErrors } = parseResult.error.flatten();
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'failed',
+				level: 'error',
+				message: 'Validation failed. Please review the highlighted fields and retry.'
+			});
+
 			return fail<CampaignFormActionData>(400, {
 				errors: fieldErrors,
 				values,
+				pipelineRunId,
 				planner,
 				mode
 			});
@@ -275,6 +292,12 @@ export const actions: Actions = {
 
 		let createdCampaign;
 		try {
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'saving_campaign',
+				level: 'info',
+				message: 'Saving campaign metadata.'
+			});
+
 			createdCampaign = await createCampaign({
 				name: campaignData.name,
 				audience: campaignData.audience,
@@ -285,44 +308,96 @@ export const actions: Actions = {
 				notes: campaignData.notes?.length ? campaignData.notes : null,
 				created_by: createdBy
 			});
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'campaign_saved',
+				level: 'success',
+				message: `Campaign #${createdCampaign.id} saved.`
+			});
 			console.log(`Campaign ${createdCampaign.id} saved, starting Google Ads pipeline.`);
 		} catch (error) {
 			console.error('Failed to create campaign:', error);
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'failed',
+				level: 'error',
+				message: 'Could not save campaign metadata.'
+			});
+
 			return fail<CampaignFormActionData>(500, {
 				message: 'Unable to save the campaign right now. Please try again.',
 				values,
+				pipelineRunId,
 				planner,
 				mode
 			});
 		}
 
 		try {
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'generating_google_ads',
+				level: 'info',
+				message: 'Generating Google Ads assets.'
+			});
 			await runGoogleAdsGenerationForCampaign(createdCampaign.id);
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'google_ads_done',
+				level: 'success',
+				message: 'Google Ads assets generated.'
+			});
 			console.log('Google Ads generation completed for campaign', createdCampaign.id);
 		} catch (error) {
 			console.error('Google Ads generation failed:', error);
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'failed',
+				level: 'error',
+				message: 'Google Ads generation failed.'
+			});
+
 			return fail<CampaignFormActionData>(500, {
 				message: 'Campaign saved, but Google Ads generation failed. Please retry.',
 				pipelineMessage: error instanceof Error ? error.message : String(error),
 				values,
+				pipelineRunId,
 				planner,
 				mode
 			});
 		}
 
 		try {
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'generating_landing_page',
+				level: 'info',
+				message: 'Generating landing page structure.'
+			});
 			await runLandingPageGenerationForCampaign(createdCampaign.id);
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'landing_page_done',
+				level: 'success',
+				message: 'Landing page generated.'
+			});
 			console.log('Landing page generation completed for campaign', createdCampaign.id);
 		} catch (error) {
 			console.error('Landing page generation failed:', error);
+			publishCampaignPipelineEvent(pipelineRunId, {
+				step: 'failed',
+				level: 'error',
+				message: 'Landing page generation failed.'
+			});
+
 			return fail<CampaignFormActionData>(500, {
 				message: 'Campaign saved, but landing page generation failed. Please retry.',
 				pipelineMessage: error instanceof Error ? error.message : String(error),
 				values,
+				pipelineRunId,
 				planner,
 				mode
 			});
 		}
+
+		publishCampaignPipelineEvent(pipelineRunId, {
+			step: 'done',
+			level: 'success',
+			message: 'Campaign pipeline completed. Redirecting to campaign details.'
+		});
 
 		throw redirect(303, '/campaigns/' + createdCampaign.id);
 	},
