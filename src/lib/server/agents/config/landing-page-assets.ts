@@ -14,17 +14,17 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 		logos: [
 			{
 				name: 'Executive Summits',
-				imageUrl: 'https://dummyimage.com/220x80/f3f3f3/1a1c1c.png&text=Executive+Summits',
+				imageUrl: '/CeBIT-Logo.png',
 				alt: 'Executive Summits wordmark placeholder'
 			},
 			{
 				name: 'Innovation Forums',
-				imageUrl: 'https://dummyimage.com/220x80/f3f3f3/1a1c1c.png&text=Innovation+Forums',
+				imageUrl: '/cisco-svgrepo-com.svg',
 				alt: 'Innovation Forums wordmark placeholder'
 			},
 			{
 				name: 'Corporate Offsites',
-				imageUrl: 'https://dummyimage.com/220x80/f3f3f3/1a1c1c.png&text=Corporate+Offsites',
+				imageUrl: '/redbull-logo-svgrepo-com.svg',
 				alt: 'Corporate Offsites wordmark placeholder'
 			}
 		]

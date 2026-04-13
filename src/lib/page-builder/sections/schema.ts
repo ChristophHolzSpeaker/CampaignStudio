@@ -39,7 +39,7 @@ export const immediateAuthorityHeroPropsSchema = z
 
 export const trustLogoItemSchema = z.object({
 	name: z.string().trim().min(1),
-	imageUrl: z.string().trim().url(),
+	imageUrl: z.string().trim(),
 	alt: z.string().trim().min(1)
 });
 
