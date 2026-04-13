@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { ActionData } from './$types';
+	import { applyAction, enhance } from '$app/forms';
+	import { onDestroy } from 'svelte';
 	import {
 		audienceOptions,
 		formatOptions,
@@ -30,6 +32,25 @@
 		mode?: 'manual' | 'planner';
 	};
 
+	type PipelineStageKey =
+		| 'queued'
+		| 'saving_campaign'
+		| 'campaign_saved'
+		| 'generating_google_ads'
+		| 'google_ads_done'
+		| 'generating_landing_page'
+		| 'landing_page_done'
+		| 'done'
+		| 'failed';
+
+	type PipelineProgressEvent = {
+		runId: string;
+		step: PipelineStageKey;
+		message: string;
+		level: 'info' | 'success' | 'error';
+		timestamp: string;
+	};
+
 	let { form }: { form?: PlannerActionData } = $props();
 
 	const defaultValues: CampaignFormSubmission = {
@@ -57,19 +78,205 @@
 	const getPlanner = () => form?.planner ?? defaultPlanner;
 
 	let selectedMode = $state<'manual' | 'planner'>('planner');
-	let isSubmitting = $state(false);
+	let isPlannerSubmitting = $state(false);
+	let isCreateSubmitting = $state(false);
+	let pipelineRunId = $state('');
+	let isPipelineActive = $state(false);
+	let pipelineEvents = $state<PipelineProgressEvent[]>([]);
+	let currentStageKey = $state<PipelineStageKey | null>(null);
+	let pipelineFailedTerminally = $state(false);
+	let pipelineSource: EventSource | null = null;
 	const mode = $derived(form?.mode ?? selectedMode);
 
 	const plannerAction = $derived(
 		getPlanner().messages.length ? '?/continuePlanner' : '?/startPlanner'
 	);
 	const plannerStateSerialized = $derived(JSON.stringify(getPlanner()));
+	const shouldShowPipelineProgress = $derived(isCreateSubmitting || pipelineEvents.length > 0);
+	const latestPipelineMessage = $derived(
+		pipelineEvents[pipelineEvents.length - 1]?.message ?? 'Waiting for pipeline updates...'
+	);
+
+	const isPipelineStepSeen = (step: PipelineStageKey) =>
+		pipelineEvents.some((event) => event.step === step);
+
+	const getChecklistRowStatus = (
+		step: 'saving_campaign' | 'generating_google_ads' | 'generating_landing_page'
+	): 'pending' | 'active' | 'completed' => {
+		if (step === 'saving_campaign') {
+			if (
+				isPipelineStepSeen('campaign_saved') ||
+				isPipelineStepSeen('generating_google_ads') ||
+				isPipelineStepSeen('google_ads_done') ||
+				isPipelineStepSeen('generating_landing_page') ||
+				isPipelineStepSeen('landing_page_done') ||
+				isPipelineStepSeen('done')
+			) {
+				return 'completed';
+			}
+
+			if (isPipelineStepSeen('saving_campaign')) {
+				return 'active';
+			}
+
+			return 'pending';
+		}
+
+		if (step === 'generating_google_ads') {
+			if (
+				isPipelineStepSeen('google_ads_done') ||
+				isPipelineStepSeen('generating_landing_page') ||
+				isPipelineStepSeen('landing_page_done') ||
+				isPipelineStepSeen('done')
+			) {
+				return 'completed';
+			}
+
+			if (isPipelineStepSeen('generating_google_ads')) {
+				return 'active';
+			}
+
+			return 'pending';
+		}
+
+		if (isPipelineStepSeen('landing_page_done') || isPipelineStepSeen('done')) {
+			return 'completed';
+		}
+
+		if (isPipelineStepSeen('generating_landing_page')) {
+			return 'active';
+		}
+
+		return 'pending';
+	};
+
+	const savingCampaignStatus = $derived(getChecklistRowStatus('saving_campaign'));
+	const googleAdsStatus = $derived(getChecklistRowStatus('generating_google_ads'));
+	const landingPageStatus = $derived(getChecklistRowStatus('generating_landing_page'));
+
+	const getChecklistIndicator = (status: 'pending' | 'active' | 'completed') => {
+		if (status === 'completed') {
+			return '✓';
+		}
+
+		if (status === 'active') {
+			return '•';
+		}
+
+		return '○';
+	};
+
+	const isPipelineProgressEvent = (value: unknown): value is PipelineProgressEvent => {
+		if (typeof value !== 'object' || value === null) {
+			return false;
+		}
+
+		const candidate = value as Partial<PipelineProgressEvent>;
+		const validStep =
+			typeof candidate.step === 'string' &&
+			[
+				'queued',
+				'saving_campaign',
+				'campaign_saved',
+				'generating_google_ads',
+				'google_ads_done',
+				'generating_landing_page',
+				'landing_page_done',
+				'done',
+				'failed'
+			].includes(candidate.step);
+
+		return (
+			typeof candidate.runId === 'string' &&
+			validStep &&
+			typeof candidate.message === 'string' &&
+			(candidate.level === 'info' ||
+				candidate.level === 'success' ||
+				candidate.level === 'error') &&
+			typeof candidate.timestamp === 'string'
+		);
+	};
 
 	const getFieldError = (field: keyof CampaignFormSubmission) => getErrors()[field]?.[0];
 
-	function handleSubmit() {
-		isSubmitting = true;
+	function generatePipelineRunId(): string {
+		if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+			return crypto.randomUUID();
+		}
+
+		return `campaign_create_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 	}
+
+	function stopPipelineStream() {
+		pipelineSource?.close();
+		pipelineSource = null;
+		isPipelineActive = false;
+	}
+
+	function beginPipelineStream(runId: string) {
+		stopPipelineStream();
+		isPipelineActive = true;
+
+		const source = new EventSource(`/campaign/new/progress?runId=${encodeURIComponent(runId)}`);
+		pipelineSource = source;
+
+		source.addEventListener('pipeline', (event) => {
+			const messageEvent = event as MessageEvent<string>;
+
+			try {
+				const parsed: unknown = JSON.parse(messageEvent.data);
+				if (!isPipelineProgressEvent(parsed)) {
+					return;
+				}
+
+				pipelineEvents = [...pipelineEvents, parsed];
+				currentStageKey = parsed.step;
+				pipelineFailedTerminally = parsed.step === 'failed';
+
+				if (parsed.step === 'done' || parsed.step === 'failed') {
+					isCreateSubmitting = false;
+					stopPipelineStream();
+				}
+			} catch {
+				return;
+			}
+		});
+
+		source.onerror = () => {
+			if (source.readyState === EventSource.CLOSED) {
+				isPipelineActive = false;
+			}
+		};
+	}
+
+	const enhanceCreateSubmission = ({ formData }: { formData: FormData }) => {
+		isCreateSubmitting = true;
+		pipelineFailedTerminally = false;
+		currentStageKey = null;
+		pipelineEvents = [];
+
+		const runId = generatePipelineRunId();
+		pipelineRunId = runId;
+		formData.set('pipelineRunId', runId);
+		beginPipelineStream(runId);
+
+		return async ({ result }: { result: Parameters<typeof applyAction>[0] }) => {
+			await applyAction(result);
+
+			if (result.type === 'failure' || result.type === 'error') {
+				isCreateSubmitting = false;
+				stopPipelineStream();
+			}
+		};
+	};
+
+	function handlePlannerSubmit() {
+		isPlannerSubmitting = true;
+	}
+
+	onDestroy(() => {
+		stopPipelineStream();
+	});
 </script>
 
 <section
@@ -161,9 +368,52 @@
 					{/if}
 
 					<div class="mt-8 space-y-2">
-						<form method="POST" action="?/create" onsubmit={handleSubmit}>
+						{#if shouldShowPipelineProgress}
+							<div class="space-y-3 bg-(--surface) p-4 text-sm">
+								<p class="text-[0.6rem] text-(--accent) uppercase">Create pipeline progress</p>
+								<ul class="space-y-2 text-(--text-muted)">
+									<li class="flex items-center gap-3">
+										<span
+											class:text-(--text-muted)={savingCampaignStatus === 'pending'}
+											class:text-(--accent)={savingCampaignStatus === 'active'}
+											class:text-(--text-primary)={savingCampaignStatus === 'completed'}
+											>{getChecklistIndicator(savingCampaignStatus)}</span
+										>
+										<span>Saving campaign</span>
+									</li>
+									<li class="flex items-center gap-3">
+										<span
+											class:text-(--text-muted)={googleAdsStatus === 'pending'}
+											class:text-(--accent)={googleAdsStatus === 'active'}
+											class:text-(--text-primary)={googleAdsStatus === 'completed'}
+											>{getChecklistIndicator(googleAdsStatus)}</span
+										>
+										<span>Generating Google Ads</span>
+									</li>
+									<li class="flex items-center gap-3">
+										<span
+											class:text-(--text-muted)={landingPageStatus === 'pending'}
+											class:text-(--accent)={landingPageStatus === 'active'}
+											class:text-(--text-primary)={landingPageStatus === 'completed'}
+											>{getChecklistIndicator(landingPageStatus)}</span
+										>
+										<span>Generating landing page</span>
+									</li>
+								</ul>
+								<p
+									class="text-xs"
+									class:text-(--text-muted)={!pipelineFailedTerminally}
+									class:text-[#b42318]={pipelineFailedTerminally}
+								>
+									{latestPipelineMessage}
+								</p>
+							</div>
+						{/if}
+
+						<form method="POST" action="?/create" use:enhance={enhanceCreateSubmission}>
 							<input type="hidden" name="mode" value="planner" />
 							<input type="hidden" name="plannerState" value={plannerStateSerialized} />
+							<input type="hidden" name="pipelineRunId" value={pipelineRunId} />
 							<input type="hidden" name="name" value={getPlanner().resolvedFields.name} />
 							<input type="hidden" name="audience" value={getPlanner().resolvedFields.audience} />
 							<input type="hidden" name="format" value={getPlanner().resolvedFields.format} />
@@ -172,7 +422,7 @@
 							<input type="hidden" name="geography" value={getPlanner().resolvedFields.geography} />
 							<input type="hidden" name="notes" value={getPlanner().resolvedFields.notes} />
 							{#if getPlanner().readyToCreate}
-								<Button isSubmitting={isSubmitting || !getPlanner().readyToCreate}>
+								<Button isSubmitting={isCreateSubmitting || !getPlanner().readyToCreate}>
 									Create Campaign
 								</Button>
 							{/if}
@@ -217,7 +467,12 @@
 						{/each}
 					</div>
 
-					<form method="POST" action={plannerAction} class="mt-6 space-y-4" onsubmit={handleSubmit}>
+					<form
+						method="POST"
+						action={plannerAction}
+						class="mt-6 space-y-4"
+						onsubmit={handlePlannerSubmit}
+					>
 						<input type="hidden" name="mode" value="planner" />
 						<input type="hidden" name="plannerState" value={plannerStateSerialized} />
 						<TextArea
@@ -226,8 +481,8 @@
 							label="Your message"
 							helper="Describe your campaign naturally."
 						></TextArea>
-						<Button {isSubmitting}>
-							{#if isSubmitting}
+						<Button isSubmitting={isPlannerSubmitting}>
+							{#if isPlannerSubmitting}
 								Sending...
 							{:else if getPlanner().messages.length === 0}
 								Start planning
@@ -275,9 +530,10 @@
 					method="POST"
 					action="?/create"
 					class="horizontal-lg vertical-lg space-y-6 rounded-none bg-(--surface-card)/90 shadow-(--shadow-card-strong)"
-					onsubmit={handleSubmit}
+					use:enhance={enhanceCreateSubmission}
 				>
 					<input type="hidden" name="mode" value="manual" />
+					<input type="hidden" name="pipelineRunId" value={pipelineRunId} />
 					<p class="text-[0.6rem] text-(--accent) uppercase">Campaign brief</p>
 
 					<Input
@@ -355,8 +611,50 @@
 					></TextArea>
 
 					<div class="space-y-2">
-						<Button {isSubmitting}>
-							{#if isSubmitting}
+						{#if shouldShowPipelineProgress}
+							<div class="space-y-3 bg-(--surface) p-4 text-sm">
+								<p class="text-[0.6rem] text-(--accent) uppercase">Create pipeline progress</p>
+								<ul class="space-y-2 text-(--text-muted)">
+									<li class="flex items-center gap-3">
+										<span
+											class:text-(--text-muted)={savingCampaignStatus === 'pending'}
+											class:text-(--accent)={savingCampaignStatus === 'active'}
+											class:text-(--text-primary)={savingCampaignStatus === 'completed'}
+											>{getChecklistIndicator(savingCampaignStatus)}</span
+										>
+										<span>Saving campaign</span>
+									</li>
+									<li class="flex items-center gap-3">
+										<span
+											class:text-(--text-muted)={googleAdsStatus === 'pending'}
+											class:text-(--accent)={googleAdsStatus === 'active'}
+											class:text-(--text-primary)={googleAdsStatus === 'completed'}
+											>{getChecklistIndicator(googleAdsStatus)}</span
+										>
+										<span>Generating Google Ads</span>
+									</li>
+									<li class="flex items-center gap-3">
+										<span
+											class:text-(--text-muted)={landingPageStatus === 'pending'}
+											class:text-(--accent)={landingPageStatus === 'active'}
+											class:text-(--text-primary)={landingPageStatus === 'completed'}
+											>{getChecklistIndicator(landingPageStatus)}</span
+										>
+										<span>Generating landing page</span>
+									</li>
+								</ul>
+								<p
+									class="text-xs"
+									class:text-(--text-muted)={!pipelineFailedTerminally}
+									class:text-[#b42318]={pipelineFailedTerminally}
+								>
+									{latestPipelineMessage}
+								</p>
+							</div>
+						{/if}
+
+						<Button isSubmitting={isCreateSubmitting}>
+							{#if isCreateSubmitting}
 								Creating...
 							{:else}
 								Create Campaign
