@@ -47,12 +47,12 @@
 			class="grid grid-cols-2 items-center justify-items-center gap-x-8 gap-y-8 opacity-70 grayscale lg:grid-cols-4 lg:gap-x-12"
 		>
 			{#each logos as logo (logo.name)}
-				<div class="flex min-h-12 w-full max-w-[220px] items-center justify-center">
+				<div class="flex min-h-20 w-full max-w-60 items-center justify-center">
 					{#if logo.imageUrl}
 						<img
 							src={logo.imageUrl}
 							alt={logo.alt}
-							class="h-auto max-h-10 w-auto object-contain sm:max-h-12"
+							class="h-auto max-h-12 w-auto object-contain sm:max-h-20"
 						/>
 					{:else}
 						<span class="text-center text-base tracking-tight text-on-surface">{logo.name}</span>
