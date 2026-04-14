@@ -8,7 +8,8 @@ import {
 	boolean,
 	uuid,
 	index,
-	uniqueIndex
+	uniqueIndex,
+	pgView
 } from 'drizzle-orm/pg-core';
 
 export const campaigns = pgTable('campaigns', {
@@ -57,6 +58,13 @@ export const campaign_visits = pgTable('campaign_visits', {
 	user_agent: text('user_agent'),
 	ip_hash_or_session_identifier: text('ip_hash_or_session_identifier')
 });
+
+export const campaign_visit_metrics = pgView('campaign_visit_metrics', {
+	campaign_id: integer('campaign_id'),
+	visit_count: integer('visit_count'),
+	unique_visitor_count: integer('unique_visitor_count'),
+	last_visited_at: timestamp('last_visited_at')
+}).existing();
 
 export const generation_jobs = pgTable('generation_jobs', {
 	id: serial('id').primaryKey(),

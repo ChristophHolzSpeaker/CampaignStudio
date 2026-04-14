@@ -6,6 +6,7 @@
 		CampaignAdPackageWithDetails,
 		CampaignRecord
 	} from '$lib/server/campaigns/client';
+	import type { CampaignVisitMetrics } from '$lib/validation/campaign-visit-metrics';
 
 	let { data } = $props();
 
@@ -22,11 +23,22 @@
 	const getPageData = () =>
 		data as {
 			campaign?: CampaignRecord;
+			visitMetrics?: CampaignVisitMetrics | null;
 			adGroups?: CampaignAdGroupWithDetails[];
 			adPackage?: CampaignAdPackageWithDetails | null;
 		};
 
 	const getCampaign = () => getPageData().campaign ?? null;
+	const getVisitMetrics = (): CampaignVisitMetrics =>
+		getPageData().visitMetrics ?? {
+			campaignId: getCampaign()?.id ?? 0,
+			visitCount: 0,
+			uniqueVisitorCount: 0,
+			lastVisitedAt: null
+		};
+	const getVisitCount = () => getVisitMetrics().visitCount ?? 0;
+	const getUniqueVisitors = () => getVisitMetrics().uniqueVisitorCount ?? 0;
+	const getLastVisit = () => getVisitMetrics().lastVisitedAt ?? null;
 	const getAdGroups = () => getPageData().adGroups ?? [];
 	const getAdPackage = () => getPageData().adPackage ?? null;
 	const getPackageId = () => getAdPackage()?.id ?? '—';
@@ -107,6 +119,30 @@
 								>
 								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
 									{getPackageVersionLabel()}
+								</span>
+							</div>
+							<div class="rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
+									>Visit count</span
+								>
+								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+									{getVisitCount()}
+								</span>
+							</div>
+							<div class="rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
+									>Unique visitors</span
+								>
+								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+									{getUniqueVisitors()}
+								</span>
+							</div>
+							<div class="rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
+									>Last visit</span
+								>
+								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+									{getLastVisit() ? formatFriendlyDate(getLastVisit() ?? undefined) : 'Pending'}
 								</span>
 							</div>
 						</div>

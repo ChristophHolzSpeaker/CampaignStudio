@@ -1,5 +1,7 @@
 <script lang="ts">
-	const { campaign } = $props();
+	import type { CampaignRecordWithMetrics } from '$lib/server/campaigns/client';
+
+	const { campaign }: { campaign?: CampaignRecordWithMetrics | null | undefined } = $props();
 
 	const badges = $derived.by(() =>
 		[
@@ -18,6 +20,20 @@
 		const notes = (campaign?.notes ?? '').trim();
 		if (!notes.length) return '';
 		return notes.length > 140 ? `${notes.slice(0, 140)}…` : notes;
+	});
+
+	const visitDisplay = $derived.by(() => {
+		const withMetrics = campaign as Partial<CampaignRecordWithMetrics> | null | undefined;
+		const totalVisits = typeof withMetrics?.visitCount === 'number' ? withMetrics.visitCount : 0;
+		const uniqueVisitors =
+			typeof withMetrics?.uniqueVisitorCount === 'number' ? withMetrics.uniqueVisitorCount : 0;
+		const lastVisitedAt = withMetrics?.lastVisitedAt ?? null;
+
+		return {
+			totalVisits,
+			uniqueVisitors,
+			lastVisitedAt
+		};
 	});
 
 	const formatDate = (value?: Date | string | null) => {
@@ -40,6 +56,13 @@
 		{campaign?.created_by ? `By ${campaign.created_by}` : ''}
 		{campaign?.created_by && campaign?.created_at ? ' · ' : ''}
 		{formatDate(campaign?.created_at)}
+	</p>
+	<p class="meta meta-secondary">
+		Visits {visitDisplay.totalVisits}
+		· Unique {visitDisplay.uniqueVisitors}
+		{#if visitDisplay.lastVisitedAt}
+			· Last visit {formatDate(visitDisplay.lastVisitedAt)}
+		{/if}
 	</p>
 	<div class="badge-row">
 		{#each badges as badge (badge.label)}
@@ -121,6 +144,12 @@
 		margin: 0;
 		font-size: 0.9rem;
 		color: #5d3f3f;
+	}
+
+	.meta-secondary {
+		font-size: 0.8rem;
+		color: #876868;
+		margin-top: -0.5rem;
 	}
 
 	.snippet {
