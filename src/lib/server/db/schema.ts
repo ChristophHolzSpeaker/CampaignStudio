@@ -1,4 +1,16 @@
-import { pgTable, serial, integer, text, timestamp, jsonb, boolean } from 'drizzle-orm/pg-core';
+import {
+	pgTable,
+	serial,
+	integer,
+	text,
+	timestamp,
+	jsonb,
+	boolean,
+	uuid,
+	index,
+	uniqueIndex,
+	pgView
+} from 'drizzle-orm/pg-core';
 
 export const campaigns = pgTable('campaigns', {
 	id: serial('id').primaryKey(),
@@ -46,6 +58,13 @@ export const campaign_visits = pgTable('campaign_visits', {
 	user_agent: text('user_agent'),
 	ip_hash_or_session_identifier: text('ip_hash_or_session_identifier')
 });
+
+export const campaign_visit_metrics = pgView('campaign_visit_metrics', {
+	campaign_id: integer('campaign_id'),
+	visit_count: integer('visit_count'),
+	unique_visitor_count: integer('unique_visitor_count'),
+	last_visited_at: timestamp('last_visited_at')
+}).existing();
 
 export const generation_jobs = pgTable('generation_jobs', {
 	id: serial('id').primaryKey(),
@@ -113,6 +132,91 @@ export const campaign_ads = pgTable('campaign_ads', {
 	created_at: timestamp('created_at').notNull().defaultNow(),
 	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
+
+export const lead_journeys = pgTable(
+	'lead_journeys',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		campaign_id: integer('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
+		first_touch_type: text('first_touch_type').notNull(),
+		first_touch_at: timestamp('first_touch_at').notNull().defaultNow(),
+		contact_email: text('contact_email'),
+		contact_name: text('contact_name'),
+		current_stage: text('current_stage').notNull().default('new'),
+		hubspot_contact_id: text('hubspot_contact_id'),
+		hubspot_deal_id: text('hubspot_deal_id'),
+		outcome: text('outcome'),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		journeyLookupIdx: index('lead_journeys_contact_campaign_updated_idx').on(
+			table.contact_email,
+			table.campaign_id,
+			table.updated_at
+		),
+		journeyStageIdx: index('lead_journeys_stage_idx').on(table.current_stage)
+	})
+);
+
+export const lead_events = pgTable(
+	'lead_events',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		lead_journey_id: uuid('lead_journey_id').references(() => lead_journeys.id, {
+			onDelete: 'set null'
+		}),
+		campaign_id: integer('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
+		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
+		event_type: text('event_type').notNull(),
+		event_source: text('event_source').notNull(),
+		event_payload: jsonb('event_payload').notNull().default({}),
+		session_id: text('session_id'),
+		anonymous_id: text('anonymous_id'),
+		occurred_at: timestamp('occurred_at').notNull().defaultNow()
+	},
+	(table) => ({
+		eventJourneyOccurredIdx: index('lead_events_journey_occurred_idx').on(
+			table.lead_journey_id,
+			table.occurred_at
+		),
+		eventCampaignPageOccurredIdx: index('lead_events_campaign_page_occurred_idx').on(
+			table.campaign_id,
+			table.campaign_page_id,
+			table.occurred_at
+		),
+		eventSessionIdx: index('lead_events_session_idx').on(table.session_id),
+		eventAnonymousIdx: index('lead_events_anonymous_idx').on(table.anonymous_id)
+	})
+);
+
+export const booking_links = pgTable(
+	'booking_links',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		lead_journey_id: uuid('lead_journey_id')
+			.notNull()
+			.references(() => lead_journeys.id, { onDelete: 'cascade' }),
+		campaign_id: integer('campaign_id')
+			.notNull()
+			.references(() => campaigns.id, { onDelete: 'cascade' }),
+		token: text('token').notNull(),
+		expires_at: timestamp('expires_at').notNull(),
+		clicked_at: timestamp('clicked_at'),
+		booked_at: timestamp('booked_at'),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		tokenUniqueIdx: uniqueIndex('booking_links_token_key').on(table.token),
+		expiresAtIdx: index('booking_links_expires_at_idx').on(table.expires_at)
+	})
+);
 
 export const prompts = pgTable('prompts', {
 	id: serial('id').primaryKey(),

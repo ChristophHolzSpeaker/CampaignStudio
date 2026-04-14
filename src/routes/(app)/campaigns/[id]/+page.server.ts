@@ -7,7 +7,8 @@ import type {
 import {
 	getCampaignAdPackageWithDetails,
 	getCampaignAdPackages,
-	getCampaignById
+	getCampaignById,
+	getCampaignVisitMetricsByCampaignId
 } from '$lib/server/campaigns/client';
 import { setCampaignStatus } from '$lib/server/campaigns/client';
 import type { Actions } from '@sveltejs/kit';
@@ -27,6 +28,8 @@ export const load: PageServerLoad = async ({ params }) => {
 	if (!campaign) {
 		throw error(404, 'Campaign not found');
 	}
+
+	const visitMetrics = await getCampaignVisitMetricsByCampaignId(candidateId);
 
 	const adPackages = await getCampaignAdPackages(candidateId);
 	const latestPackage = adPackages.at(-1);
@@ -58,6 +61,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		campaign,
+		visitMetrics,
 		adGroups,
 		adPackage,
 		campaignPageId

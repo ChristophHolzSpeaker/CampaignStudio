@@ -1,8 +1,8 @@
 import type { Actions, PageServerLoad } from './$types';
-import { listCampaigns, setCampaignStatus } from '$lib/server/campaigns/client';
+import { listCampaignsWithMetrics, setCampaignStatus } from '$lib/server/campaigns/client';
 
 export const load: PageServerLoad = async () => {
-	const campaignList = await listCampaigns();
+	const campaignList = await listCampaignsWithMetrics();
 	return {
 		campaignList
 	};
