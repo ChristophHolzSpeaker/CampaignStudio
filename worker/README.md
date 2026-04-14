@@ -1,0 +1,36 @@
+ Worker scaffold:
+  - worker/wrangler.toml
+  - worker/tsconfig.json
+  - worker/src/index.ts
+  - worker/src/routes/track-cta.ts
+  - worker/src/routes/email-inbound.ts
+  - worker/src/routes/booking-link.ts
+  - worker/src/routes/health.ts
+  - worker/src/lib/db.ts
+  - worker/src/lib/env.ts
+  - worker/src/lib/crypto.ts
+  - worker/src/lib/email.ts
+  - worker/src/lib/http.ts
+- Env examples:
+  - Updated .env.example with worker-related vars.
+Behavior highlights
+- /track/cta (GET)
+  - Validates type, campaign_id, campaign_page_id, optional lead_journey_id, session_id, anonymous_id.
+  - Validates campaign/page pair exists.
+  - Logs email_cta_click | booking_cta_click | form_cta_click in lead_events.
+  - Never creates lead_journeys.
+- /email/inbound (POST)
+  - Parses and normalizes sender email.
+  - Parses plus tag format cmp12_cp3.
+  - Uses explicit attribution status enum.
+  - Resolves campaign/page if parse succeeds; marks unresolved when lookup fails.
+  - Reuses recent open journey under your exact rule; otherwise creates a new journey.
+  - Logs email_received with attribution details.
+- /booking/link (POST)
+  - Validates input.
+  - Resolves campaign_id from journey if available, or validates provided campaign_id matches journey.
+  - Generates signed HMAC token with { lead_journey_id, campaign_id, iat, exp }.
+  - Persists booking_links with expires_at.
+  - Logs booking_link_generated.
+- /health (GET)
+  - Returns { ok: true }.

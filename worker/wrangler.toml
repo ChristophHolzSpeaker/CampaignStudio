@@ -1,0 +1,7 @@
+name = "campaignstudio-attribution-worker"
+main = "src/index.ts"
+compatibility_date = "2026-04-14"
+
+[vars]
+BOOKING_BASE_URL = "https://book.domain.com/"
+BOOKING_LINK_TTL_SECONDS = "2592000"
