@@ -2,6 +2,7 @@ export type WorkerEnv = {
 	SUPABASE_URL: string;
 	SUPABASE_SERVICE_ROLE_KEY: string;
 	BOOKING_TOKEN_SECRET: string;
+	INTERNAL_API_TOKEN: string;
 	BOOKING_BASE_URL?: string;
 	BOOKING_LINK_TTL_SECONDS?: string;
 };

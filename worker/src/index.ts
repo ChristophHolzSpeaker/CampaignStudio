@@ -1,5 +1,6 @@
 import { type WorkerEnv } from './lib/env';
 import { json } from './lib/http';
+import { requireInternalAuth } from './lib/auth';
 import { handleBookingLink } from './routes/booking-link';
 import { handleEmailInbound } from './routes/email-inbound';
 import { handleHealth } from './routes/health';
@@ -15,6 +16,9 @@ export default {
 			}
 
 			if (pathname === '/track/cta' && request.method === 'GET') {
+				if (!requireInternalAuth(request, env)) {
+					return json({ ok: false, error: 'Unauthorized' }, 401);
+				}
 				return await handleTrackCTA(request, env);
 			}
 
@@ -23,6 +27,9 @@ export default {
 			}
 
 			if (pathname === '/booking/link' && request.method === 'POST') {
+				if (!requireInternalAuth(request, env)) {
+					return json({ ok: false, error: 'Unauthorized' }, 401);
+				}
 				return await handleBookingLink(request, env);
 			}
 

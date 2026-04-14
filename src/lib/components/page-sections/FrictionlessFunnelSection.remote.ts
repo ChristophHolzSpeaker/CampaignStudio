@@ -1,4 +1,8 @@
-import { form } from '$app/server';
+import { form, getRequestEvent } from '$app/server';
+import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-context';
+import { normalizeEmailAddress } from '$lib/server/attribution/email';
+import { logLeadEvent } from '$lib/server/attribution/lead-events';
+import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
 import { z } from 'zod';
 
 const bookingRequestSchema = z.object({
@@ -8,12 +12,111 @@ const bookingRequestSchema = z.object({
 	eventDetails: z
 		.string()
 		.trim()
-		.min(20, 'Please provide a bit more detail about your event goals.')
+		.min(20, 'Please provide a bit more detail about your event goals.'),
+	campaignId: z.number().int().positive('Missing campaign context.'),
+	campaignPageId: z.number().int().positive('Missing page context.'),
+	pageSlug: z.string().trim().optional(),
+	sessionId: z.string().trim().min(1).max(255).optional(),
+	anonymousId: z.string().trim().min(1).max(255).optional()
 });
 
-export const submitBookingRequest = form(bookingRequestSchema, async () => {
+function readSingleString(input: unknown): string | undefined {
+	if (typeof input === 'string') {
+		return input;
+	}
+	if (Array.isArray(input)) {
+		const first = input[0];
+		return typeof first === 'string' ? first : undefined;
+	}
+	return undefined;
+}
+
+export const submitBookingRequest = form('unchecked', async (rawData) => {
+	const parsed = bookingRequestSchema.safeParse({
+		fullName: readSingleString(rawData.fullName) ?? '',
+		organization: readSingleString(rawData.organization) ?? '',
+		email: readSingleString(rawData.email) ?? '',
+		eventDetails: readSingleString(rawData.eventDetails) ?? '',
+		campaignId: Number(readSingleString(rawData.campaignId)),
+		campaignPageId: Number(readSingleString(rawData.campaignPageId)),
+		pageSlug: readSingleString(rawData.pageSlug),
+		sessionId: readSingleString(rawData.sessionId),
+		anonymousId: readSingleString(rawData.anonymousId)
+	});
+
+	if (!parsed.success) {
+		return {
+			success: false,
+			message: parsed.error.issues[0]?.message ?? 'Unable to submit right now.'
+		};
+	}
+
+	const data = parsed.data;
+	const requestEvent = getRequestEvent();
+	const normalizedEmail = normalizeEmailAddress(data.email);
+	if (!normalizedEmail) {
+		return {
+			success: false,
+			message: 'Please provide a valid email address.'
+		};
+	}
+
+	const campaignContext = await resolveCampaignPageContext({
+		campaignId: data.campaignId,
+		campaignPageId: data.campaignPageId
+	});
+
+	if (!campaignContext) {
+		return {
+			success: false,
+			message: 'Unable to submit right now. Please refresh and try again.'
+		};
+	}
+
+	const now = new Date();
+	const { journey, created } = await findOrCreateLeadJourneyFromInquiry({
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		contactEmail: normalizedEmail,
+		contactName: data.fullName,
+		now
+	});
+
+	await logLeadEvent({
+		leadJourneyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		eventType: 'form_submitted',
+		eventSource: 'sveltekit.frictionless_funnel_form',
+		eventPayload: {
+			attribution: {
+				page_path: requestEvent.url.pathname,
+				page_slug: data.pageSlug ?? null,
+				campaign_page_id: campaignContext.campaignPageId
+			},
+			form: {
+				organization: data.organization,
+				event_details_length: data.eventDetails.length
+			},
+			journey: {
+				created
+			}
+		},
+		sessionId: data.sessionId,
+		anonymousId: data.anonymousId
+	});
+
 	return {
 		success: true,
-		message: 'Thanks! Your booking request is captured. We will follow up shortly.'
+		message: 'Thanks! Your booking request is captured. We will follow up shortly.',
+		leadJourneyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		contactEmail: normalizedEmail,
+		next: {
+			woody: { shouldTrigger: true },
+			booking: { canGenerateLink: true },
+			hubspot: { canSync: true }
+		}
 	};
 });

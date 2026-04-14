@@ -5,6 +5,7 @@ export const eventTypes = [
 	'email_cta_click',
 	'booking_cta_click',
 	'form_cta_click',
+	'form_submitted',
 	'email_received',
 	'booking_link_generated'
 ] as const;

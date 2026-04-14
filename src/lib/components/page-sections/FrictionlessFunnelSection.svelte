@@ -2,10 +2,41 @@
 	import Button from '$lib/components/elements/Button.svelte';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
+	import { page } from '$app/state';
 	import type { FrictionlessFunnelBookingProps } from '$lib/page-builder/sections/types';
 	import { submitBookingRequest } from './FrictionlessFunnelSection.remote';
+	import type { CTAType } from '../../../../shared/event-types';
 
-	let { props }: { props?: FrictionlessFunnelBookingProps } = $props();
+	let {
+		props,
+		campaignId = null,
+		campaignPageId = null
+	}: {
+		props?: FrictionlessFunnelBookingProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+	} = $props();
+
+	function trackCta(type: CTAType, leadJourneyId?: string): void {
+		if (campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		void fetch('/api/attribution/cta', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				type,
+				campaign_id: campaignId,
+				campaign_page_id: campaignPageId,
+				...(leadJourneyId ? { lead_journey_id: leadJourneyId } : {})
+			})
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
 
 	const title = $derived(props?.title ?? 'Tell us about your event goals');
 	const description = $derived(
@@ -16,6 +47,11 @@
 	const trustNote = $derived(props?.trustNote);
 	const formDisclaimer = $derived(props?.formDisclaimer);
 	const calendlyUrl = $derived(props?.calendlyUrl);
+	const pageSlug = $derived(page.url.pathname);
+	const leadJourneyId = $derived.by(() => {
+		const result = submitBookingRequest.result as { leadJourneyId?: string } | undefined;
+		return result?.leadJourneyId;
+	});
 
 	const fullNameError = $derived(submitBookingRequest.fields?.fullName?.issues()?.[0]?.message);
 	const organizationError = $derived(
@@ -49,6 +85,7 @@
 					href={calendlyUrl}
 					target="_blank"
 					rel="noreferrer"
+					onclick={() => trackCta('booking', leadJourneyId)}
 				>
 					Prefer direct scheduling
 				</a>
@@ -60,7 +97,12 @@
 				{...submitBookingRequest}
 				class="space-y-6"
 				oninput={() => submitBookingRequest.validate()}
+				onsubmit={() => trackCta('form')}
 			>
+				<input type="hidden" name="campaignId" value={campaignId ?? ''} />
+				<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
+				<input type="hidden" name="pageSlug" value={pageSlug} />
+
 				{#if submitBookingRequest.result?.message}
 					<p
 						class={`px-4 py-3 text-xs tracking-[0.14em] uppercase ${submitBookingRequest.result.success ? 'bg-primary/10 text-primary' : 'bg-on-surface/8 text-on-surface'}`}
