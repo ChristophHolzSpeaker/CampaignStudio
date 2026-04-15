@@ -7,6 +7,7 @@ import {
 	jsonb,
 	boolean,
 	uuid,
+	real,
 	index,
 	uniqueIndex,
 	pgView
@@ -215,6 +216,62 @@ export const booking_links = pgTable(
 	(table) => ({
 		tokenUniqueIdx: uniqueIndex('booking_links_token_key').on(table.token),
 		expiresAtIdx: index('booking_links_expires_at_idx').on(table.expires_at)
+	})
+);
+
+export const mailbox_cursors = pgTable(
+	'mailbox_cursors',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		gmail_user: text('gmail_user').notNull(),
+		last_processed_history_id: text('last_processed_history_id').notNull(),
+		watch_expiration: timestamp('watch_expiration').notNull(),
+		last_watch_renewed_at: timestamp('last_watch_renewed_at'),
+		last_push_received_at: timestamp('last_push_received_at'),
+		last_sync_at: timestamp('last_sync_at'),
+		sync_status: text('sync_status').notNull().default('idle'),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		gmailUserUniqueIdx: uniqueIndex('mailbox_cursors_gmail_user_key').on(table.gmail_user)
+	})
+);
+
+export const lead_messages = pgTable(
+	'lead_messages',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		lead_journey_id: uuid('lead_journey_id')
+			.notNull()
+			.references(() => lead_journeys.id, { onDelete: 'cascade' }),
+		direction: text('direction').notNull(),
+		provider: text('provider').notNull().default('gmail'),
+		provider_message_id: text('provider_message_id').notNull(),
+		provider_thread_id: text('provider_thread_id').notNull(),
+		from_email: text('from_email').notNull(),
+		to_email: text('to_email').notNull(),
+		subject: text('subject').notNull(),
+		body_text: text('body_text').notNull(),
+		body_html: text('body_html'),
+		classification: text('classification'),
+		classification_confidence: real('classification_confidence'),
+		auto_response_decision: text('auto_response_decision'),
+		auto_response_sent_at: timestamp('auto_response_sent_at'),
+		received_at: timestamp('received_at'),
+		sent_at: timestamp('sent_at'),
+		raw_metadata: jsonb('raw_metadata').notNull().default({}),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		providerMessageUniqueIdx: uniqueIndex('lead_messages_provider_message_id_key').on(
+			table.provider_message_id
+		),
+		journeyIdx: index('lead_messages_lead_journey_id_idx').on(table.lead_journey_id),
+		threadIdx: index('lead_messages_provider_thread_id_idx').on(table.provider_thread_id),
+		receivedAtIdx: index('lead_messages_received_at_idx').on(table.received_at),
+		sentAtIdx: index('lead_messages_sent_at_idx').on(table.sent_at)
 	})
 );
 
