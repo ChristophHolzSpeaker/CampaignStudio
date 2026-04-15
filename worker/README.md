@@ -19,6 +19,12 @@ Worker scaffold:
 - worker/src/lib/gmail/messages.ts
 - worker/src/lib/gmail/watch.ts
 - worker/src/lib/gmail/send.ts
+- worker/src/lib/woody/types.ts
+- worker/src/lib/woody/schemas.ts
+- worker/src/lib/woody/prompt.ts
+- worker/src/lib/woody/openrouter-client.ts
+- worker/src/lib/woody/generate-reply.ts
+- worker/src/lib/woody/invoke.ts
 - Env examples:
   - Updated .env.example with worker-related vars.
     Behavior highlights
@@ -223,9 +229,24 @@ Exact journey resolution order implemented
   - unresolved_campaign_page when token parses but campaign/page pair cannot be resolved in campaign_pages
 - Status is propagated into the resolver result and event payload; nothing is silently swallowed.
 
-
 Implemented Phase 5 with deterministic autoresponse eligibility and respond-once enforcement, integrated into inbound Gmail processing (decision-only, no sending/generation).
-What changed
+
+Implemented Woody generation foundation (OpenRouter-backed, generation-only):
+
+- `worker/src/lib/woody/generate-reply.ts`
+  - Validates input with Zod and returns a structured result for downstream Gmail sending.
+  - Applies controlled language fallback to English when requested language is unsupported.
+  - Validates model JSON output and rejects malformed output safely.
+- `worker/src/lib/woody/openrouter-client.ts`
+  - Encapsulates OpenRouter HTTP logic, timeout handling, and retriable failures.
+  - Uses model/API key from environment.
+- `worker/src/lib/woody/prompt.ts`
+  - Versioned prompt builder (`woody_v1`) for structured JSON output.
+  - Instructs model to output `subject`, `body_html`, `body_text`, and extracted inquiry fields.
+- `worker/src/lib/woody/schemas.ts` and `worker/src/lib/woody/types.ts`
+  - Centralized contracts for input/output and extracted fields.
+  - Enforces “To Determine” normalization for missing extraction values.
+    What changed
 - worker/src/lib/email/internal-senders.ts
   - Added configurable internal-sender filter using domain-level matching only.
   - Reads INTERNAL_TEAM_EMAIL_DOMAINS (comma-separated), normalizes domains, and checks sender domain membership.
@@ -273,29 +294,31 @@ What changed
   - Added INTERNAL_TEAM_EMAIL_DOMAINS?: string to Worker env typing.
 - .env.example
   - Added INTERNAL_TEAM_EMAIL_DOMAINS="christophholz.com" example.
-Classification placeholder used
+    Classification placeholder used
 - Deterministic keyword heuristic (subject + body text), no LLM calls.
 - Positive speaking signals (e.g. speak, keynote, workshop, availability, book you) bias toward speaking_inquiry.
 - Negative/system signals (e.g. out of office, undeliverable, unsubscribe) bias toward not_speaking_inquiry.
 - Low/ambiguous signal returns uncertain.
 - Designed so later Woody/AI classifier can replace this module without changing respond-once logic.
-How internal senders are handled
+  How internal senders are handled
 - Domain-level only (as requested): sender is internal if sender domain matches configured INTERNAL_TEAM_EMAIL_DOMAINS.
 - Internal sender path is skipped from eligibility and classified as:
   - auto_response_decision = do_not_autorespond_internal_sender
   - eligible_for_autoresponse = false
-Exact respond-once rule implemented
+    Exact respond-once rule implemented
+
 1. If sender is internal -> do_not_autorespond_internal_sender.
 2. Else if journey auto_response_sent_at is already set -> do_not_autorespond_already_sent.
 3. Else if classification is speaking_inquiry -> eligible_for_autoresponse.
 4. Else if classification is not_speaking_inquiry -> do_not_autorespond_not_inquiry.
 5. Else (uncertain) -> do_not_autorespond_uncertain.
-This guarantees only the first qualifying inquiry in a journey can be eligible.
-Schema changes
+   This guarantees only the first qualifying inquiry in a journey can be eligible.
+   Schema changes
+
 - Added nullable journey-level field:
   - lead_journeys.auto_response_sent_at
 - No migration renumbering or metadata repair performed.
-Deferred intentionally
+  Deferred intentionally
 - Actual reply text generation (Woody)
 - Actual outbound autoresponse sending
 - HubSpot sync / notifications / scheduling side-effects
