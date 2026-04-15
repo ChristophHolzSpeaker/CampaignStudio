@@ -85,3 +85,62 @@ export async function updateMany<T extends Row>(
 		prefer: 'return=representation'
 	});
 }
+
+export async function insertMany<T extends Row>(
+	env: WorkerEnv,
+	table: string,
+	rows: Row[]
+): Promise<T[]> {
+	if (rows.length === 0) {
+		return [];
+	}
+
+	const query = new URLSearchParams({ select: '*' });
+	return request<T[]>(env, table, query, {
+		method: 'POST',
+		body: rows,
+		prefer: 'return=representation'
+	});
+}
+
+export async function upsertMany<T extends Row>(
+	env: WorkerEnv,
+	table: string,
+	rows: Row[],
+	options: {
+		onConflict: string;
+		ignoreDuplicates?: boolean;
+	}
+): Promise<T[]> {
+	if (rows.length === 0) {
+		return [];
+	}
+
+	const query = new URLSearchParams({
+		select: '*',
+		on_conflict: options.onConflict
+	});
+
+	const resolution = options.ignoreDuplicates
+		? 'resolution=ignore-duplicates'
+		: 'resolution=merge-duplicates';
+
+	return request<T[]>(env, table, query, {
+		method: 'POST',
+		body: rows,
+		prefer: `${resolution},return=representation`
+	});
+}
+
+export async function upsertOne<T extends Row>(
+	env: WorkerEnv,
+	table: string,
+	row: Row,
+	options: {
+		onConflict: string;
+		ignoreDuplicates?: boolean;
+	}
+): Promise<T | null> {
+	const rows = await upsertMany<T>(env, table, [row], options);
+	return rows[0] ?? null;
+}

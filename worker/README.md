@@ -7,11 +7,18 @@ Worker scaffold:
 - worker/src/routes/email-inbound.ts
 - worker/src/routes/booking-link.ts
 - worker/src/routes/health.ts
+- worker/src/routes/gmail-push.ts
 - worker/src/lib/db.ts
 - worker/src/lib/env.ts
 - worker/src/lib/crypto.ts
 - worker/src/lib/email.ts
 - worker/src/lib/http.ts
+- worker/src/lib/gmail/auth.ts
+- worker/src/lib/gmail/client.ts
+- worker/src/lib/gmail/history-sync.ts
+- worker/src/lib/gmail/messages.ts
+- worker/src/lib/gmail/watch.ts
+- worker/src/lib/gmail/send.ts
 - Env examples:
   - Updated .env.example with worker-related vars.
     Behavior highlights
@@ -35,6 +42,10 @@ Worker scaffold:
   - Logs booking_link_generated.
 - /health (GET)
   - Returns { ok: true }.
+- /gmail/push (POST)
+  - Accepts Google Pub/Sub Gmail push envelopes.
+  - Decodes message data, updates mailbox cursor push timestamp, and triggers async sync.
+  - Returns quickly with accepted status.
 
   At a high level
 
@@ -84,3 +95,97 @@ Worker scaffold:
 - Supports anonymous pre-lead tracking (session_id / anonymous_id) for later joins.
 - Treats email attribution as best-effort, while booking links are deterministic via signed tokens.
 - Easy to run independently via Wrangler without coupling to SvelteKit runtime.
+
+# Change log
+What I changed
+- worker/src/index.ts
+  - Preserved existing routes: /health, /track/cta, /email/inbound, /booking/link.
+  - Added POST /gmail/push dispatch to handleGmailPush.
+  - Added scheduled(...) handler that runs Gmail watch renewal via renewGmailWatches(...) using ctx.waitUntil(...).
+- worker/src/routes/gmail-push.ts
+  - New Gmail Pub/Sub intake route with Zod validation.
+  - Validates envelope shape, decodes base64/base64url Pub/Sub message.data, parses JSON safely.
+  - Extracts mailbox (emailAddress) and historyId from payload (with attribute fallback).
+  - Updates cursor push timestamp through touchMailboxPush(...).
+  - Triggers async mailbox sync via ctx.waitUntil(syncMailboxHistory(...)).
+  - Returns fast success JSON (accepted, sync_triggered) and handles malformed payloads defensively.
+  - Optional verification token support using GMAIL_PUSH_VERIFICATION_TOKEN query param check.
+- worker/src/lib/gmail/auth.ts
+  - New isolated service-account delegated auth layer.
+  - Builds/signs JWT assertion with RS256 and exchanges for Google OAuth access token.
+  - Supports runtime token caching per delegated user.
+- worker/src/lib/gmail/client.ts
+  - New Gmail API client boundary (single fetch abstraction).
+  - Added typed helpers for:
+    - users.history.list
+    - users.messages.get
+    - users.messages.send
+    - users.watch
+  - Added GmailApiError + stale cursor detection helper (isHistoryCursorStale).
+- worker/src/lib/gmail/messages.ts
+  - New Gmail message normalization/parsing module.
+  - Extracts headers (From, To, Subject), decodes body parts (text/plain, text/html), computes direction (inbound/outbound), derives contact email, and prepares raw_metadata.
+- worker/src/lib/gmail/history-sync.ts
+  - New reusable mailbox sync service.
+  - Loads cursor from mailbox_cursors, reads last_processed_history_id, paginates history in order, collects messagesAdded, fetches full messages, normalizes, persists to lead_messages, and writes lead_events.
+  - Dedupes using provider_message_id (pre-check + unique key protection).
+  - Advances cursor only after successful processing.
+  - Updates last_sync_at and sync_status.
+  - Explicit stale/invalid cursor handling sets sync_status = 'resync_required' (no silent continuation).
+  - General failures set sync_status = 'sync_failed'.
+  - Includes push-touch helper for last_push_received_at.
+- worker/src/lib/gmail/watch.ts
+  - New scheduled watch renewal service.
+  - Reads mailboxes from mailbox_cursors, renews watches before expiration buffer, persists watch_expiration + last_watch_renewed_at.
+  - Sets sync_status = 'active' on success, sync_status = 'renewal_failed' on failure.
+- worker/src/lib/gmail/send.ts
+  - New outbound Gmail sending foundation.
+  - Builds MIME (plain or multipart alternative), supports threaded replies (threadId, In-Reply-To, References), sends via Gmail API.
+  - Persists outbound messages to lead_messages and writes lead_events (email_sent).
+  - Returns provider ids (provider_message_id, provider_thread_id).
+- worker/src/lib/db.ts
+  - Extended DB REST helpers with insertMany, upsertMany, upsertOne for idempotent persistence patterns.
+- worker/src/lib/env.ts
+  - Added Gmail-related env typings and execution/scheduled context types used by Worker handlers.
+- worker/wrangler.toml
+  - Added cron schedule:
+    - [triggers]
+    - crons = ["*/15 * * * *"]
+- .env.example
+  - Added Gmail-related configuration placeholders.
+- worker/README.md
+  - Updated Worker structure list and behavior notes for new Gmail route/services.
+---
+How /gmail/push works
+- Receives Pub/Sub push (POST /gmail/push).
+- Validates envelope with Zod.
+- Decodes message.data, parses JSON, extracts mailbox + optional history id (with attribute fallback).
+- Touches mailbox_cursors.last_push_received_at (and bootstraps cursor if needed and history id exists).
+- Triggers mailbox sync asynchronously using ctx.waitUntil(...).
+- Returns immediately with success JSON; malformed payloads return controlled 400 responses.
+---
+How sync is triggered
+- Primary trigger: POST /gmail/push -> syncMailboxHistory(...) in background.
+- Sync pipeline:
+  - users.history.list(startHistoryId, paginated)
+  - gather messagesAdded
+  - users.messages.get per message
+  - normalize and persist to lead_messages
+  - write minimal lead_events
+  - update cursor/status fields
+---
+How watch renewal is scheduled
+- Cron runs via Worker scheduled handler (worker/src/index.ts).
+- Calls renewGmailWatches(...).
+- Renews only mailboxes due within renewal buffer.
+- Persists watch_expiration, last_watch_renewed_at, and status transitions (active / renewal_failed).
+---
+How outbound sending is structured
+- No public arbitrary-send route added.
+- Reusable service in worker/src/lib/gmail/send.ts handles:
+  - MIME creation
+  - Gmail send call
+  - optional thread/reply headers
+  - persistence to lead_messages
+  - lead event logging
+- Designed as internal foundation for later Woody orchestration.
