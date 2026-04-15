@@ -204,20 +204,98 @@ How outbound sending is structured
   - lead event logging
 - Designed as internal foundation for later Woody orchestration.
 
-
 Exact journey resolution order implemented
+
 1. Check duplicate message by provider_message_id (stop early if duplicate).
 2. Resolve by Gmail provider_thread_id mapping from existing lead_messages.
 3. If no thread match, parse plus-address from recipients (cmpX_cpY), then validate campaign/page in DB.
 4. If campaign resolved, find recent open journey by normalized sender email + campaign_id (last 30 days, non-closed stages, newest first).
 5. If none found, create new journey (first_touch_type: 'email', current_stage: 'new', resolved campaign/page when available).
-How duplicates are prevented
+   How duplicates are prevented
+
 - Pre-processing dedupe query on lead_messages.provider_message_id.
 - Write path uses conflict-safe upsert on provider_message_id with duplicate-ignore semantics, so repeated delivery/race conditions do not create duplicates.
 - Duplicate outcomes return structured status duplicate_ignored with matched_by: 'duplicate'.
-How malformed plus-addresses are handled
+  How malformed plus-addresses are handled
 - Parser returns explicit status:
   - missing_plus_address when no +... token exists
   - malformed_plus_address when token exists but is invalid
   - unresolved_campaign_page when token parses but campaign/page pair cannot be resolved in campaign_pages
 - Status is propagated into the resolver result and event payload; nothing is silently swallowed.
+
+
+Implemented Phase 5 with deterministic autoresponse eligibility and respond-once enforcement, integrated into inbound Gmail processing (decision-only, no sending/generation).
+What changed
+- worker/src/lib/email/internal-senders.ts
+  - Added configurable internal-sender filter using domain-level matching only.
+  - Reads INTERNAL_TEAM_EMAIL_DOMAINS (comma-separated), normalizes domains, and checks sender domain membership.
+- worker/src/lib/inbound/classify-message.ts
+  - Added pluggable classification foundation with deterministic default heuristic.
+  - Outputs one of:
+    - speaking_inquiry
+    - not_speaking_inquiry
+    - uncertain
+  - Also returns classification_confidence and reason.
+- worker/src/lib/inbound/autoresponse-decision.ts
+  - Added deterministic decision engine for one-time autoresponse eligibility.
+  - Reads lead_journeys.auto_response_sent_at and enforces respond-once.
+  - Returns structured decision:
+    - classification
+    - classification_confidence
+    - auto_response_decision
+    - eligible_for_autoresponse
+    - skipped_reason
+    - lead_journey_id
+    - lead_message_id
+- worker/src/lib/gmail/process-inbound-message.ts
+  - Integrated decision pipeline after dedupe/normalization/journey-resolution/message persistence.
+  - Persists decision metadata onto lead_messages:
+    - classification
+    - classification_confidence
+    - auto_response_decision
+    - auto_response_sent_at stays null in this phase
+    - supplemental decision details in raw_metadata.inbound_processing.autoresponse
+  - Added decision event logging:
+    - inbound_message_classified
+    - autoresponse_eligible
+    - autoresponse_skipped_internal_sender
+    - autoresponse_skipped_not_inquiry
+    - autoresponse_skipped_uncertain
+    - autoresponse_skipped_already_sent
+  - Extended processing result shape with decision fields.
+- src/lib/server/db/schema.ts
+  - Added lead_journeys.auto_response_sent_at nullable timestamp for journey-level respond-once state.
+- drizzle/0008_add_lead_journeys_auto_response_state.sql
+  - Added Drizzle migration to add auto_response_sent_at to lead_journeys.
+- supabase/migrations/009_add_lead_journeys_auto_response_state.sql
+  - Added Supabase migration mirroring the same column.
+- worker/src/lib/env.ts
+  - Added INTERNAL_TEAM_EMAIL_DOMAINS?: string to Worker env typing.
+- .env.example
+  - Added INTERNAL_TEAM_EMAIL_DOMAINS="christophholz.com" example.
+Classification placeholder used
+- Deterministic keyword heuristic (subject + body text), no LLM calls.
+- Positive speaking signals (e.g. speak, keynote, workshop, availability, book you) bias toward speaking_inquiry.
+- Negative/system signals (e.g. out of office, undeliverable, unsubscribe) bias toward not_speaking_inquiry.
+- Low/ambiguous signal returns uncertain.
+- Designed so later Woody/AI classifier can replace this module without changing respond-once logic.
+How internal senders are handled
+- Domain-level only (as requested): sender is internal if sender domain matches configured INTERNAL_TEAM_EMAIL_DOMAINS.
+- Internal sender path is skipped from eligibility and classified as:
+  - auto_response_decision = do_not_autorespond_internal_sender
+  - eligible_for_autoresponse = false
+Exact respond-once rule implemented
+1. If sender is internal -> do_not_autorespond_internal_sender.
+2. Else if journey auto_response_sent_at is already set -> do_not_autorespond_already_sent.
+3. Else if classification is speaking_inquiry -> eligible_for_autoresponse.
+4. Else if classification is not_speaking_inquiry -> do_not_autorespond_not_inquiry.
+5. Else (uncertain) -> do_not_autorespond_uncertain.
+This guarantees only the first qualifying inquiry in a journey can be eligible.
+Schema changes
+- Added nullable journey-level field:
+  - lead_journeys.auto_response_sent_at
+- No migration renumbering or metadata repair performed.
+Deferred intentionally
+- Actual reply text generation (Woody)
+- Actual outbound autoresponse sending
+- HubSpot sync / notifications / scheduling side-effects

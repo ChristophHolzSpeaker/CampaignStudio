@@ -13,6 +13,7 @@ export type WorkerEnv = {
 	GMAIL_WATCH_RENEWAL_BUFFER_SECONDS?: string;
 	GMAIL_WATCH_LABEL_IDS?: string;
 	GMAIL_WATCH_LABEL_FILTER_ACTION?: 'include' | 'exclude';
+	INTERNAL_TEAM_EMAIL_DOMAINS?: string;
 };
 
 export type WorkerExecutionContext = {
