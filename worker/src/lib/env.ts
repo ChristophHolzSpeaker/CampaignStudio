@@ -14,6 +14,10 @@ export type WorkerEnv = {
 	GMAIL_WATCH_LABEL_IDS?: string;
 	GMAIL_WATCH_LABEL_FILTER_ACTION?: 'include' | 'exclude';
 	INTERNAL_TEAM_EMAIL_DOMAINS?: string;
+	OPENROUTER_API_KEY?: string;
+	WOODY_OPENROUTER_MODEL?: string;
+	WOODY_OPENROUTER_TIMEOUT_MS?: string;
+	WOODY_SUPPORTED_LANGUAGES?: string;
 };
 
 export type WorkerExecutionContext = {
