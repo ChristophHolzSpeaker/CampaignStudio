@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WorkerEnv } from '../env';
+import { makeTestEnv } from '../../test/helpers';
 
 vi.mock('../db', () => ({
 	selectOne: vi.fn()
@@ -9,15 +9,6 @@ import { selectOne } from '../db';
 import { evaluateInboundAutoResponseDecision } from './autoresponse-decision';
 
 const mockedSelectOne = vi.mocked(selectOne);
-
-function makeEnv(): WorkerEnv {
-	return {
-		SUPABASE_URL: 'http://localhost:54321',
-		SUPABASE_SERVICE_ROLE_KEY: 'test',
-		BOOKING_TOKEN_SECRET: 'test',
-		INTERNAL_API_TOKEN: 'test'
-	};
-}
 
 describe('autoresponse decision engine', () => {
 	beforeEach(() => {
@@ -30,7 +21,7 @@ describe('autoresponse decision engine', () => {
 			auto_response_sent_at: '2026-01-01T00:00:00Z'
 		});
 
-		const result = await evaluateInboundAutoResponseDecision(makeEnv(), {
+		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
 			lead_message_id: 'message-1',
 			is_internal_sender: true,
@@ -51,7 +42,7 @@ describe('autoresponse decision engine', () => {
 			auto_response_sent_at: '2026-01-01T00:00:00Z'
 		});
 
-		const result = await evaluateInboundAutoResponseDecision(makeEnv(), {
+		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
 			lead_message_id: 'message-1',
 			is_internal_sender: false,
@@ -68,7 +59,7 @@ describe('autoresponse decision engine', () => {
 	it('skips uncertain classification', async () => {
 		mockedSelectOne.mockResolvedValue({ id: 'journey-1', auto_response_sent_at: null });
 
-		const result = await evaluateInboundAutoResponseDecision(makeEnv(), {
+		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
 			lead_message_id: 'message-1',
 			is_internal_sender: false,
@@ -85,7 +76,7 @@ describe('autoresponse decision engine', () => {
 	it('skips non-speaking inquiry', async () => {
 		mockedSelectOne.mockResolvedValue({ id: 'journey-1', auto_response_sent_at: null });
 
-		const result = await evaluateInboundAutoResponseDecision(makeEnv(), {
+		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
 			lead_message_id: 'message-1',
 			is_internal_sender: false,
@@ -102,7 +93,7 @@ describe('autoresponse decision engine', () => {
 	it('marks eligible only for first speaking inquiry', async () => {
 		mockedSelectOne.mockResolvedValue({ id: 'journey-1', auto_response_sent_at: null });
 
-		const result = await evaluateInboundAutoResponseDecision(makeEnv(), {
+		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
 			lead_message_id: 'message-1',
 			is_internal_sender: false,

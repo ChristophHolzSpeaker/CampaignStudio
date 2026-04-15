@@ -1,15 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { WorkerEnv } from '../env';
 import { isInternalSender } from './internal-senders';
+import { makeTestEnv } from '../../test/helpers';
 
-function makeEnv(domains?: string): WorkerEnv {
-	return {
-		SUPABASE_URL: 'http://localhost:54321',
-		SUPABASE_SERVICE_ROLE_KEY: 'test',
-		BOOKING_TOKEN_SECRET: 'test',
-		INTERNAL_API_TOKEN: 'test',
-		INTERNAL_TEAM_EMAIL_DOMAINS: domains
-	};
+function makeEnv(domains?: string) {
+	return makeTestEnv({ INTERNAL_TEAM_EMAIL_DOMAINS: domains });
 }
 
 describe('internal sender domain matching', () => {

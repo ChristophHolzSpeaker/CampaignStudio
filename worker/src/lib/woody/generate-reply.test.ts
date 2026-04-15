@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WorkerEnv } from '../env';
+import { makeTestEnv } from '../../test/helpers';
 
 vi.mock('./openrouter-client', () => ({
 	callOpenRouterChat: vi.fn()
@@ -10,16 +10,12 @@ import { generateWoodyReply } from './generate-reply';
 
 const mockedCallOpenRouterChat = vi.mocked(callOpenRouterChat);
 
-function makeEnv(overrides?: Partial<WorkerEnv>): WorkerEnv {
-	return {
-		SUPABASE_URL: 'http://localhost:54321',
-		SUPABASE_SERVICE_ROLE_KEY: 'test',
-		BOOKING_TOKEN_SECRET: 'test',
-		INTERNAL_API_TOKEN: 'test',
+function makeEnv(overrides?: Parameters<typeof makeTestEnv>[0]): ReturnType<typeof makeTestEnv> {
+	return makeTestEnv({
 		OPENROUTER_API_KEY: 'test-key',
 		WOODY_OPENROUTER_MODEL: 'openai/gpt-4.1-mini',
 		...overrides
-	};
+	});
 }
 
 function validModelContent(): string {
