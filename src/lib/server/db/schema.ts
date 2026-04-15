@@ -149,6 +149,7 @@ export const lead_journeys = pgTable(
 		current_stage: text('current_stage').notNull().default('new'),
 		hubspot_contact_id: text('hubspot_contact_id'),
 		hubspot_deal_id: text('hubspot_deal_id'),
+		auto_response_sent_at: timestamp('auto_response_sent_at'),
 		outcome: text('outcome'),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
