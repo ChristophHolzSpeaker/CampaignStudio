@@ -10,7 +10,8 @@ import {
 	real,
 	index,
 	uniqueIndex,
-	pgView
+	pgView,
+	type AnyPgColumn
 } from 'drizzle-orm/pg-core';
 
 export const campaigns = pgTable('campaigns', {
@@ -150,6 +151,12 @@ export const lead_journeys = pgTable(
 		hubspot_contact_id: text('hubspot_contact_id'),
 		hubspot_deal_id: text('hubspot_deal_id'),
 		auto_response_sent_at: timestamp('auto_response_sent_at'),
+		auto_response_message_id: uuid('auto_response_message_id').references(
+			(): AnyPgColumn => lead_messages.id,
+			{
+				onDelete: 'set null'
+			}
+		),
 		outcome: text('outcome'),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
@@ -203,7 +210,7 @@ export const booking_links = pgTable(
 		id: uuid('id').defaultRandom().primaryKey(),
 		lead_journey_id: uuid('lead_journey_id')
 			.notNull()
-			.references(() => lead_journeys.id, { onDelete: 'cascade' }),
+			.references((): AnyPgColumn => lead_journeys.id, { onDelete: 'cascade' }),
 		campaign_id: integer('campaign_id')
 			.notNull()
 			.references(() => campaigns.id, { onDelete: 'cascade' }),

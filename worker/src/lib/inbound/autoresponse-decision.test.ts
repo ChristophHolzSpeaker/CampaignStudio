@@ -18,7 +18,8 @@ describe('autoresponse decision engine', () => {
 	it('skips internal sender before other checks', async () => {
 		mockedSelectOne.mockResolvedValue({
 			id: 'journey-1',
-			auto_response_sent_at: '2026-01-01T00:00:00Z'
+			auto_response_sent_at: '2026-01-01T00:00:00Z',
+			auto_response_message_id: null
 		});
 
 		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
@@ -39,7 +40,8 @@ describe('autoresponse decision engine', () => {
 	it('skips when journey already auto-responded', async () => {
 		mockedSelectOne.mockResolvedValue({
 			id: 'journey-1',
-			auto_response_sent_at: '2026-01-01T00:00:00Z'
+			auto_response_sent_at: '2026-01-01T00:00:00Z',
+			auto_response_message_id: null
 		});
 
 		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
@@ -57,7 +59,11 @@ describe('autoresponse decision engine', () => {
 	});
 
 	it('skips uncertain classification', async () => {
-		mockedSelectOne.mockResolvedValue({ id: 'journey-1', auto_response_sent_at: null });
+		mockedSelectOne.mockResolvedValue({
+			id: 'journey-1',
+			auto_response_sent_at: null,
+			auto_response_message_id: null
+		});
 
 		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
@@ -74,7 +80,11 @@ describe('autoresponse decision engine', () => {
 	});
 
 	it('skips non-speaking inquiry', async () => {
-		mockedSelectOne.mockResolvedValue({ id: 'journey-1', auto_response_sent_at: null });
+		mockedSelectOne.mockResolvedValue({
+			id: 'journey-1',
+			auto_response_sent_at: null,
+			auto_response_message_id: null
+		});
 
 		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',
@@ -91,7 +101,11 @@ describe('autoresponse decision engine', () => {
 	});
 
 	it('marks eligible only for first speaking inquiry', async () => {
-		mockedSelectOne.mockResolvedValue({ id: 'journey-1', auto_response_sent_at: null });
+		mockedSelectOne.mockResolvedValue({
+			id: 'journey-1',
+			auto_response_sent_at: null,
+			auto_response_message_id: null
+		});
 
 		const result = await evaluateInboundAutoResponseDecision(makeTestEnv(), {
 			lead_journey_id: 'journey-1',

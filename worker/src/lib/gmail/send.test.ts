@@ -3,6 +3,7 @@ import { decodeBase64Url, makeTestEnv } from '../../test/helpers';
 
 vi.mock('../db', () => ({
 	insertOne: vi.fn(),
+	selectOne: vi.fn(),
 	upsertOne: vi.fn()
 }));
 
@@ -10,17 +11,19 @@ vi.mock('./client', () => ({
 	gmailSendMessage: vi.fn()
 }));
 
-import { insertOne, upsertOne } from '../db';
+import { insertOne, selectOne, upsertOne } from '../db';
 import { gmailSendMessage } from './client';
 import { sendOutboundEmail } from './send';
 
 const mockedInsertOne = vi.mocked(insertOne);
+const mockedSelectOne = vi.mocked(selectOne);
 const mockedUpsertOne = vi.mocked(upsertOne);
 const mockedGmailSendMessage = vi.mocked(gmailSendMessage);
 
 describe('sendOutboundEmail', () => {
 	beforeEach(() => {
 		mockedInsertOne.mockReset();
+		mockedSelectOne.mockReset();
 		mockedUpsertOne.mockReset();
 		mockedGmailSendMessage.mockReset();
 		vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(
@@ -42,6 +45,7 @@ describe('sendOutboundEmail', () => {
 
 	it('sends email and persists lead_message + lead_event', async () => {
 		mockedGmailSendMessage.mockResolvedValue({ id: 'msg_sent_1', threadId: 'thread_1' });
+		mockedUpsertOne.mockResolvedValue({ id: 'lead_message_1' });
 
 		const result = await sendOutboundEmail(makeTestEnv(), {
 			leadJourneyId: 'journey_1',
@@ -55,7 +59,11 @@ describe('sendOutboundEmail', () => {
 			references: ['<ref-1@id>', '<ref-2@id>']
 		});
 
-		expect(result).toEqual({ provider_message_id: 'msg_sent_1', provider_thread_id: 'thread_1' });
+		expect(result).toEqual({
+			lead_message_id: 'lead_message_1',
+			provider_message_id: 'msg_sent_1',
+			provider_thread_id: 'thread_1'
+		});
 		expect(mockedGmailSendMessage).toHaveBeenCalledTimes(1);
 		expect(mockedUpsertOne).toHaveBeenCalledTimes(1);
 		expect(mockedInsertOne).toHaveBeenCalledTimes(1);
