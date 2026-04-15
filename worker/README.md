@@ -97,7 +97,9 @@ Worker scaffold:
 - Easy to run independently via Wrangler without coupling to SvelteKit runtime.
 
 # Change log
+
 What I changed
+
 - worker/src/index.ts
   - Preserved existing routes: /health, /track/cta, /email/inbound, /booking/link.
   - Added POST /gmail/push dispatch to handleGmailPush.
@@ -155,16 +157,22 @@ What I changed
   - Added Gmail-related configuration placeholders.
 - worker/README.md
   - Updated Worker structure list and behavior notes for new Gmail route/services.
+
 ---
+
 How /gmail/push works
+
 - Receives Pub/Sub push (POST /gmail/push).
 - Validates envelope with Zod.
 - Decodes message.data, parses JSON, extracts mailbox + optional history id (with attribute fallback).
 - Touches mailbox_cursors.last_push_received_at (and bootstraps cursor if needed and history id exists).
 - Triggers mailbox sync asynchronously using ctx.waitUntil(...).
 - Returns immediately with success JSON; malformed payloads return controlled 400 responses.
+
 ---
+
 How sync is triggered
+
 - Primary trigger: POST /gmail/push -> syncMailboxHistory(...) in background.
 - Sync pipeline:
   - users.history.list(startHistoryId, paginated)
@@ -173,14 +181,20 @@ How sync is triggered
   - normalize and persist to lead_messages
   - write minimal lead_events
   - update cursor/status fields
+
 ---
+
 How watch renewal is scheduled
+
 - Cron runs via Worker scheduled handler (worker/src/index.ts).
 - Calls renewGmailWatches(...).
 - Renews only mailboxes due within renewal buffer.
 - Persists watch_expiration, last_watch_renewed_at, and status transitions (active / renewal_failed).
+
 ---
+
 How outbound sending is structured
+
 - No public arbitrary-send route added.
 - Reusable service in worker/src/lib/gmail/send.ts handles:
   - MIME creation
@@ -189,3 +203,21 @@ How outbound sending is structured
   - persistence to lead_messages
   - lead event logging
 - Designed as internal foundation for later Woody orchestration.
+
+
+Exact journey resolution order implemented
+1. Check duplicate message by provider_message_id (stop early if duplicate).
+2. Resolve by Gmail provider_thread_id mapping from existing lead_messages.
+3. If no thread match, parse plus-address from recipients (cmpX_cpY), then validate campaign/page in DB.
+4. If campaign resolved, find recent open journey by normalized sender email + campaign_id (last 30 days, non-closed stages, newest first).
+5. If none found, create new journey (first_touch_type: 'email', current_stage: 'new', resolved campaign/page when available).
+How duplicates are prevented
+- Pre-processing dedupe query on lead_messages.provider_message_id.
+- Write path uses conflict-safe upsert on provider_message_id with duplicate-ignore semantics, so repeated delivery/race conditions do not create duplicates.
+- Duplicate outcomes return structured status duplicate_ignored with matched_by: 'duplicate'.
+How malformed plus-addresses are handled
+- Parser returns explicit status:
+  - missing_plus_address when no +... token exists
+  - malformed_plus_address when token exists but is invalid
+  - unresolved_campaign_page when token parses but campaign/page pair cannot be resolved in campaign_pages
+- Status is propagated into the resolver result and event payload; nothing is silently swallowed.

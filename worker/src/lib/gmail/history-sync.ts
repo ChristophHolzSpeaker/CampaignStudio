@@ -1,16 +1,13 @@
-import { insertOne, selectMany, selectOne, updateMany, upsertOne } from '../db';
+import { insertOne, selectMany, selectOne, updateMany } from '../db';
 import type { WorkerEnv } from '../env';
-import { normalizeEmailAddress, parsePlusAddressAttribution } from '../email';
 import {
-	type GmailMessage,
 	gmailGetMessage,
 	gmailListHistory,
-	isHistoryCursorStale
+	isHistoryCursorStale,
+	type GmailMessage
 } from './client';
-import { normalizeGmailMessage, type NormalizedGmailMessage } from './messages';
-
-const OPEN_STAGES_FILTER = 'not.in.(won,lost,disqualified,archived)';
-const JOURNEY_MATCH_WINDOW_DAYS = 30;
+import { normalizeGmailMessage } from './messages';
+import { processInboundGmailMessage } from './process-inbound-message';
 
 type MailboxCursorRow = {
 	id: string;
@@ -18,25 +15,6 @@ type MailboxCursorRow = {
 	last_processed_history_id: string;
 	watch_expiration: string;
 	sync_status: string;
-};
-
-type LeadJourneyRow = {
-	id: string;
-	campaign_id: number | null;
-	campaign_page_id: number | null;
-	contact_email: string | null;
-	updated_at: string;
-};
-
-type CampaignPageRow = {
-	id: number;
-	campaign_id: number;
-};
-
-type LeadMessageRow = {
-	id: string;
-	provider_message_id: string;
-	lead_journey_id: string;
 };
 
 type SyncOutcome = {
@@ -90,88 +68,7 @@ async function getMailboxCursor(
 	return selectOne<MailboxCursorRow>(env, 'mailbox_cursors', query);
 }
 
-async function resolveCampaignForInbound(
-	env: WorkerEnv,
-	toEmailHeader: string
-): Promise<{ campaign_id: number | null; campaign_page_id: number | null }> {
-	const firstRecipient = toEmailHeader
-		.split(',')
-		.map((value) => value.trim())
-		.find((value) => value.length > 0);
-
-	if (!firstRecipient) {
-		return { campaign_id: null, campaign_page_id: null };
-	}
-
-	const parsed = parsePlusAddressAttribution(firstRecipient);
-	if (parsed.status !== 'parsed' || !parsed.campaign_id || !parsed.campaign_page_id) {
-		return { campaign_id: null, campaign_page_id: null };
-	}
-
-	const query = new URLSearchParams({
-		select: 'id,campaign_id',
-		id: `eq.${parsed.campaign_page_id}`,
-		campaign_id: `eq.${parsed.campaign_id}`,
-		limit: '1'
-	});
-	const campaignPage = await selectOne<CampaignPageRow>(env, 'campaign_pages', query);
-	if (!campaignPage) {
-		return { campaign_id: null, campaign_page_id: null };
-	}
-
-	return {
-		campaign_id: campaignPage.campaign_id,
-		campaign_page_id: campaignPage.id
-	};
-}
-
-async function resolveLeadJourneyId(
-	env: WorkerEnv,
-	message: NormalizedGmailMessage
-): Promise<LeadJourneyRow> {
-	const normalizedContactEmail = normalizeEmailAddress(message.contact_email ?? '');
-	const nowIso = new Date().toISOString();
-
-	let campaignId: number | null = null;
-	let campaignPageId: number | null = null;
-
-	if (message.direction === 'inbound') {
-		const inboundCampaign = await resolveCampaignForInbound(env, message.to_email);
-		campaignId = inboundCampaign.campaign_id;
-		campaignPageId = inboundCampaign.campaign_page_id;
-	}
-
-	if (normalizedContactEmail) {
-		const windowStart = new Date(
-			Date.now() - JOURNEY_MATCH_WINDOW_DAYS * 24 * 60 * 60 * 1000
-		).toISOString();
-
-		const query = new URLSearchParams({
-			select: 'id,campaign_id,campaign_page_id,contact_email,updated_at',
-			contact_email: `eq.${normalizedContactEmail}`,
-			current_stage: OPEN_STAGES_FILTER,
-			updated_at: `gte.${windowStart}`,
-			order: 'updated_at.desc',
-			limit: '1'
-		});
-		const existingJourney = await selectOne<LeadJourneyRow>(env, 'lead_journeys', query);
-		if (existingJourney) {
-			return existingJourney;
-		}
-	}
-
-	return insertOne<LeadJourneyRow>(env, 'lead_journeys', {
-		campaign_id: campaignId,
-		campaign_page_id: campaignPageId,
-		first_touch_type: 'email',
-		first_touch_at: nowIso,
-		contact_email: normalizedContactEmail,
-		contact_name: null,
-		current_stage: 'new'
-	});
-}
-
-async function persistMessage(
+async function persistFetchedMessage(
 	env: WorkerEnv,
 	gmailUser: string,
 	gmailMessage: GmailMessage
@@ -181,63 +78,23 @@ async function persistMessage(
 		return false;
 	}
 
-	const existingQuery = new URLSearchParams({
-		select: 'id,provider_message_id,lead_journey_id',
-		provider_message_id: `eq.${normalized.provider_message_id}`,
-		limit: '1'
-	});
-	const existingMessage = await selectOne<LeadMessageRow>(env, 'lead_messages', existingQuery);
-	if (existingMessage) {
+	if (normalized.direction !== 'inbound') {
 		return false;
 	}
 
-	const journey = await resolveLeadJourneyId(env, normalized);
-
-	await upsertOne(
-		env,
-		'lead_messages',
-		{
-			lead_journey_id: journey.id,
-			direction: normalized.direction,
-			provider: 'gmail',
-			provider_message_id: normalized.provider_message_id,
-			provider_thread_id: normalized.provider_thread_id,
-			from_email: normalized.from_email,
-			to_email: normalized.to_email,
-			subject: normalized.subject,
-			body_text: normalized.body_text,
-			body_html: normalized.body_html,
-			classification: null,
-			classification_confidence: null,
-			auto_response_decision: null,
-			auto_response_sent_at: null,
-			received_at: normalized.received_at,
-			sent_at: normalized.sent_at,
-			raw_metadata: normalized.raw_metadata,
-			updated_at: new Date().toISOString()
-		},
-		{
-			onConflict: 'provider_message_id',
-			ignoreDuplicates: false
-		}
-	);
-
-	await insertOne(env, 'lead_events', {
-		lead_journey_id: journey.id,
-		campaign_id: journey.campaign_id,
-		campaign_page_id: journey.campaign_page_id,
-		event_type: normalized.direction === 'inbound' ? 'email_received' : 'email_sent',
-		event_source: 'worker.gmail_sync',
-		event_payload: {
-			provider: 'gmail',
-			provider_message_id: normalized.provider_message_id,
-			provider_thread_id: normalized.provider_thread_id,
-			direction: normalized.direction,
-			subject: normalized.subject
-		}
+	const result = await processInboundGmailMessage(env, {
+		gmailUser,
+		gmailMessage
 	});
 
-	return true;
+	if (result.status === 'invalid_sender_email') {
+		console.warn('gmail_inbound_invalid_sender_email', {
+			provider_message_id: result.provider_message_id,
+			provider_thread_id: result.provider_thread_id
+		});
+	}
+
+	return result.status === 'processed';
 }
 
 async function collectHistoryMessageIds(
@@ -300,7 +157,7 @@ export async function syncMailboxHistory(
 				gmailUser: params.gmailUser,
 				messageId
 			});
-			const inserted = await persistMessage(env, params.gmailUser, gmailMessage);
+			const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
 			if (inserted) {
 				processed += 1;
 			}
