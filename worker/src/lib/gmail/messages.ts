@@ -1,11 +1,13 @@
-import { normalizeEmailAddress } from '../email';
+import { normalizeEmailAddress, normalizeEmailIdentity } from '../email';
 import type { GmailHeader, GmailMessage, GmailMessagePart } from './client';
 
 export type NormalizedGmailMessage = {
 	provider_message_id: string;
 	provider_thread_id: string;
 	from_email: string;
+	from_name: string | null;
 	to_email: string;
+	to_recipients: string[];
 	subject: string;
 	body_text: string;
 	body_html: string | null;
@@ -46,6 +48,25 @@ function extractEmails(value: string | null): string[] {
 		.map((email) => normalizeEmailAddress(email))
 		.filter((email): email is string => email !== null);
 	return [...new Set(normalized)];
+}
+
+function extractSenderIdentity(value: string | null): {
+	email: string;
+	display_name: string | null;
+} {
+	if (!value) {
+		return { email: '', display_name: null };
+	}
+	const identity = normalizeEmailIdentity(value);
+	if (identity) {
+		return { email: identity.email, display_name: identity.display_name };
+	}
+
+	const fallbackEmail = extractEmails(value)[0] ?? '';
+	return {
+		email: fallbackEmail,
+		display_name: null
+	};
 }
 
 function flattenParts(part: GmailMessagePart | undefined): GmailMessagePart[] {
@@ -140,7 +161,8 @@ export function normalizeGmailMessage(
 
 	const fromEmails = extractEmails(fromRaw);
 	const toEmails = extractEmails(toRaw);
-	const fromEmail = fromEmails[0] ?? '';
+	const sender = extractSenderIdentity(fromRaw);
+	const fromEmail = sender.email || fromEmails[0] || '';
 	const toEmail = toEmails.join(',');
 
 	const outbound = includesEmail(fromEmails, gmailUser);
@@ -151,7 +173,9 @@ export function normalizeGmailMessage(
 		provider_message_id: message.id,
 		provider_thread_id: message.threadId,
 		from_email: fromEmail,
+		from_name: sender.display_name,
 		to_email: toEmail,
+		to_recipients: toEmails,
 		subject,
 		body_text: bodyText,
 		body_html: bodyHtml,
