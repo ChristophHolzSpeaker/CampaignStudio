@@ -5,6 +5,7 @@ import type { InboundClassificationResult } from './classify-message';
 type LeadJourneyAutoresponseState = {
 	id: string;
 	auto_response_sent_at: string | null;
+	auto_response_message_id: string | null;
 };
 
 export type AutoResponseDecision =
@@ -29,7 +30,7 @@ async function loadJourneyResponseState(
 	leadJourneyId: string
 ): Promise<LeadJourneyAutoresponseState | null> {
 	const query = new URLSearchParams({
-		select: 'id,auto_response_sent_at',
+		select: 'id,auto_response_sent_at,auto_response_message_id',
 		id: `eq.${leadJourneyId}`,
 		limit: '1'
 	});
@@ -63,7 +64,7 @@ export async function evaluateInboundAutoResponseDecision(
 		};
 	}
 
-	if (journey.auto_response_sent_at) {
+	if (journey.auto_response_sent_at || journey.auto_response_message_id) {
 		return {
 			classification: input.classification?.classification ?? null,
 			classification_confidence: input.classification?.classification_confidence ?? null,

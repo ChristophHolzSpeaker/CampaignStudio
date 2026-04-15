@@ -28,12 +28,17 @@ vi.mock('../inbound/autoresponse-decision', () => ({
 	evaluateInboundAutoResponseDecision: vi.fn()
 }));
 
+vi.mock('../inbound/run-autoresponse', () => ({
+	runAutoresponsePipeline: vi.fn()
+}));
+
 import { insertOne, selectOne, updateMany, upsertOne } from '../db';
 import { resolveInboundJourney } from '../journeys/resolve-inbound-journey';
 import { normalizeGmailMessage } from './messages';
 import { isInternalSender } from '../email/internal-senders';
 import { classifyInboundMessage } from '../inbound/classify-message';
 import { evaluateInboundAutoResponseDecision } from '../inbound/autoresponse-decision';
+import { runAutoresponsePipeline } from '../inbound/run-autoresponse';
 import { processInboundGmailMessage } from './process-inbound-message';
 
 const mockedInsertOne = vi.mocked(insertOne);
@@ -45,6 +50,7 @@ const mockedNormalizeGmailMessage = vi.mocked(normalizeGmailMessage);
 const mockedIsInternalSender = vi.mocked(isInternalSender);
 const mockedClassifyInboundMessage = vi.mocked(classifyInboundMessage);
 const mockedEvaluateInboundAutoResponseDecision = vi.mocked(evaluateInboundAutoResponseDecision);
+const mockedRunAutoresponsePipeline = vi.mocked(runAutoresponsePipeline);
 
 function sampleNormalizedInbound() {
 	return {
@@ -76,6 +82,19 @@ describe('processInboundGmailMessage', () => {
 		mockedIsInternalSender.mockReset();
 		mockedClassifyInboundMessage.mockReset();
 		mockedEvaluateInboundAutoResponseDecision.mockReset();
+		mockedRunAutoresponsePipeline.mockReset();
+		mockedRunAutoresponsePipeline.mockResolvedValue({
+			status: 'skipped_not_eligible',
+			lead_journey_id: 'journey_1',
+			inbound_lead_message_id: 'lead_message_1',
+			outbound_lead_message_id: null,
+			booking_link_id: null,
+			provider_message_id: null,
+			provider_thread_id: null,
+			skipped_reason: 'not_eligible',
+			generation_status: null,
+			send_status: null
+		});
 	});
 
 	it('returns invalid_message when normalization fails', async () => {
@@ -202,6 +221,7 @@ describe('processInboundGmailMessage', () => {
 
 		expect(result.status).toBe('processed');
 		expect(result.eligible_for_autoresponse).toBe(true);
+		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledTimes(1);
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
 		expect(mockedInsertOne).toHaveBeenCalledTimes(3);
 
@@ -244,6 +264,7 @@ describe('processInboundGmailMessage', () => {
 		expect(result.status).toBe('processed');
 		expect(result.auto_response_decision).toBe('do_not_autorespond_internal_sender');
 		expect(mockedClassifyInboundMessage).not.toHaveBeenCalled();
+		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledTimes(1);
 
 		const eventTypes = mockedInsertOne.mock.calls.map(
 			(call) => (call[2] as { event_type?: string }).event_type

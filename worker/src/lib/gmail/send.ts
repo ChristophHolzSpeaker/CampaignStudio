@@ -1,4 +1,4 @@
-import { insertOne, upsertOne } from '../db';
+import { insertOne, selectOne, upsertOne } from '../db';
 import type { WorkerEnv } from '../env';
 import { normalizeEmailAddress } from '../email';
 import { gmailSendMessage } from './client';
@@ -13,11 +13,20 @@ type SendOutboundEmailInput = {
 	threadId?: string;
 	inReplyTo?: string;
 	references?: string[];
+	autoResponseDecision?: string | null;
+	campaignId?: number | null;
+	campaignPageId?: number | null;
+	rawMetadata?: Record<string, unknown>;
 };
 
 type SendOutboundEmailResult = {
+	lead_message_id: string | null;
 	provider_message_id: string;
 	provider_thread_id: string;
+};
+
+type PersistedLeadMessageRow = {
+	id: string;
 };
 
 function toBase64Url(value: string): string {
@@ -99,7 +108,7 @@ export async function sendOutboundEmail(
 
 	const nowIso = new Date().toISOString();
 
-	await upsertOne(
+	const persisted = await upsertOne<PersistedLeadMessageRow>(
 		env,
 		'lead_messages',
 		{
@@ -115,11 +124,12 @@ export async function sendOutboundEmail(
 			body_html: input.bodyHtml ?? null,
 			classification: null,
 			classification_confidence: null,
-			auto_response_decision: null,
+			auto_response_decision: input.autoResponseDecision ?? null,
 			auto_response_sent_at: null,
 			received_at: null,
 			sent_at: nowIso,
 			raw_metadata: {
+				...(input.rawMetadata ?? {}),
 				gmail: {
 					id: sent.id,
 					threadId: sent.threadId,
@@ -135,21 +145,34 @@ export async function sendOutboundEmail(
 		}
 	);
 
+	let leadMessageId = persisted?.id ?? null;
+	if (!leadMessageId) {
+		const query = new URLSearchParams({
+			select: 'id',
+			provider_message_id: `eq.${sent.id}`,
+			limit: '1'
+		});
+		const existing = await selectOne<PersistedLeadMessageRow>(env, 'lead_messages', query);
+		leadMessageId = existing?.id ?? null;
+	}
+
 	await insertOne(env, 'lead_events', {
 		lead_journey_id: input.leadJourneyId,
-		campaign_id: null,
-		campaign_page_id: null,
+		campaign_id: input.campaignId ?? null,
+		campaign_page_id: input.campaignPageId ?? null,
 		event_type: 'email_sent',
 		event_source: 'worker.gmail_send',
 		event_payload: {
 			provider: 'gmail',
 			provider_message_id: sent.id,
 			provider_thread_id: sent.threadId,
-			recipients
+			recipients,
+			auto_response_decision: input.autoResponseDecision ?? null
 		}
 	});
 
 	return {
+		lead_message_id: leadMessageId,
 		provider_message_id: sent.id,
 		provider_thread_id: sent.threadId
 	};
