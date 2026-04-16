@@ -43,6 +43,8 @@ const cursorRow = {
 	gmail_user: 'speaker@christophholz.com',
 	last_processed_history_id: '100',
 	watch_expiration: '2026-04-16T00:00:00.000Z',
+	last_push_received_at: null,
+	last_sync_at: null,
 	sync_status: 'active'
 };
 

@@ -9,11 +9,13 @@ import {
 import { normalizeGmailMessage } from './messages';
 import { processInboundGmailMessage } from './process-inbound-message';
 
-type MailboxCursorRow = {
+export type MailboxCursorRow = {
 	id: string;
 	gmail_user: string;
 	last_processed_history_id: string;
 	watch_expiration: string;
+	last_push_received_at: string | null;
+	last_sync_at: string | null;
 	sync_status: string;
 };
 
@@ -61,7 +63,8 @@ async function getMailboxCursor(
 	gmailUser: string
 ): Promise<MailboxCursorRow | null> {
 	const query = new URLSearchParams({
-		select: 'id,gmail_user,last_processed_history_id,watch_expiration,sync_status',
+		select:
+			'id,gmail_user,last_processed_history_id,watch_expiration,last_push_received_at,last_sync_at,sync_status',
 		gmail_user: `eq.${gmailUser}`,
 		limit: '1'
 	});
@@ -266,7 +269,8 @@ export async function touchMailboxPush(
 
 export async function listMailboxCursors(env: WorkerEnv): Promise<MailboxCursorRow[]> {
 	const query = new URLSearchParams({
-		select: 'id,gmail_user,last_processed_history_id,watch_expiration,sync_status',
+		select:
+			'id,gmail_user,last_processed_history_id,watch_expiration,last_push_received_at,last_sync_at,sync_status',
 		order: 'gmail_user.asc'
 	});
 	return selectMany<MailboxCursorRow>(env, 'mailbox_cursors', query);

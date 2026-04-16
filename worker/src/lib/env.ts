@@ -18,6 +18,9 @@ export type WorkerEnv = {
 	WOODY_OPENROUTER_MODEL?: string;
 	WOODY_OPENROUTER_TIMEOUT_MS?: string;
 	WOODY_SUPPORTED_LANGUAGES?: string;
+	GMAIL_RECONCILE_PUSH_STALE_SECONDS?: string;
+	GMAIL_RECONCILE_SYNC_STALE_SECONDS?: string;
+	GMAIL_RECONCILE_RETRY_COOLDOWN_SECONDS?: string;
 };
 
 export type WorkerExecutionContext = {
