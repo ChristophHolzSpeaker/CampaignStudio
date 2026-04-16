@@ -94,6 +94,29 @@ describe('handleGmailPush', () => {
 		expect(response.status).toBe(400);
 	});
 
+	it('acknowledges malformed decoded notification payload', async () => {
+		const { ctx } = makeTestExecutionContext();
+		const request = makeRequest('https://worker.test/gmail/push', {
+			subscription: 'projects/demo/subscriptions/gmail-push-sub',
+			message: {
+				messageId: 'm1',
+				data: encodeJsonBase64({
+					emailAddress: 'speaker@christophholz.com',
+					historyId: { value: '123' }
+				})
+			}
+		});
+
+		const response = await handleGmailPush(request, makeTestEnv(), ctx);
+		const json = (await response.json()) as Record<string, unknown>;
+
+		expect(response.status).toBe(200);
+		expect(json.sync_triggered).toBe(false);
+		expect(json.reason).toBe('malformed_notification_payload');
+		expect(mockedTouchMailboxPush).not.toHaveBeenCalled();
+		expect(mockedTriggerMailboxSync).not.toHaveBeenCalled();
+	});
+
 	it('acknowledges incomplete notification when emailAddress is missing', async () => {
 		const { ctx } = makeTestExecutionContext();
 		const request = makeRequest('https://worker.test/gmail/push', {
@@ -189,5 +212,33 @@ describe('handleGmailPush', () => {
 			expect.objectContaining({ gmailUser: 'speaker@christophholz.com', historyId: '123' })
 		);
 		expect(mockedTriggerMailboxSync).toHaveBeenCalledTimes(1);
+	});
+
+	it('accepts numeric historyId and normalizes to string', async () => {
+		mockedTouchMailboxPush.mockResolvedValue({
+			id: 'cursor_1',
+			gmail_user: 'speaker@christophholz.com',
+			last_processed_history_id: '120',
+			watch_expiration: '2026-04-16T00:00:00.000Z',
+			last_push_received_at: null,
+			last_sync_at: null,
+			sync_status: 'active'
+		});
+
+		const { ctx } = makeTestExecutionContext();
+		const request = makeRequest('https://worker.test/gmail/push', {
+			subscription: 'projects/demo/subscriptions/gmail-push-sub',
+			message: {
+				messageId: 'm2',
+				data: encodeJsonBase64({ emailAddress: 'speaker@christophholz.com', historyId: 456 })
+			}
+		});
+
+		const response = await handleGmailPush(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(200);
+		expect(mockedTouchMailboxPush).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ gmailUser: 'speaker@christophholz.com', historyId: '456' })
+		);
 	});
 });

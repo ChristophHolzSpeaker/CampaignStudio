@@ -96,8 +96,24 @@ describe('gmail client', () => {
 		expect(body).toEqual({
 			topicName: 'projects/foo/topics/bar',
 			labelIds: ['INBOX'],
-			labelFilterAction: 'include'
+			labelFilterBehavior: 'INCLUDE'
 		});
+	});
+
+	it('prefers explicit labelFilterBehavior when provided', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValue(new Response(JSON.stringify({ historyId: '200' }), { status: 200 }));
+
+		await gmailWatch(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			topicName: 'projects/foo/topics/bar',
+			labelFilterAction: 'exclude',
+			labelFilterBehavior: 'INCLUDE'
+		});
+
+		const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+		expect(body.labelFilterBehavior).toBe('INCLUDE');
 	});
 
 	it('throws GmailApiError with parsed response body on non-2xx', async () => {

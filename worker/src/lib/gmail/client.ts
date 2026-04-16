@@ -194,8 +194,17 @@ export async function gmailWatch(
 		topicName: string;
 		labelIds?: string[];
 		labelFilterAction?: 'include' | 'exclude';
+		labelFilterBehavior?: 'INCLUDE' | 'EXCLUDE';
 	}
 ): Promise<{ historyId?: string; expiration?: string }> {
+	const filterBehavior =
+		params.labelFilterBehavior ??
+		(params.labelFilterAction
+			? params.labelFilterAction === 'include'
+				? 'INCLUDE'
+				: 'EXCLUDE'
+			: undefined);
+
 	return gmailRequest<{ historyId?: string; expiration?: string }>(
 		env,
 		params.gmailUser,
@@ -205,7 +214,7 @@ export async function gmailWatch(
 			body: {
 				topicName: params.topicName,
 				labelIds: params.labelIds,
-				labelFilterAction: params.labelFilterAction
+				labelFilterBehavior: filterBehavior
 			}
 		}
 	);

@@ -45,6 +45,16 @@ export async function handleGmailPush(
 			error: parsedPush.error,
 			details: parsedPush.details
 		});
+
+		if (parsedPush.code === 'invalid_notification_payload') {
+			return json({
+				ok: true,
+				accepted: true,
+				sync_triggered: false,
+				reason: 'malformed_notification_payload'
+			});
+		}
+
 		return json(
 			{
 				ok: false,

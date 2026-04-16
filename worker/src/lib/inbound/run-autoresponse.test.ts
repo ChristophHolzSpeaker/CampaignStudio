@@ -168,6 +168,77 @@ describe('runAutoresponsePipeline', () => {
 		expect(mockedUpdateMany).not.toHaveBeenCalled();
 	});
 
+	it('uses generic booking link fallback when campaign is missing and still sends autoresponse', async () => {
+		mockedSelectOne
+			.mockResolvedValueOnce({
+				id: 'journey_1',
+				campaign_id: null,
+				campaign_page_id: null,
+				auto_response_sent_at: null,
+				auto_response_message_id: null
+			})
+			.mockResolvedValueOnce(null);
+		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
+			subject: 'Subject',
+			body_html:
+				'<p>Body</p><ul><li>Event Topic: To Determine</li><li>Talking Length: To Determine</li><li>Location: To Determine</li><li>Date/Time: To Determine</li><li>Event Name: To Determine</li><li>Audience: To Determine</li><li>Agent: To Determine</li><li>Client: To Determine</li></ul>',
+			body_text: 'Body',
+			extracted_fields: {
+				event_topic: 'To Determine',
+				talking_length: 'To Determine',
+				location: 'To Determine',
+				date_time: 'To Determine',
+				event_name: 'To Determine',
+				audience: 'To Determine',
+				agent: 'To Determine',
+				client: 'To Determine'
+			},
+			model: 'openai/gpt-4.1-mini',
+			provider: 'openrouter',
+			prompt_version: 'woody_v1',
+			generation_status: 'success',
+			raw_usage: null,
+			raw_response: null
+		});
+		mockedSendOutboundEmail.mockResolvedValue({
+			lead_message_id: 'outbound_1',
+			provider_message_id: 'provider_out_1',
+			provider_thread_id: 'thread_1'
+		});
+
+		const result = await runAutoresponsePipeline(
+			makeTestEnv({
+				GOOGLE_IMPERSONATED_USER: 'speaker@christophholz.com',
+				BOOKING_BASE_URL: 'https://book.christophholz.com/schedule'
+			}),
+			{
+				...baseInput(),
+				campaign_id: null,
+				campaign_page_id: null
+			}
+		);
+
+		expect(result.status).toBe('sent_successfully');
+		expect(result.booking_link_id).toBeNull();
+		expect(mockedCreateBookingLinkForJourney).not.toHaveBeenCalled();
+		expect(mockedInvokeWoodyAcknowledgement).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ booking_link: 'https://book.christophholz.com/schedule' })
+		);
+		expect(mockedSendOutboundEmail).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({
+				campaignId: null,
+				rawMetadata: expect.objectContaining({
+					autoresponse: expect.objectContaining({
+						booking_link_id: null,
+						booking_link_kind: 'generic_fallback'
+					})
+				})
+			})
+		);
+	});
+
 	it('returns send_failed when gmail send fails and does not update journey responded state', async () => {
 		mockedSelectOne
 			.mockResolvedValueOnce({
