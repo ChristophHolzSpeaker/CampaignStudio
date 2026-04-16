@@ -210,7 +210,7 @@ describe('runAutoresponsePipeline', () => {
 		mockedSendOutboundEmail.mockRejectedValue(new Error('send fail'));
 
 		const result = await runAutoresponsePipeline(
-			makeTestEnv({ GMAIL_DELEGATED_ADMIN_EMAIL: 'speaker@christophholz.com' }),
+			makeTestEnv({ GOOGLE_IMPERSONATED_USER: 'speaker@christophholz.com' }),
 			baseInput()
 		);
 
@@ -264,7 +264,7 @@ describe('runAutoresponsePipeline', () => {
 		});
 
 		const result = await runAutoresponsePipeline(
-			makeTestEnv({ GMAIL_DELEGATED_ADMIN_EMAIL: 'speaker@christophholz.com' }),
+			makeTestEnv({ GOOGLE_IMPERSONATED_USER: 'speaker@christophholz.com' }),
 			baseInput()
 		);
 

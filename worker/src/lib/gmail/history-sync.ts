@@ -1,5 +1,6 @@
-import { insertOne, selectMany, selectOne, updateMany } from '../db';
+import { selectMany, selectOne, updateMany } from '../db';
 import type { WorkerEnv } from '../env';
+import { GoogleAuthError } from '../google-auth/errors';
 import {
 	gmailGetMessage,
 	gmailListHistory,
@@ -185,6 +186,16 @@ export async function syncMailboxHistory(
 			last_history_id: nextHistoryId
 		};
 	} catch (error) {
+		const authDetails =
+			error instanceof GoogleAuthError
+				? {
+						error_code: error.code,
+						google_status:
+							typeof error.details?.status === 'number' ? error.details.status : undefined,
+						google_response: error.details?.response
+					}
+				: {};
+
 		if (isHistoryCursorStale(error)) {
 			await updateCursor(env, params.gmailUser, {
 				sync_status: 'resync_required',
@@ -194,7 +205,8 @@ export async function syncMailboxHistory(
 
 			console.error('gmail_sync_resync_required', {
 				gmail_user: params.gmailUser,
-				error: error instanceof Error ? error.message : 'unknown'
+				error: error instanceof Error ? error.message : 'unknown',
+				...authDetails
 			});
 
 			return {
@@ -213,7 +225,8 @@ export async function syncMailboxHistory(
 
 		console.error('gmail_sync_failed', {
 			gmail_user: params.gmailUser,
-			error: error instanceof Error ? error.message : 'unknown'
+			error: error instanceof Error ? error.message : 'unknown',
+			...authDetails
 		});
 
 		return {
@@ -236,24 +249,8 @@ export async function touchMailboxPush(
 	const existing = await getMailboxCursor(env, params.gmailUser);
 
 	if (!existing) {
-		if (!params.historyId) {
-			return null;
-		}
-
-		await insertOne(env, 'mailbox_cursors', {
-			gmail_user: params.gmailUser,
-			last_processed_history_id: params.historyId,
-			watch_expiration: nowIso,
-			last_watch_renewed_at: null,
-			last_push_received_at: nowIso,
-			last_sync_at: null,
-			sync_status: 'active'
-		});
-
-		return getMailboxCursor(env, params.gmailUser);
+		return null;
 	}
-
-	const latestHistoryId = maxHistoryId(existing.last_processed_history_id, params.historyId);
 
 	await updateCursor(env, params.gmailUser, {
 		last_push_received_at: nowIso,
@@ -263,7 +260,7 @@ export async function touchMailboxPush(
 
 	return {
 		...existing,
-		last_processed_history_id: latestHistoryId
+		last_push_received_at: nowIso
 	};
 }
 

@@ -1,28 +1,8 @@
-import { z } from 'zod';
 import { type WorkerEnv, type WorkerExecutionContext } from '../lib/env';
-import { badRequestFromZod, json } from '../lib/http';
-import { syncMailboxHistory, touchMailboxPush } from '../lib/gmail/history-sync';
-
-const gmailPushEnvelopeSchema = z.object({
-	message: z.object({
-		data: z.string().min(1),
-		messageId: z.string().optional(),
-		publishTime: z.string().optional(),
-		attributes: z.record(z.string(), z.string()).optional()
-	}),
-	subscription: z.string().optional()
-});
-
-const gmailPushPayloadSchema = z.object({
-	emailAddress: z.string().trim().email().optional(),
-	historyId: z.string().trim().optional()
-});
-
-function decodePubSubMessageData(data: string): string {
-	const normalized = data.replace(/-/g, '+').replace(/_/g, '/');
-	const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
-	return atob(`${normalized}${padding}`);
-}
+import { json } from '../lib/http';
+import { touchMailboxPush } from '../lib/gmail/history-sync';
+import { parsePubSubPushEnvelope } from '../lib/gmail/pubsub';
+import { triggerMailboxSync } from '../lib/gmail/trigger-sync';
 
 function safeEquals(left: string, right: string): boolean {
 	if (left.length !== right.length) {
@@ -52,82 +32,91 @@ export async function handleGmailPush(
 	try {
 		payload = await request.json();
 	} catch {
+		console.warn('gmail_push_invalid_json_payload', {
+			path: new URL(request.url).pathname
+		});
 		return json({ ok: false, error: 'Invalid JSON payload' }, 400);
 	}
 
-	const envelope = gmailPushEnvelopeSchema.safeParse(payload);
-	if (!envelope.success) {
-		return badRequestFromZod(envelope.error);
+	const parsedPush = parsePubSubPushEnvelope(payload);
+	if (!parsedPush.ok) {
+		console.warn('gmail_push_malformed_envelope', {
+			code: parsedPush.code,
+			error: parsedPush.error,
+			details: parsedPush.details
+		});
+		return json(
+			{
+				ok: false,
+				error: parsedPush.error,
+				details: parsedPush.details
+			},
+			parsedPush.status
+		);
 	}
 
-	let decodedData: string;
-	try {
-		decodedData = decodePubSubMessageData(envelope.data.message.data);
-	} catch {
-		return json({ ok: false, error: 'Invalid Pub/Sub message data encoding' }, 400);
-	}
+	const { envelope, emailAddress, historyId } = parsedPush.value;
 
-	let decodedPayload: unknown;
-	try {
-		decodedPayload = JSON.parse(decodedData);
-	} catch {
-		return json({ ok: false, error: 'Pub/Sub data is not valid JSON' }, 400);
-	}
+	console.log('gmail_push_received', {
+		subscription: envelope.subscription,
+		message_id: envelope.message.messageId,
+		publish_time: envelope.message.publishTime,
+		email_address: emailAddress,
+		history_id: historyId
+	});
 
-	const gmailPushPayload = gmailPushPayloadSchema.safeParse(decodedPayload);
-	if (!gmailPushPayload.success) {
-		return badRequestFromZod(gmailPushPayload.error);
-	}
+	if (!emailAddress || !historyId) {
+		console.warn('gmail_push_incomplete_notification', {
+			message_id: envelope.message.messageId,
+			subscription: envelope.subscription,
+			email_address: emailAddress,
+			history_id: historyId
+		});
 
-	const gmailUser =
-		gmailPushPayload.data.emailAddress ?? envelope.data.message.attributes?.emailAddress ?? null;
-	if (!gmailUser) {
-		return json({ ok: false, error: 'Gmail user identifier missing from push payload' }, 400);
+		return json({
+			ok: true,
+			accepted: true,
+			sync_triggered: false,
+			reason: 'incomplete_notification'
+		});
 	}
-
-	const historyId =
-		gmailPushPayload.data.historyId ?? envelope.data.message.attributes?.historyId ?? null;
 
 	const cursor = await touchMailboxPush(env, {
-		gmailUser,
+		gmailUser: emailAddress,
 		historyId
+	});
+
+	console.log('gmail_push_cursor_touch_result', {
+		gmail_user: emailAddress,
+		history_id: historyId,
+		cursor_found: cursor !== null
 	});
 
 	if (!cursor) {
 		console.warn('gmail_push_cursor_missing', {
-			gmail_user: gmailUser,
+			gmail_user: emailAddress,
 			history_id: historyId,
-			message_id: envelope.data.message.messageId
+			message_id: envelope.message.messageId
 		});
 		return json({ ok: true, accepted: true, sync_triggered: false, reason: 'cursor_missing' });
 	}
 
-	ctx.waitUntil(
-		syncMailboxHistory(env, {
-			gmailUser,
-			hintedHistoryId: historyId
-		})
-			.then((result) => {
-				console.log('gmail_push_sync_complete', {
-					gmail_user: gmailUser,
-					status: result.status,
-					processed_messages: result.processed_messages,
-					last_history_id: result.last_history_id
-				});
-			})
-			.catch((error) => {
-				console.error('gmail_push_sync_unhandled_error', {
-					gmail_user: gmailUser,
-					error: error instanceof Error ? error.message : 'unknown'
-				});
-			})
-	);
+	const triggerResult = triggerMailboxSync(env, ctx, {
+		gmailUser: emailAddress,
+		historyId
+	});
+
+	console.log('gmail_push_sync_triggered', {
+		gmail_user: emailAddress,
+		history_id: historyId,
+		trigger_status: triggerResult.status
+	});
 
 	return json({
 		ok: true,
 		accepted: true,
 		sync_triggered: true,
-		gmail_user: gmailUser,
+		gmail_user: emailAddress,
 		history_id: historyId
 	});
 }

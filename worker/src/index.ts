@@ -29,7 +29,10 @@ export default {
 				return await handleEmailInbound(request, env);
 			}
 
-			if (pathname === '/gmail/push' && request.method === 'POST') {
+			if (pathname === '/gmail/push') {
+				if (request.method !== 'POST') {
+					return json({ ok: false, error: 'Method not allowed' }, 405);
+				}
 				return await handleGmailPush(request, env, ctx);
 			}
 
