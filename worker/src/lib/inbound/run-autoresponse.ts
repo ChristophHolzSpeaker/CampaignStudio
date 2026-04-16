@@ -24,6 +24,12 @@ type InboundHeader = {
 	value?: string;
 };
 
+type AutoresponseBookingLink = {
+	booking_link_id: string | null;
+	url: string;
+	kind: 'campaign_token' | 'generic_fallback';
+};
+
 export type RunAutoresponseStatus =
 	| 'sent_successfully'
 	| 'already_responded'
@@ -95,6 +101,11 @@ function getInboundHeaders(rawMetadata: Record<string, unknown>): InboundHeader[
 	return headers.filter(
 		(value): value is InboundHeader => typeof value === 'object' && value !== null
 	);
+}
+
+function resolveGenericBookingUrl(env: WorkerEnv): string {
+	const base = env.BOOKING_BASE_URL ?? 'https://book.domain.com/';
+	return new URL(base).toString();
 }
 
 async function loadJourneyState(
@@ -207,46 +218,101 @@ export async function runAutoresponsePipeline(
 		};
 	}
 
-	let bookingLink: {
-		booking_link_id: string;
-		url: string;
-		campaign_id: number;
-	} | null = null;
+	let bookingLink: AutoresponseBookingLink;
 
-	try {
-		bookingLink = await createBookingLinkForJourney(env, {
-			lead_journey_id: input.lead_journey_id,
-			campaign_id: input.campaign_id,
-			event_source: 'worker.autoresponse'
-		});
-	} catch (error) {
+	if (input.campaign_id === null) {
+		try {
+			bookingLink = {
+				booking_link_id: null,
+				url: resolveGenericBookingUrl(env),
+				kind: 'generic_fallback'
+			};
+		} catch (error) {
+			await insertOne(env, 'lead_events', {
+				lead_journey_id: input.lead_journey_id,
+				campaign_id: input.campaign_id,
+				campaign_page_id: input.campaign_page_id,
+				event_type: 'autoresponse_send_failed',
+				event_source: 'worker.autoresponse',
+				event_payload: {
+					stage: 'booking_link_fallback',
+					inbound_lead_message_id: input.inbound_lead_message_id,
+					provider_message_id: input.inbound_provider_message_id,
+					provider_thread_id: input.inbound_provider_thread_id,
+					error: error instanceof Error ? error.message : 'unknown'
+				}
+			});
+
+			return {
+				status: 'booking_link_failed',
+				lead_journey_id: input.lead_journey_id,
+				inbound_lead_message_id: input.inbound_lead_message_id,
+				outbound_lead_message_id: null,
+				booking_link_id: null,
+				provider_message_id: null,
+				provider_thread_id: input.inbound_provider_thread_id,
+				skipped_reason: 'booking_link_failed',
+				generation_status: null,
+				send_status: null
+			};
+		}
+
 		await insertOne(env, 'lead_events', {
 			lead_journey_id: input.lead_journey_id,
 			campaign_id: input.campaign_id,
 			campaign_page_id: input.campaign_page_id,
-			event_type: 'autoresponse_send_failed',
+			event_type: 'autoresponse_booking_link_fallback_used',
 			event_source: 'worker.autoresponse',
 			event_payload: {
-				stage: 'booking_link_generation',
 				inbound_lead_message_id: input.inbound_lead_message_id,
 				provider_message_id: input.inbound_provider_message_id,
 				provider_thread_id: input.inbound_provider_thread_id,
-				error: error instanceof Error ? error.message : 'unknown'
+				booking_link: bookingLink.url,
+				reason: 'missing_campaign_id'
 			}
 		});
+	} else {
+		try {
+			const created = await createBookingLinkForJourney(env, {
+				lead_journey_id: input.lead_journey_id,
+				campaign_id: input.campaign_id,
+				event_source: 'worker.autoresponse'
+			});
 
-		return {
-			status: 'booking_link_failed',
-			lead_journey_id: input.lead_journey_id,
-			inbound_lead_message_id: input.inbound_lead_message_id,
-			outbound_lead_message_id: null,
-			booking_link_id: null,
-			provider_message_id: null,
-			provider_thread_id: input.inbound_provider_thread_id,
-			skipped_reason: 'booking_link_failed',
-			generation_status: null,
-			send_status: null
-		};
+			bookingLink = {
+				booking_link_id: created.booking_link_id,
+				url: created.url,
+				kind: 'campaign_token'
+			};
+		} catch (error) {
+			await insertOne(env, 'lead_events', {
+				lead_journey_id: input.lead_journey_id,
+				campaign_id: input.campaign_id,
+				campaign_page_id: input.campaign_page_id,
+				event_type: 'autoresponse_send_failed',
+				event_source: 'worker.autoresponse',
+				event_payload: {
+					stage: 'booking_link_generation',
+					inbound_lead_message_id: input.inbound_lead_message_id,
+					provider_message_id: input.inbound_provider_message_id,
+					provider_thread_id: input.inbound_provider_thread_id,
+					error: error instanceof Error ? error.message : 'unknown'
+				}
+			});
+
+			return {
+				status: 'booking_link_failed',
+				lead_journey_id: input.lead_journey_id,
+				inbound_lead_message_id: input.inbound_lead_message_id,
+				outbound_lead_message_id: null,
+				booking_link_id: null,
+				provider_message_id: null,
+				provider_thread_id: input.inbound_provider_thread_id,
+				skipped_reason: 'booking_link_failed',
+				generation_status: null,
+				send_status: null
+			};
+		}
 	}
 
 	const woodyResult = await invokeWoodyAcknowledgement(env, {
@@ -274,6 +340,7 @@ export async function runAutoresponsePipeline(
 				provider_message_id: input.inbound_provider_message_id,
 				provider_thread_id: input.inbound_provider_thread_id,
 				booking_link_id: bookingLink.booking_link_id,
+				booking_link_kind: bookingLink.kind,
 				raw_response: woodyResult.raw_response
 			}
 		});
@@ -303,6 +370,7 @@ export async function runAutoresponsePipeline(
 			provider_message_id: input.inbound_provider_message_id,
 			provider_thread_id: input.inbound_provider_thread_id,
 			booking_link_id: bookingLink.booking_link_id,
+			booking_link_kind: bookingLink.kind,
 			model: woodyResult.model,
 			prompt_version: woodyResult.prompt_version
 		}
@@ -318,7 +386,8 @@ export async function runAutoresponsePipeline(
 			inbound_lead_message_id: input.inbound_lead_message_id,
 			provider_message_id: input.inbound_provider_message_id,
 			provider_thread_id: input.inbound_provider_thread_id,
-			booking_link_id: bookingLink.booking_link_id
+			booking_link_id: bookingLink.booking_link_id,
+			booking_link_kind: bookingLink.kind
 		}
 	});
 
@@ -346,7 +415,8 @@ export async function runAutoresponsePipeline(
 					inbound_provider_message_id: input.inbound_provider_message_id,
 					woody_model: woodyResult.model,
 					woody_prompt_version: woodyResult.prompt_version,
-					booking_link_id: bookingLink.booking_link_id
+					booking_link_id: bookingLink.booking_link_id,
+					booking_link_kind: bookingLink.kind
 				}
 			}
 		});
@@ -369,7 +439,8 @@ export async function runAutoresponsePipeline(
 				outbound_lead_message_id: sendResult.lead_message_id,
 				provider_message_id: sendResult.provider_message_id,
 				provider_thread_id: sendResult.provider_thread_id,
-				booking_link_id: bookingLink.booking_link_id
+				booking_link_id: bookingLink.booking_link_id,
+				booking_link_kind: bookingLink.kind
 			}
 		});
 
@@ -398,6 +469,7 @@ export async function runAutoresponsePipeline(
 				provider_message_id: input.inbound_provider_message_id,
 				provider_thread_id: input.inbound_provider_thread_id,
 				booking_link_id: bookingLink.booking_link_id,
+				booking_link_kind: bookingLink.kind,
 				error: error instanceof Error ? error.message : 'unknown'
 			}
 		});

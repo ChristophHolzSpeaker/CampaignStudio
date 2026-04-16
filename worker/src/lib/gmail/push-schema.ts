@@ -12,7 +12,14 @@ export const pubSubPushEnvelopeSchema = z.object({
 
 export const gmailPushPayloadSchema = z.object({
 	emailAddress: z.string().trim().email().optional(),
-	historyId: z.string().trim().min(1).optional()
+	historyId: z
+		.preprocess((value) => {
+			if (typeof value === 'string' || typeof value === 'number') {
+				return String(value);
+			}
+			return value;
+		}, z.string().trim().min(1))
+		.optional()
 });
 
 export type PubSubPushEnvelope = z.infer<typeof pubSubPushEnvelopeSchema>;
