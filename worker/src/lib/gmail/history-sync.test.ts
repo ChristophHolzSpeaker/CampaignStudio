@@ -43,6 +43,8 @@ const cursorRow = {
 	gmail_user: 'speaker@christophholz.com',
 	last_processed_history_id: '100',
 	watch_expiration: '2026-04-16T00:00:00.000Z',
+	last_push_received_at: null,
+	last_sync_at: null,
 	sync_status: 'active'
 };
 
@@ -145,21 +147,19 @@ describe('history sync', () => {
 		expect(mockedInsertOne).not.toHaveBeenCalled();
 	});
 
-	it('touchMailboxPush creates cursor when missing and history id provided', async () => {
-		mockedSelectOne
-			.mockResolvedValueOnce(null)
-			.mockResolvedValueOnce({ ...cursorRow, last_processed_history_id: '300' });
+	it('touchMailboxPush returns null when cursor missing even with history id', async () => {
+		mockedSelectOne.mockResolvedValue(null);
 
 		const touched = await touchMailboxPush(makeTestEnv(), {
 			gmailUser: 'speaker@christophholz.com',
 			historyId: '300'
 		});
 
-		expect(mockedInsertOne).toHaveBeenCalledTimes(1);
-		expect(touched?.last_processed_history_id).toBe('300');
+		expect(touched).toBeNull();
+		expect(mockedInsertOne).not.toHaveBeenCalled();
 	});
 
-	it('touchMailboxPush updates push timestamp and returns max history id', async () => {
+	it('touchMailboxPush updates push timestamp without changing processed history id', async () => {
 		mockedSelectOne.mockResolvedValue(cursorRow);
 
 		const touched = await touchMailboxPush(makeTestEnv(), {
@@ -168,7 +168,7 @@ describe('history sync', () => {
 		});
 
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
-		expect(touched?.last_processed_history_id).toBe('150');
+		expect(touched?.last_processed_history_id).toBe('100');
 	});
 
 	it('lists mailbox cursors', async () => {

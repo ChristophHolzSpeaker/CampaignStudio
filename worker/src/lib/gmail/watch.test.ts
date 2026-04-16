@@ -37,6 +37,8 @@ describe('renewGmailWatches', () => {
 				gmail_user: 'due@christophholz.com',
 				last_processed_history_id: '100',
 				watch_expiration: new Date(now + 10 * 60 * 1000).toISOString(),
+				last_push_received_at: null,
+				last_sync_at: null,
 				sync_status: 'active'
 			},
 			{
@@ -44,6 +46,8 @@ describe('renewGmailWatches', () => {
 				gmail_user: 'future@christophholz.com',
 				last_processed_history_id: '200',
 				watch_expiration: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+				last_push_received_at: null,
+				last_sync_at: null,
 				sync_status: 'active'
 			}
 		]);
@@ -77,6 +81,8 @@ describe('renewGmailWatches', () => {
 				gmail_user: 'due@christophholz.com',
 				last_processed_history_id: '100',
 				watch_expiration: 'invalid-date',
+				last_push_received_at: null,
+				last_sync_at: null,
 				sync_status: 'active'
 			}
 		]);

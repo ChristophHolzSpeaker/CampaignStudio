@@ -329,7 +329,7 @@ export async function runAutoresponsePipeline(
 	try {
 		const sendResult = await sendOutboundEmail(env, {
 			leadJourneyId: input.lead_journey_id,
-			gmailUser: requireEnv(env, 'GMAIL_DELEGATED_ADMIN_EMAIL'),
+			gmailUser: requireEnv(env, 'GOOGLE_IMPERSONATED_USER'),
 			to: [input.sender_email],
 			subject: woodyResult.subject,
 			bodyText: woodyResult.body_text,

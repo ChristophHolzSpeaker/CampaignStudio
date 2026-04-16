@@ -4,6 +4,7 @@ import { requireInternalAuth } from './lib/auth';
 import { handleBookingLink } from './routes/booking-link';
 import { handleEmailInbound } from './routes/email-inbound';
 import { renewGmailWatches } from './lib/gmail/watch';
+import { reconcileMailboxHealth } from './lib/gmail/reconcile';
 import { handleGmailPush } from './routes/gmail-push';
 import { handleHealth } from './routes/health';
 import { handleTrackCTA } from './routes/track-cta';
@@ -28,7 +29,10 @@ export default {
 				return await handleEmailInbound(request, env);
 			}
 
-			if (pathname === '/gmail/push' && request.method === 'POST') {
+			if (pathname === '/gmail/push') {
+				if (request.method !== 'POST') {
+					return json({ ok: false, error: 'Method not allowed' }, 405);
+				}
 				return await handleGmailPush(request, env, ctx);
 			}
 
@@ -51,21 +55,43 @@ export default {
 		ctx: WorkerExecutionContext
 	): Promise<void> {
 		ctx.waitUntil(
-			renewGmailWatches(env)
-				.then((result) => {
+			Promise.allSettled([renewGmailWatches(env), reconcileMailboxHealth(env)]).then((results) => {
+				const watchResult = results[0];
+				if (watchResult?.status === 'fulfilled') {
 					console.log('gmail_watch_renewal_complete', {
 						cron: event.cron,
 						scheduled_time: event.scheduledTime,
-						renewed_count: result.filter((entry) => entry.ok).length,
-						failed_count: result.filter((entry) => !entry.ok).length
+						renewed_count: watchResult.value.filter((entry) => entry.ok).length,
+						failed_count: watchResult.value.filter((entry) => !entry.ok).length
 					});
-				})
-				.catch((error) => {
+				} else {
 					console.error('gmail_watch_renewal_unhandled_error', {
 						cron: event.cron,
-						error: error instanceof Error ? error.message : 'unknown'
+						error: watchResult?.reason instanceof Error ? watchResult.reason.message : 'unknown'
 					});
-				})
+				}
+
+				const reconcileResult = results[1];
+				if (reconcileResult?.status === 'fulfilled') {
+					const outcomes = reconcileResult.value;
+					console.log('gmail_mailbox_reconcile_complete', {
+						cron: event.cron,
+						scheduled_time: event.scheduledTime,
+						healthy_count: outcomes.filter((item) => item.status === 'healthy').length,
+						sync_attempted_count: outcomes.filter((item) => item.status === 'sync_attempted')
+							.length,
+						failed_count: outcomes.filter(
+							(item) => item.status === 'sync_failed' || item.status === 'resync_required'
+						).length
+					});
+				} else {
+					console.error('gmail_mailbox_reconcile_unhandled_error', {
+						cron: event.cron,
+						error:
+							reconcileResult?.reason instanceof Error ? reconcileResult.reason.message : 'unknown'
+					});
+				}
+			})
 		);
 	}
 };
