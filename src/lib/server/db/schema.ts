@@ -11,8 +11,17 @@ import {
 	index,
 	uniqueIndex,
 	pgView,
-	type AnyPgColumn
+	type AnyPgColumn,
+	pgEnum
 } from 'drizzle-orm/pg-core';
+
+export const booking_type = pgEnum('booking_type', ['lead', 'general']);
+export const booking_status = pgEnum('booking_status', ['confirmed', 'cancelled']);
+export const booking_reschedule_actor = pgEnum('booking_reschedule_actor', [
+	'lead',
+	'admin',
+	'system'
+]);
 
 export const campaigns = pgTable('campaigns', {
 	id: serial('id').primaryKey(),
@@ -208,22 +217,98 @@ export const booking_links = pgTable(
 	'booking_links',
 	{
 		id: uuid('id').defaultRandom().primaryKey(),
-		lead_journey_id: uuid('lead_journey_id')
-			.notNull()
-			.references((): AnyPgColumn => lead_journeys.id, { onDelete: 'cascade' }),
-		campaign_id: integer('campaign_id')
-			.notNull()
-			.references(() => campaigns.id, { onDelete: 'cascade' }),
+		lead_journey_id: uuid('lead_journey_id').references((): AnyPgColumn => lead_journeys.id, {
+			onDelete: 'cascade'
+		}),
+		campaign_id: integer('campaign_id').references(() => campaigns.id, { onDelete: 'cascade' }),
 		token: text('token').notNull(),
+		booking_type: booking_type('booking_type').notNull().default('lead'),
 		expires_at: timestamp('expires_at').notNull(),
 		clicked_at: timestamp('clicked_at'),
 		booked_at: timestamp('booked_at'),
+		metadata: jsonb('metadata'),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
 	},
 	(table) => ({
 		tokenUniqueIdx: uniqueIndex('booking_links_token_key').on(table.token),
 		expiresAtIdx: index('booking_links_expires_at_idx').on(table.expires_at)
+	})
+);
+
+export const bookings = pgTable(
+	'bookings',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		booking_type: booking_type('booking_type').notNull(),
+		lead_journey_id: uuid('lead_journey_id').references((): AnyPgColumn => lead_journeys.id, {
+			onDelete: 'set null'
+		}),
+		email: text('email').notNull(),
+		name: text('name'),
+		company: text('company'),
+		scope: text('scope').notNull(),
+		status: booking_status('status').notNull().default('confirmed'),
+		starts_at: timestamp('starts_at').notNull(),
+		ends_at: timestamp('ends_at').notNull(),
+		google_calendar_event_id: text('google_calendar_event_id'),
+		reschedule_token: text('reschedule_token'),
+		is_repeat_interaction: boolean('is_repeat_interaction').notNull().default(false),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		emailIdx: index('bookings_email_idx').on(table.email),
+		leadJourneyIdx: index('bookings_lead_journey_id_idx').on(table.lead_journey_id),
+		startsAtIdx: index('bookings_starts_at_idx').on(table.starts_at),
+		rescheduleTokenUniqueIdx: uniqueIndex('bookings_reschedule_token_key').on(
+			table.reschedule_token
+		)
+	})
+);
+
+export const booking_rules = pgTable(
+	'booking_rules',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		booking_type: booking_type('booking_type').notNull(),
+		advance_notice_minutes: integer('advance_notice_minutes').notNull(),
+		slot_duration_minutes: integer('slot_duration_minutes').notNull(),
+		slot_interval_minutes: integer('slot_interval_minutes').notNull(),
+		is_enabled: boolean('is_enabled').notNull().default(true),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		bookingTypeUniqueIdx: uniqueIndex('booking_rules_booking_type_key').on(table.booking_type)
+	})
+);
+
+export const booking_settings = pgTable('booking_settings', {
+	id: uuid('id').defaultRandom().primaryKey(),
+	is_paused: boolean('is_paused').notNull().default(false),
+	pause_message: text('pause_message'),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
+});
+
+export const booking_reschedules = pgTable(
+	'booking_reschedules',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		booking_id: uuid('booking_id')
+			.notNull()
+			.references(() => bookings.id, { onDelete: 'cascade' }),
+		old_starts_at: timestamp('old_starts_at').notNull(),
+		old_ends_at: timestamp('old_ends_at').notNull(),
+		new_starts_at: timestamp('new_starts_at').notNull(),
+		new_ends_at: timestamp('new_ends_at').notNull(),
+		changed_by: booking_reschedule_actor('changed_by').notNull(),
+		changed_at: timestamp('changed_at').notNull().defaultNow()
+	},
+	(table) => ({
+		bookingIdIdx: index('booking_reschedules_booking_id_idx').on(table.booking_id),
+		changedAtIdx: index('booking_reschedules_changed_at_idx').on(table.changed_at)
 	})
 );
 
