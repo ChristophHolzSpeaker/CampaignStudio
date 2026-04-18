@@ -323,3 +323,43 @@ export type ConfirmBookingResult =
 			state: 'invalid_token';
 			message: string;
 	  };
+
+export type RescheduleBookingResolutionState =
+	| 'usable'
+	| 'invalid_token'
+	| 'booking_not_found'
+	| 'booking_unavailable';
+
+export type RescheduleBookingResolution = {
+	state: RescheduleBookingResolutionState;
+	booking: BookingRecord | null;
+	availability: BookingAvailabilityResult | null;
+	searchStartsAt: Date | null;
+	searchEndsAt: Date | null;
+	message: string | null;
+};
+
+export type ConfirmBookingRescheduleInput = {
+	rescheduleToken: string;
+	selectedStartsAt: Date;
+	selectedEndsAt: Date;
+	requestOrigin: string;
+	now?: Date;
+};
+
+export type ConfirmBookingRescheduleResult =
+	| {
+			state: 'rescheduled';
+			booking: BookingRecord;
+			audit: BookingRescheduleRecord;
+	  }
+	| {
+			state:
+				| 'invalid_token'
+				| 'booking_unavailable'
+				| 'slot_unavailable'
+				| 'calendar_sync_failed'
+				| 'missing_calendar_event_id';
+			message: string;
+			booking?: BookingRecord;
+	  };

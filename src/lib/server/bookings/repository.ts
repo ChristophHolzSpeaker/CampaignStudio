@@ -112,17 +112,22 @@ export async function createBookingRecord(input: CreateBookingInput): Promise<Bo
 export async function getOverlappingActiveBooking(input: {
 	startsAt: Date;
 	endsAt: Date;
+	excludeBookingId?: string;
 }): Promise<BookingRecord | null> {
+	const conditions = [
+		lt(bookings.starts_at, input.endsAt),
+		gt(bookings.ends_at, input.startsAt),
+		ne(bookings.status, 'cancelled')
+	];
+
+	if (input.excludeBookingId) {
+		conditions.push(ne(bookings.id, input.excludeBookingId));
+	}
+
 	const [row] = await db
 		.select()
 		.from(bookings)
-		.where(
-			and(
-				lt(bookings.starts_at, input.endsAt),
-				gt(bookings.ends_at, input.startsAt),
-				ne(bookings.status, 'cancelled')
-			)
-		)
+		.where(and(...conditions))
 		.orderBy(asc(bookings.starts_at))
 		.limit(1);
 

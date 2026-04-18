@@ -1,6 +1,8 @@
 import type {
 	CreateBookingCalendarEventRequest,
-	CreateBookingCalendarEventResponse
+	CreateBookingCalendarEventResponse,
+	UpdateBookingCalendarEventRequest,
+	UpdateBookingCalendarEventResponse
 } from '../../../../shared/booking-calendar';
 import {
 	buildWorkerAuthHeader,
@@ -24,4 +26,22 @@ export async function createBookingCalendarEventViaWorker(
 	});
 
 	return parseWorkerResponse<CreateBookingCalendarEventResponse>(response);
+}
+
+export async function updateBookingCalendarEventViaWorker(
+	input: UpdateBookingCalendarEventRequest
+): Promise<UpdateBookingCalendarEventResponse> {
+	const baseUrl = requireWorkerEnv('ATTRIBUTION_WORKER_URL');
+	const url = new URL('/booking/calendar-event/update', baseUrl);
+
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: buildWorkerAuthHeader(),
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(input)
+	});
+
+	return parseWorkerResponse<UpdateBookingCalendarEventResponse>(response);
 }

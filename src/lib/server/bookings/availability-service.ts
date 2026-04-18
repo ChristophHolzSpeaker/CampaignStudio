@@ -9,6 +9,7 @@ export async function getBookingAvailability(input: {
 	searchEndsAt: Date;
 	calendarProvider: BookingCalendarAvailabilityProvider;
 	calendarId?: string;
+	ignoredBusyIntervals?: Array<{ startsAt: Date; endsAt: Date }>;
 	now?: Date;
 }): Promise<BookingAvailabilityResult> {
 	const policy = await getBookingPolicy(input.bookingType);
@@ -29,11 +30,23 @@ export async function getBookingAvailability(input: {
 		calendarId: input.calendarId
 	});
 
+	const ignoredBusyIntervals = input.ignoredBusyIntervals ?? [];
+	const filteredBusyIntervals =
+		ignoredBusyIntervals.length === 0
+			? busy.intervals
+			: busy.intervals.filter((busyInterval) => {
+					return !ignoredBusyIntervals.some(
+						(ignoredInterval) =>
+							busyInterval.startsAt.getTime() === ignoredInterval.startsAt.getTime() &&
+							busyInterval.endsAt.getTime() === ignoredInterval.endsAt.getTime()
+					);
+				});
+
 	return evaluateBookingAvailability({
 		policy,
 		searchStartsAt: input.searchStartsAt,
 		searchEndsAt: input.searchEndsAt,
-		busyIntervals: busy.intervals,
+		busyIntervals: filteredBusyIntervals,
 		now: input.now
 	});
 }

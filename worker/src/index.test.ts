@@ -21,12 +21,17 @@ vi.mock('./routes/booking-calendar-event', () => ({
 	handleBookingCalendarEvent: vi.fn()
 }));
 
+vi.mock('./routes/booking-calendar-event-update', () => ({
+	handleBookingCalendarEventUpdate: vi.fn()
+}));
+
 import worker from './index';
 import { renewGmailWatches } from './lib/gmail/watch';
 import { reconcileMailboxHealth } from './lib/gmail/reconcile';
 import { handleGmailPush } from './routes/gmail-push';
 import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
+import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
 import { makeTestEnv, makeTestExecutionContext } from './test/helpers';
 
 const mockedRenewGmailWatches = vi.mocked(renewGmailWatches);
@@ -34,6 +39,7 @@ const mockedReconcileMailboxHealth = vi.mocked(reconcileMailboxHealth);
 const mockedHandleGmailPush = vi.mocked(handleGmailPush);
 const mockedHandleGmailWatchActivate = vi.mocked(handleGmailWatchActivate);
 const mockedHandleBookingCalendarEvent = vi.mocked(handleBookingCalendarEvent);
+const mockedHandleBookingCalendarEventUpdate = vi.mocked(handleBookingCalendarEventUpdate);
 
 describe('worker scheduled handler', () => {
 	it('runs watch renewal and mailbox reconciliation in waitUntil', async () => {
@@ -62,6 +68,7 @@ describe('worker fetch handler', () => {
 		mockedHandleGmailPush.mockReset();
 		mockedHandleGmailWatchActivate.mockReset();
 		mockedHandleBookingCalendarEvent.mockReset();
+		mockedHandleBookingCalendarEventUpdate.mockReset();
 	});
 
 	it('returns method not allowed for non-POST /gmail/push', async () => {
@@ -176,5 +183,51 @@ describe('worker fetch handler', () => {
 		const response = await worker.fetch(request, makeTestEnv(), ctx);
 		expect(response.status).toBe(200);
 		expect(mockedHandleBookingCalendarEvent).toHaveBeenCalledTimes(1);
+	});
+
+	it('returns unauthorized for /booking/calendar-event/update without auth', async () => {
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/booking/calendar-event/update', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(401);
+		expect(mockedHandleBookingCalendarEventUpdate).not.toHaveBeenCalled();
+	});
+
+	it('dispatches authorized /booking/calendar-event/update to route handler', async () => {
+		mockedHandleBookingCalendarEventUpdate.mockResolvedValueOnce(
+			new Response(JSON.stringify({ ok: true, event_id: 'evt_123' }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/booking/calendar-event/update', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: 'Bearer test'
+			},
+			body: JSON.stringify({
+				booking_id: '3fdb8e65-2ed6-4f56-a6d7-d749ccdc4690',
+				event_id: 'evt_123',
+				booking_type: 'lead',
+				attendee_email: 'lead@example.com',
+				meeting_scope: 'Discuss campaign goals',
+				starts_at_iso: '2026-06-02T10:00:00.000Z',
+				ends_at_iso: '2026-06-02T10:30:00.000Z',
+				reschedule_url: 'https://book.example.com/book/r/token',
+				is_repeat_interaction: false
+			})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(200);
+		expect(mockedHandleBookingCalendarEventUpdate).toHaveBeenCalledTimes(1);
 	});
 });
