@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	type HeaderRoute = '/campaigns' | '/admin/prompts' | '/campaigns/analytics' | '/admin/settings';
+	type HeaderRoute = '/campaigns' | '/admin/prompts' | '/campaigns/analytics' | '/admin/bookings';
 
 	const navLinks: { label: string; href: HeaderRoute }[] = [
 		{ label: 'Campaigns', href: '/campaigns' },
 		{ label: 'Prompt Library', href: '/admin/prompts' },
 		{ label: 'Analytics', href: '/campaigns/analytics' },
-		{ label: 'Settings', href: '/admin/settings' }
+		{ label: 'Settings', href: '/admin/bookings' }
 	];
 
 	const currentPath = $derived.by(() => $page.url.pathname);

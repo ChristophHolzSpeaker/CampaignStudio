@@ -143,4 +143,47 @@ describe('getBookingAvailability', () => {
 		expect(result.slots).toHaveLength(2);
 		expect(result.slots[0]?.startsAt.toISOString()).toBe('2026-05-01T10:00:00.000Z');
 	});
+
+	it('uses updated rule duration and interval values when evaluating availability', async () => {
+		mockedGetBookingPolicy.mockResolvedValueOnce({
+			state: 'active',
+			bookingType: 'lead',
+			pause: {
+				isPaused: false,
+				pauseMessage: null,
+				settingsRowId: null,
+				updatedAt: null
+			},
+			rules: {
+				bookingType: 'lead',
+				advanceNoticeMinutes: 0,
+				slotDurationMinutes: 45,
+				slotIntervalMinutes: 15,
+				isEnabled: true,
+				ruleRowId: 'rule-updated',
+				updatedAt: new Date('2026-04-20T00:00:00.000Z')
+			}
+		});
+
+		const provider: BookingCalendarAvailabilityProvider = {
+			fetchBusyIntervals: vi.fn().mockResolvedValue({
+				providerName: 'test-provider',
+				intervals: []
+			})
+		};
+
+		const result = await getBookingAvailability({
+			bookingType: 'lead',
+			searchStartsAt: new Date('2026-05-01T10:00:00.000Z'),
+			searchEndsAt: new Date('2026-05-01T11:00:00.000Z'),
+			calendarProvider: provider
+		});
+
+		expect(result.state).toBe('available');
+		expect(result.slots).toHaveLength(2);
+		expect(result.slots[0]?.startsAt.toISOString()).toBe('2026-05-01T10:00:00.000Z');
+		expect(result.slots[0]?.endsAt.toISOString()).toBe('2026-05-01T10:45:00.000Z');
+		expect(result.slots[1]?.startsAt.toISOString()).toBe('2026-05-01T10:15:00.000Z');
+		expect(result.slots[1]?.endsAt.toISOString()).toBe('2026-05-01T11:00:00.000Z');
+	});
 });
