@@ -11,6 +11,19 @@ export const bookingIntakeSchema = z.object({
 	company: z.string().trim().max(120, 'Company is too long').optional()
 });
 
+export const bookingConfirmationSchema = bookingIntakeSchema.extend({
+	selectedStartsAtIso: z
+		.string()
+		.trim()
+		.min(1, 'Please select a slot')
+		.refine((value) => !Number.isNaN(Date.parse(value)), 'Selected slot is invalid'),
+	selectedEndsAtIso: z
+		.string()
+		.trim()
+		.min(1, 'Please select a slot')
+		.refine((value) => !Number.isNaN(Date.parse(value)), 'Selected slot is invalid')
+});
+
 export type BookingIntakeSubmission = {
 	email: string;
 	scope: string;
@@ -18,7 +31,15 @@ export type BookingIntakeSubmission = {
 	company: string;
 };
 
+export type BookingConfirmationSubmission = BookingIntakeSubmission & {
+	selectedStartsAtIso: string;
+	selectedEndsAtIso: string;
+};
+
 export type BookingIntakeFieldErrors = Partial<Record<keyof BookingIntakeSubmission, string>>;
+export type BookingConfirmationFieldErrors = Partial<
+	Record<keyof BookingConfirmationSubmission, string>
+>;
 
 export function getBookingIntakeSubmission(formData: FormData): BookingIntakeSubmission {
 	return {
@@ -26,6 +47,16 @@ export function getBookingIntakeSubmission(formData: FormData): BookingIntakeSub
 		scope: formData.get('scope')?.toString().trim() ?? '',
 		name: formData.get('name')?.toString().trim() ?? '',
 		company: formData.get('company')?.toString().trim() ?? ''
+	};
+}
+
+export function getBookingConfirmationSubmission(
+	formData: FormData
+): BookingConfirmationSubmission {
+	return {
+		...getBookingIntakeSubmission(formData),
+		selectedStartsAtIso: formData.get('selected_starts_at')?.toString().trim() ?? '',
+		selectedEndsAtIso: formData.get('selected_ends_at')?.toString().trim() ?? ''
 	};
 }
 
@@ -43,6 +74,36 @@ export function toBookingIntakeFieldErrors(input: z.ZodError): BookingIntakeFiel
 		}
 
 		if (field === 'email' || field === 'scope' || field === 'name' || field === 'company') {
+			fieldErrors[field] = issue.message;
+		}
+	}
+
+	return fieldErrors;
+}
+
+export function toBookingConfirmationFieldErrors(
+	input: z.ZodError
+): BookingConfirmationFieldErrors {
+	const fieldErrors: BookingConfirmationFieldErrors = {};
+
+	for (const issue of input.issues) {
+		const field = issue.path[0];
+		if (typeof field !== 'string') {
+			continue;
+		}
+
+		if (field in fieldErrors) {
+			continue;
+		}
+
+		if (
+			field === 'email' ||
+			field === 'scope' ||
+			field === 'name' ||
+			field === 'company' ||
+			field === 'selectedStartsAtIso' ||
+			field === 'selectedEndsAtIso'
+		) {
 			fieldErrors[field] = issue.message;
 		}
 	}

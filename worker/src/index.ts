@@ -9,6 +9,7 @@ import { handleGmailPush } from './routes/gmail-push';
 import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
 import { handleHealth } from './routes/health';
 import { handleTrackCTA } from './routes/track-cta';
+import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 
 export default {
 	async fetch(request: Request, env: WorkerEnv, ctx: WorkerExecutionContext): Promise<Response> {
@@ -49,6 +50,13 @@ export default {
 					return json({ ok: false, error: 'Unauthorized' }, 401);
 				}
 				return await handleBookingLink(request, env);
+			}
+
+			if (pathname === '/booking/calendar-event' && request.method === 'POST') {
+				if (!requireInternalAuth(request, env)) {
+					return json({ ok: false, error: 'Unauthorized' }, 401);
+				}
+				return await handleBookingCalendarEvent(request, env);
 			}
 
 			return json({ ok: false, error: 'Not found' }, 404);

@@ -7,10 +7,10 @@ import type {
 	BookingType
 } from './contracts';
 import { classifyBookingRequesterByEmail } from './requester-classification';
+import { PUBLIC_BOOKING_CALENDAR_ID } from '$env/static/public';
 
 export const PUBLIC_BOOKING_SLOT_WINDOW_DAYS = 3;
 export const PUBLIC_BOOKING_SLOT_LIMIT = 40;
-export const PUBLIC_BOOKING_CALENDAR_ID = 'speaker@christophholz.com';
 
 export type PublicBookingSlotPresentation = {
 	startsAtIso: string;

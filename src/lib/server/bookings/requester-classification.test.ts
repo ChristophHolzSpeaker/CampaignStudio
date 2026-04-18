@@ -51,6 +51,7 @@ describe('classifyBookingRequesterByEmail', () => {
 			starts_at: new Date('2026-06-01T10:00:00.000Z'),
 			ends_at: new Date('2026-06-01T10:30:00.000Z'),
 			google_calendar_event_id: null,
+			calendar_sync_error: null,
 			reschedule_token: 'resched-1',
 			is_repeat_interaction: true,
 			created_at: new Date('2026-05-20T00:00:00.000Z'),

@@ -36,6 +36,14 @@
 
 		return `${dateLabel} ${startTime} - ${endTime}`;
 	}
+
+	const confirmationTone = $derived(
+		form?.confirmationState === 'confirmed'
+			? 'border-emerald-400/70 bg-emerald-50 text-emerald-700'
+			: form?.confirmationState === 'calendar_sync_failed'
+				? 'border-amber-400/70 bg-amber-50 text-amber-700'
+				: 'border-rose-400/70 bg-rose-50 text-rose-700'
+	);
 </script>
 
 <svelte:head>
@@ -58,14 +66,10 @@
 					{data.unavailableMessage ?? 'Booking is currently unavailable.'}
 				</div>
 			{:else}
-				<form method="POST" class="space-y-6" use:enhance>
+				<form method="POST" action="?/check" class="space-y-6" use:enhance>
 					{#if form?.message}
 						<div
-							class={`rounded-2xl border px-4 py-3 text-xs font-semibold tracking-[0.3em] uppercase ${
-								form.availabilityState === 'available'
-									? 'border-emerald-400/70 bg-emerald-50 text-emerald-700'
-									: 'border-amber-400/70 bg-amber-50 text-amber-700'
-							}`}
+							class={`rounded-2xl border px-4 py-3 text-xs font-semibold tracking-[0.3em] uppercase ${form.confirmationState ? confirmationTone : form.availabilityState === 'available' ? 'border-emerald-400/70 bg-emerald-50 text-emerald-700' : 'border-amber-400/70 bg-amber-50 text-amber-700'}`}
 						>
 							{form.message}
 						</div>
@@ -144,8 +148,25 @@
 								<h3 class="text-lg text-slate-900">{formatDayLabel(day.dateKey)}</h3>
 								<ul class="space-y-2">
 									{#each day.slots as slot (slot.startsAtIso)}
-										<li class="rounded-xl bg-white px-3 py-2 text-sm text-slate-700">
-											{formatSlotRange(slot.startsAtIso, slot.endsAtIso)}
+										<li class="rounded-xl bg-white px-3 py-3 text-sm text-slate-700">
+											<form
+												method="POST"
+												action="?/confirm"
+												class="flex items-center justify-between gap-3"
+												use:enhance
+											>
+												<input type="hidden" name="email" value={form?.values?.email ?? ''} />
+												<input type="hidden" name="name" value={form?.values?.name ?? ''} />
+												<input type="hidden" name="company" value={form?.values?.company ?? ''} />
+												<input type="hidden" name="scope" value={form?.values?.scope ?? ''} />
+												<input type="hidden" name="selected_starts_at" value={slot.startsAtIso} />
+												<input type="hidden" name="selected_ends_at" value={slot.endsAtIso} />
+												<span>{formatSlotRange(slot.startsAtIso, slot.endsAtIso)}</span>
+												<button
+													class="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold uppercase hover:border-slate-500"
+													type="submit">Confirm slot</button
+												>
+											</form>
 										</li>
 									{/each}
 								</ul>
