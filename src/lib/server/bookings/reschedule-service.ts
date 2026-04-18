@@ -14,6 +14,7 @@ import {
 	updateBookingStatus
 } from './repository';
 import { updateBookingCalendarEventViaWorker } from './worker-calendar-client';
+import { notifyBookingRescheduled } from '$lib/server/notifications/telegram';
 
 const SLOT_UNAVAILABLE_MESSAGE =
 	'That replacement slot is no longer available. Please choose another available time.';
@@ -347,6 +348,42 @@ export async function confirmBookingReschedule(
 			status: 'confirmed',
 			calendarSyncError: null
 		});
+
+		try {
+			await notifyBookingRescheduled({
+				booking_id: syncedBooking.id,
+				booking_type: syncedBooking.booking_type,
+				attendee_name: syncedBooking.name,
+				attendee_email: syncedBooking.email,
+				company: syncedBooking.company,
+				meeting_scope: syncedBooking.scope,
+				previous_booking_time: {
+					starts_at_iso: booking.starts_at.toISOString(),
+					ends_at_iso: booking.ends_at.toISOString()
+				},
+				new_booking_time: {
+					starts_at_iso: syncedBooking.starts_at.toISOString(),
+					ends_at_iso: syncedBooking.ends_at.toISOString()
+				},
+				campaign_context: {
+					lead_journey_id: syncedBooking.lead_journey_id
+				},
+				urls: {
+					reschedule_url: buildRescheduleUrl({
+						requestOrigin: input.requestOrigin,
+						rescheduleToken: token
+					})
+				}
+			});
+		} catch (notificationError) {
+			console.error('telegram_booking_rescheduled_failed', {
+				booking_id: syncedBooking.id,
+				error:
+					notificationError instanceof Error
+						? notificationError.message
+						: 'unknown_notification_error'
+			});
+		}
 
 		return {
 			state: 'rescheduled',

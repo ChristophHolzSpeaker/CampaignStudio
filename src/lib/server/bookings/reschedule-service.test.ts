@@ -22,6 +22,10 @@ vi.mock('./worker-calendar-client', () => ({
 	updateBookingCalendarEventViaWorker: vi.fn()
 }));
 
+vi.mock('$lib/server/notifications/telegram', () => ({
+	notifyBookingRescheduled: vi.fn()
+}));
+
 import {
 	getBookingByRescheduleToken,
 	getOverlappingActiveBooking,
@@ -31,6 +35,7 @@ import { getBookingPolicy } from './policy';
 import { getBookingAvailability } from './availability-service';
 import { rescheduleBooking } from './lifecycle';
 import { updateBookingCalendarEventViaWorker } from './worker-calendar-client';
+import { notifyBookingRescheduled } from '$lib/server/notifications/telegram';
 import { confirmBookingReschedule, resolveRescheduleBookingFlow } from './reschedule-service';
 
 const mockedGetBookingByRescheduleToken = vi.mocked(getBookingByRescheduleToken);
@@ -40,6 +45,7 @@ const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
 const mockedGetBookingAvailability = vi.mocked(getBookingAvailability);
 const mockedRescheduleBooking = vi.mocked(rescheduleBooking);
 const mockedUpdateBookingCalendarEventViaWorker = vi.mocked(updateBookingCalendarEventViaWorker);
+const mockedNotifyBookingRescheduled = vi.mocked(notifyBookingRescheduled);
 
 const existingBooking = {
 	id: 'booking-1',
@@ -69,6 +75,7 @@ describe('reschedule service', () => {
 		mockedGetBookingAvailability.mockReset();
 		mockedRescheduleBooking.mockReset();
 		mockedUpdateBookingCalendarEventViaWorker.mockReset();
+		mockedNotifyBookingRescheduled.mockReset();
 	});
 
 	it('resolveRescheduleBookingFlow returns invalid token state', async () => {
@@ -229,6 +236,12 @@ describe('reschedule service', () => {
 				event_id: 'evt_123'
 			})
 		);
+		expect(mockedNotifyBookingRescheduled).toHaveBeenCalledWith(
+			expect.objectContaining({
+				booking_id: 'booking-1',
+				booking_type: 'lead'
+			})
+		);
 		expect(result.state).toBe('rescheduled');
 		if (result.state === 'rescheduled') {
 			expect(result.booking.starts_at.toISOString()).toBe('2026-06-01T11:00:00.000Z');
@@ -380,7 +393,95 @@ describe('reschedule service', () => {
 				status: 'calendar_sync_failed'
 			})
 		);
+		expect(mockedNotifyBookingRescheduled).not.toHaveBeenCalled();
 		expect(result.state).toBe('calendar_sync_failed');
+	});
+
+	it('keeps reschedule successful when telegram notification fails', async () => {
+		mockedGetBookingByRescheduleToken.mockResolvedValueOnce(existingBooking as never);
+		mockedGetBookingPolicy.mockResolvedValueOnce({
+			state: 'active',
+			bookingType: 'lead',
+			pause: {
+				isPaused: false,
+				pauseMessage: null,
+				settingsRowId: null,
+				updatedAt: null
+			},
+			rules: {
+				bookingType: 'lead',
+				advanceNoticeMinutes: 30,
+				slotDurationMinutes: 30,
+				slotIntervalMinutes: 30,
+				isEnabled: true,
+				ruleRowId: 'rule-lead',
+				updatedAt: new Date('2026-05-20T00:00:00.000Z')
+			}
+		});
+		mockedGetOverlappingActiveBooking.mockResolvedValueOnce(null);
+		mockedGetBookingAvailability.mockResolvedValueOnce({
+			state: 'available',
+			policy: {
+				state: 'active',
+				bookingType: 'lead',
+				pause: {
+					isPaused: false,
+					pauseMessage: null,
+					settingsRowId: null,
+					updatedAt: null
+				},
+				rules: {
+					bookingType: 'lead',
+					advanceNoticeMinutes: 30,
+					slotDurationMinutes: 30,
+					slotIntervalMinutes: 30,
+					isEnabled: true,
+					ruleRowId: 'rule-lead',
+					updatedAt: new Date('2026-05-20T00:00:00.000Z')
+				}
+			},
+			slots: [
+				{
+					startsAt: new Date('2026-06-01T11:00:00.000Z'),
+					endsAt: new Date('2026-06-01T11:30:00.000Z'),
+					bookingType: 'lead',
+					source: 'computed'
+				}
+			],
+			searchStartsAt: new Date('2026-06-01T11:00:00.000Z'),
+			searchEndsAt: new Date('2026-06-01T11:30:00.000Z')
+		});
+		mockedRescheduleBooking.mockResolvedValueOnce({
+			booking: {
+				...existingBooking,
+				starts_at: new Date('2026-06-01T11:00:00.000Z'),
+				ends_at: new Date('2026-06-01T11:30:00.000Z')
+			},
+			audit: {
+				id: 'audit-2'
+			} as never
+		});
+		mockedUpdateBookingCalendarEventViaWorker.mockResolvedValueOnce({
+			ok: true,
+			event_id: 'evt_123'
+		});
+		mockedUpdateBookingStatus.mockResolvedValueOnce({
+			...existingBooking,
+			status: 'confirmed',
+			starts_at: new Date('2026-06-01T11:00:00.000Z'),
+			ends_at: new Date('2026-06-01T11:30:00.000Z')
+		} as never);
+		mockedNotifyBookingRescheduled.mockRejectedValueOnce(new Error('telegram down'));
+
+		const result = await confirmBookingReschedule({
+			rescheduleToken: 'resched-1',
+			selectedStartsAt: new Date('2026-06-01T11:00:00.000Z'),
+			selectedEndsAt: new Date('2026-06-01T11:30:00.000Z'),
+			requestOrigin: 'https://book.example.com',
+			now: new Date('2026-05-31T00:00:00.000Z')
+		});
+
+		expect(result.state).toBe('rescheduled');
 	});
 
 	it('confirmBookingReschedule fails when booking is missing calendar event id', async () => {

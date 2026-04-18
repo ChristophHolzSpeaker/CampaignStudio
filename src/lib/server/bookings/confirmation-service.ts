@@ -16,6 +16,7 @@ import {
 import { getOverlappingActiveBooking, markBookingLinkBookedAt } from './repository';
 import { getPublicBookingUnavailableMessage } from './public-flow';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
+import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
 import type { CreateBookingCalendarEventRequest } from '../../../../shared/booking-calendar';
 import { randomBytes } from 'node:crypto';
 
@@ -222,6 +223,38 @@ export async function confirmBookingSelection(
 			bookingId: created.booking.id,
 			googleCalendarEventId: calendarResponse.event_id
 		});
+
+		try {
+			await notifyBookingConfirmed({
+				booking_id: attached.booking.id,
+				booking_type: attached.booking.booking_type,
+				attendee_name: attached.booking.name,
+				attendee_email: attached.booking.email,
+				company: attached.booking.company,
+				meeting_scope: attached.booking.scope,
+				booking_time: {
+					starts_at_iso: attached.booking.starts_at.toISOString(),
+					ends_at_iso: attached.booking.ends_at.toISOString()
+				},
+				campaign_context: {
+					lead_journey_id: attached.booking.lead_journey_id,
+					campaign_id: input.leadTokenContext?.campaignId ?? null,
+					booking_link_id: input.leadTokenContext?.bookingLinkId ?? null
+				},
+				urls: {
+					reschedule_url: rescheduleUrl,
+					calendar_event_url: calendarResponse.html_link ?? null
+				}
+			});
+		} catch (notificationError) {
+			console.error('telegram_booking_confirmed_failed', {
+				booking_id: attached.booking.id,
+				error:
+					notificationError instanceof Error
+						? notificationError.message
+						: 'unknown_notification_error'
+			});
+		}
 
 		return {
 			state: 'confirmed',
