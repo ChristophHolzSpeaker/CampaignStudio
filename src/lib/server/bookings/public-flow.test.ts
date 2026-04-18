@@ -11,6 +11,7 @@ vi.mock('./availability-service', () => ({
 import { getBookingAvailability } from './availability-service';
 import { classifyBookingRequesterByEmail } from './requester-classification';
 import {
+	getPublicBookingUnavailableMessage,
 	getPublicBookingSearchWindow,
 	resolvePublicBookingSlots,
 	PUBLIC_BOOKING_SLOT_WINDOW_DAYS
@@ -103,5 +104,21 @@ describe('public booking flow service', () => {
 		expect(result.slotGroups[0]?.dateKey).toBe('2026-05-02');
 		expect(result.slotGroups[0]?.slots).toHaveLength(2);
 		expect(result.slotGroups[1]?.dateKey).toBe('2026-05-03');
+	});
+
+	it('returns updated pause message for globally paused public flows', () => {
+		const message = getPublicBookingUnavailableMessage({
+			state: 'globally_paused',
+			bookingType: 'general',
+			pause: {
+				isPaused: true,
+				pauseMessage: 'Bookings are paused for travel week',
+				settingsRowId: 'settings-22',
+				updatedAt: new Date('2026-05-02T00:00:00.000Z')
+			},
+			rules: null
+		});
+
+		expect(message).toBe('Bookings are paused for travel week');
 	});
 });

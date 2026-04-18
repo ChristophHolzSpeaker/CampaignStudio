@@ -31,6 +31,45 @@ export async function getBookingRulesByType(
 	return row ?? null;
 }
 
+export async function upsertBookingRulesByType(input: {
+	bookingType: BookingType;
+	advanceNoticeMinutes: number;
+	slotDurationMinutes: number;
+	slotIntervalMinutes: number;
+	isEnabled: boolean;
+	updatedAt?: Date;
+}): Promise<BookingRuleRecord> {
+	const updatedAt = input.updatedAt ?? new Date();
+
+	const [upserted] = await db
+		.insert(booking_rules)
+		.values({
+			booking_type: input.bookingType,
+			advance_notice_minutes: input.advanceNoticeMinutes,
+			slot_duration_minutes: input.slotDurationMinutes,
+			slot_interval_minutes: input.slotIntervalMinutes,
+			is_enabled: input.isEnabled,
+			updated_at: updatedAt
+		})
+		.onConflictDoUpdate({
+			target: booking_rules.booking_type,
+			set: {
+				advance_notice_minutes: input.advanceNoticeMinutes,
+				slot_duration_minutes: input.slotDurationMinutes,
+				slot_interval_minutes: input.slotIntervalMinutes,
+				is_enabled: input.isEnabled,
+				updated_at: updatedAt
+			}
+		})
+		.returning();
+
+	if (!upserted) {
+		throw new Error(`Failed to upsert booking rules for type ${input.bookingType}`);
+	}
+
+	return upserted;
+}
+
 export async function getGlobalBookingSettings(): Promise<BookingSettingsRecord | null> {
 	const [row] = await db
 		.select()
@@ -39,6 +78,48 @@ export async function getGlobalBookingSettings(): Promise<BookingSettingsRecord 
 		.limit(1);
 
 	return row ?? null;
+}
+
+export async function upsertGlobalBookingSettings(input: {
+	isPaused: boolean;
+	pauseMessage: string | null;
+	updatedAt?: Date;
+}): Promise<BookingSettingsRecord> {
+	const updatedAt = input.updatedAt ?? new Date();
+	const existing = await getGlobalBookingSettings();
+
+	if (!existing) {
+		const [created] = await db
+			.insert(booking_settings)
+			.values({
+				is_paused: input.isPaused,
+				pause_message: input.pauseMessage,
+				updated_at: updatedAt
+			})
+			.returning();
+
+		if (!created) {
+			throw new Error('Failed to create booking settings row');
+		}
+
+		return created;
+	}
+
+	const [updated] = await db
+		.update(booking_settings)
+		.set({
+			is_paused: input.isPaused,
+			pause_message: input.pauseMessage,
+			updated_at: updatedAt
+		})
+		.where(eq(booking_settings.id, existing.id))
+		.returning();
+
+	if (!updated) {
+		throw new Error(`Failed to update booking settings row ${existing.id}`);
+	}
+
+	return updated;
 }
 
 export async function getBookingLinkByToken(token: string): Promise<BookingLinkRecord | null> {
