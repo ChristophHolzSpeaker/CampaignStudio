@@ -8,3 +8,5 @@ export * from './slot-engine';
 export * from './availability-service';
 export * from './lifecycle';
 export * from './public-flow';
+export * from './worker-calendar-client';
+export * from './confirmation-service';

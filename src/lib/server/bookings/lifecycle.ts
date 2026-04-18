@@ -1,6 +1,7 @@
 import type {
 	AttachCalendarEventIdInput,
 	AttachCalendarEventIdResult,
+	BookingRecord,
 	CreateBookingInput,
 	CreateBookingResult,
 	MarkRepeatInteractionInput,
@@ -14,6 +15,7 @@ import {
 	getBookingByRescheduleToken,
 	updateBookingGoogleEventId,
 	updateBookingRepeatInteraction,
+	updateBookingStatus,
 	updateBookingSchedule
 } from './repository';
 
@@ -60,7 +62,24 @@ export async function attachBookingCalendarEventId(
 ): Promise<AttachCalendarEventIdResult> {
 	const booking = await updateBookingGoogleEventId({
 		bookingId: input.bookingId,
-		googleCalendarEventId: input.googleCalendarEventId
+		googleCalendarEventId: input.googleCalendarEventId,
+		status: 'confirmed',
+		calendarSyncError: null
+	});
+
+	return {
+		booking
+	};
+}
+
+export async function markBookingCalendarSyncFailed(input: {
+	bookingId: string;
+	errorMessage: string;
+}): Promise<{ booking: BookingRecord }> {
+	const booking = await updateBookingStatus({
+		bookingId: input.bookingId,
+		status: 'calendar_sync_failed',
+		calendarSyncError: input.errorMessage
 	});
 
 	return {

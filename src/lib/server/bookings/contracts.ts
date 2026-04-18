@@ -10,7 +10,12 @@ export const bookingTypes = ['lead', 'general'] as const;
 export type BookingType = (typeof bookingTypes)[number];
 export type BookingFlowType = BookingType;
 
-export const bookingStatuses = ['confirmed', 'cancelled'] as const;
+export const bookingStatuses = [
+	'pending_calendar_sync',
+	'confirmed',
+	'calendar_sync_failed',
+	'cancelled'
+] as const;
 export type BookingStatus = (typeof bookingStatuses)[number];
 
 export const bookingRescheduleActors = ['lead', 'admin', 'system'] as const;
@@ -222,6 +227,8 @@ export type CreateBookingInput = {
 	requester: BookingRequester;
 	startsAt: Date;
 	endsAt: Date;
+	status?: BookingStatus;
+	calendarSyncError?: string | null;
 	rescheduleToken?: string | null;
 	isRepeatInteraction?: boolean;
 };
@@ -259,3 +266,60 @@ export type MarkRepeatInteractionInput = {
 export type MarkRepeatInteractionResult = {
 	booking: BookingRecord;
 };
+
+export type BookingConfirmationState =
+	| 'confirmed'
+	| 'slot_unavailable'
+	| 'booking_unavailable'
+	| 'calendar_sync_failed'
+	| 'invalid_token';
+
+export type BookingConfirmationIntake = {
+	email: string;
+	scope: string;
+	name?: string;
+	company?: string;
+};
+
+export type BookingConfirmationLeadTokenContext = {
+	token: string;
+	bookingLinkId: string;
+	leadJourneyId: string | null;
+	campaignId: number | null;
+	metadata: unknown;
+};
+
+export type ConfirmBookingInput = {
+	bookingType: BookingType;
+	intake: BookingConfirmationIntake;
+	selectedStartsAt: Date;
+	selectedEndsAt: Date;
+	requestOrigin: string;
+	calendarId?: string;
+	now?: Date;
+	leadTokenContext?: BookingConfirmationLeadTokenContext;
+};
+
+export type ConfirmBookingResult =
+	| {
+			state: 'confirmed';
+			booking: BookingRecord;
+			calendarEventId: string;
+	  }
+	| {
+			state: 'slot_unavailable';
+			message: string;
+	  }
+	| {
+			state: 'booking_unavailable';
+			message: string;
+	  }
+	| {
+			state: 'calendar_sync_failed';
+			booking: BookingRecord;
+			message: string;
+	  }
+	| {
+			state: 'invalid_token';
+			message: string;
+	  };

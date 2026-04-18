@@ -23,6 +23,10 @@ export type CreateBookingLinkResult = {
 	campaign_id: number;
 };
 
+function resolveBookingBaseUrl(env: WorkerEnv): URL {
+	return new URL(env.BOOKING_BASE_URL ?? 'https://book.domain.com/');
+}
+
 function resolveBookingTtlSeconds(env: WorkerEnv): number {
 	const configured = env.BOOKING_LINK_TTL_SECONDS;
 	if (!configured) {
@@ -100,9 +104,8 @@ export async function createBookingLinkForJourney(
 		}
 	});
 
-	const bookingBase = env.BOOKING_BASE_URL ?? 'https://book.domain.com/';
-	const bookingUrl = new URL(bookingBase);
-	bookingUrl.searchParams.set('token', token);
+	const bookingBase = resolveBookingBaseUrl(env);
+	const bookingUrl = new URL(`/book/l/${encodeURIComponent(token)}`, bookingBase);
 
 	return {
 		booking_link_id: created.id,

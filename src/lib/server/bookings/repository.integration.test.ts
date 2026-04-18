@@ -75,6 +75,7 @@ describeDb('booking repository integration', () => {
 				},
 				startsAt: new Date('2026-06-01T10:00:00.000Z'),
 				endsAt: new Date('2026-06-01T10:30:00.000Z'),
+				status: 'confirmed',
 				rescheduleToken
 			});
 			createdBookingIds.push(createdBooking.id);

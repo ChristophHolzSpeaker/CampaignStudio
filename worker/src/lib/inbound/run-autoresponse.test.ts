@@ -134,7 +134,7 @@ describe('runAutoresponsePipeline', () => {
 			.mockResolvedValueOnce(null);
 		mockedCreateBookingLinkForJourney.mockResolvedValue({
 			booking_link_id: 'booking_1',
-			url: 'https://book.domain.com/?token=t1',
+			url: 'https://book.domain.com/book/l/t1',
 			token: 't1',
 			expires_at: '2026-05-01T00:00:00.000Z',
 			campaign_id: 12
@@ -223,7 +223,7 @@ describe('runAutoresponsePipeline', () => {
 		expect(mockedCreateBookingLinkForJourney).not.toHaveBeenCalled();
 		expect(mockedInvokeWoodyAcknowledgement).toHaveBeenCalledWith(
 			expect.any(Object),
-			expect.objectContaining({ booking_link: 'https://book.christophholz.com/schedule' })
+			expect.objectContaining({ booking_link: 'https://book.christophholz.com/book/g' })
 		);
 		expect(mockedSendOutboundEmail).toHaveBeenCalledWith(
 			expect.any(Object),
@@ -251,7 +251,7 @@ describe('runAutoresponsePipeline', () => {
 			.mockResolvedValueOnce(null);
 		mockedCreateBookingLinkForJourney.mockResolvedValue({
 			booking_link_id: 'booking_1',
-			url: 'https://book.domain.com/?token=t1',
+			url: 'https://book.domain.com/book/l/t1',
 			token: 't1',
 			expires_at: '2026-05-01T00:00:00.000Z',
 			campaign_id: 12
@@ -301,7 +301,7 @@ describe('runAutoresponsePipeline', () => {
 			.mockResolvedValueOnce(null);
 		mockedCreateBookingLinkForJourney.mockResolvedValue({
 			booking_link_id: 'booking_1',
-			url: 'https://book.domain.com/?token=t1',
+			url: 'https://book.domain.com/book/l/t1',
 			token: 't1',
 			expires_at: '2026-05-01T00:00:00.000Z',
 			campaign_id: 12

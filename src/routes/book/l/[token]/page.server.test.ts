@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/server/bookings', () => ({
+	confirmBookingSelection: vi.fn(),
 	getBookingPolicy: vi.fn(),
 	getPublicBookingUnavailableMessage: vi.fn(),
 	resolveLeadBookingToken: vi.fn(),
@@ -8,6 +9,7 @@ vi.mock('$lib/server/bookings', () => ({
 }));
 
 import {
+	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
 	resolveLeadBookingToken,
@@ -19,9 +21,11 @@ const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
 const mockedGetPublicBookingUnavailableMessage = vi.mocked(getPublicBookingUnavailableMessage);
 const mockedResolveLeadBookingToken = vi.mocked(resolveLeadBookingToken);
 const mockedResolvePublicBookingSlots = vi.mocked(resolvePublicBookingSlots);
+const mockedConfirmBookingSelection = vi.mocked(confirmBookingSelection);
 
 describe('/book/l/[token] +page.server', () => {
 	beforeEach(() => {
+		mockedConfirmBookingSelection.mockReset();
 		mockedGetBookingPolicy.mockReset();
 		mockedGetPublicBookingUnavailableMessage.mockReset();
 		mockedResolveLeadBookingToken.mockReset();
@@ -231,5 +235,97 @@ describe('/book/l/[token] +page.server', () => {
 		});
 		expect(response.availabilityState).toBe('available');
 		expect(response.slotGroups).toHaveLength(1);
+	});
+
+	it('confirm action returns confirmed state for usable lead token', async () => {
+		mockedResolveLeadBookingToken.mockResolvedValueOnce({
+			state: 'usable',
+			context: {
+				bookingType: 'lead',
+				token: 'usable-token',
+				bookingLinkId: 'link-4',
+				leadJourneyId: 'journey-4',
+				campaignId: 14,
+				expiresAt: new Date('2026-06-01T00:00:00.000Z'),
+				clickedAt: null,
+				bookedAt: null,
+				metadata: null
+			}
+		});
+		mockedGetBookingPolicy.mockResolvedValueOnce({
+			state: 'active',
+			bookingType: 'lead',
+			pause: {
+				isPaused: false,
+				pauseMessage: null,
+				settingsRowId: null,
+				updatedAt: null
+			},
+			rules: {
+				bookingType: 'lead',
+				advanceNoticeMinutes: 30,
+				slotDurationMinutes: 30,
+				slotIntervalMinutes: 30,
+				isEnabled: true,
+				ruleRowId: 'rule-lead',
+				updatedAt: new Date('2026-04-17T00:00:00.000Z')
+			}
+		});
+		mockedConfirmBookingSelection.mockResolvedValueOnce({
+			state: 'confirmed',
+			calendarEventId: 'evt_222',
+			booking: {
+				id: 'booking-2'
+			} as never
+		});
+
+		const formData = new FormData();
+		formData.set('email', 'lead@example.com');
+		formData.set('scope', 'Lead call');
+		formData.set('selected_starts_at', '2026-06-01T10:00:00.000Z');
+		formData.set('selected_ends_at', '2026-06-01T10:30:00.000Z');
+
+		const response = (await actions.confirm({
+			params: { token: 'usable-token' },
+			request: new Request('http://test.local/book/l/usable-token', {
+				method: 'POST',
+				body: formData
+			})
+		} as never)) as any;
+
+		expect(mockedConfirmBookingSelection).toHaveBeenCalledWith(
+			expect.objectContaining({
+				bookingType: 'lead',
+				leadTokenContext: expect.objectContaining({
+					bookingLinkId: 'link-4'
+				})
+			})
+		);
+		expect(response.confirmationState).toBe('confirmed');
+		expect(response.confirmedBookingId).toBe('booking-2');
+	});
+
+	it('confirm action rejects when token is invalid during submit', async () => {
+		mockedResolveLeadBookingToken.mockResolvedValueOnce({
+			state: 'invalid',
+			reason: 'not_found'
+		});
+
+		const formData = new FormData();
+		formData.set('email', 'lead@example.com');
+		formData.set('scope', 'Lead call');
+		formData.set('selected_starts_at', '2026-06-01T10:00:00.000Z');
+		formData.set('selected_ends_at', '2026-06-01T10:30:00.000Z');
+
+		const response = (await actions.confirm({
+			params: { token: 'invalid-token' },
+			request: new Request('http://test.local/book/l/invalid-token', {
+				method: 'POST',
+				body: formData
+			})
+		} as never)) as any;
+
+		expect(response.status).toBe(400);
+		expect(response.data.message).toContain('invalid');
 	});
 });

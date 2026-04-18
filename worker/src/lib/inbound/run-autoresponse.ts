@@ -104,8 +104,8 @@ function getInboundHeaders(rawMetadata: Record<string, unknown>): InboundHeader[
 }
 
 function resolveGenericBookingUrl(env: WorkerEnv): string {
-	const base = env.BOOKING_BASE_URL ?? 'https://book.domain.com/';
-	return new URL(base).toString();
+	const base = new URL(env.BOOKING_BASE_URL ?? 'https://book.domain.com/');
+	return new URL('/book/g', base).toString();
 }
 
 async function loadJourneyState(

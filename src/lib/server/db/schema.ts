@@ -16,7 +16,12 @@ import {
 } from 'drizzle-orm/pg-core';
 
 export const booking_type = pgEnum('booking_type', ['lead', 'general']);
-export const booking_status = pgEnum('booking_status', ['confirmed', 'cancelled']);
+export const booking_status = pgEnum('booking_status', [
+	'pending_calendar_sync',
+	'confirmed',
+	'calendar_sync_failed',
+	'cancelled'
+]);
 export const booking_reschedule_actor = pgEnum('booking_reschedule_actor', [
 	'lead',
 	'admin',
@@ -248,10 +253,11 @@ export const bookings = pgTable(
 		name: text('name'),
 		company: text('company'),
 		scope: text('scope').notNull(),
-		status: booking_status('status').notNull().default('confirmed'),
+		status: booking_status('status').notNull().default('pending_calendar_sync'),
 		starts_at: timestamp('starts_at').notNull(),
 		ends_at: timestamp('ends_at').notNull(),
 		google_calendar_event_id: text('google_calendar_event_id'),
+		calendar_sync_error: text('calendar_sync_error'),
 		reschedule_token: text('reschedule_token'),
 		is_repeat_interaction: boolean('is_repeat_interaction').notNull().default(false),
 		created_at: timestamp('created_at').notNull().defaultNow(),

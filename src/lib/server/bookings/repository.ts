@@ -6,7 +6,7 @@ import {
 	booking_settings,
 	bookings
 } from '$lib/server/db/schema';
-import { and, asc, desc, eq, gte } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, lt, ne } from 'drizzle-orm';
 import type {
 	BookingLinkRecord,
 	BookingRecord,
@@ -14,6 +14,7 @@ import type {
 	BookingRescheduleRecord,
 	BookingRuleRecord,
 	BookingSettingsRecord,
+	BookingStatus,
 	BookingType,
 	CreateBookingInput
 } from './contracts';
@@ -92,9 +93,11 @@ export async function createBookingRecord(input: CreateBookingInput): Promise<Bo
 			name: input.requester.name ?? null,
 			company: input.requester.company ?? null,
 			scope: input.requester.scope,
+			status: input.status ?? 'pending_calendar_sync',
 			starts_at: input.startsAt,
 			ends_at: input.endsAt,
 			reschedule_token: input.rescheduleToken ?? null,
+			calendar_sync_error: input.calendarSyncError ?? null,
 			is_repeat_interaction: input.isRepeatInteraction ?? false
 		})
 		.returning();
@@ -104,6 +107,26 @@ export async function createBookingRecord(input: CreateBookingInput): Promise<Bo
 	}
 
 	return created;
+}
+
+export async function getOverlappingActiveBooking(input: {
+	startsAt: Date;
+	endsAt: Date;
+}): Promise<BookingRecord | null> {
+	const [row] = await db
+		.select()
+		.from(bookings)
+		.where(
+			and(
+				lt(bookings.starts_at, input.endsAt),
+				gt(bookings.ends_at, input.startsAt),
+				ne(bookings.status, 'cancelled')
+			)
+		)
+		.orderBy(asc(bookings.starts_at))
+		.limit(1);
+
+	return row ?? null;
 }
 
 export async function getBookingByRescheduleToken(token: string): Promise<BookingRecord | null> {
@@ -148,12 +171,16 @@ export async function updateBookingSchedule(input: {
 export async function updateBookingGoogleEventId(input: {
 	bookingId: string;
 	googleCalendarEventId: string;
+	status?: BookingStatus;
+	calendarSyncError?: string | null;
 	updatedAt?: Date;
 }): Promise<BookingRecord> {
 	const [updated] = await db
 		.update(bookings)
 		.set({
 			google_calendar_event_id: input.googleCalendarEventId,
+			status: input.status,
+			calendar_sync_error: input.calendarSyncError ?? null,
 			updated_at: input.updatedAt ?? new Date()
 		})
 		.where(eq(bookings.id, input.bookingId))
@@ -161,6 +188,29 @@ export async function updateBookingGoogleEventId(input: {
 
 	if (!updated) {
 		throw new Error(`Booking ${input.bookingId} was not found for event-id update`);
+	}
+
+	return updated;
+}
+
+export async function updateBookingStatus(input: {
+	bookingId: string;
+	status: BookingStatus;
+	calendarSyncError?: string | null;
+	updatedAt?: Date;
+}): Promise<BookingRecord> {
+	const [updated] = await db
+		.update(bookings)
+		.set({
+			status: input.status,
+			calendar_sync_error: input.calendarSyncError ?? null,
+			updated_at: input.updatedAt ?? new Date()
+		})
+		.where(eq(bookings.id, input.bookingId))
+		.returning();
+
+	if (!updated) {
+		throw new Error(`Booking ${input.bookingId} was not found for status update`);
 	}
 
 	return updated;
@@ -205,6 +255,27 @@ export async function updateBookingLinkTimestamps(input: {
 
 	if (!updated) {
 		throw new Error(`Booking link ${input.bookingLinkId} was not found for timestamp update`);
+	}
+
+	return updated;
+}
+
+export async function markBookingLinkBookedAt(input: {
+	bookingLinkId: string;
+	bookedAt: Date;
+	updatedAt?: Date;
+}): Promise<BookingLinkRecord> {
+	const [updated] = await db
+		.update(booking_links)
+		.set({
+			booked_at: input.bookedAt,
+			updated_at: input.updatedAt ?? new Date()
+		})
+		.where(eq(booking_links.id, input.bookingLinkId))
+		.returning();
+
+	if (!updated) {
+		throw new Error(`Booking link ${input.bookingLinkId} was not found for booked-at update`);
 	}
 
 	return updated;

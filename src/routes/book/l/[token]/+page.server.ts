@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import {
+	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
 	resolveLeadBookingToken,
@@ -8,9 +9,14 @@ import {
 	type PublicBookingSlotDayGroup
 } from '$lib/server/bookings';
 import {
+	bookingConfirmationSchema,
 	bookingIntakeSchema,
+	getBookingConfirmationSubmission,
 	getBookingIntakeSubmission,
+	toBookingConfirmationFieldErrors,
 	toBookingIntakeFieldErrors,
+	type BookingConfirmationFieldErrors,
+	type BookingConfirmationSubmission,
 	type BookingIntakeFieldErrors,
 	type BookingIntakeSubmission
 } from '$lib/validation/booking-intake';
@@ -25,7 +31,15 @@ type ClassificationView = {
 export type LeadBookingActionData = {
 	values: BookingIntakeSubmission;
 	errors?: BookingIntakeFieldErrors;
+	confirmationValues?: BookingConfirmationSubmission;
+	confirmationErrors?: BookingConfirmationFieldErrors;
 	message?: string;
+	confirmationState?:
+		| 'confirmed'
+		| 'slot_unavailable'
+		| 'booking_unavailable'
+		| 'calendar_sync_failed';
+	confirmedBookingId?: string;
 	classification?: ClassificationView;
 	availabilityState?:
 		| 'available'
@@ -87,7 +101,7 @@ export const load: PageServerLoad = async ({ params }: { params: { token?: strin
 };
 
 export const actions: Actions = {
-	default: async ({ request, params }: { request: Request; params: { token?: string } }) => {
+	check: async ({ request, params }: { request: Request; params: { token?: string } }) => {
 		const token = params.token?.trim() ?? '';
 		const tokenResolution = await resolveLeadBookingToken(token);
 
@@ -139,5 +153,84 @@ export const actions: Actions = {
 					? 'No slots are currently available in the next 3 days.'
 					: undefined
 		};
+	},
+	confirm: async ({ request, params }: { request: Request; params: { token?: string } }) => {
+		const token = params.token?.trim() ?? '';
+		const tokenResolution = await resolveLeadBookingToken(token);
+
+		const formData = await request.formData();
+		const values = getBookingIntakeSubmission(formData);
+		const confirmationValues = getBookingConfirmationSubmission(formData);
+
+		if (tokenResolution.state !== 'usable') {
+			return fail<LeadBookingActionData>(400, {
+				values,
+				confirmationValues,
+				confirmationState: 'booking_unavailable',
+				message: getTokenMessage(tokenResolution.state)
+			});
+		}
+
+		const policy = await getBookingPolicy('lead');
+		if (policy.state !== 'active') {
+			return fail<LeadBookingActionData>(409, {
+				values,
+				confirmationValues,
+				confirmationState: 'booking_unavailable',
+				message: getPublicBookingUnavailableMessage(policy) ?? 'Booking is currently unavailable.'
+			});
+		}
+
+		const parseResult = bookingConfirmationSchema.safeParse(confirmationValues);
+		if (!parseResult.success) {
+			return fail<LeadBookingActionData>(400, {
+				values,
+				confirmationValues,
+				confirmationErrors: toBookingConfirmationFieldErrors(parseResult.error)
+			});
+		}
+
+		const confirmation = await confirmBookingSelection({
+			bookingType: 'lead',
+			intake: {
+				email: parseResult.data.email,
+				scope: parseResult.data.scope,
+				name: parseResult.data.name,
+				company: parseResult.data.company
+			},
+			selectedStartsAt: new Date(parseResult.data.selectedStartsAtIso),
+			selectedEndsAt: new Date(parseResult.data.selectedEndsAtIso),
+			requestOrigin: new URL(request.url).origin,
+			leadTokenContext: {
+				token: tokenResolution.context.token,
+				bookingLinkId: tokenResolution.context.bookingLinkId,
+				leadJourneyId: tokenResolution.context.leadJourneyId,
+				campaignId: tokenResolution.context.campaignId,
+				metadata: tokenResolution.context.metadata
+			}
+		});
+
+		if (confirmation.state === 'confirmed') {
+			return {
+				values,
+				confirmationValues,
+				confirmationState: 'confirmed' as const,
+				confirmedBookingId: confirmation.booking.id,
+				message: 'Booking confirmed. Check your inbox for the calendar invite.'
+			};
+		}
+
+		const status = confirmation.state === 'calendar_sync_failed' ? 503 : 409;
+		return fail<LeadBookingActionData>(status, {
+			values,
+			confirmationValues,
+			confirmationState:
+				confirmation.state === 'slot_unavailable'
+					? 'slot_unavailable'
+					: confirmation.state === 'calendar_sync_failed'
+						? 'calendar_sync_failed'
+						: 'booking_unavailable',
+			message: confirmation.message
+		});
 	}
 };

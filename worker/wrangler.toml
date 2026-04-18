@@ -3,7 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-04-14"
 
 [vars]
-BOOKING_BASE_URL = "https://book.domain.com/"
+BOOKING_BASE_URL = "http://localhost:5173"
+BOOKING_CALENDAR_ID = "podcast@christophholz.com"
 BOOKING_LINK_TTL_SECONDS = "2592000"
 
 [triggers]
