@@ -3,6 +3,7 @@ import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-con
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
+import { notifyLeadCreated } from '$lib/server/notifications/lead-notifications';
 import { z } from 'zod';
 
 const bookingRequestSchema = z.object({
@@ -105,6 +106,31 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 		sessionId: data.sessionId,
 		anonymousId: data.anonymousId
 	});
+
+	if (created) {
+		try {
+			await notifyLeadCreated({
+				created,
+				leadJourneyId: journey.id,
+				attendeeName: data.fullName,
+				attendeeEmail: normalizedEmail,
+				company: data.organization,
+				meetingScope: data.eventDetails,
+				campaignId: campaignContext.campaignId,
+				campaignPageId: campaignContext.campaignPageId,
+				pageSlug: data.pageSlug,
+				pagePath: requestEvent.url.pathname
+			});
+		} catch (notificationError) {
+			console.error('telegram_new_lead_notification_failed', {
+				lead_journey_id: journey.id,
+				error:
+					notificationError instanceof Error
+						? notificationError.message
+						: 'unknown_notification_error'
+			});
+		}
+	}
 
 	return {
 		success: true,

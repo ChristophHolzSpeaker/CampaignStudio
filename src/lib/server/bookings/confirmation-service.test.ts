@@ -19,6 +19,10 @@ vi.mock('./repository', () => ({
 	markBookingLinkBookedAt: vi.fn()
 }));
 
+vi.mock('$lib/server/notifications/telegram', () => ({
+	notifyBookingConfirmed: vi.fn()
+}));
+
 import { getBookingPolicy } from './policy';
 import { classifyBookingRequesterByEmail } from './requester-classification';
 import {
@@ -27,6 +31,7 @@ import {
 	markBookingCalendarSyncFailed
 } from './lifecycle';
 import { getOverlappingActiveBooking, markBookingLinkBookedAt } from './repository';
+import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
 import { confirmBookingSelection } from './confirmation-service';
 
 const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
@@ -36,6 +41,7 @@ const mockedAttachBookingCalendarEventId = vi.mocked(attachBookingCalendarEventI
 const mockedMarkBookingCalendarSyncFailed = vi.mocked(markBookingCalendarSyncFailed);
 const mockedGetOverlappingActiveBooking = vi.mocked(getOverlappingActiveBooking);
 const mockedMarkBookingLinkBookedAt = vi.mocked(markBookingLinkBookedAt);
+const mockedNotifyBookingConfirmed = vi.mocked(notifyBookingConfirmed);
 
 function activePolicy(bookingType: 'general' | 'lead') {
 	return {
@@ -68,6 +74,7 @@ describe('confirmBookingSelection', () => {
 		mockedMarkBookingCalendarSyncFailed.mockReset();
 		mockedGetOverlappingActiveBooking.mockReset();
 		mockedMarkBookingLinkBookedAt.mockReset();
+		mockedNotifyBookingConfirmed.mockReset();
 	});
 
 	it('confirms general booking and attaches returned calendar event id', async () => {
@@ -164,6 +171,12 @@ describe('confirmBookingSelection', () => {
 			bookingId: 'booking-1',
 			googleCalendarEventId: 'evt_123'
 		});
+		expect(mockedNotifyBookingConfirmed).toHaveBeenCalledWith(
+			expect.objectContaining({
+				booking_id: 'booking-1',
+				booking_type: 'general'
+			})
+		);
 	});
 
 	it('confirms lead booking and marks booking link booked timestamp', async () => {
@@ -256,6 +269,14 @@ describe('confirmBookingSelection', () => {
 			bookingLinkId: 'booking-link-1',
 			bookedAt: new Date('2026-06-01T10:00:00.000Z')
 		});
+		expect(mockedNotifyBookingConfirmed).toHaveBeenCalledWith(
+			expect.objectContaining({
+				booking_id: 'booking-2',
+				campaign_context: expect.objectContaining({
+					campaign_id: 88
+				})
+			})
+		);
 		expect(createBookingEvent).toHaveBeenCalledWith(
 			expect.objectContaining({
 				lead_context: expect.objectContaining({
@@ -366,6 +387,85 @@ describe('confirmBookingSelection', () => {
 			bookingId: 'booking-3',
 			errorMessage: 'worker error'
 		});
+		expect(mockedNotifyBookingConfirmed).not.toHaveBeenCalled();
+	});
+
+	it('does not fail confirmed booking when telegram notification fails', async () => {
+		mockedGetBookingPolicy.mockResolvedValueOnce(activePolicy('general'));
+		mockedGetOverlappingActiveBooking.mockResolvedValueOnce(null);
+		mockedClassifyBookingRequesterByEmail.mockResolvedValueOnce({
+			email: 'person@example.com',
+			normalizedEmail: 'person@example.com',
+			hasPriorBookings: false,
+			hasUpcomingBooking: false,
+			interactionKind: 'first_time',
+			upcomingBooking: null,
+			recentBooking: null,
+			totalBookings: 0
+		});
+		mockedCreateBooking.mockResolvedValueOnce({
+			booking: {
+				id: 'booking-4',
+				booking_type: 'general',
+				lead_journey_id: null,
+				email: 'person@example.com',
+				name: 'Person',
+				company: null,
+				scope: 'Intro',
+				status: 'pending_calendar_sync',
+				starts_at: new Date('2026-06-01T10:00:00.000Z'),
+				ends_at: new Date('2026-06-01T10:30:00.000Z'),
+				google_calendar_event_id: null,
+				calendar_sync_error: null,
+				reschedule_token: null,
+				is_repeat_interaction: false,
+				created_at: new Date('2026-04-01T00:00:00.000Z'),
+				updated_at: new Date('2026-04-01T00:00:00.000Z')
+			}
+		});
+		mockedAttachBookingCalendarEventId.mockResolvedValueOnce({
+			booking: {
+				id: 'booking-4',
+				booking_type: 'general',
+				lead_journey_id: null,
+				email: 'person@example.com',
+				name: 'Person',
+				company: null,
+				scope: 'Intro',
+				status: 'confirmed',
+				starts_at: new Date('2026-06-01T10:00:00.000Z'),
+				ends_at: new Date('2026-06-01T10:30:00.000Z'),
+				google_calendar_event_id: 'evt_999',
+				calendar_sync_error: null,
+				reschedule_token: 'resched-token',
+				is_repeat_interaction: false,
+				created_at: new Date('2026-04-01T00:00:00.000Z'),
+				updated_at: new Date('2026-04-01T00:00:00.000Z')
+			}
+		});
+		mockedNotifyBookingConfirmed.mockRejectedValueOnce(new Error('telegram down'));
+
+		const result = await confirmBookingSelection(
+			{
+				bookingType: 'general',
+				intake: {
+					email: 'person@example.com',
+					scope: 'Intro',
+					name: 'Person'
+				},
+				selectedStartsAt: new Date('2026-06-01T10:00:00.000Z'),
+				selectedEndsAt: new Date('2026-06-01T10:30:00.000Z'),
+				requestOrigin: 'https://book.example.com',
+				now: new Date('2026-06-01T09:00:00.000Z')
+			},
+			{
+				calendarEventProvider: {
+					createBookingEvent: vi.fn().mockResolvedValueOnce({ ok: true, event_id: 'evt_999' })
+				}
+			}
+		);
+
+		expect(result.state).toBe('confirmed');
 	});
 
 	it('returns booking unavailable when policy is no longer active', async () => {

@@ -28,6 +28,8 @@ export type WorkerEnv = {
 	GMAIL_RECONCILE_PUSH_STALE_SECONDS?: string;
 	GMAIL_RECONCILE_SYNC_STALE_SECONDS?: string;
 	GMAIL_RECONCILE_RETRY_COOLDOWN_SECONDS?: string;
+	TELEGRAM_BOT_TOKEN?: string;
+	TELEGRAM_CHAT_ID?: string;
 };
 
 export type WorkerExecutionContext = {

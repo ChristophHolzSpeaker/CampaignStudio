@@ -25,6 +25,10 @@ vi.mock('./routes/booking-calendar-event-update', () => ({
 	handleBookingCalendarEventUpdate: vi.fn()
 }));
 
+vi.mock('./routes/telegram-notification', () => ({
+	handleTelegramNotification: vi.fn()
+}));
+
 import worker from './index';
 import { renewGmailWatches } from './lib/gmail/watch';
 import { reconcileMailboxHealth } from './lib/gmail/reconcile';
@@ -32,6 +36,7 @@ import { handleGmailPush } from './routes/gmail-push';
 import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
+import { handleTelegramNotification } from './routes/telegram-notification';
 import { makeTestEnv, makeTestExecutionContext } from './test/helpers';
 
 const mockedRenewGmailWatches = vi.mocked(renewGmailWatches);
@@ -40,6 +45,7 @@ const mockedHandleGmailPush = vi.mocked(handleGmailPush);
 const mockedHandleGmailWatchActivate = vi.mocked(handleGmailWatchActivate);
 const mockedHandleBookingCalendarEvent = vi.mocked(handleBookingCalendarEvent);
 const mockedHandleBookingCalendarEventUpdate = vi.mocked(handleBookingCalendarEventUpdate);
+const mockedHandleTelegramNotification = vi.mocked(handleTelegramNotification);
 
 describe('worker scheduled handler', () => {
 	it('runs watch renewal and mailbox reconciliation in waitUntil', async () => {
@@ -69,6 +75,7 @@ describe('worker fetch handler', () => {
 		mockedHandleGmailWatchActivate.mockReset();
 		mockedHandleBookingCalendarEvent.mockReset();
 		mockedHandleBookingCalendarEventUpdate.mockReset();
+		mockedHandleTelegramNotification.mockReset();
 	});
 
 	it('returns method not allowed for non-POST /gmail/push', async () => {
@@ -229,5 +236,49 @@ describe('worker fetch handler', () => {
 		const response = await worker.fetch(request, makeTestEnv(), ctx);
 		expect(response.status).toBe(200);
 		expect(mockedHandleBookingCalendarEventUpdate).toHaveBeenCalledTimes(1);
+	});
+
+	it('returns unauthorized for /notifications/telegram without auth', async () => {
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/notifications/telegram', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(401);
+		expect(mockedHandleTelegramNotification).not.toHaveBeenCalled();
+	});
+
+	it('dispatches authorized /notifications/telegram to route handler', async () => {
+		mockedHandleTelegramNotification.mockResolvedValueOnce(
+			new Response(JSON.stringify({ ok: true, message_id: 1001 }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/notifications/telegram', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: 'Bearer test'
+			},
+			body: JSON.stringify({
+				type: 'booking_confirmed',
+				booking_id: '3fdb8e65-2ed6-4f56-a6d7-d749ccdc4690',
+				booking_type: 'lead',
+				booking_time: {
+					starts_at_iso: '2026-06-10T10:00:00.000Z',
+					ends_at_iso: '2026-06-10T10:30:00.000Z'
+				}
+			})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(200);
+		expect(mockedHandleTelegramNotification).toHaveBeenCalledTimes(1);
 	});
 });
