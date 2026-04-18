@@ -22,6 +22,21 @@ export type CalendarCreateEventResult = {
 	htmlLink?: string;
 };
 
+export type CalendarUpdateEventInput = {
+	calendarId: string;
+	eventId: string;
+	summary: string;
+	description: string;
+	startsAtIso: string;
+	endsAtIso: string;
+	attendees: CalendarEventAttendee[];
+};
+
+export type CalendarUpdateEventResult = {
+	id: string;
+	htmlLink?: string;
+};
+
 type GoogleCalendarEventResponse = {
 	id?: string;
 	htmlLink?: string;
@@ -30,7 +45,7 @@ type GoogleCalendarEventResponse = {
 async function calendarRequest<T>(
 	env: WorkerEnv,
 	input: {
-		method: 'POST';
+		method: 'POST' | 'PATCH';
 		path: string;
 		body: unknown;
 	}
@@ -61,6 +76,36 @@ export async function createCalendarEvent(
 	const response = await calendarRequest<GoogleCalendarEventResponse>(env, {
 		method: 'POST',
 		path: `/calendars/${encodeURIComponent(input.calendarId)}/events`,
+		body: {
+			summary: input.summary,
+			description: input.description,
+			start: {
+				dateTime: input.startsAtIso
+			},
+			end: {
+				dateTime: input.endsAtIso
+			},
+			attendees: input.attendees
+		}
+	});
+
+	if (!response.id) {
+		throw new Error('Calendar API response missing event id');
+	}
+
+	return {
+		id: response.id,
+		htmlLink: response.htmlLink
+	};
+}
+
+export async function updateCalendarEvent(
+	env: WorkerEnv,
+	input: CalendarUpdateEventInput
+): Promise<CalendarUpdateEventResult> {
+	const response = await calendarRequest<GoogleCalendarEventResponse>(env, {
+		method: 'PATCH',
+		path: `/calendars/${encodeURIComponent(input.calendarId)}/events/${encodeURIComponent(input.eventId)}`,
 		body: {
 			summary: input.summary,
 			description: input.description,

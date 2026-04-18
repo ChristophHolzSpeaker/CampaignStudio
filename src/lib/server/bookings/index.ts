@@ -10,3 +10,4 @@ export * from './lifecycle';
 export * from './public-flow';
 export * from './worker-calendar-client';
 export * from './confirmation-service';
+export * from './reschedule-service';
