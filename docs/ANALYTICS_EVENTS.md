@@ -76,3 +76,7 @@ When building funnel reporting, treat `campaign_visits` as the authoritative pag
 - **First-touch stability**: once set, first-touch is only replaced by a strictly earlier authoritative visit.
 - **Last-touch evolution**: last-touch is updated only when a newer observation is processed.
 - **No inference**: unknown dimensions remain null; values are not guessed.
+
+## Reporting base views
+
+Phase 3 reporting base views are documented in `docs/ANALYTICS_BASE_VIEWS.md`.
