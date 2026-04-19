@@ -46,3 +46,13 @@ The CTA columns are additive and nullable for historical compatibility.
 - Worker helper: `worker/src/lib/analytics/lead-events.ts`
 
 Both helpers enforce a consistent write shape and keep event payloads extensible.
+
+## page_view source of truth
+
+`page_view` is sourced from `campaign_visits` in Phase 1/1.5.
+
+- Insert path: `src/lib/server/attribution/campaign-visits.ts` (`logCampaignVisit`)
+- Route usage: `src/routes/speaker/[slug]/+page.server.ts`
+- Reason: `campaign_visits` already provides visit dedupe and UTM/referrer context, so we avoid duplicating page-view rows into `lead_events`.
+
+When building funnel reporting, treat `campaign_visits` as the authoritative page-view dataset and `lead_events` as the canonical interaction/journey stream.

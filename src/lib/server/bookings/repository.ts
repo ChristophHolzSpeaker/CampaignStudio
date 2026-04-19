@@ -388,6 +388,23 @@ export async function markBookingLinkBookedAt(input: {
 	return updated;
 }
 
+export async function markBookingLinkClickedAt(input: {
+	bookingLinkId: string;
+	clickedAt: Date;
+	updatedAt?: Date;
+}): Promise<BookingLinkRecord | null> {
+	const [updated] = await db
+		.update(booking_links)
+		.set({
+			clicked_at: input.clickedAt,
+			updated_at: input.updatedAt ?? new Date()
+		})
+		.where(and(eq(booking_links.id, input.bookingLinkId), isNull(booking_links.clicked_at)))
+		.returning();
+
+	return updated ?? null;
+}
+
 export async function createBookingRescheduleAudit(input: {
 	bookingId: string;
 	oldStartsAt: Date;

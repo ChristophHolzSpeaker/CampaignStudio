@@ -4,11 +4,13 @@ import {
 	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
+	markBookingLinkClickedAt,
 	resolveLeadBookingIntakeContext,
 	resolveLeadBookingToken,
 	resolvePublicBookingSlots,
 	type PublicBookingSlotDayGroup
 } from '$lib/server/bookings';
+import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import {
 	bookingConfirmationSchema,
 	bookingIntakeSchema,
@@ -126,6 +128,28 @@ export const load: PageServerLoad = async ({
 			policyState: null,
 			unavailableMessage: null
 		} satisfies LeadBookingPageData;
+	}
+
+	if (!tokenResolution.context.clickedAt) {
+		const clicked = await markBookingLinkClickedAt({
+			bookingLinkId: tokenResolution.context.bookingLinkId,
+			clickedAt: new Date()
+		});
+
+		if (clicked) {
+			await logLeadEvent({
+				leadJourneyId: tokenResolution.context.leadJourneyId,
+				campaignId: tokenResolution.context.campaignId,
+				eventType: 'booking_link_clicked',
+				eventSource: 'sveltekit.book_lead_page',
+				eventPayload: {
+					booking_link_id: tokenResolution.context.bookingLinkId,
+					booking_type: tokenResolution.context.bookingType,
+					page_path: '/book/l/[token]'
+				},
+				occurredAt: clicked.clicked_at ?? new Date()
+			});
+		}
 	}
 
 	const policy = await getBookingPolicy('lead');

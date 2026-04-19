@@ -4,36 +4,47 @@ vi.mock('$lib/server/bookings', () => ({
 	confirmBookingSelection: vi.fn(),
 	getBookingPolicy: vi.fn(),
 	getPublicBookingUnavailableMessage: vi.fn(),
+	markBookingLinkClickedAt: vi.fn(),
 	resolveLeadBookingIntakeContext: vi.fn(),
 	resolveLeadBookingToken: vi.fn(),
 	resolvePublicBookingSlots: vi.fn()
+}));
+
+vi.mock('$lib/server/attribution/lead-events', () => ({
+	logLeadEvent: vi.fn()
 }));
 
 import {
 	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
+	markBookingLinkClickedAt,
 	resolveLeadBookingIntakeContext,
 	resolveLeadBookingToken,
 	resolvePublicBookingSlots
 } from '$lib/server/bookings';
+import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { actions, load } from './+page.server';
 
 const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
 const mockedGetPublicBookingUnavailableMessage = vi.mocked(getPublicBookingUnavailableMessage);
+const mockedMarkBookingLinkClickedAt = vi.mocked(markBookingLinkClickedAt);
 const mockedResolveLeadBookingIntakeContext = vi.mocked(resolveLeadBookingIntakeContext);
 const mockedResolveLeadBookingToken = vi.mocked(resolveLeadBookingToken);
 const mockedResolvePublicBookingSlots = vi.mocked(resolvePublicBookingSlots);
 const mockedConfirmBookingSelection = vi.mocked(confirmBookingSelection);
+const mockedLogLeadEvent = vi.mocked(logLeadEvent);
 
 describe('/book/l/[token] +page.server', () => {
 	beforeEach(() => {
 		mockedConfirmBookingSelection.mockReset();
 		mockedGetBookingPolicy.mockReset();
 		mockedGetPublicBookingUnavailableMessage.mockReset();
+		mockedMarkBookingLinkClickedAt.mockReset();
 		mockedResolveLeadBookingIntakeContext.mockReset();
 		mockedResolveLeadBookingToken.mockReset();
 		mockedResolvePublicBookingSlots.mockReset();
+		mockedLogLeadEvent.mockReset();
 	});
 
 	it('load returns invalid token state', async () => {
@@ -138,6 +149,144 @@ describe('/book/l/[token] +page.server', () => {
 		expect(result.unavailableMessage).toBe('Bookings paused');
 		expect(result.prefillValues.email).toBe('lead@example.com');
 		expect(result.intakeSkipped).toBe(false);
+	});
+
+	it('load records booking_link_clicked once when link is first visited', async () => {
+		mockedResolveLeadBookingToken.mockResolvedValueOnce({
+			state: 'usable',
+			context: {
+				bookingType: 'lead',
+				token: 'usable-token',
+				bookingLinkId: 'link-click-1',
+				leadJourneyId: 'journey-click-1',
+				campaignId: 14,
+				expiresAt: new Date('2026-06-01T00:00:00.000Z'),
+				clickedAt: null,
+				bookedAt: null,
+				metadata: null
+			}
+		});
+		mockedMarkBookingLinkClickedAt.mockResolvedValueOnce({
+			id: 'link-click-1',
+			lead_journey_id: 'journey-click-1',
+			campaign_id: 14,
+			booking_type: 'lead',
+			token: 'usable-token',
+			expires_at: new Date('2026-06-01T00:00:00.000Z'),
+			clicked_at: new Date('2026-05-01T10:00:00.000Z'),
+			booked_at: null,
+			metadata: null,
+			created_at: new Date('2026-05-01T09:00:00.000Z'),
+			updated_at: new Date('2026-05-01T10:00:00.000Z')
+		});
+		mockedGetBookingPolicy.mockResolvedValueOnce({
+			state: 'globally_paused',
+			bookingType: 'lead',
+			pause: {
+				isPaused: true,
+				pauseMessage: 'Bookings paused',
+				settingsRowId: 'settings-1',
+				updatedAt: new Date('2026-04-17T00:00:00.000Z')
+			},
+			rules: null
+		});
+		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce('Bookings paused');
+		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
+			values: {
+				email: 'lead@example.com',
+				scope: '',
+				name: 'Lead User',
+				company: ''
+			},
+			knownFields: {
+				email: true,
+				scope: false,
+				name: true,
+				company: false
+			},
+			missingRequiredFields: ['scope'],
+			isComplete: false,
+			summary: null,
+			source: {
+				hasJourneyContext: true,
+				hasLatestFormSubmissionContext: false,
+				hasBookingLinkMetadataContext: false
+			}
+		});
+
+		await load({
+			params: { token: 'usable-token' },
+			url: new URL('http://test.local/book/l/usable-token')
+		} as never);
+
+		expect(mockedMarkBookingLinkClickedAt).toHaveBeenCalledTimes(1);
+		expect(mockedLogLeadEvent).toHaveBeenCalledTimes(1);
+		expect(mockedLogLeadEvent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventType: 'booking_link_clicked',
+				campaignId: 14,
+				leadJourneyId: 'journey-click-1'
+			})
+		);
+	});
+
+	it('load does not re-log booking_link_clicked when link was already clicked', async () => {
+		mockedResolveLeadBookingToken.mockResolvedValueOnce({
+			state: 'usable',
+			context: {
+				bookingType: 'lead',
+				token: 'usable-token',
+				bookingLinkId: 'link-click-2',
+				leadJourneyId: 'journey-click-2',
+				campaignId: 15,
+				expiresAt: new Date('2026-06-01T00:00:00.000Z'),
+				clickedAt: new Date('2026-05-01T08:00:00.000Z'),
+				bookedAt: null,
+				metadata: null
+			}
+		});
+		mockedGetBookingPolicy.mockResolvedValueOnce({
+			state: 'globally_paused',
+			bookingType: 'lead',
+			pause: {
+				isPaused: true,
+				pauseMessage: 'Bookings paused',
+				settingsRowId: 'settings-1',
+				updatedAt: new Date('2026-04-17T00:00:00.000Z')
+			},
+			rules: null
+		});
+		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce('Bookings paused');
+		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
+			values: {
+				email: 'lead@example.com',
+				scope: '',
+				name: 'Lead User',
+				company: ''
+			},
+			knownFields: {
+				email: true,
+				scope: false,
+				name: true,
+				company: false
+			},
+			missingRequiredFields: ['scope'],
+			isComplete: false,
+			summary: null,
+			source: {
+				hasJourneyContext: true,
+				hasLatestFormSubmissionContext: false,
+				hasBookingLinkMetadataContext: false
+			}
+		});
+
+		await load({
+			params: { token: 'usable-token' },
+			url: new URL('http://test.local/book/l/usable-token')
+		} as never);
+
+		expect(mockedMarkBookingLinkClickedAt).not.toHaveBeenCalled();
+		expect(mockedLogLeadEvent).not.toHaveBeenCalled();
 	});
 
 	it('load skips intake and resolves slots when persisted lead context is complete', async () => {
