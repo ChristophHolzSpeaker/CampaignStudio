@@ -1,7 +1,15 @@
 <script lang="ts">
 	import type { ComplianceTransparencyFooterProps } from '$lib/page-builder/sections/types';
 
-	let { props }: { props?: ComplianceTransparencyFooterProps } = $props();
+	let {
+		props,
+		campaignId = null,
+		campaignPageId = null
+	}: {
+		props?: ComplianceTransparencyFooterProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+	} = $props();
 
 	const privacyPolicyUrl = $derived(props?.privacyPolicyUrl ?? 'https://christophholz.com/privacy');
 	const contactEmail = $derived(props?.contactEmail ?? 'team@christophholz.com');
@@ -21,6 +29,30 @@
 
 	const phoneHref = $derived(phone ? `tel:${phone.replace(/\s+/g, '')}` : undefined);
 	const emailHref = $derived(`mailto:${contactEmail}`);
+
+	function trackDirectEmailCta(): void {
+		if (campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		void fetch('/api/attribution/cta', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				type: 'email',
+				campaign_id: campaignId,
+				campaign_page_id: campaignPageId,
+				cta_key: 'compliance_footer_email',
+				cta_label: contactEmail,
+				cta_section: 'compliance_transparency_footer',
+				cta_variant: 'default'
+			})
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
 </script>
 
 <footer
@@ -41,7 +73,13 @@
 				<ul class="space-y-2 text-sm text-on-surface/70">
 					<li>{businessAddress}</li>
 					<li>
-						<a class="transition-opacity hover:opacity-70" href={emailHref}>{contactEmail}</a>
+						<a
+							class="transition-opacity hover:opacity-70"
+							href={emailHref}
+							onclick={trackDirectEmailCta}
+						>
+							{contactEmail}
+						</a>
 					</li>
 					{#if phone && phoneHref}
 						<li>

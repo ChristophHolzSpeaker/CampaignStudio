@@ -234,6 +234,17 @@ export const vw_funnel_daily = pgView('vw_funnel_daily', {
 	visit_to_booking_rate: real('visit_to_booking_rate')
 }).existing();
 
+export const vw_direct_email_funnel_daily = pgView('vw_direct_email_funnel_daily', {
+	report_date: timestamp('report_date'),
+	visits: integer('visits'),
+	direct_email_cta_clicks: integer('direct_email_cta_clicks'),
+	alias_inbound_messages: integer('alias_inbound_messages'),
+	direct_email_entries: integer('direct_email_entries'),
+	email_first_touch_bookings: integer('email_first_touch_bookings'),
+	visit_to_direct_email_rate: real('visit_to_direct_email_rate'),
+	email_to_booking_rate: real('email_to_booking_rate')
+}).existing();
+
 export const vw_campaign_conversion_summary = pgView('vw_campaign_conversion_summary', {
 	campaign_id: integer('campaign_id'),
 	campaign_name: text('campaign_name'),

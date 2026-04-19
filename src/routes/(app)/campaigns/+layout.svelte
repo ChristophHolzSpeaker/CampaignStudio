@@ -34,14 +34,14 @@
 					match: 'prefix',
 					disabled: !previewHref
 				},
-				{ label: 'Analytics', disabled: true },
+				{ label: 'Analytics', href: '/campaigns/analytics', match: 'prefix' },
 				{ label: 'History', disabled: true }
 			];
 		}
 
 		return [
 			{ label: 'Library', href: '/campaigns', match: 'prefix' },
-			{ label: 'Analytics', disabled: true }
+			{ label: 'Analytics', href: '/campaigns/analytics', match: 'prefix' }
 		];
 	});
 </script>
