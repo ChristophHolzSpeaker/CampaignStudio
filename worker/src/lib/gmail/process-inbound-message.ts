@@ -1,7 +1,8 @@
-import type { AttributionStatus } from '../../../../shared/event-types';
+import type { AttributionStatus, LegacyEventType } from '../../../../shared/event-types';
 import { insertOne, selectOne, updateMany, upsertOne } from '../db';
 import type { WorkerEnv } from '../env';
 import { isInternalSender } from '../email/internal-senders';
+import { logLeadEvent } from '../analytics/lead-events';
 import { evaluateInboundAutoResponseDecision } from '../inbound/autoresponse-decision';
 import {
 	classifyInboundMessage,
@@ -70,7 +71,7 @@ async function findMessageByProviderId(
 	return selectOne<ExistingLeadMessageRow>(env, 'lead_messages', query);
 }
 
-function mapDecisionEventType(decision: AutoResponseDecision): string {
+function mapDecisionEventType(decision: AutoResponseDecision): LegacyEventType {
 	switch (decision) {
 		case 'eligible_for_autoresponse':
 			return 'autoresponse_eligible';
@@ -306,13 +307,14 @@ export async function processInboundGmailMessage(
 		updated_at: new Date().toISOString()
 	});
 
-	await insertOne(env, 'lead_events', {
+	await logLeadEvent(env, {
 		lead_journey_id: journeyResolution.lead_journey_id,
 		campaign_id: journeyResolution.campaign_id,
 		campaign_page_id: journeyResolution.campaign_page_id,
-		event_type: 'email_received',
+		event_type: 'message_received',
 		event_source: 'worker.gmail_sync',
 		event_payload: {
+			legacy_event_type: 'email_received',
 			provider: 'gmail',
 			provider_message_id: normalized.provider_message_id,
 			provider_thread_id: normalized.provider_thread_id,
@@ -324,13 +326,14 @@ export async function processInboundGmailMessage(
 	});
 
 	if (classification) {
-		await insertOne(env, 'lead_events', {
+		await logLeadEvent(env, {
 			lead_journey_id: journeyResolution.lead_journey_id,
 			campaign_id: journeyResolution.campaign_id,
 			campaign_page_id: journeyResolution.campaign_page_id,
-			event_type: 'inbound_message_classified',
+			event_type: 'message_classified',
 			event_source: 'worker.gmail_sync',
 			event_payload: {
+				legacy_event_type: 'inbound_message_classified',
 				provider_message_id: normalized.provider_message_id,
 				provider_thread_id: normalized.provider_thread_id,
 				classification: classification.classification,
@@ -340,7 +343,35 @@ export async function processInboundGmailMessage(
 		});
 	}
 
-	await insertOne(env, 'lead_events', {
+	if (decision.classification === 'speaking_inquiry') {
+		await logLeadEvent(env, {
+			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_id: journeyResolution.campaign_id,
+			campaign_page_id: journeyResolution.campaign_page_id,
+			event_type: 'lead_qualified',
+			event_source: 'worker.gmail_sync',
+			event_payload: {
+				qualification_reason: 'message_classification',
+				classification: decision.classification,
+				classification_confidence: decision.classification_confidence
+			}
+		});
+	} else if (decision.classification === 'not_speaking_inquiry') {
+		await logLeadEvent(env, {
+			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_id: journeyResolution.campaign_id,
+			campaign_page_id: journeyResolution.campaign_page_id,
+			event_type: 'lead_disqualified',
+			event_source: 'worker.gmail_sync',
+			event_payload: {
+				disqualification_reason: 'message_classification',
+				classification: decision.classification,
+				classification_confidence: decision.classification_confidence
+			}
+		});
+	}
+
+	await logLeadEvent(env, {
 		lead_journey_id: journeyResolution.lead_journey_id,
 		campaign_id: journeyResolution.campaign_id,
 		campaign_page_id: journeyResolution.campaign_page_id,

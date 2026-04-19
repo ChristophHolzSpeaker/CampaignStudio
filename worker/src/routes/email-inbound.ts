@@ -3,6 +3,7 @@ import { insertOne, selectOne, updateMany } from '../lib/db';
 import type { WorkerEnv } from '../lib/env';
 import { normalizeEmailAddress, parsePlusAddressAttribution } from '../lib/email';
 import { badRequestFromZod, json } from '../lib/http';
+import { logLeadEvent } from '../lib/analytics/lead-events';
 
 const INBOUND_WINDOW_DAYS = 30;
 const CLOSED_STAGES = ['won', 'lost', 'disqualified', 'archived'];
@@ -110,13 +111,14 @@ export async function handleEmailInbound(request: Request, env: WorkerEnv): Prom
 		journey = updatedRows[0] ?? journey;
 	}
 
-	await insertOne(env, 'lead_events', {
+	await logLeadEvent(env, {
 		lead_journey_id: journey.id,
 		campaign_id: journey.campaign_id,
 		campaign_page_id: journey.campaign_page_id,
-		event_type: 'email_received',
+		event_type: 'message_received',
 		event_source: 'worker.email_inbound',
 		event_payload: {
+			legacy_event_type: 'email_received',
 			to: input.to,
 			from: input.from,
 			subject: input.subject,

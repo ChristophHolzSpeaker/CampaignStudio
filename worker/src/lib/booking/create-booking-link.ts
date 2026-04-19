@@ -1,6 +1,7 @@
 import { createSignedBookingToken } from '../crypto';
 import { insertOne, selectOne } from '../db';
 import { requireEnv, type WorkerEnv } from '../env';
+import { logLeadEvent } from '../analytics/lead-events';
 
 const DEFAULT_BOOKING_TTL_SECONDS = 60 * 60 * 24 * 30;
 
@@ -92,13 +93,14 @@ export async function createBookingLinkForJourney(
 		expires_at: expiresAt
 	});
 
-	await insertOne(env, 'lead_events', {
+	await logLeadEvent(env, {
 		lead_journey_id: input.lead_journey_id,
 		campaign_id: campaignId,
 		campaign_page_id: null,
-		event_type: 'booking_link_generated',
+		event_type: 'booking_link_created',
 		event_source: input.event_source,
 		event_payload: {
+			legacy_event_type: 'booking_link_generated',
 			booking_link_id: created.id,
 			expires_at: expiresAt
 		}

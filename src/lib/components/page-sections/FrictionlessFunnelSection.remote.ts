@@ -109,6 +109,35 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 		anonymousId: data.anonymousId
 	});
 
+	await logLeadEvent({
+		leadJourneyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		eventType: 'lead_identified',
+		eventSource: 'sveltekit.frictionless_funnel_form',
+		eventPayload: {
+			identification_method: 'form_submission',
+			contact_email: normalizedEmail,
+			contact_name: data.fullName
+		},
+		sessionId: data.sessionId,
+		anonymousId: data.anonymousId
+	});
+
+	await logLeadEvent({
+		leadJourneyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		eventType: created ? 'journey_created' : 'journey_matched_existing',
+		eventSource: 'sveltekit.frictionless_funnel_form',
+		eventPayload: {
+			journey_id: journey.id,
+			matched_existing: !created
+		},
+		sessionId: data.sessionId,
+		anonymousId: data.anonymousId
+	});
+
 	if (created) {
 		try {
 			await notifyLeadCreated({

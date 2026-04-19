@@ -31,6 +31,18 @@ export async function trackCTA(input: CTAEventInput): Promise<void> {
 	if (input.anonymous_id) {
 		url.searchParams.set('anonymous_id', input.anonymous_id);
 	}
+	if (input.cta_key) {
+		url.searchParams.set('cta_key', input.cta_key);
+	}
+	if (input.cta_label) {
+		url.searchParams.set('cta_label', input.cta_label);
+	}
+	if (input.cta_section) {
+		url.searchParams.set('cta_section', input.cta_section);
+	}
+	if (input.cta_variant) {
+		url.searchParams.set('cta_variant', input.cta_variant);
+	}
 
 	const response = await fetch(url, {
 		method: 'GET',

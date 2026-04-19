@@ -1,6 +1,7 @@
 import { insertOne, selectOne, upsertOne } from '../db';
 import type { WorkerEnv } from '../env';
 import { normalizeEmailAddress } from '../email';
+import { logLeadEvent } from '../analytics/lead-events';
 import { gmailSendMessage } from './client';
 
 type SendOutboundEmailInput = {
@@ -159,13 +160,17 @@ export async function sendOutboundEmail(
 		}
 	}
 
-	await insertOne(env, 'lead_events', {
+	const analyticsEventType =
+		input.autoResponseDecision === 'autoresponse_sent' ? 'auto_reply_sent' : 'manual_reply_sent';
+
+	await logLeadEvent(env, {
 		lead_journey_id: input.leadJourneyId ?? null,
 		campaign_id: input.campaignId ?? null,
 		campaign_page_id: input.campaignPageId ?? null,
-		event_type: 'email_sent',
+		event_type: analyticsEventType,
 		event_source: 'worker.gmail_send',
 		event_payload: {
+			legacy_event_type: 'email_sent',
 			provider: 'gmail',
 			provider_message_id: sent.id,
 			provider_thread_id: sent.threadId,

@@ -203,6 +203,10 @@ export const lead_events = pgTable(
 		event_type: text('event_type').notNull(),
 		event_source: text('event_source').notNull(),
 		event_payload: jsonb('event_payload').notNull().default({}),
+		cta_key: text('cta_key'),
+		cta_label: text('cta_label'),
+		cta_section: text('cta_section'),
+		cta_variant: text('cta_variant'),
 		session_id: text('session_id'),
 		anonymous_id: text('anonymous_id'),
 		occurred_at: timestamp('occurred_at').notNull().defaultNow()
