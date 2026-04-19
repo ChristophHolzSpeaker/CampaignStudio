@@ -6,6 +6,7 @@ import type {
 	BookingSlotResult,
 	CalendarBusyInterval
 } from './contracts';
+import { isSlotInsideBookingWindow } from './booking-window';
 
 function toMs(minutes: number): number {
 	return minutes * 60 * 1000;
@@ -62,6 +63,10 @@ export function generateBookingSlots(input: BookingSlotRequestInput): BookingSlo
 		const endsAt = new Date(startsAt.getTime() + slotDurationMs);
 		const hasConflict = busyIntervals.some((busy) => overlaps(startsAt, endsAt, busy));
 		if (hasConflict) {
+			continue;
+		}
+
+		if (!isSlotInsideBookingWindow({ startsAt, endsAt })) {
 			continue;
 		}
 

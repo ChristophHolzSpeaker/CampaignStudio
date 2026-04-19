@@ -85,6 +85,22 @@ describe('generateBookingSlots', () => {
 			'2026-05-01T11:00:00.000Z'
 		]);
 	});
+
+	it('filters slots outside the booking-day window in Europe/Berlin', () => {
+		const result = generateBookingSlots({
+			bookingType: 'lead',
+			searchStartsAt: new Date('2026-05-01T18:00:00.000Z'),
+			searchEndsAt: new Date('2026-05-01T21:00:00.000Z'),
+			rules: makeRules(),
+			busyIntervals: []
+		});
+
+		expect(result.state).toBe('slots_available');
+		expect(result.slots.map((slot) => slot.startsAt.toISOString())).toEqual([
+			'2026-05-01T18:00:00.000Z',
+			'2026-05-01T18:30:00.000Z'
+		]);
+	});
 });
 
 describe('evaluateBookingAvailability', () => {

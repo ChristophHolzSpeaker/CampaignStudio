@@ -15,6 +15,7 @@ import {
 } from './lifecycle';
 import { getOverlappingActiveBooking, markBookingLinkBookedAt } from './repository';
 import { getPublicBookingUnavailableMessage } from './public-flow';
+import { isSlotInsideBookingWindow } from './booking-window';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { sendBookingConfirmedEmail } from '$lib/server/bookings/woody-email-service';
 import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
@@ -55,6 +56,10 @@ function isSlotValidForPolicy(input: {
 
 	const cutoff = input.now.getTime() + input.advanceNoticeMinutes * 60 * 1000;
 	if (input.startsAt.getTime() < cutoff) {
+		return false;
+	}
+
+	if (!isSlotInsideBookingWindow({ startsAt: input.startsAt, endsAt: input.endsAt })) {
 		return false;
 	}
 
