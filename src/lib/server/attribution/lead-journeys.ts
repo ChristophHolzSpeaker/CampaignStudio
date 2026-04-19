@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
 import { lead_journeys } from '$lib/server/db/schema';
-import { and, desc, eq, gte, notInArray } from 'drizzle-orm';
+import { and, desc, eq, gte, isNull, notInArray } from 'drizzle-orm';
 
 const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'archived'] as const;
 const MATCH_WINDOW_DAYS = 30;
@@ -82,6 +82,39 @@ export async function touchLeadJourney(input: {
 	}
 
 	return updatedJourney;
+}
+
+export async function getLeadJourneyById(journeyId: string): Promise<LeadJourneyRecord | null> {
+	const [journey] = await db
+		.select()
+		.from(lead_journeys)
+		.where(eq(lead_journeys.id, journeyId))
+		.limit(1);
+
+	return journey ?? null;
+}
+
+export async function markLeadJourneyBookingLinkInviteEmailSent(input: {
+	journeyId: string;
+	providerMessageId: string;
+	sentAt?: Date;
+}): Promise<LeadJourneyRecord | null> {
+	const [updatedJourney] = await db
+		.update(lead_journeys)
+		.set({
+			booking_link_invite_email_sent_at: input.sentAt ?? new Date(),
+			booking_link_invite_email_provider_message_id: input.providerMessageId,
+			updated_at: input.sentAt ?? new Date()
+		})
+		.where(
+			and(
+				eq(lead_journeys.id, input.journeyId),
+				isNull(lead_journeys.booking_link_invite_email_sent_at)
+			)
+		)
+		.returning();
+
+	return updatedJourney ?? null;
 }
 
 export async function findOrCreateLeadJourneyFromInquiry(input: {

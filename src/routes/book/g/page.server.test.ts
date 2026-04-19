@@ -299,6 +299,7 @@ describe('/book/g +page.server', () => {
 		mockedConfirmBookingSelection.mockResolvedValueOnce({
 			state: 'confirmed',
 			calendarEventId: 'evt_123',
+			calendarEventUrl: null,
 			booking: {
 				id: 'booking-1'
 			} as never

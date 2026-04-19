@@ -61,6 +61,8 @@ const existingBooking = {
 	google_calendar_event_id: 'evt_123',
 	calendar_sync_error: null,
 	reschedule_token: 'resched-1',
+	booking_confirmation_email_sent_at: null,
+	booking_confirmation_email_provider_message_id: null,
 	is_repeat_interaction: false,
 	created_at: new Date('2026-05-01T00:00:00.000Z'),
 	updated_at: new Date('2026-05-01T00:00:00.000Z')

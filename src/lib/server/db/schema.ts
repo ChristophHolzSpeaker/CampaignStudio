@@ -171,6 +171,10 @@ export const lead_journeys = pgTable(
 				onDelete: 'set null'
 			}
 		),
+		booking_link_invite_email_sent_at: timestamp('booking_link_invite_email_sent_at'),
+		booking_link_invite_email_provider_message_id: text(
+			'booking_link_invite_email_provider_message_id'
+		),
 		outcome: text('outcome'),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
@@ -258,6 +262,10 @@ export const bookings = pgTable(
 		ends_at: timestamp('ends_at').notNull(),
 		google_calendar_event_id: text('google_calendar_event_id'),
 		calendar_sync_error: text('calendar_sync_error'),
+		booking_confirmation_email_sent_at: timestamp('booking_confirmation_email_sent_at'),
+		booking_confirmation_email_provider_message_id: text(
+			'booking_confirmation_email_provider_message_id'
+		),
 		reschedule_token: text('reschedule_token'),
 		is_repeat_interaction: boolean('is_repeat_interaction').notNull().default(false),
 		created_at: timestamp('created_at').notNull().defaultNow(),

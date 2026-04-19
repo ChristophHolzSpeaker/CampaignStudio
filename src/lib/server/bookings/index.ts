@@ -12,3 +12,4 @@ export * from './worker-calendar-client';
 export * from './confirmation-service';
 export * from './reschedule-service';
 export * from './admin-settings-service';
+export * from './woody-email-service';

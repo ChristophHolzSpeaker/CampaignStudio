@@ -16,6 +16,7 @@ import {
 import { getOverlappingActiveBooking, markBookingLinkBookedAt } from './repository';
 import { getPublicBookingUnavailableMessage } from './public-flow';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
+import { sendBookingConfirmedEmail } from '$lib/server/bookings/woody-email-service';
 import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
 import type { CreateBookingCalendarEventRequest } from '../../../../shared/booking-calendar';
 import { randomBytes } from 'node:crypto';
@@ -256,10 +257,25 @@ export async function confirmBookingSelection(
 			});
 		}
 
+		try {
+			if (calendarResponse.html_link) {
+				await sendBookingConfirmedEmail({
+					bookingId: attached.booking.id,
+					calendarEventUrl: calendarResponse.html_link
+				});
+			}
+		} catch (emailError) {
+			console.error('woody_booking_confirmed_email_failed', {
+				booking_id: attached.booking.id,
+				error: emailError instanceof Error ? emailError.message : 'unknown_email_error'
+			});
+		}
+
 		return {
 			state: 'confirmed',
 			booking: attached.booking,
-			calendarEventId: calendarResponse.event_id
+			calendarEventId: calendarResponse.event_id,
+			calendarEventUrl: calendarResponse.html_link ?? null
 		};
 	} catch (calendarSyncError) {
 		const syncErrorMessage = toSyncErrorMessage(calendarSyncError);

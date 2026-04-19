@@ -29,6 +29,10 @@ vi.mock('./routes/telegram-notification', () => ({
 	handleTelegramNotification: vi.fn()
 }));
 
+vi.mock('./routes/woody-email-notification', () => ({
+	handleWoodyEmailNotification: vi.fn()
+}));
+
 import worker from './index';
 import { renewGmailWatches } from './lib/gmail/watch';
 import { reconcileMailboxHealth } from './lib/gmail/reconcile';
@@ -37,6 +41,7 @@ import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
 import { handleTelegramNotification } from './routes/telegram-notification';
+import { handleWoodyEmailNotification } from './routes/woody-email-notification';
 import { makeTestEnv, makeTestExecutionContext } from './test/helpers';
 
 const mockedRenewGmailWatches = vi.mocked(renewGmailWatches);
@@ -46,6 +51,7 @@ const mockedHandleGmailWatchActivate = vi.mocked(handleGmailWatchActivate);
 const mockedHandleBookingCalendarEvent = vi.mocked(handleBookingCalendarEvent);
 const mockedHandleBookingCalendarEventUpdate = vi.mocked(handleBookingCalendarEventUpdate);
 const mockedHandleTelegramNotification = vi.mocked(handleTelegramNotification);
+const mockedHandleWoodyEmailNotification = vi.mocked(handleWoodyEmailNotification);
 
 describe('worker scheduled handler', () => {
 	it('runs watch renewal and mailbox reconciliation in waitUntil', async () => {
@@ -76,6 +82,7 @@ describe('worker fetch handler', () => {
 		mockedHandleBookingCalendarEvent.mockReset();
 		mockedHandleBookingCalendarEventUpdate.mockReset();
 		mockedHandleTelegramNotification.mockReset();
+		mockedHandleWoodyEmailNotification.mockReset();
 	});
 
 	it('returns method not allowed for non-POST /gmail/push', async () => {
@@ -280,5 +287,50 @@ describe('worker fetch handler', () => {
 		const response = await worker.fetch(request, makeTestEnv(), ctx);
 		expect(response.status).toBe(200);
 		expect(mockedHandleTelegramNotification).toHaveBeenCalledTimes(1);
+	});
+
+	it('returns unauthorized for /notifications/woody-email without auth', async () => {
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/notifications/woody-email', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(401);
+		expect(mockedHandleWoodyEmailNotification).not.toHaveBeenCalled();
+	});
+
+	it('dispatches authorized /notifications/woody-email to route handler', async () => {
+		mockedHandleWoodyEmailNotification.mockResolvedValueOnce(
+			new Response(JSON.stringify({ ok: true }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/notifications/woody-email', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: 'Bearer test'
+			},
+			body: JSON.stringify({
+				intent: 'booking_link_invite',
+				recipient_email: 'lead@example.com',
+				booking_type: 'lead',
+				booking_link_url: 'https://book.example.com/book/l/token',
+				email_content: {
+					subject: 'Hello',
+					body_text: 'Body'
+				}
+			})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(200);
+		expect(mockedHandleWoodyEmailNotification).toHaveBeenCalledTimes(1);
 	});
 });

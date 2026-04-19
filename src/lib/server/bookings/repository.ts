@@ -6,7 +6,7 @@ import {
 	booking_settings,
 	bookings
 } from '$lib/server/db/schema';
-import { and, asc, desc, eq, gt, gte, lt, ne } from 'drizzle-orm';
+import { and, asc, desc, eq, gt, gte, isNull, lt, ne } from 'drizzle-orm';
 import type {
 	BookingLinkRecord,
 	BookingRecord,
@@ -321,6 +321,27 @@ export async function updateBookingRepeatInteraction(input: {
 	}
 
 	return updated;
+}
+
+export async function markBookingConfirmationEmailSent(input: {
+	bookingId: string;
+	providerMessageId: string;
+	sentAt?: Date;
+}): Promise<BookingRecord | null> {
+	const sentAt = input.sentAt ?? new Date();
+	const [updated] = await db
+		.update(bookings)
+		.set({
+			booking_confirmation_email_sent_at: sentAt,
+			booking_confirmation_email_provider_message_id: input.providerMessageId,
+			updated_at: sentAt
+		})
+		.where(
+			and(eq(bookings.id, input.bookingId), isNull(bookings.booking_confirmation_email_sent_at))
+		)
+		.returning();
+
+	return updated ?? null;
 }
 
 export async function updateBookingLinkTimestamps(input: {

@@ -305,6 +305,7 @@ export type ConfirmBookingResult =
 			state: 'confirmed';
 			booking: BookingRecord;
 			calendarEventId: string;
+			calendarEventUrl: string | null;
 	  }
 	| {
 			state: 'slot_unavailable';
@@ -363,3 +364,39 @@ export type ConfirmBookingRescheduleResult =
 			message: string;
 			booking?: BookingRecord;
 	  };
+
+export type WoodyBookingEmailIntent = 'booking_link_invite' | 'booking_confirmed';
+
+export type BookingLinkInviteEmailContext = {
+	intent: 'booking_link_invite';
+	recipientEmail: string;
+	recipientName: string | null;
+	leadJourneyId: string;
+	campaignId: number | null;
+	campaignPageId: number | null;
+	bookingType: 'lead';
+	meetingScope: string | null;
+	requestSummary: string | null;
+	organization: string | null;
+	bookingLinkUrl: string;
+	bookingLinkToken: string;
+	pagePath: string | null;
+	pageSlug: string | null;
+};
+
+export type BookingConfirmedEmailContext = {
+	intent: 'booking_confirmed';
+	recipientEmail: string;
+	recipientName: string | null;
+	leadJourneyId: string | null;
+	campaignId: number | null;
+	campaignPageId: number | null;
+	bookingId: string;
+	bookingType: BookingType;
+	meetingScope: string;
+	requestSummary: string | null;
+	organization: string | null;
+	confirmedStartsAt: Date;
+	confirmedEndsAt: Date;
+	calendarEventUrl: string;
+};
