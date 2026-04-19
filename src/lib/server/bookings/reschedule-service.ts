@@ -14,6 +14,7 @@ import {
 	updateBookingStatus
 } from './repository';
 import { updateBookingCalendarEventViaWorker } from './worker-calendar-client';
+import { isSlotInsideBookingWindow } from './booking-window';
 import { notifyBookingRescheduled } from '$lib/server/notifications/telegram';
 
 const SLOT_UNAVAILABLE_MESSAGE =
@@ -95,6 +96,10 @@ function isSlotValidForPolicy(input: {
 
 	const cutoff = input.now.getTime() + input.advanceNoticeMinutes * 60 * 1000;
 	if (input.startsAt.getTime() < cutoff) {
+		return false;
+	}
+
+	if (!isSlotInsideBookingWindow({ startsAt: input.startsAt, endsAt: input.endsAt })) {
 		return false;
 	}
 

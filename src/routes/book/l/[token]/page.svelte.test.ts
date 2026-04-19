@@ -3,7 +3,7 @@ import { render } from 'svelte/server';
 import Page from './+page.svelte';
 
 describe('/book/l/[token] +page.svelte', () => {
-	it('renders normalized intake summary above available slots for skipped intake state', () => {
+	it('renders summary panel and slot-selection stage for skipped intake state', () => {
 		const { body } = render(Page, {
 			props: {
 				data: {
@@ -52,10 +52,12 @@ describe('/book/l/[token] +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('Intake summary');
+		expect(body).toContain('Booking details');
+		expect(body).toContain('Choose a time');
 		expect(body).toContain('lead@example.com');
 		expect(body).toContain('Discuss launch strategy');
 		expect(body).toContain('href="?edit=1"');
+		expect(body).toContain('action="?/confirm"');
 	});
 
 	it('renders editable intake form with prefilled values when intake is not skipped', () => {
@@ -87,6 +89,7 @@ describe('/book/l/[token] +page.svelte', () => {
 		});
 
 		expect(body).toContain('action="?/check"');
+		expect(body).not.toContain('Booking details');
 		expect(body).toContain('value="lead@example.com"');
 		expect(body).toContain('value="Lead User"');
 		expect(body).toContain('value="ACME"');
