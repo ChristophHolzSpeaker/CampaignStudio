@@ -1,9 +1,9 @@
-drop view if exists "vw_booking_enriched";
-drop view if exists "vw_lead_event_enriched";
-drop view if exists "vw_lead_journey_enriched";
-drop view if exists "vw_visit_enriched";
+drop view if exists vw_booking_enriched;
+drop view if exists vw_lead_event_enriched;
+drop view if exists vw_lead_journey_enriched;
+drop view if exists vw_visit_enriched;
 
-create view "vw_visit_enriched" as
+create view vw_visit_enriched as
 select
 	cv.id as visit_id,
 	cv.visited_at,
@@ -20,11 +20,11 @@ select
 	cv.utm_content,
 	cv.referrer,
 	cv.user_agent
-from "campaign_visits" cv
-left join "campaigns" c on c.id = cv.campaign_id
-left join "campaign_pages" cp on cp.id = cv.campaign_page_id;
+from campaign_visits cv
+left join campaigns c on c.id = cv.campaign_id
+left join campaign_pages cp on cp.id = cv.campaign_page_id;
 
-create view "vw_lead_journey_enriched" as
+create view vw_lead_journey_enriched as
 select
 	lj.id as journey_id,
 	lj.created_at as journey_created_at,
@@ -62,15 +62,15 @@ select
 	lj.last_cta_key,
 	lj.last_seen_at,
 	lj.attribution_model_version
-from "lead_journeys" lj
-left join "campaigns" jc on jc.id = lj.campaign_id
-left join "campaign_pages" jp on jp.id = lj.campaign_page_id
-left join "campaigns" fc on fc.id = lj.first_campaign_id
-left join "campaign_pages" fp on fp.id = lj.first_page_id
-left join "campaigns" lc on lc.id = lj.last_campaign_id
-left join "campaign_pages" lp on lp.id = lj.last_page_id;
+from lead_journeys lj
+left join campaigns jc on jc.id = lj.campaign_id
+left join campaign_pages jp on jp.id = lj.campaign_page_id
+left join campaigns fc on fc.id = lj.first_campaign_id
+left join campaign_pages fp on fp.id = lj.first_page_id
+left join campaigns lc on lc.id = lj.last_campaign_id
+left join campaign_pages lp on lp.id = lj.last_page_id;
 
-create view "vw_lead_event_enriched" as
+create view vw_lead_event_enriched as
 select
 	le.id as lead_event_id,
 	le.occurred_at,
@@ -105,16 +105,16 @@ select
 	lj.first_seen_at as journey_first_seen_at,
 	lj.last_seen_at as journey_last_seen_at,
 	lj.attribution_model_version as journey_attribution_model_version
-from "lead_events" le
-left join "lead_journeys" lj on lj.id = le.lead_journey_id
-left join "campaigns" ec on ec.id = le.campaign_id
-left join "campaign_pages" ep on ep.id = le.campaign_page_id
-left join "campaigns" jc on jc.id = lj.campaign_id
-left join "campaign_pages" jp on jp.id = lj.campaign_page_id
-left join "campaigns" rc on rc.id = coalesce(le.campaign_id, lj.campaign_id, lj.last_campaign_id, lj.first_campaign_id)
-left join "campaign_pages" rp on rp.id = coalesce(le.campaign_page_id, lj.campaign_page_id, lj.last_page_id, lj.first_page_id);
+from lead_events le
+left join lead_journeys lj on lj.id = le.lead_journey_id
+left join campaigns ec on ec.id = le.campaign_id
+left join campaign_pages ep on ep.id = le.campaign_page_id
+left join campaigns jc on jc.id = lj.campaign_id
+left join campaign_pages jp on jp.id = lj.campaign_page_id
+left join campaigns rc on rc.id = coalesce(le.campaign_id, lj.campaign_id, lj.last_campaign_id, lj.first_campaign_id)
+left join campaign_pages rp on rp.id = coalesce(le.campaign_page_id, lj.campaign_page_id, lj.last_page_id, lj.first_page_id);
 
-create view "vw_booking_enriched" as
+create view vw_booking_enriched as
 select
 	b.id as booking_id,
 	b.booking_type,
@@ -158,11 +158,11 @@ select
 	lj.last_cta_key,
 	lj.last_seen_at,
 	lj.attribution_model_version
-from "bookings" b
-left join "lead_journeys" lj on lj.id = b.lead_journey_id
-left join "campaigns" jc on jc.id = lj.campaign_id
-left join "campaign_pages" jp on jp.id = lj.campaign_page_id
-left join "campaigns" fc on fc.id = lj.first_campaign_id
-left join "campaign_pages" fp on fp.id = lj.first_page_id
-left join "campaigns" lc on lc.id = lj.last_campaign_id
-left join "campaign_pages" lp on lp.id = lj.last_page_id;
+from bookings b
+left join lead_journeys lj on lj.id = b.lead_journey_id
+left join campaigns jc on jc.id = lj.campaign_id
+left join campaign_pages jp on jp.id = lj.campaign_page_id
+left join campaigns fc on fc.id = lj.first_campaign_id
+left join campaign_pages fp on fp.id = lj.first_page_id
+left join campaigns lc on lc.id = lj.last_campaign_id
+left join campaign_pages lp on lp.id = lj.last_page_id;

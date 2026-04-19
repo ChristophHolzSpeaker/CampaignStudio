@@ -1,30 +1,30 @@
-drop view if exists "vw_cta_performance";
-drop view if exists "vw_source_medium_performance";
-drop view if exists "vw_campaign_conversion_summary";
-drop view if exists "vw_funnel_daily";
+drop view if exists vw_cta_performance;
+drop view if exists vw_source_medium_performance;
+drop view if exists vw_campaign_conversion_summary;
+drop view if exists vw_funnel_daily;
 
-create view "vw_funnel_daily" as
+create view vw_funnel_daily as
 with
 	visit_daily as (
 		select
 			date(visited_at) as report_date,
 			count(*)::integer as visits,
 			count(distinct visitor_identifier) filter (where visitor_identifier is not null)::integer as unique_visitors
-		from "vw_visit_enriched"
+		from vw_visit_enriched
 		group by date(visited_at)
 	),
 	journey_daily as (
 		select
 			date(journey_created_at) as report_date,
 			count(*)::integer as journeys_created
-		from "vw_lead_journey_enriched"
+		from vw_lead_journey_enriched
 		group by date(journey_created_at)
 	),
 	identified_daily as (
 		select
 			date(occurred_at) as report_date,
 			count(distinct journey_id)::integer as identified_leads
-		from "vw_lead_event_enriched"
+		from vw_lead_event_enriched
 		where event_type = 'lead_identified'
 		group by date(occurred_at)
 	),
@@ -32,7 +32,7 @@ with
 		select
 			date(occurred_at) as report_date,
 			count(*)::integer as inbound_messages
-		from "vw_lead_event_enriched"
+		from vw_lead_event_enriched
 		where event_type = 'message_received'
 		group by date(occurred_at)
 	),
@@ -40,7 +40,7 @@ with
 		select
 			date(occurred_at) as report_date,
 			count(*)::integer as booking_link_clicked
-		from "vw_lead_event_enriched"
+		from vw_lead_event_enriched
 		where event_type = 'booking_link_clicked'
 		group by date(occurred_at)
 	),
@@ -48,7 +48,7 @@ with
 		select
 			date(booking_updated_at) as report_date,
 			count(*)::integer as bookings_completed
-		from "vw_booking_enriched"
+		from vw_booking_enriched
 		where booking_status = 'confirmed'
 		group by date(booking_updated_at)
 	),
@@ -85,14 +85,14 @@ left join inbound_message_daily m on m.report_date = d.report_date
 left join booking_link_clicked_daily bl on bl.report_date = d.report_date
 left join booking_completed_daily bc on bc.report_date = d.report_date;
 
-create view "vw_campaign_conversion_summary" as
+create view vw_campaign_conversion_summary as
 with
 	visit_by_campaign as (
 		select
 			campaign_id,
 			max(campaign_name) as campaign_name,
 			count(*)::integer as visit_campaign_visits
-		from "vw_visit_enriched"
+		from vw_visit_enriched
 		group by campaign_id
 	),
 	journey_by_campaign as (
@@ -100,7 +100,7 @@ with
 			journey_campaign_id as campaign_id,
 			max(journey_campaign_name) as campaign_name,
 			count(distinct journey_id)::integer as journey_campaign_leads
-		from "vw_lead_journey_enriched"
+		from vw_lead_journey_enriched
 		where journey_campaign_id is not null
 		group by journey_campaign_id
 	),
@@ -109,7 +109,7 @@ with
 			first_campaign_id as campaign_id,
 			max(first_campaign_name) as campaign_name,
 			count(distinct journey_id)::integer as first_touch_leads
-		from "vw_lead_journey_enriched"
+		from vw_lead_journey_enriched
 		where first_campaign_id is not null
 		group by first_campaign_id
 	),
@@ -118,7 +118,7 @@ with
 			first_campaign_id as campaign_id,
 			max(first_campaign_name) as campaign_name,
 			count(distinct booking_id)::integer as first_touch_bookings
-		from "vw_booking_enriched"
+		from vw_booking_enriched
 		where first_campaign_id is not null and booking_status = 'confirmed'
 		group by first_campaign_id
 	),
@@ -148,14 +148,14 @@ left join journey_by_campaign j on j.campaign_id = ck.campaign_id
 left join first_touch_leads_by_campaign ft on ft.campaign_id = ck.campaign_id
 left join first_touch_bookings_by_campaign fb on fb.campaign_id = ck.campaign_id;
 
-create view "vw_source_medium_performance" as
+create view vw_source_medium_performance as
 with
 	visit_touch as (
 		select
 			utm_source,
 			utm_medium,
 			count(*)::integer as visit_touch_visits
-		from "vw_visit_enriched"
+		from vw_visit_enriched
 		group by utm_source, utm_medium
 	),
 	first_touch_leads as (
@@ -163,7 +163,7 @@ with
 			first_utm_source as utm_source,
 			first_utm_medium as utm_medium,
 			count(distinct journey_id)::integer as first_touch_leads
-		from "vw_lead_journey_enriched"
+		from vw_lead_journey_enriched
 		group by first_utm_source, first_utm_medium
 	),
 	first_touch_bookings as (
@@ -171,7 +171,7 @@ with
 			first_utm_source as utm_source,
 			first_utm_medium as utm_medium,
 			count(distinct booking_id)::integer as first_touch_bookings
-		from "vw_booking_enriched"
+		from vw_booking_enriched
 		where booking_status = 'confirmed'
 		group by first_utm_source, first_utm_medium
 	),
@@ -196,7 +196,7 @@ left join visit_touch v on v.utm_source is not distinct from k.utm_source and v.
 left join first_touch_leads l on l.utm_source is not distinct from k.utm_source and l.utm_medium is not distinct from k.utm_medium
 left join first_touch_bookings b on b.utm_source is not distinct from k.utm_source and b.utm_medium is not distinct from k.utm_medium;
 
-create view "vw_cta_performance" as
+create view vw_cta_performance as
 with
 	cta_clicks as (
 		select
@@ -205,7 +205,7 @@ with
 			max(cta_section) filter (where cta_section is not null) as cta_section,
 			max(cta_variant) filter (where cta_variant is not null) as cta_variant,
 			count(*)::integer as clicks
-		from "vw_lead_event_enriched"
+		from vw_lead_event_enriched
 		where event_type = 'cta_click' and cta_key is not null
 		group by cta_key
 	),
@@ -213,7 +213,7 @@ with
 		select
 			first_cta_key as cta_key,
 			count(distinct journey_id)::integer as first_touch_leads
-		from "vw_lead_journey_enriched"
+		from vw_lead_journey_enriched
 		where first_cta_key is not null
 		group by first_cta_key
 	),
@@ -221,7 +221,7 @@ with
 		select
 			first_cta_key as cta_key,
 			count(distinct booking_id)::integer as first_touch_bookings
-		from "vw_booking_enriched"
+		from vw_booking_enriched
 		where first_cta_key is not null and booking_status = 'confirmed'
 		group by first_cta_key
 	),

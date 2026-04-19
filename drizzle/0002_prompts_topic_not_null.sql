@@ -1,5 +1,13 @@
-ALTER TABLE "prompts" ALTER COLUMN "topic" SET DEFAULT '';
-UPDATE "prompts" SET "topic" = '' WHERE "topic" IS NULL;
-ALTER TABLE "prompts" ALTER COLUMN "topic" SET NOT NULL;
-DROP INDEX IF EXISTS "prompts_unique_key";
-CREATE UNIQUE INDEX "prompts_unique_key" ON "public"."prompts" ("purpose", "audience", "format", "topic");
+-- Ensure prompts.topic always has a value so uniqueness on audience+format works reliably
+alter table prompts
+	alter column topic set default '';
+
+update prompts
+	set topic = ''
+	where topic is null;
+
+alter table prompts
+	alter column topic set not null;
+
+drop index if exists prompts_unique_key;
+create unique index prompts_unique_key on prompts (purpose, audience, format, topic);
