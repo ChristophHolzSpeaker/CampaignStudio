@@ -1,9 +1,10 @@
-import { fail } from '@sveltejs/kit';
+import { fail, type RequestEvent } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import {
 	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
+	resolveLeadBookingIntakeContext,
 	resolveLeadBookingToken,
 	resolvePublicBookingSlots,
 	type PublicBookingSlotDayGroup
@@ -26,6 +27,14 @@ type ClassificationView = {
 	hasUpcomingBooking: boolean;
 	totalBookings: number;
 	upcomingBookingStartsAt: string | null;
+};
+
+type IntakeSummaryView = {
+	name: string | null;
+	email: string;
+	scope: string;
+	requestSummary: string;
+	company: string | null;
 };
 
 export type LeadBookingActionData = {
@@ -51,6 +60,30 @@ export type LeadBookingActionData = {
 	slotGroups?: PublicBookingSlotDayGroup[];
 	searchStartsAtIso?: string;
 	searchEndsAtIso?: string;
+	intakeSummary?: IntakeSummaryView;
+};
+
+type LeadBookingPageData = {
+	bookingType: 'lead';
+	tokenState: 'usable' | 'invalid' | 'expired';
+	tokenMessage: string | null;
+	policyState: Awaited<ReturnType<typeof getBookingPolicy>>['state'] | null;
+	unavailableMessage: string | null;
+	prefillValues?: BookingIntakeSubmission;
+	intakeSummary?: IntakeSummaryView;
+	intakeSkipped?: boolean;
+	classification?: ClassificationView;
+	availabilityState?:
+		| 'available'
+		| 'bookings_paused'
+		| 'rules_missing'
+		| 'booking_type_disabled'
+		| 'invalid_window'
+		| 'no_slots';
+	slotGroups?: PublicBookingSlotDayGroup[];
+	searchStartsAtIso?: string;
+	searchEndsAtIso?: string;
+	message?: string;
 };
 
 function toClassificationView(input: {
@@ -75,7 +108,13 @@ function getTokenMessage(state: 'invalid' | 'expired'): string {
 	return 'This booking link is invalid.';
 }
 
-export const load: PageServerLoad = async ({ params }: { params: { token?: string } }) => {
+export const load: PageServerLoad = async ({
+	params,
+	url
+}: {
+	params: { token?: string };
+	url: URL;
+}) => {
 	const token = params.token?.trim() ?? '';
 	const tokenResolution = await resolveLeadBookingToken(token);
 
@@ -86,22 +125,61 @@ export const load: PageServerLoad = async ({ params }: { params: { token?: strin
 			tokenMessage: getTokenMessage(tokenResolution.state),
 			policyState: null,
 			unavailableMessage: null
-		};
+		} satisfies LeadBookingPageData;
 	}
 
 	const policy = await getBookingPolicy('lead');
+	const intakeContext = await resolveLeadBookingIntakeContext({
+		tokenContext: tokenResolution.context
+	});
+	const isEditDetails = url.searchParams.get('edit') === '1';
+
+	if (policy.state === 'active' && intakeContext.isComplete && !isEditDetails) {
+		const bookingFlow = await resolvePublicBookingSlots({
+			bookingType: 'lead',
+			requesterEmail: intakeContext.values.email
+		});
+
+		return {
+			bookingType: 'lead' as const,
+			tokenState: 'usable' as const,
+			tokenMessage: null,
+			policyState: policy.state,
+			unavailableMessage: getPublicBookingUnavailableMessage(policy),
+			prefillValues: intakeContext.values,
+			intakeSummary: intakeContext.summary ?? undefined,
+			intakeSkipped: true,
+			classification: toClassificationView({
+				interactionKind: bookingFlow.classification.interactionKind,
+				hasUpcomingBooking: bookingFlow.classification.hasUpcomingBooking,
+				totalBookings: bookingFlow.classification.totalBookings,
+				upcomingBookingStartsAt: bookingFlow.classification.upcomingBooking?.startsAt ?? null
+			}),
+			availabilityState: bookingFlow.availability.state,
+			slotGroups: bookingFlow.slotGroups,
+			searchStartsAtIso: bookingFlow.searchStartsAt.toISOString(),
+			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
+			message:
+				bookingFlow.availability.state === 'no_slots'
+					? 'No slots are currently available in the next 3 days.'
+					: undefined
+		} satisfies LeadBookingPageData;
+	}
 
 	return {
 		bookingType: 'lead' as const,
 		tokenState: 'usable' as const,
 		tokenMessage: null,
 		policyState: policy.state,
-		unavailableMessage: getPublicBookingUnavailableMessage(policy)
-	};
+		unavailableMessage: getPublicBookingUnavailableMessage(policy),
+		prefillValues: intakeContext.values,
+		intakeSummary: intakeContext.summary ?? undefined,
+		intakeSkipped: false
+	} satisfies LeadBookingPageData;
 };
 
 export const actions: Actions = {
-	check: async ({ request, params }: { request: Request; params: { token?: string } }) => {
+	check: async ({ request, params }: RequestEvent) => {
 		const token = params.token?.trim() ?? '';
 		const tokenResolution = await resolveLeadBookingToken(token);
 
@@ -136,8 +214,15 @@ export const actions: Actions = {
 			requesterEmail: parseResult.data.email
 		});
 
+		const normalizedValues: BookingIntakeSubmission = {
+			email: parseResult.data.email,
+			scope: parseResult.data.scope,
+			name: parseResult.data.name ?? '',
+			company: parseResult.data.company ?? ''
+		};
+
 		return {
-			values,
+			values: normalizedValues,
 			classification: toClassificationView({
 				interactionKind: bookingFlow.classification.interactionKind,
 				hasUpcomingBooking: bookingFlow.classification.hasUpcomingBooking,
@@ -148,13 +233,20 @@ export const actions: Actions = {
 			slotGroups: bookingFlow.slotGroups,
 			searchStartsAtIso: bookingFlow.searchStartsAt.toISOString(),
 			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
+			intakeSummary: {
+				name: normalizedValues.name || null,
+				email: normalizedValues.email,
+				scope: normalizedValues.scope,
+				requestSummary: normalizedValues.scope,
+				company: normalizedValues.company || null
+			},
 			message:
 				bookingFlow.availability.state === 'no_slots'
 					? 'No slots are currently available in the next 3 days.'
 					: undefined
 		};
 	},
-	confirm: async ({ request, params }: { request: Request; params: { token?: string } }) => {
+	confirm: async ({ request, params }: RequestEvent) => {
 		const token = params.token?.trim() ?? '';
 		const tokenResolution = await resolveLeadBookingToken(token);
 
