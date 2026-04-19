@@ -53,6 +53,8 @@ describe('classifyBookingRequesterByEmail', () => {
 			google_calendar_event_id: null,
 			calendar_sync_error: null,
 			reschedule_token: 'resched-1',
+			booking_confirmation_email_sent_at: null,
+			booking_confirmation_email_provider_message_id: null,
 			is_repeat_interaction: true,
 			created_at: new Date('2026-05-20T00:00:00.000Z'),
 			updated_at: new Date('2026-05-20T00:00:00.000Z')

@@ -4,7 +4,7 @@ import { normalizeEmailAddress } from '../email';
 import { gmailSendMessage } from './client';
 
 type SendOutboundEmailInput = {
-	leadJourneyId: string;
+	leadJourneyId?: string | null;
 	gmailUser: string;
 	to: string[];
 	subject: string;
@@ -108,56 +108,59 @@ export async function sendOutboundEmail(
 
 	const nowIso = new Date().toISOString();
 
-	const persisted = await upsertOne<PersistedLeadMessageRow>(
-		env,
-		'lead_messages',
-		{
-			lead_journey_id: input.leadJourneyId,
-			direction: 'outbound',
-			provider: 'gmail',
-			provider_message_id: sent.id,
-			provider_thread_id: sent.threadId,
-			from_email: input.gmailUser,
-			to_email: recipients.join(','),
-			subject: input.subject,
-			body_text: input.bodyText,
-			body_html: input.bodyHtml ?? null,
-			classification: null,
-			classification_confidence: null,
-			auto_response_decision: input.autoResponseDecision ?? null,
-			auto_response_sent_at: null,
-			received_at: null,
-			sent_at: nowIso,
-			raw_metadata: {
-				...(input.rawMetadata ?? {}),
-				gmail: {
-					id: sent.id,
-					threadId: sent.threadId,
-					inReplyTo: input.inReplyTo ?? null,
-					references: input.references ?? [],
-					mime_preview: mime.slice(0, 2000)
-				}
+	let leadMessageId: string | null = null;
+	if (input.leadJourneyId) {
+		const persisted = await upsertOne<PersistedLeadMessageRow>(
+			env,
+			'lead_messages',
+			{
+				lead_journey_id: input.leadJourneyId,
+				direction: 'outbound',
+				provider: 'gmail',
+				provider_message_id: sent.id,
+				provider_thread_id: sent.threadId,
+				from_email: input.gmailUser,
+				to_email: recipients.join(','),
+				subject: input.subject,
+				body_text: input.bodyText,
+				body_html: input.bodyHtml ?? null,
+				classification: null,
+				classification_confidence: null,
+				auto_response_decision: input.autoResponseDecision ?? null,
+				auto_response_sent_at: null,
+				received_at: null,
+				sent_at: nowIso,
+				raw_metadata: {
+					...(input.rawMetadata ?? {}),
+					gmail: {
+						id: sent.id,
+						threadId: sent.threadId,
+						inReplyTo: input.inReplyTo ?? null,
+						references: input.references ?? [],
+						mime_preview: mime.slice(0, 2000)
+					}
+				},
+				updated_at: nowIso
 			},
-			updated_at: nowIso
-		},
-		{
-			onConflict: 'provider_message_id'
-		}
-	);
+			{
+				onConflict: 'provider_message_id'
+			}
+		);
 
-	let leadMessageId = persisted?.id ?? null;
-	if (!leadMessageId) {
-		const query = new URLSearchParams({
-			select: 'id',
-			provider_message_id: `eq.${sent.id}`,
-			limit: '1'
-		});
-		const existing = await selectOne<PersistedLeadMessageRow>(env, 'lead_messages', query);
-		leadMessageId = existing?.id ?? null;
+		leadMessageId = persisted?.id ?? null;
+		if (!leadMessageId) {
+			const query = new URLSearchParams({
+				select: 'id',
+				provider_message_id: `eq.${sent.id}`,
+				limit: '1'
+			});
+			const existing = await selectOne<PersistedLeadMessageRow>(env, 'lead_messages', query);
+			leadMessageId = existing?.id ?? null;
+		}
 	}
 
 	await insertOne(env, 'lead_events', {
-		lead_journey_id: input.leadJourneyId,
+		lead_journey_id: input.leadJourneyId ?? null,
 		campaign_id: input.campaignId ?? null,
 		campaign_page_id: input.campaignPageId ?? null,
 		event_type: 'email_sent',

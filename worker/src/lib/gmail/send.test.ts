@@ -78,4 +78,24 @@ describe('sendOutboundEmail', () => {
 		expect(decodedMime).toContain('In-Reply-To: <message@id>');
 		expect(decodedMime).toContain('References: <ref-1@id> <ref-2@id>');
 	});
+
+	it('sends email without lead journey and skips lead_messages persistence', async () => {
+		mockedGmailSendMessage.mockResolvedValue({ id: 'msg_sent_2', threadId: 'thread_2' });
+
+		const result = await sendOutboundEmail(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			to: ['person@example.com'],
+			subject: 'General booking confirmation',
+			bodyText: 'Body',
+			leadJourneyId: null
+		});
+
+		expect(result).toEqual({
+			lead_message_id: null,
+			provider_message_id: 'msg_sent_2',
+			provider_thread_id: 'thread_2'
+		});
+		expect(mockedUpsertOne).not.toHaveBeenCalled();
+		expect(mockedInsertOne).toHaveBeenCalledTimes(1);
+	});
 });

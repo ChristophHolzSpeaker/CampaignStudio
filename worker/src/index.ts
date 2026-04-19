@@ -12,6 +12,7 @@ import { handleTrackCTA } from './routes/track-cta';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
 import { handleTelegramNotification } from './routes/telegram-notification';
+import { handleWoodyEmailNotification } from './routes/woody-email-notification';
 
 export default {
 	async fetch(request: Request, env: WorkerEnv, ctx: WorkerExecutionContext): Promise<Response> {
@@ -73,6 +74,13 @@ export default {
 					return json({ ok: false, error: 'Unauthorized' }, 401);
 				}
 				return await handleTelegramNotification(request, env);
+			}
+
+			if (pathname === '/notifications/woody-email' && request.method === 'POST') {
+				if (!requireInternalAuth(request, env)) {
+					return json({ ok: false, error: 'Unauthorized' }, 401);
+				}
+				return await handleWoodyEmailNotification(request, env);
 			}
 
 			return json({ ok: false, error: 'Not found' }, 404);

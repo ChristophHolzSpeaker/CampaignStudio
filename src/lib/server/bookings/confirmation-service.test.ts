@@ -23,6 +23,10 @@ vi.mock('$lib/server/notifications/telegram', () => ({
 	notifyBookingConfirmed: vi.fn()
 }));
 
+vi.mock('$lib/server/bookings/woody-email-service', () => ({
+	sendBookingConfirmedEmail: vi.fn()
+}));
+
 import { getBookingPolicy } from './policy';
 import { classifyBookingRequesterByEmail } from './requester-classification';
 import {
@@ -32,6 +36,7 @@ import {
 } from './lifecycle';
 import { getOverlappingActiveBooking, markBookingLinkBookedAt } from './repository';
 import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
+import { sendBookingConfirmedEmail } from '$lib/server/bookings/woody-email-service';
 import { confirmBookingSelection } from './confirmation-service';
 
 const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
@@ -42,6 +47,7 @@ const mockedMarkBookingCalendarSyncFailed = vi.mocked(markBookingCalendarSyncFai
 const mockedGetOverlappingActiveBooking = vi.mocked(getOverlappingActiveBooking);
 const mockedMarkBookingLinkBookedAt = vi.mocked(markBookingLinkBookedAt);
 const mockedNotifyBookingConfirmed = vi.mocked(notifyBookingConfirmed);
+const mockedSendBookingConfirmedEmail = vi.mocked(sendBookingConfirmedEmail);
 
 function activePolicy(bookingType: 'general' | 'lead') {
 	return {
@@ -75,6 +81,7 @@ describe('confirmBookingSelection', () => {
 		mockedGetOverlappingActiveBooking.mockReset();
 		mockedMarkBookingLinkBookedAt.mockReset();
 		mockedNotifyBookingConfirmed.mockReset();
+		mockedSendBookingConfirmedEmail.mockReset();
 	});
 
 	it('confirms general booking and attaches returned calendar event id', async () => {
@@ -105,6 +112,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: null,
 				calendar_sync_error: null,
 				reschedule_token: null,
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: false,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -125,6 +134,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: 'evt_123',
 				calendar_sync_error: null,
 				reschedule_token: 'resched-token',
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: false,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -177,6 +188,7 @@ describe('confirmBookingSelection', () => {
 				booking_type: 'general'
 			})
 		);
+		expect(mockedSendBookingConfirmedEmail).not.toHaveBeenCalled();
 	});
 
 	it('confirms lead booking and marks booking link booked timestamp', async () => {
@@ -207,6 +219,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: null,
 				calendar_sync_error: null,
 				reschedule_token: null,
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: true,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -227,6 +241,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: 'evt_lead',
 				calendar_sync_error: null,
 				reschedule_token: 'resched-token',
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: true,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -235,7 +251,8 @@ describe('confirmBookingSelection', () => {
 
 		const createBookingEvent = vi.fn().mockResolvedValue({
 			ok: true as const,
-			event_id: 'evt_lead'
+			event_id: 'evt_lead',
+			html_link: 'https://calendar.google.com/event?eid=evt_lead'
 		});
 
 		const result = await confirmBookingSelection(
@@ -285,6 +302,10 @@ describe('confirmBookingSelection', () => {
 				})
 			})
 		);
+		expect(mockedSendBookingConfirmedEmail).toHaveBeenCalledWith({
+			bookingId: 'booking-2',
+			calendarEventUrl: 'https://calendar.google.com/event?eid=evt_lead'
+		});
 	});
 
 	it('returns slot unavailable when overlap is detected', async () => {
@@ -337,6 +358,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: null,
 				calendar_sync_error: null,
 				reschedule_token: null,
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: false,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -357,6 +380,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: null,
 				calendar_sync_error: 'worker error',
 				reschedule_token: 'token',
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: false,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -418,6 +443,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: null,
 				calendar_sync_error: null,
 				reschedule_token: null,
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: false,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -438,6 +465,8 @@ describe('confirmBookingSelection', () => {
 				google_calendar_event_id: 'evt_999',
 				calendar_sync_error: null,
 				reschedule_token: 'resched-token',
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
 				is_repeat_interaction: false,
 				created_at: new Date('2026-04-01T00:00:00.000Z'),
 				updated_at: new Date('2026-04-01T00:00:00.000Z')
@@ -461,6 +490,92 @@ describe('confirmBookingSelection', () => {
 			{
 				calendarEventProvider: {
 					createBookingEvent: vi.fn().mockResolvedValueOnce({ ok: true, event_id: 'evt_999' })
+				}
+			}
+		);
+
+		expect(result.state).toBe('confirmed');
+	});
+
+	it('does not fail confirmed booking when woody email notification fails', async () => {
+		mockedGetBookingPolicy.mockResolvedValueOnce(activePolicy('general'));
+		mockedGetOverlappingActiveBooking.mockResolvedValueOnce(null);
+		mockedClassifyBookingRequesterByEmail.mockResolvedValueOnce({
+			email: 'person@example.com',
+			normalizedEmail: 'person@example.com',
+			hasPriorBookings: false,
+			hasUpcomingBooking: false,
+			interactionKind: 'first_time',
+			upcomingBooking: null,
+			recentBooking: null,
+			totalBookings: 0
+		});
+		mockedCreateBooking.mockResolvedValueOnce({
+			booking: {
+				id: 'booking-5',
+				booking_type: 'general',
+				lead_journey_id: null,
+				email: 'person@example.com',
+				name: 'Person',
+				company: null,
+				scope: 'Intro',
+				status: 'pending_calendar_sync',
+				starts_at: new Date('2026-06-01T10:00:00.000Z'),
+				ends_at: new Date('2026-06-01T10:30:00.000Z'),
+				google_calendar_event_id: null,
+				calendar_sync_error: null,
+				reschedule_token: null,
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
+				is_repeat_interaction: false,
+				created_at: new Date('2026-04-01T00:00:00.000Z'),
+				updated_at: new Date('2026-04-01T00:00:00.000Z')
+			}
+		});
+		mockedAttachBookingCalendarEventId.mockResolvedValueOnce({
+			booking: {
+				id: 'booking-5',
+				booking_type: 'general',
+				lead_journey_id: null,
+				email: 'person@example.com',
+				name: 'Person',
+				company: null,
+				scope: 'Intro',
+				status: 'confirmed',
+				starts_at: new Date('2026-06-01T10:00:00.000Z'),
+				ends_at: new Date('2026-06-01T10:30:00.000Z'),
+				google_calendar_event_id: 'evt_555',
+				calendar_sync_error: null,
+				reschedule_token: 'resched-token',
+				booking_confirmation_email_sent_at: null,
+				booking_confirmation_email_provider_message_id: null,
+				is_repeat_interaction: false,
+				created_at: new Date('2026-04-01T00:00:00.000Z'),
+				updated_at: new Date('2026-04-01T00:00:00.000Z')
+			}
+		});
+		mockedSendBookingConfirmedEmail.mockRejectedValueOnce(new Error('email down'));
+
+		const result = await confirmBookingSelection(
+			{
+				bookingType: 'general',
+				intake: {
+					email: 'person@example.com',
+					scope: 'Intro',
+					name: 'Person'
+				},
+				selectedStartsAt: new Date('2026-06-01T10:00:00.000Z'),
+				selectedEndsAt: new Date('2026-06-01T10:30:00.000Z'),
+				requestOrigin: 'https://book.example.com',
+				now: new Date('2026-06-01T09:00:00.000Z')
+			},
+			{
+				calendarEventProvider: {
+					createBookingEvent: vi.fn().mockResolvedValueOnce({
+						ok: true,
+						event_id: 'evt_555',
+						html_link: 'https://calendar.google.com/event?eid=evt_555'
+					})
 				}
 			}
 		);

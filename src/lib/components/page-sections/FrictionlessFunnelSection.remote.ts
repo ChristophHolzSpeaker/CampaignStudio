@@ -3,6 +3,7 @@ import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-con
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
+import { sendBookingLinkInviteEmailForLeadSubmission } from '$lib/server/bookings/woody-email-service';
 import { notifyLeadCreated } from '$lib/server/notifications/lead-notifications';
 import { z } from 'zod';
 
@@ -97,6 +98,7 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 			},
 			form: {
 				organization: data.organization,
+				meeting_scope: data.eventDetails,
 				event_details_length: data.eventDetails.length
 			},
 			journey: {
@@ -130,6 +132,17 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 						: 'unknown_notification_error'
 			});
 		}
+	}
+
+	try {
+		await sendBookingLinkInviteEmailForLeadSubmission({
+			leadJourneyId: journey.id
+		});
+	} catch (emailError) {
+		console.error('woody_booking_link_invite_failed', {
+			lead_journey_id: journey.id,
+			error: emailError instanceof Error ? emailError.message : 'unknown_email_error'
+		});
 	}
 
 	return {
