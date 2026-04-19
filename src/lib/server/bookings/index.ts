@@ -13,3 +13,4 @@ export * from './confirmation-service';
 export * from './reschedule-service';
 export * from './admin-settings-service';
 export * from './woody-email-service';
+export * from './lead-intake-context';

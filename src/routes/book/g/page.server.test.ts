@@ -81,7 +81,7 @@ describe('/book/g +page.server', () => {
 		formData.set('email', 'not-an-email');
 		formData.set('scope', '');
 
-		const response = (await actions.default({
+		const response = (await actions.check({
 			request: new Request('http://test.local/book/g', { method: 'POST', body: formData })
 		} as never)) as any;
 
@@ -108,7 +108,7 @@ describe('/book/g +page.server', () => {
 		formData.set('email', 'person@example.com');
 		formData.set('scope', 'Discovery call');
 
-		const response = (await actions.default({
+		const response = (await actions.check({
 			request: new Request('http://test.local/book/g', { method: 'POST', body: formData })
 		} as never)) as any;
 
@@ -191,7 +191,7 @@ describe('/book/g +page.server', () => {
 		formData.set('email', 'person@example.com');
 		formData.set('scope', 'Discovery call');
 
-		const response = (await actions.default({
+		const response = (await actions.check({
 			request: new Request('http://test.local/book/g', { method: 'POST', body: formData })
 		} as never)) as any;
 
@@ -268,7 +268,7 @@ describe('/book/g +page.server', () => {
 		formData.set('email', 'person@example.com');
 		formData.set('scope', 'Discovery call');
 
-		const response = (await actions.default({
+		const response = (await actions.check({
 			request: new Request('http://test.local/book/g', { method: 'POST', body: formData })
 		} as never)) as any;
 
