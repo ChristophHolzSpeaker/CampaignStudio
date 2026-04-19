@@ -223,13 +223,14 @@ describe('processInboundGmailMessage', () => {
 		expect(result.eligible_for_autoresponse).toBe(true);
 		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledTimes(1);
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
-		expect(mockedInsertOne).toHaveBeenCalledTimes(3);
+		expect(mockedInsertOne).toHaveBeenCalledTimes(4);
 
 		const eventTypes = mockedInsertOne.mock.calls.map(
 			(call) => (call[2] as { event_type?: string }).event_type
 		);
-		expect(eventTypes).toContain('email_received');
-		expect(eventTypes).toContain('inbound_message_classified');
+		expect(eventTypes).toContain('message_received');
+		expect(eventTypes).toContain('message_classified');
+		expect(eventTypes).toContain('lead_qualified');
 		expect(eventTypes).toContain('autoresponse_eligible');
 	});
 
@@ -269,8 +270,8 @@ describe('processInboundGmailMessage', () => {
 		const eventTypes = mockedInsertOne.mock.calls.map(
 			(call) => (call[2] as { event_type?: string }).event_type
 		);
-		expect(eventTypes).toContain('email_received');
+		expect(eventTypes).toContain('message_received');
 		expect(eventTypes).toContain('autoresponse_skipped_internal_sender');
-		expect(eventTypes).not.toContain('inbound_message_classified');
+		expect(eventTypes).not.toContain('message_classified');
 	});
 });

@@ -2,6 +2,7 @@ import type { AttributionStatus } from '../../../../shared/event-types';
 import { insertOne, selectOne } from '../db';
 import type { WorkerEnv } from '../env';
 import { parsePlusAddressFromRecipients } from '../attribution/plus-address';
+import { persistWorkerJourneyAttributionSnapshot } from './attribution-persistence';
 
 const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'archived'] as const;
 const JOURNEY_MATCH_WINDOW_DAYS = 30;
@@ -164,6 +165,12 @@ export async function resolveInboundJourney(
 ): Promise<InboundJourneyResolutionResult> {
 	const threadJourney = await findJourneyByThread(env, params.providerThreadId);
 	if (threadJourney) {
+		await persistWorkerJourneyAttributionSnapshot(env, {
+			journeyId: threadJourney.id,
+			campaignId: threadJourney.campaign_id,
+			campaignPageId: threadJourney.campaign_page_id
+		});
+
 		return {
 			lead_journey_id: threadJourney.id,
 			campaign_id: threadJourney.campaign_id,
@@ -183,6 +190,12 @@ export async function resolveInboundJourney(
 		});
 
 		if (existingJourney) {
+			await persistWorkerJourneyAttributionSnapshot(env, {
+				journeyId: existingJourney.id,
+				campaignId: existingJourney.campaign_id,
+				campaignPageId: existingJourney.campaign_page_id
+			});
+
 			return {
 				lead_journey_id: existingJourney.id,
 				campaign_id: existingJourney.campaign_id,
@@ -199,6 +212,12 @@ export async function resolveInboundJourney(
 		senderDisplayName: params.senderDisplayName,
 		campaignId: plusResolution.campaign_id,
 		campaignPageId: plusResolution.campaign_page_id
+	});
+
+	await persistWorkerJourneyAttributionSnapshot(env, {
+		journeyId: createdJourney.id,
+		campaignId: createdJourney.campaign_id,
+		campaignPageId: createdJourney.campaign_page_id
 	});
 
 	return {

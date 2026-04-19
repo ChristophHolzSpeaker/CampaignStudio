@@ -10,7 +10,11 @@ const trackCtaRequestSchema = z.object({
 	campaign_page_id: z.number().int().positive(),
 	lead_journey_id: z.string().uuid().optional(),
 	session_id: z.string().trim().min(1).max(255).optional(),
-	anonymous_id: z.string().trim().min(1).max(255).optional()
+	anonymous_id: z.string().trim().min(1).max(255).optional(),
+	cta_key: z.string().trim().min(1).max(255).optional(),
+	cta_label: z.string().trim().min(1).max(255).optional(),
+	cta_section: z.string().trim().min(1).max(255).optional(),
+	cta_variant: z.string().trim().min(1).max(255).optional()
 });
 
 export const POST: RequestHandler = async ({ request }) => {

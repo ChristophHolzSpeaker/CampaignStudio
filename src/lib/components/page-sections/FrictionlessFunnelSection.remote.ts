@@ -1,4 +1,5 @@
 import { form, getRequestEvent } from '$app/server';
+import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
 import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-context';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
@@ -55,6 +56,7 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 
 	const data = parsed.data;
 	const requestEvent = getRequestEvent();
+	const visitorIdentifier = readVisitorIdentifier(requestEvent.cookies);
 	const normalizedEmail = normalizeEmailAddress(data.email);
 	if (!normalizedEmail) {
 		return {
@@ -81,6 +83,7 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 		campaignPageId: campaignContext.campaignPageId,
 		contactEmail: normalizedEmail,
 		contactName: data.fullName,
+		visitorIdentifier,
 		now
 	});
 
@@ -104,6 +107,35 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 			journey: {
 				created
 			}
+		},
+		sessionId: data.sessionId,
+		anonymousId: data.anonymousId
+	});
+
+	await logLeadEvent({
+		leadJourneyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		eventType: 'lead_identified',
+		eventSource: 'sveltekit.frictionless_funnel_form',
+		eventPayload: {
+			identification_method: 'form_submission',
+			contact_email: normalizedEmail,
+			contact_name: data.fullName
+		},
+		sessionId: data.sessionId,
+		anonymousId: data.anonymousId
+	});
+
+	await logLeadEvent({
+		leadJourneyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		eventType: created ? 'journey_created' : 'journey_matched_existing',
+		eventSource: 'sveltekit.frictionless_funnel_form',
+		eventPayload: {
+			journey_id: journey.id,
+			matched_existing: !created
 		},
 		sessionId: data.sessionId,
 		anonymousId: data.anonymousId

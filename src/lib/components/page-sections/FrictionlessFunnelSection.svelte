@@ -17,6 +17,8 @@
 		campaignPageId?: number | null;
 	} = $props();
 
+	let hasTrackedFormStart = $state(false);
+
 	function trackCta(type: CTAType, leadJourneyId?: string): void {
 		if (campaignId == null || campaignPageId == null) {
 			return;
@@ -36,6 +38,48 @@
 		}).catch(() => {
 			// fire-and-forget tracking
 		});
+	}
+
+	function trackFormStarted(): void {
+		if (hasTrackedFormStart || campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		hasTrackedFormStart = true;
+
+		void fetch('/api/attribution/form-start', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				campaign_id: campaignId,
+				campaign_page_id: campaignPageId,
+				page_path: pageSlug,
+				form_key: 'frictionless_booking_request'
+			})
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
+
+	function handleFormInput(event: Event): void {
+		submitBookingRequest.validate();
+
+		if (hasTrackedFormStart) {
+			return;
+		}
+
+		const target = event.target;
+		if (!(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) {
+			return;
+		}
+
+		if (target.value.trim().length === 0) {
+			return;
+		}
+
+		trackFormStarted();
 	}
 
 	const title = $derived(props?.title ?? 'Tell us about your event goals');
@@ -96,7 +140,7 @@
 			<form
 				{...submitBookingRequest}
 				class="space-y-6"
-				oninput={() => submitBookingRequest.validate()}
+				oninput={handleFormInput}
 				onsubmit={() => trackCta('form')}
 			>
 				<input type="hidden" name="campaignId" value={campaignId ?? ''} />

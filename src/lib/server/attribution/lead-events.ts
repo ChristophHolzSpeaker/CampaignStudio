@@ -3,25 +3,41 @@ import { lead_events } from '$lib/server/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import type { EventType } from '../../../../shared/event-types';
 
-export async function logLeadEvent(input: {
-	leadJourneyId: string;
-	campaignId: number;
-	campaignPageId: number;
+export type LeadEventPayload = Record<string, unknown>;
+
+type LeadEventInput = {
+	leadJourneyId?: string | null;
+	campaignId?: number | null;
+	campaignPageId?: number | null;
 	eventType: EventType;
 	eventSource: string;
-	eventPayload: Record<string, unknown>;
-	sessionId?: string;
-	anonymousId?: string;
-}): Promise<void> {
+	eventPayload?: LeadEventPayload;
+	sessionId?: string | null;
+	anonymousId?: string | null;
+	occurredAt?: Date;
+	cta?: {
+		key?: string | null;
+		label?: string | null;
+		section?: string | null;
+		variant?: string | null;
+	};
+};
+
+export async function logLeadEvent(input: LeadEventInput): Promise<void> {
 	await db.insert(lead_events).values({
-		lead_journey_id: input.leadJourneyId,
-		campaign_id: input.campaignId,
-		campaign_page_id: input.campaignPageId,
+		lead_journey_id: input.leadJourneyId ?? null,
+		campaign_id: input.campaignId ?? null,
+		campaign_page_id: input.campaignPageId ?? null,
 		event_type: input.eventType,
 		event_source: input.eventSource,
-		event_payload: input.eventPayload,
+		event_payload: input.eventPayload ?? {},
+		cta_key: input.cta?.key ?? null,
+		cta_label: input.cta?.label ?? null,
+		cta_section: input.cta?.section ?? null,
+		cta_variant: input.cta?.variant ?? null,
 		session_id: input.sessionId ?? null,
-		anonymous_id: input.anonymousId ?? null
+		anonymous_id: input.anonymousId ?? null,
+		occurred_at: input.occurredAt ?? new Date()
 	});
 }
 

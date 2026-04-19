@@ -82,6 +82,194 @@ export const campaign_visit_metrics = pgView('campaign_visit_metrics', {
 	last_visited_at: timestamp('last_visited_at')
 }).existing();
 
+export const vw_visit_enriched = pgView('vw_visit_enriched', {
+	visit_id: integer('visit_id'),
+	visited_at: timestamp('visited_at'),
+	campaign_id: integer('campaign_id'),
+	campaign_name: text('campaign_name'),
+	page_id: integer('page_id'),
+	page_slug: text('page_slug'),
+	visit_slug: text('visit_slug'),
+	visitor_identifier: text('visitor_identifier'),
+	utm_source: text('utm_source'),
+	utm_medium: text('utm_medium'),
+	utm_campaign: text('utm_campaign'),
+	utm_term: text('utm_term'),
+	utm_content: text('utm_content'),
+	referrer: text('referrer'),
+	user_agent: text('user_agent')
+}).existing();
+
+export const vw_lead_journey_enriched = pgView('vw_lead_journey_enriched', {
+	journey_id: uuid('journey_id'),
+	journey_created_at: timestamp('journey_created_at'),
+	journey_updated_at: timestamp('journey_updated_at'),
+	current_stage: text('current_stage'),
+	outcome: text('outcome'),
+	contact_email: text('contact_email'),
+	contact_name: text('contact_name'),
+	first_touch_type: text('first_touch_type'),
+	first_touch_at: timestamp('first_touch_at'),
+	journey_campaign_id: integer('journey_campaign_id'),
+	journey_campaign_name: text('journey_campaign_name'),
+	journey_page_id: integer('journey_page_id'),
+	journey_page_slug: text('journey_page_slug'),
+	first_visit_id: integer('first_visit_id'),
+	first_campaign_id: integer('first_campaign_id'),
+	first_campaign_name: text('first_campaign_name'),
+	first_page_id: integer('first_page_id'),
+	first_page_slug: text('first_page_slug'),
+	first_utm_source: text('first_utm_source'),
+	first_utm_medium: text('first_utm_medium'),
+	first_utm_campaign: text('first_utm_campaign'),
+	first_referrer: text('first_referrer'),
+	first_cta_key: text('first_cta_key'),
+	first_seen_at: timestamp('first_seen_at'),
+	last_visit_id: integer('last_visit_id'),
+	last_campaign_id: integer('last_campaign_id'),
+	last_campaign_name: text('last_campaign_name'),
+	last_page_id: integer('last_page_id'),
+	last_page_slug: text('last_page_slug'),
+	last_utm_source: text('last_utm_source'),
+	last_utm_medium: text('last_utm_medium'),
+	last_utm_campaign: text('last_utm_campaign'),
+	last_referrer: text('last_referrer'),
+	last_cta_key: text('last_cta_key'),
+	last_seen_at: timestamp('last_seen_at'),
+	attribution_model_version: text('attribution_model_version')
+}).existing();
+
+export const vw_lead_event_enriched = pgView('vw_lead_event_enriched', {
+	lead_event_id: uuid('lead_event_id'),
+	occurred_at: timestamp('occurred_at'),
+	event_type: text('event_type'),
+	event_source: text('event_source'),
+	event_payload: jsonb('event_payload'),
+	session_id: text('session_id'),
+	anonymous_id: text('anonymous_id'),
+	cta_key: text('cta_key'),
+	cta_label: text('cta_label'),
+	cta_section: text('cta_section'),
+	cta_variant: text('cta_variant'),
+	journey_id: uuid('journey_id'),
+	event_campaign_id: integer('event_campaign_id'),
+	event_campaign_name: text('event_campaign_name'),
+	event_page_id: integer('event_page_id'),
+	event_page_slug: text('event_page_slug'),
+	journey_campaign_id: integer('journey_campaign_id'),
+	journey_campaign_name: text('journey_campaign_name'),
+	journey_page_id: integer('journey_page_id'),
+	journey_page_slug: text('journey_page_slug'),
+	resolved_campaign_id: integer('resolved_campaign_id'),
+	resolved_campaign_name: text('resolved_campaign_name'),
+	resolved_page_id: integer('resolved_page_id'),
+	resolved_page_slug: text('resolved_page_slug'),
+	journey_first_utm_source: text('journey_first_utm_source'),
+	journey_first_utm_medium: text('journey_first_utm_medium'),
+	journey_first_utm_campaign: text('journey_first_utm_campaign'),
+	journey_last_utm_source: text('journey_last_utm_source'),
+	journey_last_utm_medium: text('journey_last_utm_medium'),
+	journey_last_utm_campaign: text('journey_last_utm_campaign'),
+	journey_first_seen_at: timestamp('journey_first_seen_at'),
+	journey_last_seen_at: timestamp('journey_last_seen_at'),
+	journey_attribution_model_version: text('journey_attribution_model_version')
+}).existing();
+
+export const vw_booking_enriched = pgView('vw_booking_enriched', {
+	booking_id: uuid('booking_id'),
+	booking_type: booking_type('booking_type'),
+	booking_status: booking_status('booking_status'),
+	booking_created_at: timestamp('booking_created_at'),
+	booking_updated_at: timestamp('booking_updated_at'),
+	starts_at: timestamp('starts_at'),
+	ends_at: timestamp('ends_at'),
+	is_repeat_interaction: boolean('is_repeat_interaction'),
+	email: text('email'),
+	name: text('name'),
+	company: text('company'),
+	scope: text('scope'),
+	journey_id: uuid('journey_id'),
+	journey_current_stage: text('journey_current_stage'),
+	journey_outcome: text('journey_outcome'),
+	journey_campaign_id: integer('journey_campaign_id'),
+	journey_campaign_name: text('journey_campaign_name'),
+	journey_page_id: integer('journey_page_id'),
+	journey_page_slug: text('journey_page_slug'),
+	first_visit_id: integer('first_visit_id'),
+	first_campaign_id: integer('first_campaign_id'),
+	first_campaign_name: text('first_campaign_name'),
+	first_page_id: integer('first_page_id'),
+	first_page_slug: text('first_page_slug'),
+	first_utm_source: text('first_utm_source'),
+	first_utm_medium: text('first_utm_medium'),
+	first_utm_campaign: text('first_utm_campaign'),
+	first_referrer: text('first_referrer'),
+	first_cta_key: text('first_cta_key'),
+	first_seen_at: timestamp('first_seen_at'),
+	last_visit_id: integer('last_visit_id'),
+	last_campaign_id: integer('last_campaign_id'),
+	last_campaign_name: text('last_campaign_name'),
+	last_page_id: integer('last_page_id'),
+	last_page_slug: text('last_page_slug'),
+	last_utm_source: text('last_utm_source'),
+	last_utm_medium: text('last_utm_medium'),
+	last_utm_campaign: text('last_utm_campaign'),
+	last_referrer: text('last_referrer'),
+	last_cta_key: text('last_cta_key'),
+	last_seen_at: timestamp('last_seen_at'),
+	attribution_model_version: text('attribution_model_version')
+}).existing();
+
+export const vw_funnel_daily = pgView('vw_funnel_daily', {
+	report_date: timestamp('report_date'),
+	visits: integer('visits'),
+	unique_visitors: integer('unique_visitors'),
+	journeys_created: integer('journeys_created'),
+	identified_leads: integer('identified_leads'),
+	inbound_messages: integer('inbound_messages'),
+	booking_link_clicked: integer('booking_link_clicked'),
+	bookings_completed: integer('bookings_completed'),
+	visit_to_lead_rate: real('visit_to_lead_rate'),
+	lead_to_booking_rate: real('lead_to_booking_rate'),
+	visit_to_booking_rate: real('visit_to_booking_rate')
+}).existing();
+
+export const vw_campaign_conversion_summary = pgView('vw_campaign_conversion_summary', {
+	campaign_id: integer('campaign_id'),
+	campaign_name: text('campaign_name'),
+	visit_campaign_visits: integer('visit_campaign_visits'),
+	journey_campaign_leads: integer('journey_campaign_leads'),
+	first_touch_leads: integer('first_touch_leads'),
+	first_touch_bookings: integer('first_touch_bookings'),
+	visit_to_journey_lead_rate: real('visit_to_journey_lead_rate'),
+	visit_to_first_touch_lead_rate: real('visit_to_first_touch_lead_rate'),
+	first_touch_lead_to_booking_rate: real('first_touch_lead_to_booking_rate'),
+	visit_to_first_touch_booking_rate: real('visit_to_first_touch_booking_rate')
+}).existing();
+
+export const vw_source_medium_performance = pgView('vw_source_medium_performance', {
+	utm_source: text('utm_source'),
+	utm_medium: text('utm_medium'),
+	visit_touch_visits: integer('visit_touch_visits'),
+	first_touch_leads: integer('first_touch_leads'),
+	first_touch_bookings: integer('first_touch_bookings'),
+	visit_to_first_touch_lead_rate: real('visit_to_first_touch_lead_rate'),
+	first_touch_lead_to_booking_rate: real('first_touch_lead_to_booking_rate'),
+	visit_to_first_touch_booking_rate: real('visit_to_first_touch_booking_rate')
+}).existing();
+
+export const vw_cta_performance = pgView('vw_cta_performance', {
+	cta_key: text('cta_key'),
+	cta_label: text('cta_label'),
+	cta_section: text('cta_section'),
+	cta_variant: text('cta_variant'),
+	clicks: integer('clicks'),
+	first_touch_leads: integer('first_touch_leads'),
+	first_touch_bookings: integer('first_touch_bookings'),
+	click_to_first_touch_lead_rate: real('click_to_first_touch_lead_rate'),
+	click_to_first_touch_booking_rate: real('click_to_first_touch_booking_rate')
+}).existing();
+
 export const generation_jobs = pgTable('generation_jobs', {
 	id: serial('id').primaryKey(),
 	campaign_id: integer('campaign_id')
@@ -157,6 +345,39 @@ export const lead_journeys = pgTable(
 		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id, {
 			onDelete: 'set null'
 		}),
+		first_visit_id: integer('first_visit_id').references(() => campaign_visits.id, {
+			onDelete: 'set null'
+		}),
+		first_campaign_id: integer('first_campaign_id').references(() => campaigns.id, {
+			onDelete: 'set null'
+		}),
+		first_page_id: integer('first_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
+		first_utm_source: text('first_utm_source'),
+		first_utm_medium: text('first_utm_medium'),
+		first_utm_campaign: text('first_utm_campaign'),
+		first_referrer: text('first_referrer'),
+		first_cta_key: text('first_cta_key'),
+		first_seen_at: timestamp('first_seen_at'),
+		last_visit_id: integer('last_visit_id').references(() => campaign_visits.id, {
+			onDelete: 'set null'
+		}),
+		last_campaign_id: integer('last_campaign_id').references(() => campaigns.id, {
+			onDelete: 'set null'
+		}),
+		last_page_id: integer('last_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
+		last_utm_source: text('last_utm_source'),
+		last_utm_medium: text('last_utm_medium'),
+		last_utm_campaign: text('last_utm_campaign'),
+		last_referrer: text('last_referrer'),
+		last_cta_key: text('last_cta_key'),
+		last_seen_at: timestamp('last_seen_at'),
+		attribution_model_version: text('attribution_model_version')
+			.notNull()
+			.default('journey_attribution_v1'),
 		first_touch_type: text('first_touch_type').notNull(),
 		first_touch_at: timestamp('first_touch_at').notNull().defaultNow(),
 		contact_email: text('contact_email'),
@@ -203,6 +424,10 @@ export const lead_events = pgTable(
 		event_type: text('event_type').notNull(),
 		event_source: text('event_source').notNull(),
 		event_payload: jsonb('event_payload').notNull().default({}),
+		cta_key: text('cta_key'),
+		cta_label: text('cta_label'),
+		cta_section: text('cta_section'),
+		cta_variant: text('cta_variant'),
 		session_id: text('session_id'),
 		anonymous_id: text('anonymous_id'),
 		occurred_at: timestamp('occurred_at').notNull().defaultNow()

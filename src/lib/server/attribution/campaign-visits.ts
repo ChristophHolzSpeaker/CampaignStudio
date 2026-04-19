@@ -33,6 +33,10 @@ export function getOrCreateVisitorIdentifier(input: {
 	return created;
 }
 
+export function readVisitorIdentifier(cookies: Cookies): string | null {
+	return cookies.get(VISITOR_COOKIE_NAME) ?? null;
+}
+
 export async function logCampaignVisit(input: {
 	campaignId: number;
 	campaignPageId: number;
@@ -41,6 +45,8 @@ export async function logCampaignVisit(input: {
 	headers: Headers;
 	visitorIdentifier: string;
 }): Promise<{ logged: boolean }> {
+	// page_view source of truth: we intentionally model page views in campaign_visits
+	// (deduped by visitor and time window) instead of duplicating every view into lead_events.
 	const dedupeWindowStart = new Date(Date.now() - VISIT_DEDUPE_WINDOW_MINUTES * 60 * 1000);
 
 	const [existingVisit] = await db

@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { CTA_EVENT_TYPE, ctaTypes } from '../../../shared/event-types';
-import { insertOne, selectOne } from '../lib/db';
+import { selectOne } from '../lib/db';
 import type { WorkerEnv } from '../lib/env';
 import { badRequestFromZod, json } from '../lib/http';
+import { logLeadEvent } from '../lib/analytics/lead-events';
 
 const trackCTASchema = z.object({
 	type: z.enum(ctaTypes),
@@ -10,7 +11,11 @@ const trackCTASchema = z.object({
 	campaign_page_id: z.coerce.number().int().positive(),
 	lead_journey_id: z.string().uuid().optional(),
 	session_id: z.string().trim().min(1).max(255).optional(),
-	anonymous_id: z.string().trim().min(1).max(255).optional()
+	anonymous_id: z.string().trim().min(1).max(255).optional(),
+	cta_key: z.string().trim().min(1).max(255).optional(),
+	cta_label: z.string().trim().min(1).max(255).optional(),
+	cta_section: z.string().trim().min(1).max(255).optional(),
+	cta_variant: z.string().trim().min(1).max(255).optional()
 });
 
 type CampaignPageRow = {
@@ -38,14 +43,19 @@ export async function handleTrackCTA(request: Request, env: WorkerEnv): Promise<
 		return json({ ok: false, error: 'Invalid campaign_id/campaign_page_id pair' }, 400);
 	}
 
-	await insertOne(env, 'lead_events', {
+	await logLeadEvent(env, {
 		lead_journey_id: input.lead_journey_id ?? null,
 		campaign_id: input.campaign_id,
 		campaign_page_id: input.campaign_page_id,
 		event_type: CTA_EVENT_TYPE[input.type],
 		event_source: 'worker.track_cta',
+		cta_key: input.cta_key ?? `legacy_${input.type}_cta`,
+		cta_label: input.cta_label ?? null,
+		cta_section: input.cta_section ?? null,
+		cta_variant: input.cta_variant ?? null,
 		event_payload: {
 			cta_type: input.type,
+			legacy_event_type: `${input.type}_cta_click`,
 			path: new URL(request.url).pathname
 		},
 		session_id: input.session_id ?? null,
