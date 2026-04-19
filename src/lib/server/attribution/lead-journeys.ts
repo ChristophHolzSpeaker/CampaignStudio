@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { lead_journeys } from '$lib/server/db/schema';
 import { and, desc, eq, gte, isNull, notInArray } from 'drizzle-orm';
+import { persistJourneyAttributionSnapshot } from './journey-attribution';
 
 const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'archived'] as const;
 const MATCH_WINDOW_DAYS = 30;
@@ -122,6 +123,7 @@ export async function findOrCreateLeadJourneyFromInquiry(input: {
 	campaignPageId: number;
 	contactEmail: string;
 	contactName: string;
+	visitorIdentifier?: string | null;
 	now?: Date;
 }): Promise<{ journey: LeadJourneyRecord; created: boolean }> {
 	const now = input.now ?? new Date();
@@ -138,6 +140,14 @@ export async function findOrCreateLeadJourneyFromInquiry(input: {
 			updatedAt: now
 		});
 
+		await persistJourneyAttributionSnapshot({
+			journeyId: updated.id,
+			campaignId: input.campaignId,
+			campaignPageId: input.campaignPageId,
+			visitorIdentifier: input.visitorIdentifier ?? null,
+			observedAt: now
+		});
+
 		return { journey: updated, created: false };
 	}
 
@@ -148,6 +158,14 @@ export async function findOrCreateLeadJourneyFromInquiry(input: {
 		contactName: input.contactName,
 		firstTouchType: 'form',
 		firstTouchAt: now
+	});
+
+	await persistJourneyAttributionSnapshot({
+		journeyId: createdJourney.id,
+		campaignId: input.campaignId,
+		campaignPageId: input.campaignPageId,
+		visitorIdentifier: input.visitorIdentifier ?? null,
+		observedAt: now
 	});
 
 	return { journey: createdJourney, created: true };

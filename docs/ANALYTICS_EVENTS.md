@@ -56,3 +56,23 @@ Both helpers enforce a consistent write shape and keep event payloads extensible
 - Reason: `campaign_visits` already provides visit dedupe and UTM/referrer context, so we avoid duplicating page-view rows into `lead_events`.
 
 When building funnel reporting, treat `campaign_visits` as the authoritative page-view dataset and `lead_events` as the canonical interaction/journey stream.
+
+## Journey attribution persistence (Phase 2)
+
+`lead_journeys` now stores durable first-touch and last-touch attribution snapshots.
+
+- Snapshot fields include visit/campaign/page, UTM source/medium/campaign, referrer, CTA key, and seen-at timestamps.
+- `attribution_model_version` is stored on the journey row (`journey_attribution_v1`).
+
+### Resolution rules
+
+- **First-touch**: earliest authoritative `campaign_visits` row linked by visitor identifier and campaign, bounded at or before journey observation time.
+- **Last-touch**: latest authoritative `campaign_visits` row under the same linkage and time bound.
+- **CTA key**: earliest/latest non-null `lead_events.cta_key` associated with the journey at or before observation time.
+- **Fallback**: if no visit match exists, persist known campaign/page and seen-at time while leaving unavailable fields null.
+
+### Update behavior
+
+- **First-touch stability**: once set, first-touch is only replaced by a strictly earlier authoritative visit.
+- **Last-touch evolution**: last-touch is updated only when a newer observation is processed.
+- **No inference**: unknown dimensions remain null; values are not guessed.

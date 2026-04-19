@@ -33,6 +33,10 @@ export function getOrCreateVisitorIdentifier(input: {
 	return created;
 }
 
+export function readVisitorIdentifier(cookies: Cookies): string | null {
+	return cookies.get(VISITOR_COOKIE_NAME) ?? null;
+}
+
 export async function logCampaignVisit(input: {
 	campaignId: number;
 	campaignPageId: number;

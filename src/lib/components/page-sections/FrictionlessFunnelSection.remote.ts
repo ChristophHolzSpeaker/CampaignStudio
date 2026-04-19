@@ -1,4 +1,5 @@
 import { form, getRequestEvent } from '$app/server';
+import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
 import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-context';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
@@ -55,6 +56,7 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 
 	const data = parsed.data;
 	const requestEvent = getRequestEvent();
+	const visitorIdentifier = readVisitorIdentifier(requestEvent.cookies);
 	const normalizedEmail = normalizeEmailAddress(data.email);
 	if (!normalizedEmail) {
 		return {
@@ -81,6 +83,7 @@ export const submitBookingRequest = form('unchecked', async (rawData) => {
 		campaignPageId: campaignContext.campaignPageId,
 		contactEmail: normalizedEmail,
 		contactName: data.fullName,
+		visitorIdentifier,
 		now
 	});
 

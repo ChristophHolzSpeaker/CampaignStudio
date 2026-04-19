@@ -157,6 +157,39 @@ export const lead_journeys = pgTable(
 		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id, {
 			onDelete: 'set null'
 		}),
+		first_visit_id: integer('first_visit_id').references(() => campaign_visits.id, {
+			onDelete: 'set null'
+		}),
+		first_campaign_id: integer('first_campaign_id').references(() => campaigns.id, {
+			onDelete: 'set null'
+		}),
+		first_page_id: integer('first_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
+		first_utm_source: text('first_utm_source'),
+		first_utm_medium: text('first_utm_medium'),
+		first_utm_campaign: text('first_utm_campaign'),
+		first_referrer: text('first_referrer'),
+		first_cta_key: text('first_cta_key'),
+		first_seen_at: timestamp('first_seen_at'),
+		last_visit_id: integer('last_visit_id').references(() => campaign_visits.id, {
+			onDelete: 'set null'
+		}),
+		last_campaign_id: integer('last_campaign_id').references(() => campaigns.id, {
+			onDelete: 'set null'
+		}),
+		last_page_id: integer('last_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
+		last_utm_source: text('last_utm_source'),
+		last_utm_medium: text('last_utm_medium'),
+		last_utm_campaign: text('last_utm_campaign'),
+		last_referrer: text('last_referrer'),
+		last_cta_key: text('last_cta_key'),
+		last_seen_at: timestamp('last_seen_at'),
+		attribution_model_version: text('attribution_model_version')
+			.notNull()
+			.default('journey_attribution_v1'),
 		first_touch_type: text('first_touch_type').notNull(),
 		first_touch_at: timestamp('first_touch_at').notNull().defaultNow(),
 		contact_email: text('contact_email'),
