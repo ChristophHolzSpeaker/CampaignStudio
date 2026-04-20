@@ -14,6 +14,7 @@ import {
 	type AnyPgColumn,
 	pgEnum
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const booking_type = pgEnum('booking_type', ['lead', 'general']);
 export const booking_status = pgEnum('booking_status', [
@@ -634,6 +635,24 @@ export const prompts = pgTable('prompts', {
 	created_at: timestamp('created_at').notNull().defaultNow(),
 	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
+
+export const landing_page_asset_sets = pgTable(
+	'landing_page_asset_sets',
+	{
+		id: serial('id').primaryKey(),
+		asset_key: text('asset_key').notNull(),
+		assets_json: jsonb('assets_json').notNull(),
+		is_active: boolean('is_active').notNull().default(true),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		assetKeyUniqueIdx: uniqueIndex('landing_page_asset_sets_asset_key_key').on(table.asset_key),
+		activeSetIdx: uniqueIndex('landing_page_asset_sets_single_active_idx')
+			.on(table.is_active)
+			.where(sql`${table.is_active} = true`)
+	})
+);
 
 // Keep the old task table for now (can be removed later)
 export const task = pgTable('task', {

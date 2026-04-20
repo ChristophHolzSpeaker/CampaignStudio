@@ -8,7 +8,7 @@ import {
 	landingPageGenerationInputSchema,
 	type LandingPageGenerationInput
 } from './schemas/landing-page-input';
-import { landingPageAssets } from './config/landing-page-assets';
+import { loadLandingPageAssets } from './config/landing-page-assets-store';
 
 const adPackageStrategySchema = z.object({
 	targetingSummary: z.string(),
@@ -50,6 +50,8 @@ export async function loadLandingPageGenerationInput(
 	if (!parsedStrategy.success) {
 		throw new Error(`Invalid ad package strategy_json: ${parsedStrategy.error.message}`);
 	}
+
+	const landingPageAssets = await loadLandingPageAssets();
 
 	const normalized = landingPageGenerationInputSchema.parse({
 		campaign: {
