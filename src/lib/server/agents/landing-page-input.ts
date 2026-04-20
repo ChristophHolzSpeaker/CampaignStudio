@@ -3,18 +3,12 @@ import {
 	getCampaignAdPackages,
 	getCampaignById
 } from '$lib/server/campaigns/client';
-import { z } from 'zod';
 import {
 	landingPageGenerationInputSchema,
 	type LandingPageGenerationInput
 } from './schemas/landing-page-input';
 import { loadLandingPageAssets } from './config/landing-page-assets-store';
-
-const adPackageStrategySchema = z.object({
-	targetingSummary: z.string(),
-	messagingAngle: z.string(),
-	conversionGoal: z.string()
-});
+import { adPackageStrategySchema } from './schemas/ad-package-strategy';
 
 export async function loadLandingPageGenerationInput(
 	campaignId: number

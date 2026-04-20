@@ -1,5 +1,6 @@
 import type { CampaignBrief } from '../schemas/campaign-brief';
 import type { GoogleAdsStrategy } from '../schemas/google-ads-strategy';
+import type { AdPackageStrategy } from '../schemas/ad-package-strategy';
 
 export const googleAdsStrategistSystemPrompt = `You are a senior Google Ads Strategist and Landing Page Performance Expert specializing in high-ticket professional services and premium personal brands.
 
@@ -68,10 +69,20 @@ Rules:
 - be concise, realistic, and strategically strong
 - return JSON only`;
 
-export const googleAdsStrategistUserPrompt = (brief: CampaignBrief) =>
+export const googleAdsStrategistUserPrompt = (
+	brief: CampaignBrief,
+	overrides?: AdPackageStrategy
+) =>
 	`Generate a Google Ads search campaign strategy for this campaign brief:
 
-${JSON.stringify(brief, null, 2)}`;
+${JSON.stringify(brief, null, 2)}
+
+${
+	overrides
+		? `Required strategic direction (must be respected):
+${JSON.stringify(overrides, null, 2)}`
+		: ''
+}`;
 
 export const googleAdsStructurerSystemPrompt = `You are a strict JSON transformation engine for a Google Ads campaign generator.
 

@@ -3,6 +3,7 @@ import { traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace'
 import { googleAdsStrategySchema } from './schemas/google-ads-strategy';
 import type { CampaignBrief } from './schemas/campaign-brief';
 import type { GoogleAdsStrategy } from './schemas/google-ads-strategy';
+import type { AdPackageStrategy } from './schemas/ad-package-strategy';
 import {
 	googleAdsStrategistSystemPrompt,
 	googleAdsStrategistUserPrompt
@@ -10,9 +11,10 @@ import {
 
 export async function generateGoogleAdsStrategy(
 	brief: CampaignBrief,
-	traceContext: LlmTraceContext = {}
+	traceContext: LlmTraceContext = {},
+	overrides?: AdPackageStrategy
 ): Promise<GoogleAdsStrategy> {
-	const userPrompt = googleAdsStrategistUserPrompt(brief);
+	const userPrompt = googleAdsStrategistUserPrompt(brief, overrides);
 	let response;
 	try {
 		console.log('Google Ads strategist: calling OpenRouter');
@@ -59,5 +61,14 @@ export async function generateGoogleAdsStrategy(
 	}
 	console.log('Google Ads strategist: strategy validated');
 
-	return parsed.data;
+	if (!overrides) {
+		return parsed.data;
+	}
+
+	return {
+		...parsed.data,
+		targetingSummary: overrides.targetingSummary,
+		messagingAngle: overrides.messagingAngle,
+		conversionGoal: overrides.conversionGoal
+	};
 }
