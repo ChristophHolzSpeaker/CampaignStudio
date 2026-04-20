@@ -26,6 +26,7 @@
 			visitMetrics?: CampaignVisitMetrics | null;
 			adGroups?: CampaignAdGroupWithDetails[];
 			adPackage?: CampaignAdPackageWithDetails | null;
+			liveLandingUrl?: string | null;
 		};
 
 	const getCampaign = () => getPageData().campaign ?? null;
@@ -41,12 +42,36 @@
 	const getLastVisit = () => getVisitMetrics().lastVisitedAt ?? null;
 	const getAdGroups = () => getPageData().adGroups ?? [];
 	const getAdPackage = () => getPageData().adPackage ?? null;
+	const getLiveLandingUrl = () => getPageData().liveLandingUrl ?? null;
 	const getPackageId = () => getAdPackage()?.id ?? '—';
 	const getPackageVersionLabel = () => {
 		const pkg = getAdPackage();
 		return pkg ? `v${pkg.version_number}` : '—';
 	};
 	const getStrategyEntries = () => strategyEntries(getAdPackage()?.strategy_json ?? null);
+
+	let copyStatus = $state<'idle' | 'copied' | 'error'>('idle');
+
+	const copyLiveLandingUrl = async () => {
+		const liveLandingUrl = getLiveLandingUrl();
+
+		if (!liveLandingUrl) {
+			copyStatus = 'error';
+			return;
+		}
+
+		if (typeof navigator === 'undefined' || !navigator.clipboard) {
+			copyStatus = 'error';
+			return;
+		}
+
+		try {
+			await navigator.clipboard.writeText(liveLandingUrl);
+			copyStatus = 'copied';
+		} catch {
+			copyStatus = 'error';
+		}
+	};
 </script>
 
 <section class="flex flex-col gap-6 p-6 lg:p-10">
@@ -147,6 +172,38 @@
 							</div>
 						</div>
 					</div>
+					{#if getCampaign()?.status === 'published'}
+						<div>
+							<span
+								class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
+							>
+								Live Landing Page
+							</span>
+							{#if getLiveLandingUrl()}
+								<div class="space-y-3 rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+									<p class="font-['Space_Grotesk'] text-[11px] break-all text-slate-700">
+										{getLiveLandingUrl()}
+									</p>
+									<button
+										type="button"
+										class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+										onclick={copyLiveLandingUrl}
+									>
+										{copyStatus === 'copied' ? 'Copied' : 'Copy link'}
+									</button>
+									{#if copyStatus === 'error'}
+										<p class="text-[11px] text-red-500">
+											Couldn't copy automatically. Copy it manually.
+										</p>
+									{/if}
+								</div>
+							{:else}
+								<p class="text-xs text-slate-500 italic">
+									Live URL will appear once the landing page slug is available.
+								</p>
+							{/if}
+						</div>
+					{/if}
 					<div>
 						<span
 							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
