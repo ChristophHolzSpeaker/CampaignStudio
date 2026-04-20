@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type {
 	CampaignAdGroupWithDetails,
@@ -15,6 +15,21 @@ import type { Actions } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { campaign_pages } from '$lib/server/db/schema';
 import { desc, eq } from 'drizzle-orm';
+import { runCampaignRegenerationFromStrategyPrompt } from '$lib/server/agents/google-ads-pipeline';
+
+type StrategyUpdateFormState = {
+	values: {
+		strategyPrompt: string;
+	};
+	message?: string;
+	success?: boolean;
+	adPackageId?: number;
+	campaignPageId?: number;
+};
+
+export type CampaignDetailActionData = {
+	strategyUpdate?: StrategyUpdateFormState;
+};
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const candidateId = Number(params.id);
@@ -97,5 +112,53 @@ export const actions: Actions = {
 		await setCampaignStatus(id, targetStatus);
 
 		return { success: true };
+	},
+	updateStrategy: async ({ request, params }) => {
+		const formData = await request.formData();
+		const id = Number(params.id);
+		const strategyPrompt = formData.get('strategy_prompt')?.toString().trim() ?? '';
+
+		if (!Number.isFinite(id) || id <= 0) {
+			return fail<CampaignDetailActionData>(400, {
+				strategyUpdate: {
+					values: { strategyPrompt },
+					message: 'Invalid campaign id.',
+					success: false
+				}
+			});
+		}
+
+		if (!strategyPrompt.length) {
+			return fail<CampaignDetailActionData>(400, {
+				strategyUpdate: {
+					values: { strategyPrompt },
+					message: 'Please describe how the campaign strategy should change.',
+					success: false
+				}
+			});
+		}
+
+		try {
+			const result = await runCampaignRegenerationFromStrategyPrompt(id, strategyPrompt);
+
+			return {
+				strategyUpdate: {
+					values: { strategyPrompt: '' },
+					message: 'Strategy updated. Ads and landing page were regenerated.',
+					success: true,
+					adPackageId: result.adPackageId,
+					campaignPageId: result.campaignPageId
+				}
+			};
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			return fail<CampaignDetailActionData>(500, {
+				strategyUpdate: {
+					values: { strategyPrompt },
+					message: `Strategy update failed: ${message}`,
+					success: false
+				}
+			});
+		}
 	}
 };

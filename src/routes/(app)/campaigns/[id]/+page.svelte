@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AdGroupCard from '$lib/components/blocks/AdGroupCard.svelte';
 	import { strategyEntries } from '$lib/utils/strategy';
+	import type { PageProps } from './$types';
 	import type {
 		CampaignAdGroupWithDetails,
 		CampaignAdPackageWithDetails,
@@ -8,7 +9,17 @@
 	} from '$lib/server/campaigns/client';
 	import type { CampaignVisitMetrics } from '$lib/validation/campaign-visit-metrics';
 
-	let { data } = $props();
+	type StrategyUpdateState = {
+		values: {
+			strategyPrompt: string;
+		};
+		message?: string;
+		success?: boolean;
+		adPackageId?: number;
+		campaignPageId?: number;
+	};
+
+	let { data, form }: PageProps = $props();
 
 	const formatFriendlyDate = (value?: Date | string) => {
 		if (!value) return 'Pending';
@@ -49,6 +60,23 @@
 		return pkg ? `v${pkg.version_number}` : '—';
 	};
 	const getStrategyEntries = () => strategyEntries(getAdPackage()?.strategy_json ?? null);
+	const getStrategyUpdateState = (): StrategyUpdateState | null => {
+		const actionData = form as { strategyUpdate?: StrategyUpdateState } | null | undefined;
+		return actionData?.strategyUpdate ?? null;
+	};
+	const isStrategyUpdateSuccess = () => getStrategyUpdateState()?.success === true;
+	const getStrategyMessage = () => getStrategyUpdateState()?.message ?? null;
+	const getStrategyPromptValue = () => {
+		const state = getStrategyUpdateState();
+
+		if (!state || state.success === true) {
+			return '';
+		}
+
+		return state.values.strategyPrompt;
+	};
+	const getUpdatedPackageId = () => getStrategyUpdateState()?.adPackageId ?? null;
+	const getUpdatedPageId = () => getStrategyUpdateState()?.campaignPageId ?? null;
 
 	let copyStatus = $state<'idle' | 'copied' | 'error'>('idle');
 
@@ -123,6 +151,47 @@
 								{/each}
 							</div>
 						{/if}
+						<form method="POST" action="?/updateStrategy" class="mt-4 space-y-3">
+							<input type="hidden" name="id" value={getCampaign()?.id ?? ''} />
+							<label
+								for="strategy-prompt"
+								class="block font-['Space_Grotesk'] text-[10px] font-bold text-slate-500 uppercase"
+							>
+								Strategy edit prompt
+							</label>
+							<textarea
+								id="strategy-prompt"
+								name="strategy_prompt"
+								rows="4"
+								class="w-full rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-[0_2px_12px_rgba(0,0,0,0.02)] focus:border-slate-300 focus:outline-none"
+								placeholder="Describe how you'd like to refine the strategy..."
+								>{getStrategyPromptValue()}</textarea
+							>
+							<button
+								type="submit"
+								class="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+							>
+								Update Strategy + Regenerate
+							</button>
+							{#if getStrategyMessage()}
+								<p
+									class="text-xs font-medium"
+									class:text-green-600={isStrategyUpdateSuccess()}
+									class:text-red-500={!isStrategyUpdateSuccess()}
+								>
+									{getStrategyMessage()}
+								</p>
+							{/if}
+							{#if isStrategyUpdateSuccess() && (getUpdatedPackageId() || getUpdatedPageId())}
+								<p class="font-['Space_Grotesk'] text-[10px] text-slate-500 uppercase">
+									{#if getUpdatedPackageId()}New package: {getUpdatedPackageId()}{/if}
+									{#if getUpdatedPackageId() && getUpdatedPageId()}
+										·
+									{/if}
+									{#if getUpdatedPageId()}New page: {getUpdatedPageId()}{/if}
+								</p>
+							{/if}
+						</form>
 					</div>
 					<div>
 						<span
