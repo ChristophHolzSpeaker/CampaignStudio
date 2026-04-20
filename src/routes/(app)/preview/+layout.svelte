@@ -27,7 +27,12 @@
 				: '/preview/landing-page',
 			match: 'prefix'
 		},
-		{ label: 'Analytics', disabled: true },
+		{
+			label: 'Analytics',
+			href: campaignId ? `/campaigns/${campaignId}/analytics` : undefined,
+			match: 'prefix',
+			disabled: !campaignId
+		},
 		{ label: 'History', disabled: true }
 	]);
 </script>

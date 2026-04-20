@@ -13,7 +13,7 @@
 		campaignPageId?: number | null;
 	};
 
-	const isDetailRoute = $derived(/^\/campaigns\/\d+$/.test($page.url.pathname));
+	const isDetailRoute = $derived(/^\/campaigns\/\d+(?:\/analytics)?$/.test($page.url.pathname));
 	const sidebarData = $derived(($page.data as CampaignSidebarData) ?? {});
 	const campaign = $derived(sidebarData.campaign ?? null);
 	const campaignPageId = $derived(sidebarData.campaignPageId ?? null);
@@ -34,7 +34,7 @@
 					match: 'prefix',
 					disabled: !previewHref
 				},
-				{ label: 'Analytics', href: '/campaigns/analytics', match: 'prefix' },
+				{ label: 'Analytics', href: `/campaigns/${campaign.id}/analytics`, match: 'prefix' },
 				{ label: 'History', disabled: true }
 			];
 		}
@@ -48,7 +48,11 @@
 
 {#snippet primaryAction()}
 	{#if isDetailRoute && campaign}
-		<form method="POST" action="?/publish" class="campaign-sidebar-action">
+		<form
+			method="POST"
+			action={`/campaigns/${campaign.id}?/publish`}
+			class="campaign-sidebar-action"
+		>
 			<input type="hidden" name="id" value={campaign.id} />
 			<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
 			<button type="submit" class="btn-dark">
