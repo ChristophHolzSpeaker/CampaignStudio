@@ -1,5 +1,5 @@
 <script>
-	import { audienceOptions, formatOptions, purposeOptions } from '$lib/constants/prompts';
+	import { promptWildcardValue, purposeOptions } from '$lib/constants/prompts';
 	import Input from '$lib/components/elements/Input.svelte';
 	import Select from '$lib/components/elements/Select.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
@@ -8,6 +8,7 @@
 	const values = () => props.values ?? {};
 	const errors = () => props.errors ?? {};
 	const isActive = () => values().is_active === 'true';
+	const wildcardHint = `Use ${promptWildcardValue} for wildcard fallback.`;
 </script>
 
 <div class="grid gap-8">
@@ -30,26 +31,25 @@
 			value={values().purpose ?? ''}
 			error={errors().purpose}
 		/>
-		<Select
+		<Input
 			id="audience"
 			name="audience"
 			label="Audience"
-			options={audienceOptions}
-			placeholder="Select audience"
 			value={values().audience ?? ''}
 			error={errors().audience}
+			placeholder="Banks, AI founders, or *"
 		/>
-		<Select
+		<Input
 			id="format"
 			name="format"
 			label="Format"
-			options={formatOptions}
-			placeholder="Select format"
 			value={values().format ?? ''}
 			error={errors().format}
+			placeholder="Panel moderation, keynote, or *"
 		/>
 		<Input id="topic" name="topic" label="Topic (optional)" value={values().topic ?? ''} />
 	</div>
+	<p class="text-[0.65rem] tracking-[0.12em] text-[#6b7280] uppercase">{wildcardHint}</p>
 
 	<div class="grid gap-8">
 		<Input

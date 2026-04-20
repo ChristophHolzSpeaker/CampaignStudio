@@ -22,7 +22,7 @@ export const actions: Actions = {
 		} catch (error) {
 			const message =
 				error instanceof Error && error.message.includes('duplicate key')
-					? 'A prompt already exists for that audience/format combination'
+					? 'A prompt already exists for that purpose/audience/format/topic combination'
 					: 'Unable to save prompt';
 			return fail(400, { values: formValues, formError: message });
 		}
