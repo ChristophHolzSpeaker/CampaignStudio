@@ -2,14 +2,9 @@
 	import type { ActionData } from './$types';
 	import { applyAction, enhance } from '$app/forms';
 	import { onDestroy } from 'svelte';
-	import {
-		audienceOptions,
-		formatOptions,
-		type CampaignFormSubmission
-	} from '$lib/validation/campaign';
+	import { type CampaignFormSubmission } from '$lib/validation/campaign';
 	import Button from '$lib/components/elements/Button.svelte';
 	import Input from '$lib/components/elements/Input.svelte';
-	import Select from '$lib/components/elements/Select.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import MarkdownText from '$lib/components/elements/MarkdownText.svelte';
 
@@ -513,7 +508,7 @@
 						</li>
 						<li class="flex items-start gap-3">
 							<span class="text-(--accent)">•</span>
-							Audience and format establish tone. Choose the precise match.
+							Audience and format establish tone. Keep them specific and commercially clear.
 						</li>
 						<li class="flex items-start gap-3">
 							<span class="text-(--accent)">•</span>
@@ -547,24 +542,26 @@
 					></Input>
 
 					<div class="grid gap-6 md:grid-cols-2">
-						<Select
+						<Input
 							id="audience"
 							name="audience"
-							label="Audience"
-							options={audienceOptions}
-							placeholder="Select an audience"
+							type="text"
 							value={getValues().audience}
 							error={getFieldError('audience')}
-						></Select>
-						<Select
+							placeholder="CIOs at industrial enterprises"
+							autocomplete="off"
+							label="Audience"
+						></Input>
+						<Input
 							id="format"
 							name="format"
-							label="Format"
-							options={formatOptions}
-							placeholder="Select format"
+							type="text"
 							value={getValues().format}
 							error={getFieldError('format')}
-						></Select>
+							placeholder="Executive breakfast briefing"
+							autocomplete="off"
+							label="Format"
+						></Input>
 					</div>
 
 					<Input

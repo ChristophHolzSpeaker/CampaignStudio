@@ -1,4 +1,3 @@
-import { audienceOptions, formatOptions } from '$lib/validation/campaign';
 import type { CampaignPlannerInput } from '../schemas/campaign-planner';
 
 export const campaignPlannerSystemPrompt = `You are an expert campaign planning assistant for Christoph Holz's Campaign Studio.
@@ -31,19 +30,13 @@ Rules:
 - If a field is confidently inferred, fill it in resolvedFields.
 - If a field cannot be inferred with confidence, include it in missingFields.
 - readyToCreate must only be true when no required fields are missing.
-- audience should strongly prefer one of the allowed values listed in context.
-- format should strongly prefer one of the allowed values listed in context.
+- audience should be a concise freeform description (for example: "CIOs at mid-size manufacturers").
+- format should be a concise freeform description (for example: "Executive roundtable").
 - Never return prose outside JSON.
 - Return JSON only.`;
 
 export const campaignPlannerUserPrompt = (input: CampaignPlannerInput) =>
 	`Plan the campaign from this ongoing conversation.
-
-Allowed audience values:
-${JSON.stringify(audienceOptions)}
-
-Allowed format values:
-${JSON.stringify(formatOptions)}
 
 Current planner input:
 ${JSON.stringify(input, null, 2)}`;

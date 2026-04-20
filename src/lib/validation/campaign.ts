@@ -1,27 +1,23 @@
 import { z } from 'zod';
 
-export const audienceOptions = ['IT Companies', 'Banks', 'Associations (Verbände)'] as const;
-export const formatOptions = [
-	'Morning Keynotes',
-	'Endnotes',
-	'Business Breakfasts',
-	'Panel Moderations',
-	'Dinner Speeches'
-] as const;
+const requiredFreeformField = (label: string) =>
+	z
+		.string()
+		.trim()
+		.min(2, `${label} must be at least 2 characters`)
+		.max(120, `${label} must be 120 characters or fewer`);
 
 export const campaignFormSchema = z.object({
-	name: z.string().trim().min(2),
-	audience: z.enum(audienceOptions),
-	format: z.enum(formatOptions),
-	topic: z.string().trim().min(2),
-	language: z.string().trim().min(2),
-	geography: z.string().trim().min(2),
-	notes: z.string().trim().optional()
+	name: requiredFreeformField('Campaign name'),
+	audience: requiredFreeformField('Audience'),
+	format: requiredFreeformField('Format'),
+	topic: requiredFreeformField('Topic'),
+	language: requiredFreeformField('Language'),
+	geography: requiredFreeformField('Geography'),
+	notes: z.string().trim().max(2000, 'Notes must be 2000 characters or fewer').optional()
 });
 
 export type CampaignFormValues = z.infer<typeof campaignFormSchema>;
-export type AudienceOption = (typeof audienceOptions)[number];
-export type FormatOption = (typeof formatOptions)[number];
 export type CampaignFormSubmission = {
 	name: string;
 	audience: string;
