@@ -1,11 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import {
-	audienceOptions,
-	campaignFormSchema,
-	formatOptions,
-	type CampaignFormSubmission
-} from '$lib/validation/campaign';
+import { campaignFormSchema, type CampaignFormSubmission } from '$lib/validation/campaign';
 import { createCampaign } from '$lib/server/campaigns/client';
 import { runCampaignPlanner } from '$lib/server/agents/campaign-planner';
 import { runGoogleAdsGenerationForCampaign } from '$lib/server/agents/google-ads-pipeline';
@@ -124,64 +119,6 @@ const parsePlannerState = (rawValue: FormDataEntryValue | null): PlannerState =>
 	}
 };
 
-const normalizeOption = (value: string, options: readonly string[]): string => {
-	const lowerValue = value.trim().toLowerCase();
-	const exact = options.find((option) => option.toLowerCase() === lowerValue);
-	return exact ?? '';
-};
-
-const normalizeAudience = (value: string): string => {
-	const exact = normalizeOption(value, audienceOptions);
-	if (exact) {
-		return exact;
-	}
-
-	const lower = value.trim().toLowerCase();
-	if (lower.includes('bank') || lower.includes('financ')) {
-		return 'Banks';
-	}
-
-	if (lower.includes('association') || lower.includes('verband')) {
-		return 'Associations (Verbände)';
-	}
-
-	if (lower.includes('it') || lower.includes('tech') || lower.includes('software')) {
-		return 'IT Companies';
-	}
-
-	return '';
-};
-
-const normalizeFormat = (value: string): string => {
-	const exact = normalizeOption(value, formatOptions);
-	if (exact) {
-		return exact;
-	}
-
-	const lower = value.trim().toLowerCase();
-	if (lower.includes('morning') && lower.includes('keynote')) {
-		return 'Morning Keynotes';
-	}
-
-	if (lower.includes('endnote')) {
-		return 'Endnotes';
-	}
-
-	if (lower.includes('business') && lower.includes('breakfast')) {
-		return 'Business Breakfasts';
-	}
-
-	if (lower.includes('panel') && (lower.includes('moderation') || lower.includes('moderator'))) {
-		return 'Panel Moderations';
-	}
-
-	if (lower.includes('dinner') && lower.includes('speech')) {
-		return 'Dinner Speeches';
-	}
-
-	return '';
-};
-
 const mergeResolvedFields = (
 	previous: CampaignFormSubmission,
 	proposed: Partial<CampaignFormSubmission>
@@ -195,13 +132,10 @@ const mergeResolvedFields = (
 		return trimmed.length ? trimmed : fallback;
 	};
 
-	const nextAudience = normalizeAudience(proposed.audience ?? '') || previous.audience;
-	const nextFormat = normalizeFormat(proposed.format ?? '') || previous.format;
-
 	return {
 		name: normalizeText(proposed.name, previous.name),
-		audience: nextAudience,
-		format: nextFormat,
+		audience: normalizeText(proposed.audience, previous.audience),
+		format: normalizeText(proposed.format, previous.format),
 		topic: normalizeText(proposed.topic, previous.topic),
 		language: normalizeText(proposed.language, previous.language),
 		geography: normalizeText(proposed.geography, previous.geography),
@@ -216,11 +150,11 @@ const getMissingPlannerFields = (values: CampaignFormSubmission): PlannerRequire
 		missing.push('name');
 	}
 
-	if (!normalizeOption(values.audience, audienceOptions)) {
+	if (!values.audience.trim()) {
 		missing.push('audience');
 	}
 
-	if (!normalizeOption(values.format, formatOptions)) {
+	if (!values.format.trim()) {
 		missing.push('format');
 	}
 
