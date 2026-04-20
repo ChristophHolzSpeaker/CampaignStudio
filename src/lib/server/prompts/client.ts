@@ -1,13 +1,18 @@
 import { db } from '$lib/server/db';
 import { prompts } from '$lib/server/db/schema';
 import { and, asc, eq } from 'drizzle-orm';
-import { audienceOptions, formatOptions, purposeOptions } from '$lib/constants/prompts';
+import { promptWildcardValue, purposeOptions } from '$lib/constants/prompts';
 
 export type PromptPurpose = 'intermediate' | 'final' | 'edit_plan' | 'apply_plan';
 
+export const PROMPT_WILDCARD = promptWildcardValue;
+
+export function normalizePromptDimension(value: string): string {
+	return value.trim().replace(/\s+/g, ' ');
+}
+
 export const promptOptions = {
-	audiences: audienceOptions,
-	formats: formatOptions,
+	wildcard: PROMPT_WILDCARD,
 	purposes: purposeOptions
 };
 
@@ -364,13 +369,15 @@ export async function getPromptById(id: number): Promise<PromptRecord | null> {
 
 export async function createPrompt(input: PromptInput): Promise<PromptRecord> {
 	const normalizedTopic = normalizeTopic(input.topic);
+	const normalizedAudience = normalizePromptDimension(input.audience);
+	const normalizedFormat = normalizePromptDimension(input.format);
 	const [created] = await db
 		.insert(prompts)
 		.values({
 			name: input.name,
 			purpose: input.purpose,
-			audience: input.audience,
-			format: input.format,
+			audience: normalizedAudience,
+			format: normalizedFormat,
 			topic: normalizedTopic,
 			model: input.model,
 			system_prompt: input.system_prompt,
@@ -389,13 +396,15 @@ export async function createPrompt(input: PromptInput): Promise<PromptRecord> {
 
 export async function updatePrompt(id: number, input: PromptInput): Promise<PromptRecord> {
 	const normalizedTopic = normalizeTopic(input.topic);
+	const normalizedAudience = normalizePromptDimension(input.audience);
+	const normalizedFormat = normalizePromptDimension(input.format);
 	const [updated] = await db
 		.update(prompts)
 		.set({
 			name: input.name,
 			purpose: input.purpose,
-			audience: input.audience,
-			format: input.format,
+			audience: normalizedAudience,
+			format: normalizedFormat,
 			topic: normalizedTopic,
 			model: input.model,
 			system_prompt: input.system_prompt,
@@ -427,21 +436,49 @@ export interface PromptLookupOptions {
 export async function findPromptTemplate(
 	options: PromptLookupOptions
 ): Promise<PromptRecord | null> {
+	const normalizedAudience = normalizePromptDimension(options.audience) || PROMPT_WILDCARD;
+	const normalizedFormat = normalizePromptDimension(options.format) || PROMPT_WILDCARD;
 	const topicValue = normalizeTopic(options.topic);
-	const filters = [
-		eq(prompts.purpose, options.purpose),
-		eq(prompts.audience, options.audience),
-		eq(prompts.format, options.format),
-		eq(prompts.is_active, true),
-		eq(prompts.topic, topicValue)
+
+	const fallbackCandidates: Array<{ audience: string; format: string; topic: string }> = [
+		{ audience: normalizedAudience, format: normalizedFormat, topic: topicValue },
+		{ audience: normalizedAudience, format: normalizedFormat, topic: '' },
+		{ audience: normalizedAudience, format: PROMPT_WILDCARD, topic: topicValue },
+		{ audience: normalizedAudience, format: PROMPT_WILDCARD, topic: '' },
+		{ audience: PROMPT_WILDCARD, format: normalizedFormat, topic: topicValue },
+		{ audience: PROMPT_WILDCARD, format: normalizedFormat, topic: '' },
+		{ audience: PROMPT_WILDCARD, format: PROMPT_WILDCARD, topic: topicValue },
+		{ audience: PROMPT_WILDCARD, format: PROMPT_WILDCARD, topic: '' }
 	];
 
-	const [record] = await db
-		.select()
-		.from(prompts)
-		.where(and(...filters))
-		.limit(1);
-	return (record as PromptRecord) ?? null;
+	const seen = new Set<string>();
+	for (const candidate of fallbackCandidates) {
+		const key = `${candidate.audience}::${candidate.format}::${candidate.topic}`;
+		if (seen.has(key)) {
+			continue;
+		}
+		seen.add(key);
+
+		const filters = [
+			eq(prompts.purpose, options.purpose),
+			eq(prompts.audience, candidate.audience),
+			eq(prompts.format, candidate.format),
+			eq(prompts.is_active, true),
+			eq(prompts.topic, candidate.topic)
+		];
+
+		const [record] = await db
+			.select()
+			.from(prompts)
+			.where(and(...filters))
+			.limit(1);
+
+		if (record) {
+			return record as PromptRecord;
+		}
+	}
+
+	return null;
 }
 
 export function renderPromptTemplate(template: string, values: Record<string, string>): string {

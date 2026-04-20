@@ -36,7 +36,7 @@ export const actions: Actions = {
 		} catch (err) {
 			const message =
 				err instanceof Error && err.message.includes('duplicate key')
-					? 'A prompt already exists for that audience/format combination'
+					? 'A prompt already exists for that purpose/audience/format/topic combination'
 					: 'Unable to update prompt';
 			return fail(400, { values: formValues, formError: message });
 		}
