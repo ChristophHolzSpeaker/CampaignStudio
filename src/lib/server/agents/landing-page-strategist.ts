@@ -1,11 +1,13 @@
 import { callOpenRouter } from '$lib/server/openrouter/client';
 import { traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace';
 import {
+	appendPromptLibraryGuidance,
 	buildLandingPageStrategistSystemPrompt,
 	landingPageStrategistUserPrompt
 } from './prompts/landing-page';
 import { buildSectionCatalog } from './section-catalog';
 import { getSectionEligibility } from './section-eligibility';
+import { resolvePromptGuidanceForCampaign } from './prompt-guidance';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 import {
 	landingPagePlanSchema,
@@ -56,7 +58,41 @@ export async function generateLandingPagePlan(
 	};
 
 	const userPrompt = landingPageStrategistUserPrompt(input, promptContext);
-	const systemPrompt = buildLandingPageStrategistSystemPrompt(promptContext);
+	const baseSystemPrompt = buildLandingPageStrategistSystemPrompt(promptContext);
+
+	let systemPrompt = baseSystemPrompt;
+	try {
+		const guidance = await resolvePromptGuidanceForCampaign('intermediate', {
+			name: input.campaign.name,
+			audience: input.campaign.audience,
+			format: input.campaign.format,
+			topic: input.campaign.topic,
+			language: input.campaign.language,
+			geography: input.campaign.geography,
+			notes: input.campaign.notes
+		});
+
+		systemPrompt = appendPromptLibraryGuidance(baseSystemPrompt, guidance.guidance);
+		traceLlm(
+			'agent_prompt_guidance',
+			{ ...traceContext, stage: 'landing_page_strategist' },
+			{
+				found: guidance.matchedPromptId !== null,
+				promptId: guidance.matchedPromptId,
+				promptName: guidance.matchedPromptName,
+				audience: guidance.matchedAudience,
+				format: guidance.matchedFormat
+			}
+		);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.warn('Landing page strategist: prompt guidance lookup failed', message);
+		traceLlm(
+			'agent_prompt_guidance_error',
+			{ ...traceContext, stage: 'landing_page_strategist' },
+			{ message }
+		);
+	}
 
 	let response;
 	try {
