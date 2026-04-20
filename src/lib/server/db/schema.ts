@@ -14,6 +14,7 @@ import {
 	type AnyPgColumn,
 	pgEnum
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const booking_type = pgEnum('booking_type', ['lead', 'general']);
 export const booking_status = pgEnum('booking_status', [
@@ -634,6 +635,68 @@ export const prompts = pgTable('prompts', {
 	created_at: timestamp('created_at').notNull().defaultNow(),
 	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
+
+export const media_assets = pgTable(
+	'media_assets',
+	{
+		id: text('id').primaryKey(),
+		kind: text('kind').notNull(),
+		title: text('title').notNull(),
+		description: text('description').notNull(),
+		usage_notes: text('usage_notes').notNull(),
+		avoid_notes: text('avoid_notes'),
+		primary_url: text('primary_url').notNull(),
+		thumbnail_url: text('thumbnail_url'),
+		thumbnail_alt: text('thumbnail_alt'),
+		section_types: text('section_types')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		topics: text('topics')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		audiences: text('audiences')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		formats: text('formats')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		intent_tags: text('intent_tags')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		is_active: boolean('is_active').notNull().default(true),
+		priority: integer('priority').notNull().default(100),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		activeIdx: index('media_assets_active_idx').on(table.is_active),
+		priorityIdx: index('media_assets_priority_idx').on(table.priority),
+		kindIdx: index('media_assets_kind_idx').on(table.kind)
+	})
+);
+
+export const landing_page_asset_sets = pgTable(
+	'landing_page_asset_sets',
+	{
+		id: serial('id').primaryKey(),
+		asset_key: text('asset_key').notNull(),
+		assets_json: jsonb('assets_json').notNull(),
+		is_active: boolean('is_active').notNull().default(true),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		assetKeyUniqueIdx: uniqueIndex('landing_page_asset_sets_asset_key_key').on(table.asset_key),
+		activeSetIdx: uniqueIndex('landing_page_asset_sets_single_active_idx')
+			.on(table.is_active)
+			.where(sql`${table.is_active} = true`)
+	})
+);
 
 // Keep the old task table for now (can be removed later)
 export const task = pgTable('task', {

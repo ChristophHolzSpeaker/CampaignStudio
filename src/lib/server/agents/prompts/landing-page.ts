@@ -114,6 +114,10 @@ Rules:
 * avoid selecting adjacent sections that do the same job or repeat the same narrative function
 * section purpose and contentDirection are internal planning artifacts, not final customer-facing copy
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
+* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID
+* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
+* use only IDs that exist in input.assets.assetCatalog
+* never invent media IDs or media URLs
 * section order should reflect a strong conversion narrative
 * avoid bloated or repetitive pages
 * maintain message match with ad intent without collapsing multiple sections into one repeated line
@@ -132,7 +136,17 @@ Return exactly one valid JSON object with this shape:
       "purpose": "string",
       "contentDirection": "string"
     }
-  ]
+  ],
+  "assetPlan": {
+    "hero": {
+      "videoAssetId": "string",
+      "rationale": "string"
+    },
+    "hybridContentSection": {
+      "supportingImageAssetIds": ["string"],
+      "rationale": "string"
+    }
+  }
 }`;
 
 export const appendPromptLibraryGuidance = (
@@ -209,8 +223,10 @@ Asset usage requirements:
 * landing page generation input includes input.assets with pre-approved media, proof, and compliance records
 * for logos_of_trust_ribbon, use input.assets.fixedLogosRibbon.logos
 * for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
-* for hero media, use input.assets.heroDefaults
+* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
+* for hybrid supporting visuals, resolve IDs from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages
 * for compliance footer fields, use input.assets.complianceDefaults
+* use only approved assets listed in input.assets
 * do not invent assets outside input.assets
 
 Hybrid section contract requirements:
