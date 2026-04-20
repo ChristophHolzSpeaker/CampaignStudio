@@ -135,6 +135,22 @@ Return exactly one valid JSON object with this shape:
   ]
 }`;
 
+export const appendPromptLibraryGuidance = (
+	basePrompt: string,
+	promptLibraryGuidance?: string
+): string => {
+	const guidance = promptLibraryGuidance?.trim();
+	if (!guidance) {
+		return basePrompt;
+	}
+
+	return `${basePrompt}
+
+Prompt library guidance:
+
+${guidance}`;
+};
+
 export const landingPageStrategistUserPrompt = (
 	input: LandingPageGenerationInput,
 	context: PromptContext
@@ -149,12 +165,13 @@ ${JSON.stringify(input, null, 2)}`;
 
 export const buildLandingPageWriterSystemPrompt = (
 	context: PromptContext,
-	selectedSectionTypes: readonly string[] = []
+	selectedSectionTypes: readonly string[] = [],
+	promptLibraryGuidance?: string
 ) => {
 	const sectionTypesForGuidance =
 		selectedSectionTypes.length > 0 ? selectedSectionTypes : context.allowedSectionTypes;
 
-	return `You are a strict landing page JSON writer for Campaign Studio.
+	const basePrompt = `You are a strict landing page JSON writer for Campaign Studio.
 
 Your task is to convert a landing page generation input and a strategic landing page plan into the exact final landing page document required by the application.
 
@@ -202,6 +219,8 @@ Hybrid section contract requirements:
 * if hybrid_content_section is included, props.benefits must be [{ "title": "string", "body": "string" }]
 * if hybrid_content_section is included, props.deepDiveTitle is required
 * if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]`;
+
+	return appendPromptLibraryGuidance(basePrompt, promptLibraryGuidance);
 };
 
 export const landingPageWriterUserPrompt = (

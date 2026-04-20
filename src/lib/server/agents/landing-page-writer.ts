@@ -8,6 +8,7 @@ import {
 	buildLandingPageWriterSystemPrompt,
 	landingPageWriterUserPrompt
 } from './prompts/landing-page';
+import { resolvePromptGuidanceForCampaign } from './prompt-guidance';
 import { buildSectionCatalog } from './section-catalog';
 import { getSectionEligibility } from './section-eligibility';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
@@ -522,7 +523,47 @@ export async function generateLandingPageDocument(
 
 	const userPrompt = landingPageWriterUserPrompt(input, plan, promptContext);
 	const selectedSectionTypes = plan.sectionPlan.map((section) => section.type);
-	const systemPrompt = buildLandingPageWriterSystemPrompt(promptContext, selectedSectionTypes);
+
+	let promptLibraryGuidance = '';
+	try {
+		const guidance = await resolvePromptGuidanceForCampaign('final', {
+			name: input.campaign.name,
+			audience: input.campaign.audience,
+			format: input.campaign.format,
+			topic: input.campaign.topic,
+			language: input.campaign.language,
+			geography: input.campaign.geography,
+			notes: input.campaign.notes
+		});
+		promptLibraryGuidance = guidance.guidance;
+		traceLlm(
+			'agent_prompt_guidance',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				found: guidance.matchedPromptId !== null,
+				promptId: guidance.matchedPromptId,
+				promptName: guidance.matchedPromptName,
+				audience: guidance.matchedAudience,
+				format: guidance.matchedFormat
+			}
+		);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		console.warn('Landing page writer: prompt guidance lookup failed', message);
+		traceLlm(
+			'agent_prompt_guidance_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				message
+			}
+		);
+	}
+
+	const systemPrompt = buildLandingPageWriterSystemPrompt(
+		promptContext,
+		selectedSectionTypes,
+		promptLibraryGuidance
+	);
 
 	let response;
 	try {
