@@ -217,7 +217,8 @@ export const vw_booking_enriched = pgView('vw_booking_enriched', {
 	last_referrer: text('last_referrer'),
 	last_cta_key: text('last_cta_key'),
 	last_seen_at: timestamp('last_seen_at'),
-	attribution_model_version: text('attribution_model_version')
+	attribution_model_version: text('attribution_model_version'),
+	first_touch_type: text('first_touch_type')
 }).existing();
 
 export const vw_funnel_daily = pgView('vw_funnel_daily', {
