@@ -31,6 +31,9 @@ Corrective rules:
 - include these required section types: ${requiredSectionTypes.join(', ')}
 - sectionPlan must not contain duplicate section types
 - place seo as the first section in sectionPlan
+- when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos
+- when hybrid_content_section is selected, include assetPlan.hybridContentSection.supportingImageAssetIds from input.assets.assetCatalog.hybridSupportingImages
+- never invent media IDs or media URLs
 - do not output commentary or markdown
 - return JSON only
 

@@ -1,5 +1,5 @@
 import { landingPageDocumentSchema, type LandingPageDocument } from '$lib/page-builder/page';
-import type { PageSectionType } from '$lib/page-builder/sections';
+import type { HybridSupportingVisualItem, PageSectionType } from '$lib/page-builder/sections';
 import { callOpenRouter } from '$lib/server/openrouter/client';
 import type { PageSection } from '$lib/page-builder/sections';
 import { traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace';
@@ -37,6 +37,59 @@ function inferBenefitTitle(value: string, index: number): string {
 	return `Benefit ${index + 1}`;
 }
 
+function resolveHeroVideoSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): LandingPageGenerationInput['assets']['assetCatalog']['heroVideos'][number] | null {
+	const selectedId = plan.assetPlan?.hero?.videoAssetId;
+	if (!selectedId) {
+		return null;
+	}
+
+	const selected = input.assets.assetCatalog.heroVideos.find((asset) => asset.id === selectedId);
+	if (!selected) {
+		console.warn(
+			`Landing page writer: hero asset selection '${selectedId}' not found in approved catalog; using fallback defaults.`
+		);
+		return null;
+	}
+
+	return selected;
+}
+
+function resolveHybridSupportingVisualSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): HybridSupportingVisualItem[] {
+	const selectedIds = plan.assetPlan?.hybridContentSection?.supportingImageAssetIds;
+	if (!selectedIds || selectedIds.length === 0) {
+		return [];
+	}
+
+	const catalogById = new Map(
+		input.assets.assetCatalog.hybridSupportingImages.map((asset) => [asset.id, asset])
+	);
+	const selectedItems: HybridSupportingVisualItem[] = [];
+
+	for (const id of selectedIds) {
+		const selected = catalogById.get(id);
+		if (!selected) {
+			console.warn(
+				`Landing page writer: hybrid supporting image '${id}' not found in approved catalog; skipping this asset.`
+			);
+			continue;
+		}
+
+		selectedItems.push({
+			imageUrl: selected.imageUrl,
+			alt: selected.alt,
+			caption: selected.caption
+		});
+	}
+
+	return selectedItems;
+}
+
 function hydrateSectionWithAssets(
 	section: PageSection,
 	input: LandingPageGenerationInput,
@@ -48,6 +101,7 @@ function hydrateSectionWithAssets(
 		case 'immediate_authority_hero': {
 			const fallbackHeadline = `${plan.pageTitle}`;
 			const fallbackSubheadline = input.adGroup.intentSummary || input.adPackage.messagingAngle;
+			const selectedHeroVideo = resolveHeroVideoSelection(input, plan);
 			const primaryCtaLabel =
 				section.props.primaryCtaLabel?.trim() || assets.heroDefaults.primaryCtaLabelDefault;
 
@@ -63,11 +117,18 @@ function hydrateSectionWithAssets(
 					primaryCtaLabel,
 					primaryCtaHref: ctaHref,
 					primaryCtaAction: ctaAction,
-					videoEmbedUrl: section.props.videoEmbedUrl ?? assets.heroDefaults.videoEmbedUrl,
+					videoEmbedUrl:
+						selectedHeroVideo?.videoEmbedUrl ??
+						section.props.videoEmbedUrl ??
+						assets.heroDefaults.videoEmbedUrl,
 					videoThumbnailUrl:
-						section.props.videoThumbnailUrl ?? assets.heroDefaults.videoThumbnailUrl,
+						selectedHeroVideo?.videoThumbnailUrl ??
+						section.props.videoThumbnailUrl ??
+						assets.heroDefaults.videoThumbnailUrl,
 					videoThumbnailAlt:
-						section.props.videoThumbnailAlt || assets.heroDefaults.videoThumbnailAlt
+						selectedHeroVideo?.videoThumbnailAlt ||
+						section.props.videoThumbnailAlt ||
+						assets.heroDefaults.videoThumbnailAlt
 				}
 			};
 		}
@@ -97,6 +158,7 @@ function hydrateSectionWithAssets(
 
 		case 'hybrid_content_section': {
 			const props: Record<string, unknown> = isRecord(section.props) ? section.props : {};
+			const selectedSupportingVisualItems = resolveHybridSupportingVisualSelection(input, plan);
 
 			const rawBenefits: unknown[] = Array.isArray(props.benefits) ? props.benefits : [];
 			const normalizedBenefits = rawBenefits
@@ -194,7 +256,11 @@ function hydrateSectionWithAssets(
 					intro,
 					benefits: fallbackBenefits,
 					deepDiveTitle,
-					deepDiveItems
+					deepDiveItems,
+					supportingVisualItems:
+						selectedSupportingVisualItems.length > 0
+							? selectedSupportingVisualItems
+							: section.props.supportingVisualItems
 				}
 			};
 		}
@@ -397,6 +463,9 @@ Corrective rules:
 - Do not output commentary.
 - Do not output markdown.
 - Use assets from input.assets for proof, media, and compliance values.
+- For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
+- For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
+- Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.

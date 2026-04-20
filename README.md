@@ -33,7 +33,7 @@ supabase stop
 - All server-side database access (including campaign reads and writes) uses Drizzle via `src/lib/server/db`, keeping schema definitions and migrations in sync with Postgres. Treat Drizzle as the primary server data layer.
 - Supabase SDK lives in the root-level Supabase project (`/supabase`) and is used for auth/session-aware helpers under `src/hooks.server.ts` + the layout. Reserve the SDK for auth, storage, realtime, or any client-side interactions that must respect row-level security.
 - For this MVP you can think of Supabase as "Postgres + auth provider," while Drizzle is the typed query layer that runs inside SvelteKit server actions.
-- Landing page asset configuration is stored in Postgres (`landing_page_asset_sets`) and validated against the server schema before use. If no active row exists or validation fails, the app falls back to `src/lib/server/agents/config/landing-page-assets.ts`.
+- Landing page asset configuration is stored in Postgres (`landing_page_asset_sets`) and validated against the server schema before use. AI-selectable media options are curated in `media_assets` and injected into the generation input as an approved catalog. If no active row exists or validation fails, the app falls back to `src/lib/server/agents/config/landing-page-assets.ts`.
 
 ## Quality / build commands
 

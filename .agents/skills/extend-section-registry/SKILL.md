@@ -14,6 +14,8 @@ metadata:
 
 Use this skill when adding a new landing-page section to the controlled Christoph section system.
 
+If the section includes AI-selectable media, also use `extend-section-asset-selection`.
+
 ## Goal
 
 Add one new section in a way that is:
