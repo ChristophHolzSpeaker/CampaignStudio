@@ -18,7 +18,7 @@
 	let renderedSections = $derived(page?.sections ?? sections ?? []);
 </script>
 
-<main class="col-span-2 pt-24">
+<main class="col-span-2 pt-20">
 	{#each renderedSections as section, index (`${section.type}-${index}`)}
 		{@const entry = sectionRegistry[section.type]}
 		{@const SectionComponent = entry?.component}

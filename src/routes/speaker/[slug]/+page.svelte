@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import LandingNavigation from '$lib/components/blocks/LandingNavigation.svelte';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
@@ -18,6 +19,7 @@
 	const modal = $derived((page.state as { modal?: { kind?: string; url: string } }).modal);
 </script>
 
+<LandingNavigation></LandingNavigation>
 <PageRenderer page={data.page} campaignId={data.campaignId} campaignPageId={data.campaignPageId} />
 
 {#if modal?.kind === 'youtube'}

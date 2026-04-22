@@ -119,6 +119,12 @@
 		font-stretch: condensed;
 		letter-spacing: -0.02em;
 	}
+	.nav-normal {
+		@apply capitalize;
+		font-family: 'Bureau Grot', 'Space Grotesk', sans-serif !important;
+		font-stretch: normal !important;
+		font-weight: 400;
+	}
 	.btn-primary {
 		@apply cursor-pointer rounded-none bg-primary uppercase transition-all duration-200 hover:-translate-y-0.5;
 		padding-inline: 1.5rem;
