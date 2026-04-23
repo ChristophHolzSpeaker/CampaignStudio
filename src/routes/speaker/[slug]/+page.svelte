@@ -13,13 +13,14 @@
 			page: LandingPageDocument;
 			campaignId: number | null;
 			campaignPageId: number | null;
+			speakerMailtoHref: string;
 		};
 	} = $props();
 
 	const modal = $derived((page.state as { modal?: { kind?: string; url: string } }).modal);
 </script>
 
-<LandingNavigation></LandingNavigation>
+<LandingNavigation mailto={data.speakerMailtoHref}></LandingNavigation>
 <PageRenderer page={data.page} campaignId={data.campaignId} campaignPageId={data.campaignPageId} />
 
 {#if modal?.kind === 'youtube'}
