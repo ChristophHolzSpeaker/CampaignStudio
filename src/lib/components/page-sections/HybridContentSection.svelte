@@ -36,9 +36,9 @@
 				{#each benefits as benefit, index (`hybrid-benefit-${benefit.title}`)}
 					<article class="flex h-full flex-col gap-4">
 						<span>0{index + 1}</span>
+
 						<img
-							src={benefit.imageUrl ??
-								'https://framerusercontent.com/images/WShI0RSTBW6Kz7ODXajkeTmvc.webp?width=485&height=340'}
+							src={benefit.imageUrl ?? '/momentum.png'}
 							alt={benefit.title}
 							class="aspect-4/2 object-cover"
 						/>
