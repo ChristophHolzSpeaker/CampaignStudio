@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { preloadData, replaceState } from '$app/navigation';
+	import { page } from '$app/state';
 	import Button from '$lib/components/elements/Button.svelte';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
@@ -15,7 +17,17 @@
 		slots: SlotPresentation[];
 	};
 
-	let { data, form } = $props<{ data: PageData; form: ActionData }>();
+	let { data, form: formProp } = $props<{ data: PageData; form: ActionData }>();
+
+	// Local form state for handling responses when rendered in modal context
+	// (where the form prop may not update automatically)
+	let localForm = $state<ActionData>(null);
+
+	// Merged form state: prefer prop (for normal route context), fallback to local (for modal context)
+	const form = $derived(formProp ?? localForm);
+
+	// Detect if we're in a modal context
+	const isInModal = $derived((page.state as App.PageState).modal?.kind === 'booking');
 
 	const emptyValues = {
 		email: '',
@@ -24,7 +36,8 @@
 		scope: ''
 	};
 
-	const isTokenUsable = $derived(data.tokenState === 'usable');
+	const isNewBooking = $derived(data.tokenState === 'new');
+	const isTokenUsable = $derived(data.tokenState === 'usable' || isNewBooking);
 	const isUnavailable = $derived(isTokenUsable && data.policyState !== 'active');
 	const activeValues = $derived(form?.values ?? data.prefillValues ?? emptyValues);
 	const activeClassification = $derived(form?.classification ?? data.classification);
@@ -38,6 +51,45 @@
 
 	let dayPreference = $state<string | null>(null);
 	let slotPreferenceStart = $state<string | null>(null);
+
+	// Custom enhance function that updates local form state
+	// This ensures form responses work correctly in both modal and route contexts
+	function handleFormResult({ result }: { result: { type: string; data?: unknown } }) {
+		if (result.type === 'success' || result.type === 'failure') {
+			localForm = (result.data as ActionData) ?? null;
+		}
+	}
+
+	function readRedirectToken(input: unknown): string | null {
+		if (!input || typeof input !== 'object') {
+			return null;
+		}
+
+		const token = (input as { redirectToken?: unknown }).redirectToken;
+		if (typeof token !== 'string') {
+			return null;
+		}
+
+		const trimmedToken = token.trim();
+		return trimmedToken.length > 0 ? trimmedToken : null;
+	}
+
+	async function redirectToBookingToken(token: string): Promise<void> {
+		const newUrl = `/book/l/${token}`;
+
+		if (isInModal) {
+			const result = await preloadData(newUrl);
+			if (result.type === 'loaded' && result.status === 200) {
+				replaceState(newUrl, {
+					...page.state,
+					modal: { kind: 'booking', data: result.data }
+				});
+			}
+			return;
+		}
+
+		replaceState(newUrl, page.state);
+	}
 
 	const confirmationStartsAtIso = $derived(form?.confirmationValues?.selectedStartsAtIso ?? null);
 	const resolvedDayKey = $derived(
@@ -126,7 +178,9 @@
 		})()
 	);
 
-	const showIntakeStage = $derived(!data.intakeSkipped && !hasAvailableSlots);
+	const showIntakeStage = $derived(
+		(isNewBooking && !form?.redirectToken) || (!data.intakeSkipped && !hasAvailableSlots)
+	);
 
 	function formatDayLabel(dateKey: string): string {
 		const date = new Date(`${dateKey}T00:00:00.000Z`);
@@ -213,7 +267,45 @@
 				{/if}
 
 				{#if showIntakeStage}
-					<form method="POST" action="?/check" class="space-y-6" use:enhance>
+					<form
+						method="POST"
+						action="?/check"
+						class="space-y-6"
+						use:enhance={() => {
+							return async ({ result, update }) => {
+								handleFormResult({ result });
+
+								if (result.type === 'success' && isNewBooking) {
+									const redirectToken = readRedirectToken(result.data);
+									if (redirectToken) {
+										await redirectToBookingToken(redirectToken);
+										return;
+									}
+								}
+
+								// Only run default update behavior if not in modal
+								// (in modal context, we handle state updates manually)
+								if (!isInModal) {
+									await update();
+								}
+							};
+						}}
+					>
+						{#if isNewBooking}
+							<input type="hidden" name="utm_source" value={data.utmContext?.source ?? ''} />
+							<input
+								type="hidden"
+								name="utm_campaignId"
+								value={data.utmContext?.campaignId ?? ''}
+							/>
+							<input
+								type="hidden"
+								name="utm_campaignPageId"
+								value={data.utmContext?.campaignPageId ?? ''}
+							/>
+							<input type="hidden" name="utm_pageSlug" value={data.utmContext?.pageSlug ?? ''} />
+						{/if}
+
 						<div class="grid gap-6 md:grid-cols-2">
 							<Input
 								id="email"
@@ -364,7 +456,20 @@
 								{/each}
 							</div>
 
-							<form method="POST" action="?/confirm" class="space-y-5" use:enhance>
+							<form
+								method="POST"
+								action="?/confirm"
+								class="space-y-5"
+								use:enhance={() => {
+									return async ({ result, update }) => {
+										handleFormResult({ result });
+										// Only run default update behavior if not in modal
+										if (!isInModal) {
+											await update();
+										}
+									};
+								}}
+							>
 								<input type="hidden" name="email" value={activeValues.email} />
 								<input type="hidden" name="name" value={activeValues.name} />
 								<input type="hidden" name="company" value={activeValues.company} />
