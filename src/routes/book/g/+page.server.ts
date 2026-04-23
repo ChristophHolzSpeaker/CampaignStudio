@@ -87,7 +87,7 @@ export const actions: Actions = {
 		if (policy.state !== 'active') {
 			return fail<GeneralBookingActionData>(409, {
 				values,
-				message: unavailableMessage ?? 'Booking is currently unavailable.'
+				message: unavailableMessage ?? 'Briefing is currently unavailable.'
 			});
 		}
 
@@ -118,7 +118,7 @@ export const actions: Actions = {
 			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the next 3 days.'
 					: undefined
 		};
 	},
@@ -135,7 +135,7 @@ export const actions: Actions = {
 				values,
 				confirmationValues,
 				confirmationState: 'booking_unavailable',
-				message: unavailableMessage ?? 'Booking is currently unavailable.'
+				message: unavailableMessage ?? 'Briefing is currently unavailable.'
 			});
 		}
 
@@ -167,7 +167,7 @@ export const actions: Actions = {
 				confirmationValues,
 				confirmationState: 'confirmed' as const,
 				confirmedBookingId: confirmation.booking.id,
-				message: 'Booking confirmed. Check your inbox for the calendar invite.'
+				message: 'Briefing confirmed. Please check your inbox for the calendar invite.'
 			};
 		}
 

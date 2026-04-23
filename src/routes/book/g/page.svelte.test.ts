@@ -15,9 +15,9 @@ describe('/book/g +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('General booking request');
+		expect(body).toContain('General briefing request');
 		expect(body).toContain('action="?/check"');
-		expect(body).not.toContain('Choose a time');
+		expect(body).not.toContain('Select a briefing slot');
 	});
 
 	it('renders two-column slot-selection stage after availability resolves', () => {
@@ -57,11 +57,11 @@ describe('/book/g +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('Booking details');
-		expect(body).toContain('Choose a time');
+		expect(body).toContain('Briefing details');
+		expect(body).toContain('Select a briefing slot');
 		expect(body).toContain('action="?/confirm"');
 		expect(body).toContain('name="selected_starts_at"');
 		expect(body).toContain('name="selected_ends_at"');
-		expect(body).toContain('Confirm selected slot');
+		expect(body).toContain('Confirm briefing slot');
 	});
 });

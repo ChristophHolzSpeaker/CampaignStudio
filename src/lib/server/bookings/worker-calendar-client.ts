@@ -1,4 +1,6 @@
 import type {
+	FetchBookingCalendarBusyRequest,
+	FetchBookingCalendarBusyResponse,
 	CreateBookingCalendarEventRequest,
 	CreateBookingCalendarEventResponse,
 	UpdateBookingCalendarEventRequest,
@@ -44,4 +46,22 @@ export async function updateBookingCalendarEventViaWorker(
 	});
 
 	return parseWorkerResponse<UpdateBookingCalendarEventResponse>(response);
+}
+
+export async function fetchBookingCalendarBusyViaWorker(
+	input: FetchBookingCalendarBusyRequest
+): Promise<FetchBookingCalendarBusyResponse> {
+	const baseUrl = requireWorkerEnv('ATTRIBUTION_WORKER_URL');
+	const url = new URL('/booking/calendar-busy', baseUrl);
+
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: {
+			Authorization: buildWorkerAuthHeader(),
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify(input)
+	});
+
+	return parseWorkerResponse<FetchBookingCalendarBusyResponse>(response);
 }

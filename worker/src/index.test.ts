@@ -25,6 +25,10 @@ vi.mock('./routes/booking-calendar-event-update', () => ({
 	handleBookingCalendarEventUpdate: vi.fn()
 }));
 
+vi.mock('./routes/booking-calendar-busy', () => ({
+	handleBookingCalendarBusy: vi.fn()
+}));
+
 vi.mock('./routes/telegram-notification', () => ({
 	handleTelegramNotification: vi.fn()
 }));
@@ -40,6 +44,7 @@ import { handleGmailPush } from './routes/gmail-push';
 import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
+import { handleBookingCalendarBusy } from './routes/booking-calendar-busy';
 import { handleTelegramNotification } from './routes/telegram-notification';
 import { handleWoodyEmailNotification } from './routes/woody-email-notification';
 import { makeTestEnv, makeTestExecutionContext } from './test/helpers';
@@ -50,6 +55,7 @@ const mockedHandleGmailPush = vi.mocked(handleGmailPush);
 const mockedHandleGmailWatchActivate = vi.mocked(handleGmailWatchActivate);
 const mockedHandleBookingCalendarEvent = vi.mocked(handleBookingCalendarEvent);
 const mockedHandleBookingCalendarEventUpdate = vi.mocked(handleBookingCalendarEventUpdate);
+const mockedHandleBookingCalendarBusy = vi.mocked(handleBookingCalendarBusy);
 const mockedHandleTelegramNotification = vi.mocked(handleTelegramNotification);
 const mockedHandleWoodyEmailNotification = vi.mocked(handleWoodyEmailNotification);
 
@@ -81,6 +87,7 @@ describe('worker fetch handler', () => {
 		mockedHandleGmailWatchActivate.mockReset();
 		mockedHandleBookingCalendarEvent.mockReset();
 		mockedHandleBookingCalendarEventUpdate.mockReset();
+		mockedHandleBookingCalendarBusy.mockReset();
 		mockedHandleTelegramNotification.mockReset();
 		mockedHandleWoodyEmailNotification.mockReset();
 	});
@@ -243,6 +250,48 @@ describe('worker fetch handler', () => {
 		const response = await worker.fetch(request, makeTestEnv(), ctx);
 		expect(response.status).toBe(200);
 		expect(mockedHandleBookingCalendarEventUpdate).toHaveBeenCalledTimes(1);
+	});
+
+	it('returns unauthorized for /booking/calendar-busy without auth', async () => {
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/booking/calendar-busy', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(401);
+		expect(mockedHandleBookingCalendarBusy).not.toHaveBeenCalled();
+	});
+
+	it('dispatches authorized /booking/calendar-busy to route handler', async () => {
+		mockedHandleBookingCalendarBusy.mockResolvedValueOnce(
+			new Response(
+				JSON.stringify({ ok: true, provider_name: 'google-calendar-freebusy', intervals: [] }),
+				{
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				}
+			)
+		);
+
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/booking/calendar-busy', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: 'Bearer test'
+			},
+			body: JSON.stringify({
+				range_starts_at_iso: '2026-06-02T10:00:00.000Z',
+				range_ends_at_iso: '2026-06-02T12:00:00.000Z'
+			})
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(200);
+		expect(mockedHandleBookingCalendarBusy).toHaveBeenCalledTimes(1);
 	});
 
 	it('returns unauthorized for /notifications/telegram without auth', async () => {

@@ -163,7 +163,7 @@
 		</div>
 
 		<div class="relative lg:col-span-5">
-			<div class="aspect-[4/5] overflow-hidden bg-surface-container-lowest">
+			<div class="aspect-4/5 overflow-hidden bg-surface-container-lowest">
 				<img
 					src={thumbnailUrl}
 					alt={thumbnailAlt}

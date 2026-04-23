@@ -52,8 +52,8 @@ describe('/book/l/[token] +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('Booking details');
-		expect(body).toContain('Choose a time');
+		expect(body).toContain('Briefing details');
+		expect(body).toContain('Select a briefing slot');
 		expect(body).toContain('lead@example.com');
 		expect(body).toContain('Discuss launch strategy');
 		expect(body).toContain('href="?edit=1"');
@@ -89,7 +89,7 @@ describe('/book/l/[token] +page.svelte', () => {
 		});
 
 		expect(body).toContain('action="?/check"');
-		expect(body).not.toContain('Booking details');
+		expect(body).not.toContain('Briefing details');
 		expect(body).toContain('value="lead@example.com"');
 		expect(body).toContain('value="Lead User"');
 		expect(body).toContain('value="ACME"');

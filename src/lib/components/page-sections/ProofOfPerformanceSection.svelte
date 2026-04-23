@@ -105,7 +105,7 @@
 										<cite class="block font-bold text-on-surface not-italic"
 											>{testimonial.name}</cite
 										>
-										<span class="text-xs tracking-[0.1em] text-on-surface/65 uppercase">
+										<span class="text-xs tracking-widest text-on-surface/65 uppercase">
 											{testimonial.role}, {testimonial.company}
 										</span>
 									</div>
