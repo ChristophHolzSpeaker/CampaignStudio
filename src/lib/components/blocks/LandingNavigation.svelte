@@ -4,10 +4,14 @@
 	type LandingPageNavigationData = {
 		mailto?: string;
 		mailtoCta?: string;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
 	};
 	let {
 		mailto = 'mailto:speaker@christophholz.com?subject=Request%20a%20talk',
-		mailtoCta = 'Request a talk'
+		mailtoCta = 'Request a talk',
+		campaignId = null,
+		campaignPageId = null
 	}: LandingPageNavigationData = $props();
 
 	let categoriesDropdown = $state(false);
@@ -99,6 +103,44 @@
 			subline: 'Capital, knowledge and network for young start-ups'
 		}
 	];
+
+	function trackEmailCta(variant: 'default' | 'mobile'): void {
+		if (campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		const payload = JSON.stringify({
+			type: 'email',
+			campaign_id: campaignId,
+			campaign_page_id: campaignPageId,
+			cta_key: 'landing_navigation_email',
+			cta_label: mailtoCta,
+			cta_section: 'landing_navigation',
+			cta_variant: variant
+		});
+
+		if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+			const sent = navigator.sendBeacon(
+				'/api/attribution/cta',
+				new Blob([payload], { type: 'application/json' })
+			);
+
+			if (sent) {
+				return;
+			}
+		}
+
+		void fetch('/api/attribution/cta', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: payload,
+			keepalive: true
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
 </script>
 
 <div class="fixed inset-x-0 top-0 z-50 bg-white px-4 py-2 lg:px-0 lg:py-4">
@@ -160,7 +202,7 @@
 					})}
 				</div>
 
-				<NavButton href={mailto}>{mailtoCta}</NavButton>
+				<NavButton href={mailto} onclick={() => trackEmailCta('default')}>{mailtoCta}</NavButton>
 			</nav>
 		</div>
 
@@ -324,7 +366,7 @@
 			</div>
 
 			<div class="mt-4">
-				<NavButton href={mailto}>{mailtoCta}</NavButton>
+				<NavButton href={mailto} onclick={() => trackEmailCta('mobile')}>{mailtoCta}</NavButton>
 			</div>
 		</div>
 	</nav>

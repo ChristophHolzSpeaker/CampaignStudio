@@ -80,7 +80,7 @@ export const testimonialItemSchema = z.object({
 	name: z.string().trim().min(1),
 	role: z.string().trim().min(1),
 	company: z.string().trim().min(1),
-	photoUrl: z.string().trim().url(),
+	photoUrl: z.string().trim(),
 	photoAlt: z.string().trim().min(1),
 	rating: z.number().int().min(1).max(5).optional(),
 	badgeLabel: z.string().trim().min(1).optional(),

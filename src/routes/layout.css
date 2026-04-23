@@ -54,8 +54,8 @@
 
 @theme {
 	--font-sans:
-		'Bureau Grot', 'Bureau Grot Compressed', ui-sans-serif, system-ui, sans-serif,
-		'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+		'Bureau Grot', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+		'Segoe UI Symbol', 'Noto Color Emoji';
 
 	--color-surface: #ffffff;
 	--color-surface-container-low: #97ddea33;

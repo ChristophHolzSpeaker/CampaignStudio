@@ -57,8 +57,8 @@
 					<p class="mb-8 text-xl leading-snug font-medium text-on-surface lg:text-2xl">
 						{leadTestimonial.quote}
 					</p>
-					<footer class="flex items-center justify-between gap-4">
-						<div class="flex items-center gap-4">
+					<footer class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+						<div class="flex flex-col gap-4 md:flex-row md:items-center">
 							<div class="h-12 w-12 overflow-hidden rounded-full lg:h-14 lg:w-14">
 								<img
 									src={leadTestimonial.photoUrl}
@@ -92,8 +92,8 @@
 							<p class="mb-6 text-lg leading-relaxed font-medium text-on-surface">
 								{testimonial.quote}
 							</p>
-							<footer class="flex items-center justify-between gap-4">
-								<div class="flex items-center gap-3">
+							<footer class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+								<div class="flex flex-col gap-3 md:flex-row md:items-center">
 									<div class="h-11 w-11 overflow-hidden rounded-full">
 										<img
 											src={testimonial.photoUrl}
@@ -105,7 +105,7 @@
 										<cite class="block font-bold text-on-surface not-italic"
 											>{testimonial.name}</cite
 										>
-										<span class="text-xs tracking-[0.1em] text-on-surface/65 uppercase">
+										<span class="text-xs tracking-widest text-on-surface/65 uppercase">
 											{testimonial.role}, {testimonial.company}
 										</span>
 									</div>

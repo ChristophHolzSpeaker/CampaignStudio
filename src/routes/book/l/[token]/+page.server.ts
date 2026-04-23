@@ -116,10 +116,10 @@ function toClassificationView(input: {
 
 function getTokenMessage(state: 'invalid' | 'expired'): string {
 	if (state === 'expired') {
-		return 'This booking link has expired. Please request a new link.';
+		return 'This briefing link has expired. Please request a new link.';
 	}
 
-	return 'This booking link is invalid.';
+	return 'This briefing link is invalid.';
 }
 
 export const load: PageServerLoad = async ({
@@ -230,7 +230,7 @@ export const load: PageServerLoad = async ({
 			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the next 3 days.'
 					: undefined
 		} satisfies LeadBookingPageData;
 	}
@@ -259,7 +259,8 @@ export const actions: Actions = {
 			if (policy.state !== 'active') {
 				return fail<LeadBookingActionData>(409, {
 					values,
-					message: getPublicBookingUnavailableMessage(policy) ?? 'Booking is currently unavailable.'
+					message:
+						getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
 				});
 			}
 
@@ -391,7 +392,7 @@ export const actions: Actions = {
 				},
 				message:
 					bookingFlow.availability.state === 'no_slots'
-						? 'No slots are currently available in the next 3 days.'
+						? 'No briefing slots are currently available in the next 3 days.'
 						: undefined
 			};
 		}
@@ -410,7 +411,7 @@ export const actions: Actions = {
 		if (policy.state !== 'active') {
 			return fail<LeadBookingActionData>(409, {
 				values,
-				message: getPublicBookingUnavailableMessage(policy) ?? 'Booking is currently unavailable.'
+				message: getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
 			});
 		}
 
@@ -455,7 +456,7 @@ export const actions: Actions = {
 			},
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the next 3 days.'
 					: undefined
 		};
 	},
@@ -482,7 +483,7 @@ export const actions: Actions = {
 				values,
 				confirmationValues,
 				confirmationState: 'booking_unavailable',
-				message: getPublicBookingUnavailableMessage(policy) ?? 'Booking is currently unavailable.'
+				message: getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
 			});
 		}
 
@@ -521,7 +522,8 @@ export const actions: Actions = {
 				confirmationValues,
 				confirmationState: 'confirmed' as const,
 				confirmedBookingId: confirmation.booking.id,
-				message: 'Booking confirmed. Check your inbox for the calendar invite.'
+				message:
+					"Briefing confirmed. Woody, Christoph's AI assistant will email you shortly. Please check your inbox for the calendar invite."
 			};
 		}
 

@@ -163,23 +163,20 @@
 			</h2>
 			<p class="max-w-xl text-lg leading-relaxed text-on-surface/75">{description}</p>
 
-			{#if trustNote}
-				<p class="max-w-xl text-xs tracking-[0.12em] text-on-surface/65 uppercase">{trustNote}</p>
-			{/if}
-
 			{#if canOpenBookingModal}
 				<button
 					type="button"
-					class="outline-link inline-flex items-center justify-center px-6 py-2"
+					class="outline-link relative inline-flex cursor-pointer items-center justify-center gap-2 py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:opacity-80"
 					onclick={openBookingModal}
 					disabled={isOpeningBookingModal}
 				>
+					<span class="mdi--calendar-edit"></span>
 					{isOpeningBookingModal ? 'Loading...' : 'Prefer direct scheduling'}
 				</button>
 			{/if}
 		</div>
 
-		<div class="border-outline/20 bg-surface p-8 lg:p-10">
+		<div class="border-outline/20 bg-surface p-4 lg:p-10">
 			<form
 				{...submitBookingRequest}
 				class="space-y-6"
@@ -242,3 +239,19 @@
 		</div>
 	</div>
 </section>
+
+<style>
+	.mdi--calendar-edit {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5v-2H5V8h14v1h2V5a2 2 0 0 0-2-2m2.7 10.35l-1 1l-2.05-2l1-1c.2-.21.54-.22.77 0l1.28 1.28c.19.2.19.52 0 .72M12 18.94l6.07-6.06l2.05 2L14.06 21H12z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
+	}
+</style>

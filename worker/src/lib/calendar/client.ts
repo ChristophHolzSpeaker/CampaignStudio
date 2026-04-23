@@ -37,6 +37,29 @@ export type CalendarUpdateEventResult = {
 	htmlLink?: string;
 };
 
+export type CalendarFetchBusyInput = {
+	calendarId: string;
+	rangeStartsAtIso: string;
+	rangeEndsAtIso: string;
+};
+
+export type CalendarFetchBusyInterval = {
+	startsAtIso: string;
+	endsAtIso: string;
+};
+
+type GoogleCalendarFreeBusyResponse = {
+	calendars?: Record<
+		string,
+		{
+			busy?: Array<{
+				start?: string;
+				end?: string;
+			}>;
+		}
+	>;
+};
+
 type GoogleCalendarEventResponse = {
 	id?: string;
 	htmlLink?: string;
@@ -127,4 +150,46 @@ export async function updateCalendarEvent(
 		id: response.id,
 		htmlLink: response.htmlLink
 	};
+}
+
+export async function fetchCalendarBusyIntervals(
+	env: WorkerEnv,
+	input: CalendarFetchBusyInput
+): Promise<CalendarFetchBusyInterval[]> {
+	const response = await calendarRequest<GoogleCalendarFreeBusyResponse>(env, {
+		method: 'POST',
+		path: '/freeBusy',
+		body: {
+			timeMin: input.rangeStartsAtIso,
+			timeMax: input.rangeEndsAtIso,
+			items: [{ id: input.calendarId }]
+		}
+	});
+
+	const busyEntries = response.calendars?.[input.calendarId]?.busy ?? [];
+	const intervals: CalendarFetchBusyInterval[] = [];
+
+	for (const entry of busyEntries) {
+		if (!entry.start || !entry.end) {
+			continue;
+		}
+
+		const startsAt = new Date(entry.start);
+		const endsAt = new Date(entry.end);
+
+		if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime())) {
+			continue;
+		}
+
+		if (startsAt >= endsAt) {
+			continue;
+		}
+
+		intervals.push({
+			startsAtIso: startsAt.toISOString(),
+			endsAtIso: endsAt.toISOString()
+		});
+	}
+
+	return intervals;
 }

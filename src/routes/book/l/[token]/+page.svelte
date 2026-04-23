@@ -230,41 +230,32 @@
 </script>
 
 <svelte:head>
-	<title>Book your lead call</title>
+	<title>Schedule a video call briefing</title>
 </svelte:head>
 
-<div class="min-h-screen bg-[var(--surface)] py-12">
+<div class="min-h-screen bg-(--surface) py-12">
 	<div class="mx-auto w-full max-w-6xl px-4">
-		<div class="space-y-8 bg-[var(--surface-card)] p-8 shadow-[var(--shadow-card)] lg:p-10">
-			<p class="text-[0.6rem] tracking-[0.5em] text-[var(--text-muted)] uppercase">
-				Campaign studio
-			</p>
-			<h1 class="text-4xl font-semibold text-[var(--text-primary)]">Lead booking request</h1>
+		<div class="space-y-8 bg-(--surface-card) p-8 shadow-(--shadow-card) lg:p-10">
+			<p class="text-[0.6rem] tracking-[0.5em] text-(--text-muted) uppercase">Christoph Holz</p>
+			<h1 class="text-4xl font-semibold text-(--text-primary)">Briefing request</h1>
 
 			{#if !isTokenUsable}
 				<div
 					class="rounded-none border border-rose-400/70 bg-rose-50 px-4 py-4 text-sm text-rose-700"
 				>
-					{data.tokenMessage ?? 'This booking link cannot be used.'}
+					{data.tokenMessage ?? 'This briefing link cannot be used.'}
 				</div>
 			{:else if isUnavailable}
 				<div
 					class="rounded-none border border-amber-400/70 bg-amber-50 px-4 py-4 text-sm text-amber-800"
 				>
-					{data.unavailableMessage ?? 'Booking is currently unavailable.'}
+					{data.unavailableMessage ?? 'Briefing is currently unavailable.'}
 				</div>
 			{:else}
 				<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-					Confirm your details, then choose the best available booking time in the next 3 days.
+					Please confirm your details, then select a slot to schedule a video call briefing with
+					Christoph in the next 3 days.
 				</p>
-
-				{#if activeMessage}
-					<div
-						class={`rounded-none border px-4 py-3 text-xs font-semibold tracking-[0.3em] uppercase ${statusTone}`}
-					>
-						{activeMessage}
-					</div>
-				{/if}
 
 				{#if showIntakeStage}
 					<form
@@ -355,11 +346,9 @@
 					</form>
 				{:else if hasAvailableSlots}
 					<div class="grid gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.4fr)]">
-						<section
-							class="space-y-5 bg-[var(--color-surface-container-low)] p-5 text-sm text-slate-700"
-						>
+						<section class="space-y-5 bg-surface-container-low p-5 text-sm text-slate-700">
 							<div class="flex items-start justify-between gap-3">
-								<h2 class="text-lg text-[var(--text-primary)]">Booking details</h2>
+								<h2 class="text-lg text-(--text-primary)">Briefing details</h2>
 								<a
 									class="text-xs tracking-[0.15em] text-slate-600 uppercase underline hover:text-slate-900"
 									href="?edit=1"
@@ -418,7 +407,7 @@
 										>
 									</p>
 									<p>
-										Upcoming booking:
+										Upcoming briefing:
 										<strong class="text-slate-900"
 											>{activeClassification.hasUpcomingBooking ? 'Yes' : 'No'}</strong
 										>
@@ -428,122 +417,133 @@
 						</section>
 
 						<section class="space-y-5">
-							<div class="space-y-2">
-								<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
-								<h2 class="text-2xl text-[var(--text-primary)]">Choose a time</h2>
-							</div>
-
-							<div role="tablist" aria-label="Available booking days" class="flex flex-wrap gap-2">
-								{#each activeSlotGroups as day (day.dateKey)}
-									<button
-										type="button"
-										role="tab"
-										id={`booking-day-tab-${day.dateKey}`}
-										aria-controls={`booking-day-panel-${day.dateKey}`}
-										aria-selected={resolvedDayKey === day.dateKey}
-										class={[
-											'border px-3 py-2 text-xs tracking-[0.1em] uppercase transition',
-											resolvedDayKey === day.dateKey
-												? 'border-[var(--accent)] bg-[var(--accent)] text-white'
-												: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
-										]}
-										onclick={() => {
-											selectDay(day.dateKey);
-										}}
-									>
-										{formatDayLabel(day.dateKey)}
-									</button>
-								{/each}
-							</div>
-
-							<form
-								method="POST"
-								action="?/confirm"
-								class="space-y-5"
-								use:enhance={() => {
-									return async ({ result, update }) => {
-										handleFormResult({ result });
-										// Only run default update behavior if not in modal
-										if (!isInModal) {
-											await update();
-										}
-									};
-								}}
-							>
-								<input type="hidden" name="email" value={activeValues.email} />
-								<input type="hidden" name="name" value={activeValues.name} />
-								<input type="hidden" name="company" value={activeValues.company} />
-								<input type="hidden" name="scope" value={activeValues.scope} />
-								<input
-									type="hidden"
-									name="selected_starts_at"
-									value={resolvedSlot?.startsAtIso ?? ''}
-								/>
-								<input
-									type="hidden"
-									name="selected_ends_at"
-									value={resolvedSlot?.endsAtIso ?? ''}
-								/>
-
-								{#if resolvedDayKey}
-									<div
-										role="tabpanel"
-										id={`booking-day-panel-${resolvedDayKey}`}
-										aria-labelledby={`booking-day-tab-${resolvedDayKey}`}
-										class="space-y-4"
-									>
-										{#each slotGroupsForSelectedDay as slotGroup (slotGroup.label)}
-											<div class="space-y-2">
-												<h3 class="text-xs tracking-[0.18em] text-slate-500 uppercase">
-													{slotGroup.label}
-												</h3>
-												<div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup">
-													{#each slotGroup.slots as slot (slot.startsAtIso)}
-														<button
-															type="button"
-															role="radio"
-															aria-checked={resolvedSlot?.startsAtIso === slot.startsAtIso}
-															class={[
-																'border px-3 py-3 text-left text-sm transition',
-																resolvedSlot?.startsAtIso === slot.startsAtIso
-																	? 'border-[var(--accent)] bg-rose-50 text-[var(--text-primary)]'
-																	: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
-															]}
-															onclick={() => {
-																selectSlot(slot);
-															}}
-														>
-															{formatSlotRange(slot.startsAtIso, slot.endsAtIso)}
-														</button>
-													{/each}
-												</div>
-											</div>
-										{/each}
-									</div>
-								{/if}
+							{#if form?.confirmationState !== 'confirmed'}
+								<div class="space-y-2">
+									<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
+									<h2 class="text-2xl text-(--text-primary)">Select a briefing slot</h2>
+								</div>
 
 								<div
-									class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
+									role="tablist"
+									aria-label="Available briefing days"
+									class="flex flex-wrap gap-2"
 								>
-									<p class="text-xs text-slate-600">
-										{#if resolvedSlot}
-											Selected:
-											<strong class="text-slate-900"
-												>{formatSlotRange(resolvedSlot.startsAtIso, resolvedSlot.endsAtIso)}</strong
-											>
-										{:else}
-											Select a slot to continue.
-										{/if}
-									</p>
-									<button
-										type="submit"
-										class="cursor-pointer bg-[var(--accent)] px-5 py-2 text-sm tracking-[0.12em] text-white uppercase transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
-										disabled={!resolvedSlot}
-									>
-										Confirm selected slot
-									</button>
+									{#each activeSlotGroups as day (day.dateKey)}
+										<button
+											type="button"
+											role="tab"
+											id={`booking-day-tab-${day.dateKey}`}
+											aria-controls={`booking-day-panel-${day.dateKey}`}
+											aria-selected={resolvedDayKey === day.dateKey}
+											class={[
+												'border px-3 py-2 text-xl font-(--font-sans) uppercase transition',
+												resolvedDayKey === day.dateKey
+													? 'border-(--accent-strong) bg-(--accent-strong) text-white'
+													: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
+											]}
+											onclick={() => {
+												selectDay(day.dateKey);
+											}}
+										>
+											{formatDayLabel(day.dateKey)}
+										</button>
+									{/each}
 								</div>
-							</form>
+
+								<form
+									method="POST"
+									action="?/confirm"
+									class="space-y-5"
+									use:enhance={() => {
+										return async ({ result, update }) => {
+											handleFormResult({ result });
+											// Only run default update behavior if not in modal
+											if (!isInModal) {
+												await update();
+											}
+										};
+									}}
+								>
+									<input type="hidden" name="email" value={activeValues.email} />
+									<input type="hidden" name="name" value={activeValues.name} />
+									<input type="hidden" name="company" value={activeValues.company} />
+									<input type="hidden" name="scope" value={activeValues.scope} />
+									<input
+										type="hidden"
+										name="selected_starts_at"
+										value={resolvedSlot?.startsAtIso ?? ''}
+									/>
+									<input
+										type="hidden"
+										name="selected_ends_at"
+										value={resolvedSlot?.endsAtIso ?? ''}
+									/>
+
+									{#if resolvedDayKey}
+										<div
+											role="tabpanel"
+											id={`booking-day-panel-${resolvedDayKey}`}
+											aria-labelledby={`booking-day-tab-${resolvedDayKey}`}
+											class="space-y-4"
+										>
+											{#each slotGroupsForSelectedDay as slotGroup (slotGroup.label)}
+												<div class="space-y-2">
+													<h3 class="text-xs tracking-[0.18em] text-slate-500 uppercase">
+														{slotGroup.label}
+													</h3>
+													<div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup">
+														{#each slotGroup.slots as slot (slot.startsAtIso)}
+															<button
+																type="button"
+																role="radio"
+																aria-checked={resolvedSlot?.startsAtIso === slot.startsAtIso}
+																class={[
+																	'border px-3 py-3 text-center text-base transition',
+																	resolvedSlot?.startsAtIso === slot.startsAtIso
+																		? 'border-(--accent-strong) bg-rose-50 text-(--text-primary)'
+																		: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
+																]}
+																onclick={() => {
+																	selectSlot(slot);
+																}}
+															>
+																{formatSlotRange(slot.startsAtIso, slot.endsAtIso)}
+															</button>
+														{/each}
+													</div>
+												</div>
+											{/each}
+										</div>
+									{/if}
+
+									<div
+										class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
+									>
+										<p class="text-xs text-slate-600">
+											{#if resolvedSlot}
+												Selected slot:
+												<strong class="text-slate-900"
+													>{formatSlotRange(
+														resolvedSlot.startsAtIso,
+														resolvedSlot.endsAtIso
+													)}</strong
+												>
+											{:else}
+												Please select a slot to continue.
+											{/if}
+										</p>
+
+										<Button>Confirm briefing slot</Button>
+									</div>
+								</form>
+							{/if}
+							{#if activeMessage}
+								<div
+									class={`rounded-none border px-4 py-3 text-xs font-semibold uppercase ${statusTone}`}
+								>
+									{activeMessage}
+								</div>
+							{/if}
 						</section>
 					</div>
 				{/if}

@@ -47,3 +47,21 @@ export type UpdateBookingCalendarEventResponse = {
 	event_id: string;
 	html_link?: string;
 };
+
+export type FetchBookingCalendarBusyRequest = {
+	range_starts_at_iso: string;
+	range_ends_at_iso: string;
+	calendar_id?: string;
+};
+
+export type BookingCalendarBusyInterval = {
+	starts_at_iso: string;
+	ends_at_iso: string;
+	source: 'calendar';
+};
+
+export type FetchBookingCalendarBusyResponse = {
+	ok: true;
+	provider_name: string;
+	intervals: BookingCalendarBusyInterval[];
+};

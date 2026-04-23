@@ -1,4 +1,4 @@
-import { NoopCalendarAvailabilityProvider } from './calendar-provider';
+import { WorkerCalendarAvailabilityProvider } from './calendar-provider';
 import { getBookingAvailability } from './availability-service';
 import type {
 	BookingAvailabilityResult,
@@ -61,8 +61,8 @@ export function getPublicBookingUnavailableMessage(policy: BookingPolicyResult):
 	return null;
 }
 
-export function createPublicBookingCalendarProvider(): NoopCalendarAvailabilityProvider {
-	return new NoopCalendarAvailabilityProvider();
+export function createPublicBookingCalendarProvider(): WorkerCalendarAvailabilityProvider {
+	return new WorkerCalendarAvailabilityProvider();
 }
 
 function toSlotGroups(input: BookingAvailabilityResult): PublicBookingSlotDayGroup[] {

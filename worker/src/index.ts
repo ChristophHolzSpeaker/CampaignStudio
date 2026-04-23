@@ -11,6 +11,7 @@ import { handleHealth } from './routes/health';
 import { handleTrackCTA } from './routes/track-cta';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
+import { handleBookingCalendarBusy } from './routes/booking-calendar-busy';
 import { handleTelegramNotification } from './routes/telegram-notification';
 import { handleWoodyEmailNotification } from './routes/woody-email-notification';
 
@@ -67,6 +68,13 @@ export default {
 					return json({ ok: false, error: 'Unauthorized' }, 401);
 				}
 				return await handleBookingCalendarEventUpdate(request, env);
+			}
+
+			if (pathname === '/booking/calendar-busy' && request.method === 'POST') {
+				if (!requireInternalAuth(request, env)) {
+					return json({ ok: false, error: 'Unauthorized' }, 401);
+				}
+				return await handleBookingCalendarBusy(request, env);
 			}
 
 			if (pathname === '/notifications/telegram' && request.method === 'POST') {

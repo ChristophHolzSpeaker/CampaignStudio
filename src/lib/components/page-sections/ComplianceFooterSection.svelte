@@ -4,16 +4,18 @@
 	let {
 		props,
 		campaignId = null,
-		campaignPageId = null
+		campaignPageId = null,
+		mailtoHref
 	}: {
 		props?: ComplianceTransparencyFooterProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		mailtoHref?: string;
 	} = $props();
 
 	const privacyPolicyUrl = $derived(props?.privacyPolicyUrl ?? 'https://christophholz.com/privacy');
-	const contactEmail = $derived(props?.contactEmail ?? 'team@christophholz.com');
-	const businessAddress = $derived(props?.businessAddress ?? 'Vienna, Austria');
+	const contactEmail = $derived(props?.contactEmail ?? 'speaker@christophholz.com');
+
 	const phone = $derived(props?.phone);
 	const copyrightText = $derived(props?.copyrightText ?? '© Christoph Holz. All rights reserved.');
 	const additionalLinks = $derived(props?.additionalLinks ?? []);
@@ -28,7 +30,7 @@
 	]);
 
 	const phoneHref = $derived(phone ? `tel:${phone.replace(/\s+/g, '')}` : undefined);
-	const emailHref = $derived(`mailto:${contactEmail}`);
+	const emailHref = $derived(mailtoHref ?? `mailto:${contactEmail}`);
 
 	function trackDirectEmailCta(): void {
 		if (campaignId == null || campaignPageId == null) {
@@ -61,9 +63,9 @@
 >
 	<div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12 lg:gap-12">
 		<div class="space-y-4 lg:col-span-5">
-			<p class="text-2xl font-bold tracking-tight text-on-surface uppercase lg:text-3xl">
+			<h2 class="text-2xl text-on-surface uppercase lg:text-3xl">
 				{brandName}
-			</p>
+			</h2>
 			<p class="max-w-md text-sm leading-relaxed text-on-surface/70">{brandDescriptor}</p>
 		</div>
 
@@ -71,7 +73,6 @@
 			<div class="space-y-4">
 				<h5 class="text-xs tracking-[0.16em] text-on-surface/75 uppercase">Contact</h5>
 				<ul class="space-y-2 text-sm text-on-surface/70">
-					<li>{businessAddress}</li>
 					<li>
 						<a
 							class="transition-opacity hover:opacity-70"

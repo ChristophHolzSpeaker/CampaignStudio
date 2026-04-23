@@ -169,7 +169,7 @@
 </script>
 
 <svelte:head>
-	<title>Book a general briefing</title>
+	<title>Schedule a general video call briefing</title>
 </svelte:head>
 
 <div class="min-h-screen bg-[var(--surface)] py-12">
@@ -178,17 +178,18 @@
 			<p class="text-[0.6rem] tracking-[0.5em] text-[var(--text-muted)] uppercase">
 				Campaign studio
 			</p>
-			<h1 class="text-4xl font-semibold text-[var(--text-primary)]">General booking request</h1>
+			<h1 class="text-4xl font-semibold text-[var(--text-primary)]">General briefing request</h1>
 
 			{#if isUnavailable}
 				<div
 					class="rounded-none border border-amber-400/70 bg-amber-50 px-4 py-4 text-sm text-amber-800"
 				>
-					{data.unavailableMessage ?? 'Booking is currently unavailable.'}
+					{data.unavailableMessage ?? 'Briefing is currently unavailable.'}
 				</div>
 			{:else}
 				<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-					Share your details first, then choose the best time in the next 3 days.
+					Please share your details, then select a slot to schedule a video call briefing with
+					Christoph in the next 3 days.
 				</p>
 
 				{#if form?.message}
@@ -262,7 +263,7 @@
 							class="space-y-5 bg-[var(--color-surface-container-low)] p-5 text-sm text-slate-700"
 						>
 							<div class="flex items-start justify-between gap-3">
-								<h2 class="text-lg text-[var(--text-primary)]">Booking details</h2>
+								<h2 class="text-lg text-[var(--text-primary)]">Briefing details</h2>
 								<button
 									type="button"
 									class="text-xs tracking-[0.15em] text-slate-600 uppercase underline hover:text-slate-900"
@@ -314,7 +315,7 @@
 										>
 									</p>
 									<p>
-										Upcoming booking:
+										Upcoming briefing:
 										<strong class="text-slate-900"
 											>{activeClassification.hasUpcomingBooking ? 'Yes' : 'No'}</strong
 										>
@@ -326,10 +327,10 @@
 						<section class="space-y-5">
 							<div class="space-y-2">
 								<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
-								<h2 class="text-2xl text-[var(--text-primary)]">Choose a time</h2>
+								<h2 class="text-2xl text-[var(--text-primary)]">Select a briefing slot</h2>
 							</div>
 
-							<div role="tablist" aria-label="Available booking days" class="flex flex-wrap gap-2">
+							<div role="tablist" aria-label="Available briefing days" class="flex flex-wrap gap-2">
 								{#each activeSlotGroups as day (day.dateKey)}
 									<button
 										type="button"
@@ -410,12 +411,12 @@
 								>
 									<p class="text-xs text-slate-600">
 										{#if resolvedSlot}
-											Selected:
+											Selected slot:
 											<strong class="text-slate-900"
 												>{formatSlotRange(resolvedSlot.startsAtIso, resolvedSlot.endsAtIso)}</strong
 											>
 										{:else}
-											Select a slot to continue.
+											Please select a slot to continue.
 										{/if}
 									</p>
 									<button
@@ -423,7 +424,7 @@
 										class="cursor-pointer bg-[var(--accent)] px-5 py-2 text-sm tracking-[0.12em] text-white uppercase transition hover:bg-[var(--accent-strong)] disabled:cursor-not-allowed disabled:opacity-50"
 										disabled={!resolvedSlot}
 									>
-										Confirm selected slot
+										Confirm briefing slot
 									</button>
 								</div>
 							</form>
