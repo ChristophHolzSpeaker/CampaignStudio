@@ -41,6 +41,7 @@ export interface LogosOfTrustRibbonProps {
 export interface HybridBenefitItem {
 	title: string;
 	body: string;
+	imageUrl: string;
 }
 
 export interface HybridDeepDiveItem {

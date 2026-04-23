@@ -33,6 +33,7 @@ Corrective rules:
 - place seo as the first section in sectionPlan
 - when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.supportingImageAssetIds from input.assets.assetCatalog.hybridSupportingImages
+- when hybrid_content_section is selected, prefer 3 supportingImageAssetIds mapped to distinct audience outcomes
 - never invent media IDs or media URLs
 - do not output commentary or markdown
 - return JSON only

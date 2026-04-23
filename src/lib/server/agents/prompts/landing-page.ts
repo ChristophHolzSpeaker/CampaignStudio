@@ -116,6 +116,7 @@ Rules:
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
 * when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID
 * when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
+* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 * use only IDs that exist in input.assets.assetCatalog
 * never invent media IDs or media URLs
 * section order should reflect a strong conversion narrative
@@ -232,9 +233,15 @@ Asset usage requirements:
 Hybrid section contract requirements:
 
 * if hybrid_content_section is included, props.intro is required
-* if hybrid_content_section is included, props.benefits must be [{ "title": "string", "body": "string" }]
+* if hybrid_content_section is included, write intro as a bridge from audience pain to practical outcomes for this campaign topic and format
+* if hybrid_content_section is included, props.benefits must be [{ "title": "string", "body": "string", "imageUrl": "string" }]
+* if hybrid_content_section is included, aim for exactly 3 benefits
+* if hybrid_content_section is included, every benefit must state what the audience will leave with and explicitly connect audience + topic + format
+* if hybrid_content_section is included, each benefit imageUrl must come from plan.assetPlan.hybridContentSection.supportingImageAssetIds resolved against input.assets.assetCatalog.hybridSupportingImages (re-use is allowed if fewer than 3 images are selected)
 * if hybrid_content_section is included, props.deepDiveTitle is required
-* if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]`;
+* if hybrid_content_section is included, strongly bias props.deepDiveTitle to "Why Christoph"
+* if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]
+* if hybrid_content_section is included, deepDiveItems should justify why Christoph is qualified to deliver the promised outcomes (proof, lived experience, delivery fit, practical execution)`;
 
 	return appendPromptLibraryGuidance(basePrompt, promptLibraryGuidance);
 };

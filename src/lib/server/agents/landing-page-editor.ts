@@ -161,6 +161,10 @@ function validateEditedPageGuardrails(
 		for (const item of section.props.supportingVisualItems ?? []) {
 			allowedHybridImageUrls.add(item.imageUrl);
 		}
+
+		for (const item of section.props.benefits ?? []) {
+			allowedHybridImageUrls.add(item.imageUrl);
+		}
 	}
 
 	for (const section of parsed.sections) {
@@ -171,6 +175,12 @@ function validateEditedPageGuardrails(
 		for (const item of section.props.supportingVisualItems ?? []) {
 			if (!allowedHybridImageUrls.has(item.imageUrl)) {
 				throw new Error('Edited page hybrid supporting image is not in approved media assets.');
+			}
+		}
+
+		for (const item of section.props.benefits ?? []) {
+			if (!allowedHybridImageUrls.has(item.imageUrl)) {
+				throw new Error('Edited page hybrid benefit image is not in approved media assets.');
 			}
 		}
 	}

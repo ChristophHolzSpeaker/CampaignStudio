@@ -34,7 +34,151 @@ function inferBenefitTitle(value: string, index: number): string {
 		return candidate;
 	}
 
-	return `Benefit ${index + 1}`;
+	return `Audience outcome ${index + 1}`;
+}
+
+type HybridTextItem = {
+	title: string;
+	body: string;
+};
+
+type HybridBenefitItem = HybridTextItem & {
+	imageUrl: string;
+};
+
+const hybridBenefitImageFallbackUrl =
+	'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40';
+
+const inputFallbackBenefitBody =
+	'Your audience leaves with practical outcomes they can apply immediately in their role.';
+
+function pickImageUrl(imageUrls: string[], index: number): string {
+	if (imageUrls.length === 0) {
+		return hybridBenefitImageFallbackUrl;
+	}
+
+	return imageUrls[index % imageUrls.length] ?? hybridBenefitImageFallbackUrl;
+}
+
+function buildBenefitImagePool(
+	input: LandingPageGenerationInput,
+	selectedSupportingVisualItems: HybridSupportingVisualItem[],
+	props: Record<string, unknown>
+): string[] {
+	const selectedUrls = selectedSupportingVisualItems
+		.map((item) => getString(item.imageUrl))
+		.filter((value): value is string => Boolean(value));
+	if (selectedUrls.length > 0) {
+		return selectedUrls;
+	}
+
+	const catalogUrls = input.assets.assetCatalog.hybridSupportingImages
+		.map((item) => getString(item.imageUrl))
+		.filter((value): value is string => Boolean(value));
+	if (catalogUrls.length > 0) {
+		return catalogUrls;
+	}
+
+	const rawSupportingVisualItems = Array.isArray(props.supportingVisualItems)
+		? props.supportingVisualItems
+		: [];
+	const existingUrls = rawSupportingVisualItems
+		.map((item) => (isRecord(item) ? getString(item.imageUrl) : undefined))
+		.filter((value): value is string => Boolean(value));
+	if (existingUrls.length > 0) {
+		return existingUrls;
+	}
+
+	return [hybridBenefitImageFallbackUrl];
+}
+
+function buildHybridBenefitFallbacks(input: LandingPageGenerationInput): HybridTextItem[] {
+	const audience = input.campaign.audience;
+	const topic = input.campaign.topic;
+	const format = input.campaign.format;
+
+	return [
+		{
+			title: 'Decision-ready understanding',
+			body: `${audience} leave this ${format} with a clear understanding of ${topic} and what matters most now.`
+		},
+		{
+			title: 'Practical application playbook',
+			body: `${audience} get concrete ways to apply ${topic} insights in the exact decisions and workflows this ${format} is designed to influence.`
+		},
+		{
+			title: 'Immediate next actions',
+			body: `${audience} walk away with specific next actions they can execute right after the ${format} to convert ${topic} into measurable progress.`
+		}
+	];
+}
+
+function normalizeBenefitsToThree(
+	normalizedBenefits: HybridTextItem[],
+	fallbackBenefits: HybridTextItem[],
+	benefitImageUrls: string[]
+): HybridBenefitItem[] {
+	let resolvedTextBenefits: HybridTextItem[];
+
+	if (normalizedBenefits.length >= 3) {
+		resolvedTextBenefits = normalizedBenefits.slice(0, 3);
+	} else if (normalizedBenefits.length === 0) {
+		resolvedTextBenefits = fallbackBenefits;
+	} else {
+		const usedTitles = new Set(normalizedBenefits.map((benefit) => benefit.title));
+		const result = [...normalizedBenefits];
+
+		for (const fallback of fallbackBenefits) {
+			if (result.length >= 3) {
+				break;
+			}
+
+			if (usedTitles.has(fallback.title)) {
+				continue;
+			}
+
+			result.push(fallback);
+			usedTitles.add(fallback.title);
+		}
+
+		while (result.length < 3) {
+			result.push({
+				title: `Audience outcome ${result.length + 1}`,
+				body: inputFallbackBenefitBody
+			});
+		}
+
+		resolvedTextBenefits = result;
+	}
+
+	return resolvedTextBenefits.map((benefit, index) => ({
+		...benefit,
+		imageUrl: pickImageUrl(benefitImageUrls, index)
+	}));
+}
+
+function buildWhyChristophFallbacks(
+	input: LandingPageGenerationInput,
+	benefits: HybridTextItem[]
+): HybridTextItem[] {
+	const audience = input.campaign.audience;
+	const topic = input.campaign.topic;
+	const format = input.campaign.format;
+
+	return [
+		{
+			title: 'Proven translator of complex AI',
+			body: `Christoph has a track record of turning complex ${topic} shifts into clear decisions that ${audience} can act on immediately.`
+		},
+		{
+			title: 'Built for this audience and format',
+			body: `He structures each ${format} for ${audience}, balancing strategic perspective with practical guidance that can be used the same day.`
+		},
+		{
+			title: 'Outcome-focused delivery',
+			body: `His approach is designed to deliver outcomes like ${benefits[0]?.title?.toLowerCase() ?? 'clear next steps'}, not abstract theory.`
+		}
+	];
 }
 
 function resolveHeroVideoSelection(
@@ -159,13 +303,18 @@ function hydrateSectionWithAssets(
 		case 'hybrid_content_section': {
 			const props: Record<string, unknown> = isRecord(section.props) ? section.props : {};
 			const selectedSupportingVisualItems = resolveHybridSupportingVisualSelection(input, plan);
+			const benefitImageUrls = buildBenefitImagePool(input, selectedSupportingVisualItems, props);
+			const hybridBenefitFallbacks = buildHybridBenefitFallbacks(input);
 
 			const rawBenefits: unknown[] = Array.isArray(props.benefits) ? props.benefits : [];
 			const normalizedBenefits = rawBenefits
 				.map((item: unknown, index: number) => {
 					if (isRecord(item)) {
-						const title = getString(item.title) ?? `Benefit ${index + 1}`;
-						const body = getString(item.body) ?? input.adPackage.messagingAngle;
+						const title = getString(item.title) ?? `Audience outcome ${index + 1}`;
+						const body =
+							getString(item.body) ??
+							hybridBenefitFallbacks[index % hybridBenefitFallbacks.length]?.body ??
+							inputFallbackBenefitBody;
 						return { title, body };
 					}
 
@@ -188,15 +337,12 @@ function hydrateSectionWithAssets(
 						item !== null
 				);
 
-			const fallbackBenefits =
-				normalizedBenefits.length > 0
-					? normalizedBenefits
-					: [
-							{
-								title: 'Strategic relevance',
-								body: input.adGroup.intentSummary || input.adPackage.messagingAngle
-							}
-						];
+			const benefits = normalizeBenefitsToThree(
+				normalizedBenefits,
+				hybridBenefitFallbacks,
+				benefitImageUrls
+			);
+			const deepDiveFallbacks = buildWhyChristophFallbacks(input, benefits);
 
 			const rawDeepDiveItems: unknown[] = Array.isArray(props.deepDiveItems)
 				? props.deepDiveItems
@@ -205,7 +351,8 @@ function hydrateSectionWithAssets(
 				.map((item: unknown, index: number) => {
 					if (isRecord(item)) {
 						const title = getString(item.title) ?? `Detail ${index + 1}`;
-						const body = getString(item.body) ?? fallbackBenefits[index]?.body;
+						const body =
+							getString(item.body) ?? deepDiveFallbacks[index % deepDiveFallbacks.length]?.body;
 						if (!body) {
 							return null;
 						}
@@ -233,20 +380,16 @@ function hydrateSectionWithAssets(
 				);
 
 			const deepDiveItems =
-				normalizedDeepDiveItems.length > 0
-					? normalizedDeepDiveItems
-					: fallbackBenefits.map((benefit: { title: string; body: string }) => ({
-							title: benefit.title,
-							body: benefit.body
-						}));
+				normalizedDeepDiveItems.length > 0 ? normalizedDeepDiveItems : deepDiveFallbacks;
 
-			const title = getString(props.title) || 'Why this approach fits your event goals';
+			const title =
+				getString(props.title) || 'What your audience will leave with from this session';
 
 			const intro =
 				getString(props.intro) ||
-				'Most talks stay abstract. This section translates AI shifts into practical competitive moves your audience can execute.';
+				`Most ${input.campaign.format} sessions stay abstract. This section clarifies what ${input.campaign.audience} will leave with on ${input.campaign.topic} and why those outcomes are achievable.`;
 
-			const deepDiveTitle = getString(props.deepDiveTitle) || 'Why this approach works';
+			const deepDiveTitle = getString(props.deepDiveTitle) || 'Why Christoph';
 
 			return {
 				...section,
@@ -254,7 +397,7 @@ function hydrateSectionWithAssets(
 					...props,
 					title,
 					intro,
-					benefits: fallbackBenefits,
+					benefits,
 					deepDiveTitle,
 					deepDiveItems,
 					supportingVisualItems:
@@ -473,8 +616,11 @@ Corrective rules:
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
-- For hybrid_content_section, benefits must be an array of objects with title and body fields.
+- For hybrid_content_section, benefits must be an array of objects with title, body, and imageUrl fields.
+- For hybrid_content_section, benefits should contain exactly 3 items aligned to what the audience will leave with.
+- For hybrid_content_section, each benefit imageUrl must resolve from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages.
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
+- For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}

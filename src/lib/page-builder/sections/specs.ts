@@ -81,21 +81,25 @@ export const sectionSpecs: PageSectionSpecMap = {
 		type: 'hybrid_content_section',
 		label: 'Hybrid Content Section',
 		description:
-			'Content block designed for quick scanning and deeper analytical reading in one section.',
+			'Outcomes-and-credibility block that combines audience takeaways with Christoph qualification proof.',
 		whenToUse: [
 			'Use when both skim readers and detail-oriented readers must be served.',
 			'Use after trust has been established and before conversion push.',
-			'Use when benefits need crisp summaries plus deeper rationale.'
+			'Use when the audience needs explicit takeaways plus speaker-qualification context.'
 		],
 		whenNotToUse: [
 			'Do not overload with academic or overly technical language.',
 			'Do not use when only a short summary is required.',
-			'Do not include deep-dive entries that repeat benefit copy verbatim.'
+			'Do not include deep-dive entries that repeat benefit copy verbatim.',
+			'Do not write generic claims that fail to connect audience, topic, and format.'
 		],
 		contentGuidance: [
 			'Intro should bridge audience pain to practical event outcomes.',
-			'Benefits should stay concise and outcome-focused.',
-			'Deep-dive items should add context, mechanism, or proof.',
+			'Benefits should state what the audience will leave with, tied to campaign audience, topic, and format.',
+			'Aim for exactly three benefits so the visual grid reads as complete and balanced.',
+			'Benefit images should be relevant to each outcome and reinforce audience context, not generic decoration.',
+			'Deep-dive title should bias strongly to "Why Christoph".',
+			'Deep-dive items should explain why Christoph is qualified to deliver the stated outcomes.',
 			'Supporting visuals should clarify content, not decorate it.'
 		],
 		propsSchema: hybridContentSectionPropsSchema
