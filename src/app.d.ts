@@ -8,7 +8,10 @@ declare global {
 			supabase: SupabaseClient;
 		}
 		interface PageState {
-			modal?: { kind: 'youtube'; url: string } | null;
+			modal?:
+				| { kind: 'youtube'; url: string }
+				| { kind: 'booking'; data: Record<string, unknown> }
+				| null;
 		}
 		// interface Platform {}
 	}

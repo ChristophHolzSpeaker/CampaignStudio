@@ -2,6 +2,7 @@
 	import Button from '$lib/components/elements/Button.svelte';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
+	import { preloadData, pushState, goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { FrictionlessFunnelBookingProps } from '$lib/page-builder/sections/types';
 	import { submitBookingRequest } from './FrictionlessFunnelSection.remote';
@@ -18,6 +19,7 @@
 	} = $props();
 
 	let hasTrackedFormStart = $state(false);
+	let isOpeningBookingModal = $state(false);
 
 	function trackCta(type: CTAType, leadJourneyId?: string): void {
 		if (campaignId == null || campaignPageId == null) {
@@ -90,12 +92,54 @@
 	const primaryCtaLabel = $derived(props?.primaryCtaLabel ?? 'Start Booking Request');
 	const trustNote = $derived(props?.trustNote);
 	const formDisclaimer = $derived(props?.formDisclaimer);
-	const calendlyUrl = $derived(props?.calendlyUrl);
 	const pageSlug = $derived(page.url.pathname);
 	const leadJourneyId = $derived.by(() => {
 		const result = submitBookingRequest.result as { leadJourneyId?: string } | undefined;
 		return result?.leadJourneyId;
 	});
+
+	// Check if we have valid campaign context for the booking modal
+	const canOpenBookingModal = $derived(
+		campaignId != null && campaignId > 0 && campaignPageId != null && campaignPageId > 0
+	);
+
+	async function openBookingModal(): Promise<void> {
+		if (!canOpenBookingModal || isOpeningBookingModal) {
+			return;
+		}
+
+		isOpeningBookingModal = true;
+
+		try {
+			const utmParams = new URLSearchParams();
+			utmParams.set('utm_source', 'frictionless_funnel');
+			utmParams.set('utm_campaignId', String(campaignId));
+			utmParams.set('utm_campaignPageId', String(campaignPageId));
+			utmParams.set('utm_pageSlug', pageSlug);
+
+			const href = `/book/l/new?${utmParams.toString()}`;
+
+			// Preload the route data
+			const result = await preloadData(href);
+
+			if (result.type === 'loaded' && result.status === 200) {
+				pushState(href, {
+					...page.state,
+					modal: { kind: 'booking', data: result.data }
+				});
+			} else if (result.type === 'redirect') {
+				// Campaign validation failed, go to general booking
+				goto(result.location);
+			} else {
+				// Fallback: navigate normally
+				goto(href);
+			}
+
+			trackCta('booking', leadJourneyId);
+		} finally {
+			isOpeningBookingModal = false;
+		}
+	}
 
 	const fullNameError = $derived(submitBookingRequest.fields?.fullName?.issues()?.[0]?.message);
 	const organizationError = $derived(
@@ -123,16 +167,15 @@
 				<p class="max-w-xl text-xs tracking-[0.12em] text-on-surface/65 uppercase">{trustNote}</p>
 			{/if}
 
-			{#if calendlyUrl}
-				<a
+			{#if canOpenBookingModal}
+				<button
+					type="button"
 					class="outline-link inline-flex items-center justify-center px-6 py-2"
-					href={calendlyUrl}
-					target="_blank"
-					rel="noreferrer"
-					onclick={() => trackCta('booking', leadJourneyId)}
+					onclick={openBookingModal}
+					disabled={isOpeningBookingModal}
 				>
-					Prefer direct scheduling
-				</a>
+					{isOpeningBookingModal ? 'Loading...' : 'Prefer direct scheduling'}
+				</button>
 			{/if}
 		</div>
 

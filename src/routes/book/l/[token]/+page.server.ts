@@ -1,7 +1,8 @@
-import { fail, type RequestEvent } from '@sveltejs/kit';
+import { fail, redirect, type RequestEvent } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import {
 	confirmBookingSelection,
+	createBookingLinkForJourney,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
 	markBookingLinkClickedAt,
@@ -11,6 +12,8 @@ import {
 	type PublicBookingSlotDayGroup
 } from '$lib/server/bookings';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
+import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
+import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
 import {
 	bookingConfirmationSchema,
 	bookingIntakeSchema,
@@ -63,11 +66,19 @@ export type LeadBookingActionData = {
 	searchStartsAtIso?: string;
 	searchEndsAtIso?: string;
 	intakeSummary?: IntakeSummaryView;
+	redirectToken?: string;
+};
+
+type UtmContext = {
+	source: string | null;
+	campaignId: number | null;
+	campaignPageId: number | null;
+	pageSlug: string | null;
 };
 
 type LeadBookingPageData = {
 	bookingType: 'lead';
-	tokenState: 'usable' | 'invalid' | 'expired';
+	tokenState: 'usable' | 'invalid' | 'expired' | 'new';
 	tokenMessage: string | null;
 	policyState: Awaited<ReturnType<typeof getBookingPolicy>>['state'] | null;
 	unavailableMessage: string | null;
@@ -86,6 +97,7 @@ type LeadBookingPageData = {
 	searchStartsAtIso?: string;
 	searchEndsAtIso?: string;
 	message?: string;
+	utmContext?: UtmContext;
 };
 
 function toClassificationView(input: {
@@ -118,6 +130,39 @@ export const load: PageServerLoad = async ({
 	url: URL;
 }) => {
 	const token = params.token?.trim() ?? '';
+
+	// Handle "new" as special case for direct booking from speaker pages
+	if (token === 'new') {
+		// Extract and sanitize UTM params
+		const utmSource = url.searchParams.get('utm_source') ?? null;
+		const utmCampaignIdRaw = url.searchParams.get('utm_campaignId');
+		const utmCampaignId = utmCampaignIdRaw ? parseInt(utmCampaignIdRaw, 10) : NaN;
+		const utmPageSlug = url.searchParams.get('utm_pageSlug') ?? null;
+		const utmCampaignPageIdRaw = url.searchParams.get('utm_campaignPageId');
+		const utmCampaignPageId = utmCampaignPageIdRaw ? parseInt(utmCampaignPageIdRaw, 10) : NaN;
+
+		// Validate campaignId - redirect to /book/g if invalid
+		if (!Number.isInteger(utmCampaignId) || utmCampaignId <= 0) {
+			redirect(302, '/book/g');
+		}
+
+		const policy = await getBookingPolicy('lead');
+
+		return {
+			bookingType: 'lead' as const,
+			tokenState: 'new' as const,
+			tokenMessage: null,
+			policyState: policy.state,
+			unavailableMessage: getPublicBookingUnavailableMessage(policy),
+			utmContext: {
+				source: utmSource,
+				campaignId: utmCampaignId,
+				campaignPageId: Number.isInteger(utmCampaignPageId) ? utmCampaignPageId : null,
+				pageSlug: utmPageSlug
+			}
+		} satisfies LeadBookingPageData;
+	}
+
 	const tokenResolution = await resolveLeadBookingToken(token);
 
 	if (tokenResolution.state !== 'usable') {
@@ -203,12 +248,156 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-	check: async ({ request, params }: RequestEvent) => {
+	check: async ({ request, params, cookies }: RequestEvent) => {
 		const token = params.token?.trim() ?? '';
-		const tokenResolution = await resolveLeadBookingToken(token);
-
 		const formData = await request.formData();
 		const values = getBookingIntakeSubmission(formData);
+
+		// Handle "new" token - direct booking from speaker pages
+		if (token === 'new') {
+			const policy = await getBookingPolicy('lead');
+			if (policy.state !== 'active') {
+				return fail<LeadBookingActionData>(409, {
+					values,
+					message: getPublicBookingUnavailableMessage(policy) ?? 'Booking is currently unavailable.'
+				});
+			}
+
+			const parseResult = bookingIntakeSchema.safeParse(values);
+			if (!parseResult.success) {
+				return fail<LeadBookingActionData>(400, {
+					values,
+					errors: toBookingIntakeFieldErrors(parseResult.error)
+				});
+			}
+
+			// Extract UTM context from hidden fields
+			const utmSource = (formData.get('utm_source')?.toString().trim() ?? '') || null;
+			const utmPageSlug = (formData.get('utm_pageSlug')?.toString().trim() ?? '') || null;
+			const campaignIdRaw = formData.get('utm_campaignId');
+			const campaignId = campaignIdRaw ? parseInt(String(campaignIdRaw), 10) : NaN;
+			const campaignPageIdRaw = formData.get('utm_campaignPageId');
+			const campaignPageId = campaignPageIdRaw ? parseInt(String(campaignPageIdRaw), 10) : NaN;
+
+			// Validate campaign context
+			if (!Number.isInteger(campaignId) || campaignId <= 0) {
+				return fail<LeadBookingActionData>(400, {
+					values,
+					message: 'Invalid campaign context. Please try again from the speaker page.'
+				});
+			}
+
+			if (!Number.isInteger(campaignPageId) || campaignPageId <= 0) {
+				return fail<LeadBookingActionData>(400, {
+					values,
+					message: 'Invalid campaign page context. Please try again from the speaker page.'
+				});
+			}
+
+			// Read visitor identifier
+			const visitorIdentifier = readVisitorIdentifier(cookies);
+
+			// Find or create journey
+			const { journey, created } = await findOrCreateLeadJourneyFromInquiry({
+				campaignId,
+				campaignPageId,
+				contactEmail: parseResult.data.email,
+				contactName: parseResult.data.name ?? '',
+				visitorIdentifier
+			});
+
+			// Create booking link
+			const bookingLink = await createBookingLinkForJourney({
+				leadJourneyId: journey.id,
+				campaignId,
+				eventSource: 'sveltekit.book_l_new_check',
+				metadata: {
+					utm: {
+						source: utmSource,
+						campaign_id: campaignId,
+						campaign_page_id: campaignPageId,
+						page_slug: utmPageSlug
+					},
+					intake: {
+						email: parseResult.data.email,
+						scope: parseResult.data.scope,
+						name: parseResult.data.name ?? null,
+						company: parseResult.data.company ?? null
+					}
+				}
+			});
+
+			// Log event
+			await logLeadEvent({
+				leadJourneyId: journey.id,
+				campaignId,
+				campaignPageId,
+				eventType: 'form_submitted',
+				eventSource: 'sveltekit.book_l_new_page',
+				eventPayload: {
+					attribution: {
+						page_path: '/book/l/new',
+						page_slug: utmPageSlug,
+						campaign_page_id: campaignPageId,
+						utm_source: utmSource
+					},
+					form: {
+						email: parseResult.data.email,
+						full_name: parseResult.data.name ?? '',
+						organization: parseResult.data.company ?? '',
+						meeting_scope: parseResult.data.scope,
+						form_type: 'booking_modal_intake'
+					},
+					journey: {
+						created
+					},
+					booking_link_id: bookingLink.bookingLinkId
+				},
+				occurredAt: new Date()
+			});
+
+			// Get slots
+			const bookingFlow = await resolvePublicBookingSlots({
+				bookingType: 'lead',
+				requesterEmail: parseResult.data.email
+			});
+
+			const normalizedValues: BookingIntakeSubmission = {
+				email: parseResult.data.email,
+				scope: parseResult.data.scope,
+				name: parseResult.data.name ?? '',
+				company: parseResult.data.company ?? ''
+			};
+
+			return {
+				values: normalizedValues,
+				redirectToken: bookingLink.token,
+				classification: toClassificationView({
+					interactionKind: bookingFlow.classification.interactionKind,
+					hasUpcomingBooking: bookingFlow.classification.hasUpcomingBooking,
+					totalBookings: bookingFlow.classification.totalBookings,
+					upcomingBookingStartsAt: bookingFlow.classification.upcomingBooking?.startsAt ?? null
+				}),
+				availabilityState: bookingFlow.availability.state,
+				slotGroups: bookingFlow.slotGroups,
+				searchStartsAtIso: bookingFlow.searchStartsAt.toISOString(),
+				searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
+				intakeSummary: {
+					name: normalizedValues.name || null,
+					email: normalizedValues.email,
+					scope: normalizedValues.scope,
+					requestSummary: normalizedValues.scope,
+					company: normalizedValues.company || null
+				},
+				message:
+					bookingFlow.availability.state === 'no_slots'
+						? 'No slots are currently available in the next 3 days.'
+						: undefined
+			};
+		}
+
+		// Existing token flow
+		const tokenResolution = await resolveLeadBookingToken(token);
 
 		if (tokenResolution.state !== 'usable') {
 			return fail<LeadBookingActionData>(400, {
