@@ -1,16 +1,11 @@
 // src/routes/(auth)/register/+page.server.ts
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, error } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { PRIVATE_APP_REGISTER_TOKEN } from '$env/static/private';
 
 export const load: PageServerLoad = async ({ url, locals: { supabase } }) => {
-	const {
-		data: { user },
-		error
-	} = await supabase.auth.getUser();
-
-	// if the user is already logged in return them to the account page
-	if (user && !error) {
-		redirect(303, '/account');
+	if (url.searchParams.get('t') !== PRIVATE_APP_REGISTER_TOKEN) {
+		throw error(403, { message: 'Not permitted' });
 	}
 
 	return { url: url.origin };
