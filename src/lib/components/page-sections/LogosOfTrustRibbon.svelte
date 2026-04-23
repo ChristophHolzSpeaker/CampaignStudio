@@ -5,24 +5,24 @@
 
 	const fallbackLogos = [
 		{
-			name: 'Executive Summits',
-			imageUrl: 'https://dummyimage.com/260x90/f3f3f3/1a1c1c.png&text=Executive+Summits',
-			alt: 'Executive Summits wordmark placeholder'
+			name: 'Redbull',
+			imageUrl: '/redbull-logo-svgrepo-com.svg',
+			alt: 'Redbull'
 		},
 		{
-			name: 'Innovation Forums',
-			imageUrl: 'https://dummyimage.com/260x90/f3f3f3/1a1c1c.png&text=Innovation+Forums',
-			alt: 'Innovation Forums wordmark placeholder'
+			name: 'Google',
+			imageUrl: '/68231e19a6b5c7afb9fdbf99_Google_2015_logo.svg.webp',
+			alt: 'Google'
 		},
 		{
-			name: 'Corporate Offsites',
-			imageUrl: 'https://dummyimage.com/260x90/f3f3f3/1a1c1c.png&text=Corporate+Offsites',
-			alt: 'Corporate Offsites wordmark placeholder'
+			name: 'Atos',
+			imageUrl: '/68231e18e79c638d8f3661bb_Atos.svg',
+			alt: 'Atos'
 		},
 		{
-			name: 'Global Tech Expo',
-			imageUrl: 'https://dummyimage.com/260x90/f3f3f3/1a1c1c.png&text=Global+Tech+Expo',
-			alt: 'Global Tech Expo wordmark placeholder'
+			name: 'BMW Group',
+			imageUrl: '/68231e4f2fdb78ace3f120ee_BMW_Group.svg',
+			alt: 'BMW Group'
 		}
 	] as const;
 
@@ -44,7 +44,7 @@
 		</p>
 
 		<div
-			class="grid grid-cols-2 items-center justify-items-center gap-x-8 gap-y-8 opacity-70 grayscale lg:grid-cols-4 lg:gap-x-12"
+			class="grid grid-cols-2 items-center justify-items-center gap-x-8 gap-y-8 lg:grid-cols-4 lg:gap-x-12"
 		>
 			{#each logos as logo (logo.name)}
 				<div class="flex min-h-20 w-full max-w-60 items-center justify-center">

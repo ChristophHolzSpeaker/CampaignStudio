@@ -21,8 +21,17 @@
 	const modal = $derived((page.state as App.PageState).modal);
 </script>
 
-<LandingNavigation mailto={data.speakerMailtoHref}></LandingNavigation>
-<PageRenderer page={data.page} campaignId={data.campaignId} campaignPageId={data.campaignPageId} />
+<LandingNavigation
+	mailto={data.speakerMailtoHref}
+	campaignId={data.campaignId}
+	campaignPageId={data.campaignPageId}
+></LandingNavigation>
+<PageRenderer
+	page={data.page}
+	campaignId={data.campaignId}
+	campaignPageId={data.campaignPageId}
+	mailtoHref={data.speakerMailtoHref}
+/>
 
 {#if modal?.kind === 'youtube'}
 	<ShallowRouteModal title="Showreel" onclose={() => history.back()}>

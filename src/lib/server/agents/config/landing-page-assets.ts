@@ -10,22 +10,37 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 		primaryCtaHref: 'https://christophholz.com/contact'
 	},
 	fixedLogosRibbon: {
-		label: 'Trusted in executive and innovation contexts',
+		label: "Trusted by the world's bold leaders",
 		logos: [
 			{
 				name: 'Executive Summits',
 				imageUrl: '/CeBIT-Logo.png',
-				alt: 'Executive Summits wordmark placeholder'
+				alt: 'CeBIT'
 			},
 			{
-				name: 'Innovation Forums',
+				name: 'Cisco',
 				imageUrl: '/cisco-svgrepo-com.svg',
-				alt: 'Innovation Forums wordmark placeholder'
+				alt: 'Cisco'
 			},
 			{
-				name: 'Corporate Offsites',
+				name: 'Redbull',
 				imageUrl: '/redbull-logo-svgrepo-com.svg',
-				alt: 'Corporate Offsites wordmark placeholder'
+				alt: 'Redbull'
+			},
+			{
+				name: 'Google',
+				imageUrl: '/68231e19a6b5c7afb9fdbf99_Google_2015_logo.svg.webp',
+				alt: 'Google'
+			},
+			{
+				name: 'Atos',
+				imageUrl: '/68231e18e79c638d8f3661bb_Atos.svg',
+				alt: 'Atos'
+			},
+			{
+				name: 'BMW Group',
+				imageUrl: '/68231e4f2fdb78ace3f120ee_BMW_Group.svg',
+				alt: 'BMW Group'
 			}
 		]
 	},
@@ -34,23 +49,33 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 		testimonials: [
 			{
 				quote:
-					'Christoph turned a complex AI topic into actionable direction our leadership team could align around immediately.',
-				name: 'Alex Morgan',
-				role: 'Director of Strategy',
-				company: 'Enterprise Leadership Forum',
-				photoUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330',
-				photoAlt: 'Portrait placeholder for Alex Morgan',
+					'ER IST WOHL EINER DER PROFILIERTESTEN SEINES FACHES. KAUM JEMAND HAT DIE DIGITALE TRANSFORMATION SO UMFASSEND, KRITISCH UND GLEICHZEITIG SO UNTERHALTSAM AUF DEM SCHIRM WIE ER.',
+				name: 'Jörg Rositzke',
+				role: 'Managing Director',
+				company: 'Hamburg 1 Fernsehen',
+				photoUrl: '/Hamburg1-Joerg-Rositzke-ic40years-300x300.jpg',
+				photoAlt: 'Portrait for Jörg Rositzke',
 				rating: 5,
 				featured: true
 			},
 			{
 				quote:
-					'Clear, commercially grounded, and highly relevant to executives deciding how to apply AI in real operations.',
-				name: 'Jordan Reyes',
-				role: 'Head of Operations',
-				company: 'Global Services Summit',
-				photoUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
-				photoAlt: 'Portrait placeholder for Jordan Reyes',
+					'Christoph hat ein unglaublich breites Fachwissen und schafft es die Themen der Zukunft in den heutigen Alltag zu übersetzen. Als Zuhörer wird man immer wieder in seine Spannungsbögen gezogen.',
+				name: 'Armin Skoff',
+				role: 'Channel Marketing',
+				company: 'Microsoft Austria',
+				photoUrl: '/1695903089730.jpeg',
+				photoAlt: 'Portrait for Armin Skoff',
+				rating: 5
+			},
+			{
+				quote:
+					'Vielen Dank, Christoph! Deine Begeisterung und Leidenschaft, verbunden mit einem hohen Grad an Professionalität, welche Deinen Vortrag erlebbar machen, ist eine große Freude und Bereicherung für unsere Veranstaltung gewesen.',
+				name: 'Ivonne Dombrowe',
+				role: 'Senior Project Manager',
+				company: 'FLEET Education Events',
+				photoUrl: '/ivonne-dombrowe-geb-redmann.256x256.jpg',
+				photoAlt: 'Portrait for Ivonne Dombrowe',
 				rating: 5
 			}
 		]
@@ -60,16 +85,15 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 		defaultSectionDescription:
 			'Share your audience, timeline, and outcomes. We will respond quickly with fit and next steps.',
 		primaryCtaLabelDefault: 'Start Booking Request',
-		calendlyUrl: 'https://calendly.com/christophholz/speaking-discovery',
 		trustNote: 'This page uses curated campaign assets and messaging for internal MVP generation.',
 		formDisclaimer:
 			'By submitting, you agree to be contacted regarding speaking availability and event fit.'
 	},
 	complianceDefaults: {
 		privacyPolicyUrl: 'https://christophholz.com/privacy',
-		contactEmail: 'team@christophholz.com',
-		businessAddress: 'Vienna, Austria',
-		phone: '+43 1 555 0100',
+		contactEmail: 'speaker@christophholz.com',
+		businessAddress: 'Dipl.-Informatiker Christoph Holz Achenallee 16A 6380 St. Johann in Tirol',
+		phone: '+4369917407401',
 		copyrightText: '© Christoph Holz. All rights reserved.',
 		additionalLinks: [{ label: 'Imprint', href: 'https://christophholz.com/imprint' }]
 	},

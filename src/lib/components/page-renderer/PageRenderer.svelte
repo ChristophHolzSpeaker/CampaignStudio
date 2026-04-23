@@ -7,12 +7,14 @@
 		page,
 		sections,
 		campaignId,
-		campaignPageId
+		campaignPageId,
+		mailtoHref
 	}: {
 		page?: LandingPageDocument;
 		sections?: PageSection[];
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		mailtoHref?: string;
 	} = $props();
 
 	let renderedSections = $derived(page?.sections ?? sections ?? []);
@@ -24,7 +26,7 @@
 		{@const SectionComponent = entry?.component}
 
 		{#if SectionComponent}
-			<SectionComponent props={section.props} {campaignId} {campaignPageId} />
+			<SectionComponent props={section.props} {campaignId} {campaignPageId} {mailtoHref} />
 		{:else}
 			<section aria-label="Unsupported section">
 				<p>Unsupported section: {section.type}</p>

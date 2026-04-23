@@ -4,7 +4,15 @@
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
 
-	let { props }: { props?: ImmediateAuthorityHeroProps } = $props();
+	let {
+		props,
+		campaignId = null,
+		campaignPageId = null
+	}: {
+		props?: ImmediateAuthorityHeroProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+	} = $props();
 
 	const ctaHref = $derived(props?.primaryCtaHref ?? '#booking');
 	const ctaLabel = $derived(props?.primaryCtaLabel ?? 'Request Speaking Availability');
@@ -51,7 +59,33 @@
 
 	const isYouTubeUrl = $derived(!!extractYouTubeVideoId(videoEmbedUrl));
 
+	function trackCta(variant: 'primary' | 'showreel_modal' | 'showreel_external'): void {
+		if (campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		void fetch('/api/attribution/cta', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify({
+				type: 'booking',
+				campaign_id: campaignId,
+				campaign_page_id: campaignPageId,
+				cta_key: variant === 'primary' ? 'hero_primary_cta' : 'hero_showreel_cta',
+				cta_label: variant === 'primary' ? ctaLabel : 'View Showreel',
+				cta_section: 'immediate_authority_hero',
+				cta_variant: variant
+			})
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
+
 	function openYouTubeModal() {
+		trackCta('showreel_modal');
+
 		pushState('', {
 			...page.state,
 			modal: {
@@ -103,11 +137,11 @@
 				class="flex flex-col gap-3 sm:flex-row sm:items-center"
 				data-cta-action={props?.primaryCtaAction}
 			>
-				<NavButton href={ctaHref}>{ctaLabel}</NavButton>
+				<NavButton href={ctaHref} onclick={() => trackCta('primary')}>{ctaLabel}</NavButton>
 				{#if isYouTubeUrl}
 					<button
 						type="button"
-						class="outline-link inline-flex items-center justify-center gap-2 px-6 py-2"
+						class="outline-link relative inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:opacity-80"
 						onclick={openYouTubeModal}
 					>
 						<span class="material-symbols--play-circle"></span>
@@ -115,10 +149,11 @@
 					</button>
 				{:else}
 					<a
-						class="outline-link inline-flex items-center justify-center gap-2 px-6 py-2"
+						class="outline-link relative inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:opacity-80"
 						href={videoEmbedUrl}
 						target="_blank"
 						rel="noreferrer"
+						onclick={() => trackCta('showreel_external')}
 					>
 						<span class="material-symbols--play-circle"></span>
 						View Showreel
