@@ -51,7 +51,8 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 
 export const hybridBenefitItemSchema = z.object({
 	title: z.string().trim().min(1),
-	body: z.string().trim().min(1)
+	body: z.string().trim().min(1),
+	imageUrl: z.string().trim()
 });
 
 export const hybridDeepDiveItemSchema = z.object({

@@ -6,9 +6,9 @@
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
 	const intro = $derived(
 		props?.intro ??
-			'Most talks stay in the abstract. Christoph translates complex algorithmic shifts into direct competitive advantages for your members.'
+			'This section clarifies what your audience will leave with from this format and topic, then shows why Christoph is uniquely qualified to deliver those outcomes.'
 	);
-	const deepDiveTitle = $derived(props?.deepDiveTitle ?? 'Beyond Trends: The Operational Reality');
+	const deepDiveTitle = $derived(props?.deepDiveTitle ?? 'Why Christoph');
 	const benefits = $derived(props?.benefits ?? []);
 	const deepDiveItems = $derived(props?.deepDiveItems ?? []);
 	const primaryVisual = $derived(props?.supportingVisualItems?.[0]);
@@ -34,9 +34,15 @@
 		{#if benefits.length > 0}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each benefits as benefit, index (`hybrid-benefit-${benefit.title}`)}
-					<article class="flex h-full flex-col gap-4 bg-surface-container-lowest p-8">
-						<span class="text-[10px] tracking-[0.2em] text-primary">{`0${index + 1}`}</span>
-						<h3 class="text-2xl leading-tight font-bold tracking-tight text-on-surface">
+					<article class="flex h-full flex-col gap-4">
+						<span>0{index + 1}</span>
+
+						<img
+							src={benefit.imageUrl ?? '/momentum.png'}
+							alt={benefit.title}
+							class="aspect-4/2 object-cover"
+						/>
+						<h3 class="text-3xl leading-tight font-bold tracking-tight text-on-surface">
 							{benefit.title}
 						</h3>
 						<p class="text-base leading-relaxed text-on-surface/75">{benefit.body}</p>
