@@ -1,6 +1,15 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import NavButton from '../elements/NavButton.svelte';
+	type LandingPageNavigationData = {
+		mailto?: string;
+		mailtoCta?: string;
+	};
+	let {
+		mailto = 'mailto:speaker@christophholz.com?subject=Request%20a%20talk',
+		mailtoCta = 'Request a talk'
+	}: LandingPageNavigationData = $props();
+
 	let categoriesDropdown = $state(false);
 	let mobileMenuOpen = $state(false);
 	let mobileCategoriesOpen = $state(false);
@@ -151,9 +160,7 @@
 					})}
 				</div>
 
-				<NavButton href="mailto:speaker@christophholz.com?subject=Vortrag%20anfragen"
-					>Request a talk</NavButton
-				>
+				<NavButton href={mailto}>{mailtoCta}</NavButton>
 			</nav>
 		</div>
 
@@ -317,9 +324,7 @@
 			</div>
 
 			<div class="mt-4">
-				<NavButton href="mailto:speaker@christophholz.com?subject=Vortrag%20anfragen"
-					>Request a talk</NavButton
-				>
+				<NavButton href={mailto}>{mailtoCta}</NavButton>
 			</div>
 		</div>
 	</nav>
