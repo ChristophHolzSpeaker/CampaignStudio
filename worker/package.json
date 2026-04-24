@@ -1,0 +1,21 @@
+{
+	"name": "campaignstudio-worker",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check": "tsc --noEmit -p tsconfig.json",
+		"test": "vitest run src"
+	},
+	"dependencies": {
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260416.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.1.4",
+		"wrangler": "^4.42.0"
+	}
+}

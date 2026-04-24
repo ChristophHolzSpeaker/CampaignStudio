@@ -16,9 +16,16 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
+		"supabase:login": "pnpm exec supabase login",
+		"supabase:link": "pnpm exec supabase link",
+		"supabase:push": "pnpm exec supabase db push --linked",
+		"supabase:migrations:list": "pnpm exec supabase migration list --linked",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"test": "vitest run",
-		"test:worker": "vitest run worker/src"
+		"test:worker": "pnpm --filter ./worker test",
+		"worker:dev": "pnpm --filter ./worker dev",
+		"worker:deploy": "pnpm --filter ./worker exec wrangler deploy",
+		"worker:check": "pnpm --filter ./worker check"
 	},
 	"devDependencies": {
 		"@better-auth/cli": "~1.4.21",
