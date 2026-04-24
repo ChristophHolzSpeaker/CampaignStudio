@@ -8,6 +8,8 @@
 		CampaignRecord
 	} from '$lib/server/campaigns/client';
 	import type { CampaignVisitMetrics } from '$lib/validation/campaign-visit-metrics';
+	import Button from '$lib/components/elements/Button.svelte';
+	import { applyAction, enhance } from '$app/forms';
 
 	type StrategyUpdateState = {
 		values: {
@@ -79,8 +81,10 @@
 	const getUpdatedPageId = () => getStrategyUpdateState()?.campaignPageId ?? null;
 
 	let copyStatus = $state<'idle' | 'copied' | 'error'>('idle');
+	let busy = $state(false);
 
 	const copyLiveLandingUrl = async () => {
+		busy = true;
 		const liveLandingUrl = getLiveLandingUrl();
 
 		if (!liveLandingUrl) {
@@ -99,6 +103,7 @@
 		} catch {
 			copyStatus = 'error';
 		}
+		busy = false;
 	};
 </script>
 
@@ -151,7 +156,18 @@
 								{/each}
 							</div>
 						{/if}
-						<form method="POST" action="?/updateStrategy" class="mt-4 space-y-3">
+						<form
+							method="POST"
+							action="?/updateStrategy"
+							use:enhance={() => {
+								busy = true;
+								return async ({ result }) => {
+									await applyAction(result);
+									busy = false;
+								};
+							}}
+							class="mt-4 space-y-3"
+						>
 							<input type="hidden" name="id" value={getCampaign()?.id ?? ''} />
 							<label
 								for="strategy-prompt"
@@ -167,12 +183,8 @@
 								placeholder="Describe how you'd like to refine the strategy..."
 								>{getStrategyPromptValue()}</textarea
 							>
-							<button
-								type="submit"
-								class="rounded border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-							>
-								Update Strategy + Regenerate
-							</button>
+
+							<Button variant="dark">Update Strategy + Regenerate</Button>
 							{#if getStrategyMessage()}
 								<p
 									class="text-xs font-medium"
@@ -253,13 +265,12 @@
 									<p class="font-['Space_Grotesk'] text-[11px] break-all text-slate-700">
 										{getLiveLandingUrl()}
 									</p>
-									<button
-										type="button"
-										class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+									<Button
 										onclick={copyLiveLandingUrl}
+										isSubmitting={busy}
+										type="button"
+										variant="dark">{copyStatus === 'copied' ? 'Copied' : 'Copy link'}</Button
 									>
-										{copyStatus === 'copied' ? 'Copied' : 'Copy link'}
-									</button>
 									{#if copyStatus === 'error'}
 										<p class="text-[11px] text-red-500">
 											Couldn't copy automatically. Copy it manually.
