@@ -59,10 +59,6 @@
 					<Button isSubmitting={form?.pending}>
 						{form?.pending ? 'Signing in...' : 'Sign in'}
 					</Button>
-
-					<p class="text-center text-xs text-slate-400 uppercase">
-						Need an account? <a class="font-semibold" href="/register">Sign up</a>
-					</p>
 				</form>
 			</div>
 		</div>
