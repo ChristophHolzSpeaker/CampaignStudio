@@ -132,7 +132,9 @@
 	{/if}
 
 	<div class="mt-auto flex flex-col gap-2 uppercase">
-		<a class="text-[#5d3f3f] no-underline" href={resolve('/(app)/admin/docs')}>Documentation</a>
+		<a class="text-[#5d3f3f] no-underline" href={resolve('/(app)/admin/documentation')}
+			>Documentation</a
+		>
 		<button type="button" class="text-left text-[#5d3f3f] no-underline" onclick={handleSignOut}>
 			Log Out
 		</button>

@@ -17,6 +17,7 @@
 			href: '/(app)/admin/library',
 			match: 'prefix'
 		},
+		{ label: 'Documentation', href: '/(app)/admin/documentation', match: 'prefix' },
 		{ label: 'Analytics', disabled: true }
 	];
 </script>

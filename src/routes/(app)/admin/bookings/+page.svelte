@@ -75,6 +75,11 @@
 			label: 'Bookings',
 			href: '/(app)/admin/bookings',
 			match: 'prefix'
+		},
+		{
+			label: 'Documentation',
+			href: '/(app)/admin/documentation',
+			match: 'prefix'
 		}
 	];
 </script>
