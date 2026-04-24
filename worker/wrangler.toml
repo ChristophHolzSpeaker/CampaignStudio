@@ -3,7 +3,7 @@ main = "src/index.ts"
 compatibility_date = "2026-04-14"
 
 [vars]
-BOOKING_BASE_URL = "http://localhost:5173"
+BOOKING_BASE_URL = "campaignstudio-attribution-worker.speaker.workers.dev"
 BOOKING_CALENDAR_ID = "podcast@christophholz.com"
 BOOKING_LINK_TTL_SECONDS = "2592000"
 
