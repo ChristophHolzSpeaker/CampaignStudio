@@ -322,3 +322,103 @@ Implemented Woody generation foundation (OpenRouter-backed, generation-only):
 - Actual reply text generation (Woody)
 - Actual outbound autoresponse sending
 - HubSpot sync / notifications / scheduling side-effects
+
+---
+
+# Gmail Push Setup Runbook (Order of Operations)
+
+This section documents the exact setup order for Gmail watch + Pub/Sub push so `/gmail/watch/activate` and `/gmail/push` work together without confusion.
+
+## Mental model
+
+- `/gmail/watch/activate` is the control endpoint you call manually (or from internal automation).
+  - It calls Gmail `users.watch`.
+  - It tells Gmail which Pub/Sub **topic** to publish notifications to.
+  - It stores/updates `mailbox_cursors` with the initial `history_id`.
+- `/gmail/push` is the webhook endpoint Pub/Sub calls automatically.
+  - It receives Pub/Sub push envelopes.
+  - It parses payload, touches cursor, and triggers sync.
+
+If activation fails, pushes may still arrive (from prior watch state), but processing can no-op when cursor state is missing.
+
+## Required setup order (production)
+
+1. Confirm Pub/Sub topic exists (must be a topic path):
+   - `projects/<project-id>/topics/<topic-id>`
+   - Do not use a subscription path.
+2. Grant Pub/Sub topic publisher to Gmail push service account:
+   - `serviceAccount:gmail-api-push@system.gserviceaccount.com`
+3. Create/update push subscription on that topic with endpoint:
+   - `https://campaignstudio-attribution-worker.speaker.workers.dev/gmail/push`
+   - If `GMAIL_PUSH_VERIFICATION_TOKEN` is set, include query token in endpoint:
+   - `https://campaignstudio-attribution-worker.speaker.workers.dev/gmail/push?token=<token>`
+4. Configure Worker env vars:
+   - `GOOGLE_WATCH_TOPIC` (preferred) or `GMAIL_PUBSUB_TOPIC_NAME`
+   - `GMAIL_PUSH_VERIFICATION_TOKEN` (optional, but must match subscription endpoint query token)
+   - `GMAIL_WATCH_LABEL_FILTER_ACTION` and `GMAIL_WATCH_LABEL_IDS` (optional)
+5. Activate watch per mailbox by calling `/gmail/watch/activate`.
+6. Verify cursor exists in `mailbox_cursors` for each activated mailbox.
+7. Confirm `/gmail/push` returns 2xx and logs sync-trigger path.
+
+## Critical distinctions: topic vs subscription
+
+- Correct for Gmail watch:
+  - `projects/jplanding/topics/gmail-notifications`
+- Incorrect for Gmail watch:
+  - `projects/jplanding/subscriptions/gmail-push-sub-prod`
+
+Gmail `users.watch` requires a topic name, never a subscription name.
+
+## Common failure modes and fixes
+
+- `401` on `POST /gmail/push`
+  - Cause: `GMAIL_PUSH_VERIFICATION_TOKEN` is set, but Pub/Sub push endpoint does not include `?token=<value>`.
+  - Fix: update push endpoint query token (or unset verification token).
+- `400 Invalid topic name format` from `users.watch`
+  - Cause: wrong format (URL, short name, or subscription path).
+  - Fix: use exact `projects/<project-id>/topics/<topic-id>`.
+- `404 Error sending test message ... Resource not found`
+  - Cause: topic does not exist in the referenced project.
+  - Fix: create topic or use an existing topic path that resolves.
+- Pushes arrive continuously but no processing
+  - Cause: old watch still publishing and/or cursor missing.
+  - Fix: ensure activation succeeds for mailbox and cursor row exists.
+- Label filter related 400s
+  - Cause: invalid/empty label config in watch payload.
+  - Fix: temporarily disable label filtering and retest activation.
+
+## Verification checklist
+
+- Watch activation succeeds:
+  - `POST /gmail/watch/activate` returns `ok: true` with `history_id`.
+- Push endpoint accepts Pub/Sub:
+  - `POST /gmail/push` returns 2xx (not 401).
+- Cursor present:
+  - Row exists in `mailbox_cursors` for mailbox.
+- Sync path observed:
+  - Logs show push accepted and sync triggered for mailbox.
+
+## Minimal activation call
+
+```bash
+curl -i -X POST "https://campaignstudio-attribution-worker.speaker.workers.dev/gmail/watch/activate" \
+  -H "Authorization: Bearer <INTERNAL_API_TOKEN>" \
+  -H "Content-Type: application/json" \
+  --data '{"gmail_user":"speaker@christophholz.com"}'
+```
+
+## Minimal push endpoint expectation
+
+- Pub/Sub push subscription should target:
+  - `https://campaignstudio-attribution-worker.speaker.workers.dev/gmail/push`
+- If token verification is enabled:
+  - `https://campaignstudio-attribution-worker.speaker.workers.dev/gmail/push?token=<token>`
+
+## Migration note (temporary topic -> production topic)
+
+If using a temporary working topic first:
+
+1. Stand up production topic + push subscription.
+2. Re-run `/gmail/watch/activate` for each mailbox against production topic config.
+3. Verify pushes and sync on production path.
+4. Remove old subscription/topic wiring after confirmation.
