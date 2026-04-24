@@ -3,9 +3,18 @@
 		isSubmitting?: undefined | boolean;
 		children?: any;
 		variant?: 'primary' | 'secondary' | 'dark' | 'outline';
+		onclick?: () => void;
+		type?: 'button' | 'reset' | 'submit' | null | undefined;
 	};
 
-	let { children, isSubmitting = false, variant = 'primary' }: Props = $props();
+	let {
+		children,
+		isSubmitting = false,
+		variant = 'primary',
+		type = 'submit',
+		onclick,
+		...props
+	}: Props = $props();
 
 	const variants = {
 		primary: 'btn-primary',
@@ -16,9 +25,11 @@
 </script>
 
 <button
-	type="submit"
+	{type}
 	class="{variants[variant]} inline-flex items-center gap-2"
 	disabled={isSubmitting}
+	{onclick}
+	{...props}
 >
 	{#if isSubmitting}
 		<span class="proicons--spinner animate-spin"></span> Please wait...
