@@ -20,7 +20,7 @@
 		"test": "vitest run",
 		"test:worker": "pnpm --filter ./worker test",
 		"worker:dev": "pnpm --filter ./worker dev",
-		"worker:deploy": "pnpm --filter ./worker deploy",
+		"worker:deploy": "pnpm --filter ./worker exec wrangler deploy",
 		"worker:check": "pnpm --filter ./worker check"
 	},
 	"devDependencies": {
