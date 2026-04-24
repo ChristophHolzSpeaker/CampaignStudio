@@ -1,17 +1,9 @@
 import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-
-const documentationPath = path.resolve(
-	process.cwd(),
-	'static/docs/campaign-studio-user-journey.md'
-);
+import markdown from '$lib/content/campaign-studio-user-journey.md?raw';
 
 export const load: PageServerLoad = async () => {
 	try {
-		const markdown = await readFile(documentationPath, 'utf-8');
-
 		return {
 			markdown
 		};
