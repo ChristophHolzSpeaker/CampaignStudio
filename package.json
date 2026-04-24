@@ -18,7 +18,10 @@
 		"db:studio": "drizzle-kit studio",
 		"auth:schema": "better-auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes",
 		"test": "vitest run",
-		"test:worker": "vitest run worker/src"
+		"test:worker": "pnpm --filter ./worker test",
+		"worker:dev": "pnpm --filter ./worker dev",
+		"worker:deploy": "pnpm --filter ./worker deploy",
+		"worker:check": "pnpm --filter ./worker check"
 	},
 	"devDependencies": {
 		"@better-auth/cli": "~1.4.21",
