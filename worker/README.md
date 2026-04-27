@@ -422,3 +422,47 @@ If using a temporary working topic first:
 2. Re-run `/gmail/watch/activate` for each mailbox against production topic config.
 3. Verify pushes and sync on production path.
 4. Remove old subscription/topic wiring after confirmation.
+
+---
+
+# Environment isolation (staging + production)
+
+The worker uses one codebase with separate Cloudflare environments.
+
+- `staging` deploy target: `campaignstudio-attribution-worker-staging`
+- `production` deploy target: `campaignstudio-attribution-worker-production`
+
+## Local worker setup
+
+1. Copy local worker env template:
+   - `cp worker/.dev.vars.example worker/.dev.vars`
+2. Fill required secrets in `worker/.dev.vars`:
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `BOOKING_TOKEN_SECRET`
+   - `INTERNAL_API_TOKEN`
+3. Keep app token aligned with worker token:
+   - `.env.local` -> `ATTRIBUTION_INTERNAL_TOKEN=<same value as INTERNAL_API_TOKEN>`
+4. Run locally:
+   - `pnpm worker:dev`
+
+## Remote secret management
+
+Set secrets per environment (never reuse production secrets in staging):
+
+```bash
+pnpm --filter ./worker exec wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env staging
+pnpm --filter ./worker exec wrangler secret put SUPABASE_SERVICE_ROLE_KEY --env production
+
+pnpm --filter ./worker exec wrangler secret put BOOKING_TOKEN_SECRET --env staging
+pnpm --filter ./worker exec wrangler secret put BOOKING_TOKEN_SECRET --env production
+
+pnpm --filter ./worker exec wrangler secret put INTERNAL_API_TOKEN --env staging
+pnpm --filter ./worker exec wrangler secret put INTERNAL_API_TOKEN --env production
+```
+
+Repeat for other sensitive keys (`OPENROUTER_API_KEY`, Google service account credentials, Telegram secrets, etc.).
+
+## Deploy commands
+
+- Staging: `pnpm worker:deploy:staging`
+- Production: `pnpm worker:deploy:production`
