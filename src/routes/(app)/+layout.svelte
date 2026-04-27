@@ -5,7 +5,7 @@
 	import { onMount } from 'svelte';
 
 	let { data, children } = $props();
-	let { supabase, claims } = $derived(data);
+	let { supabase, claims, currentUser } = $derived(data);
 
 	onMount(() => {
 		const { data } = supabase.auth.onAuthStateChange((event, _session) => {
@@ -22,7 +22,7 @@
 	<title>User Management</title>
 </svelte:head>
 <div class="page-shell">
-	<AdminShellHeader />
+	<AdminShellHeader {currentUser} />
 	<div class="layout-body">
 		{@render children()}
 	</div>
