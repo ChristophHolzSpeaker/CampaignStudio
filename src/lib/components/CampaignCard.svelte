@@ -45,6 +45,11 @@
 			year: 'numeric'
 		});
 	};
+
+	const creatorLabel = $derived.by(() => {
+		if (!campaign?.created_by) return '';
+		return campaign.created_by_display_name?.trim() || campaign.created_by;
+	});
 </script>
 
 <article class="campaign-card">
@@ -53,8 +58,8 @@
 	</div>
 	<h3 class="text-4xl uppercase">{campaign?.name}</h3>
 	<p class="meta">
-		{campaign?.created_by ? `By ${campaign.created_by}` : ''}
-		{campaign?.created_by && campaign?.created_at ? ' · ' : ''}
+		{creatorLabel ? `By ${creatorLabel}` : ''}
+		{creatorLabel && campaign?.created_at ? ' · ' : ''}
 		{formatDate(campaign?.created_at)}
 	</p>
 	<p class="meta meta-secondary">

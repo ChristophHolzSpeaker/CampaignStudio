@@ -44,6 +44,15 @@ export const campaigns = pgTable('campaigns', {
 	created_by: text('created_by') // Could reference user ID from auth system
 });
 
+export const profiles = pgTable('profiles', {
+	id: uuid('id').primaryKey(),
+	display_name: text('display_name').notNull(),
+	avatar_bucket: text('avatar_bucket').notNull().default('avatars'),
+	avatar_path: text('avatar_path'),
+	created_at: timestamp('created_at').notNull().defaultNow(),
+	updated_at: timestamp('updated_at').notNull().defaultNow()
+});
+
 export const campaign_pages = pgTable('campaign_pages', {
 	id: serial('id').primaryKey(),
 	campaign_id: integer('campaign_id')

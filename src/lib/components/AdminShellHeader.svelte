@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	type HeaderRoute = '/campaigns' | '/admin/prompts' | '/campaigns/analytics' | '/admin/bookings';
+	type CurrentUser = {
+		id: string;
+		displayName: string;
+		avatarUrl: string | null;
+	};
+
+	let { currentUser = null }: { currentUser?: CurrentUser | null } = $props();
 
 	const navLinks: { label: string; href: HeaderRoute }[] = [
 		{ label: 'Campaigns', href: '/campaigns' },
@@ -11,6 +18,13 @@
 
 	const currentPath = $derived.by(() => $page.url.pathname);
 	const isActive = (href?: string) => !!href && currentPath.startsWith(href);
+	const avatarSrc = $derived(
+		currentUser?.avatarUrl ??
+			'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=64&q=80'
+	);
+	const avatarAlt = $derived(
+		currentUser?.displayName ? `${currentUser.displayName} avatar` : 'Administrator portrait'
+	);
 </script>
 
 <header class="admin-shell-header">
@@ -23,11 +37,10 @@
 		{/each}
 	</nav>
 	<div class="header-tools">
-		<img
-			class="avatar"
-			src="https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=64&q=80"
-			alt="Administrator portrait"
-		/>
+		{#if currentUser?.displayName}
+			<span class="display-name">{currentUser.displayName}</span>
+		{/if}
+		<img class="avatar" src={avatarSrc} alt={avatarAlt} />
 	</div>
 </header>
 
@@ -70,6 +83,13 @@
 		gap: 0.75rem;
 	}
 
+	.display-name {
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		color: #5d3f3f;
+	}
+
 	.avatar {
 		width: 40px;
 		height: 40px;
@@ -80,6 +100,10 @@
 
 	@media (max-width: 1024px) {
 		.header-nav {
+			display: none;
+		}
+
+		.display-name {
 			display: none;
 		}
 
