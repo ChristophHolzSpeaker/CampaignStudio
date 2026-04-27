@@ -1,22 +1,12 @@
-# Drizzle
-# Replace with your DB credentials!
-DATABASE_URL="postgres://user:password@host:port/db-name"
-
-ORIGIN=""
-
-# Better Auth
-# For production use 32 characters and generated with high entropy
-# https://www.better-auth.com/docs/installation
-BETTER_AUTH_SECRET=""
-
-# Worker attribution service
 SUPABASE_URL="http://127.0.0.1:54321"
 SUPABASE_SERVICE_ROLE_KEY=""
 BOOKING_TOKEN_SECRET=""
 INTERNAL_API_TOKEN=""
-BOOKING_BASE_URL="https://book.domain.com/"
+
+BOOKING_BASE_URL="http://127.0.0.1:8787"
 BOOKING_CALENDAR_ID="podcast@christophholz.com"
 BOOKING_LINK_TTL_SECONDS="2592000"
+
 GOOGLE_SERVICE_ACCOUNT_EMAIL=""
 GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY=""
 GOOGLE_TOKEN_URI="https://oauth2.googleapis.com/token"
@@ -27,17 +17,16 @@ GMAIL_PUSH_VERIFICATION_TOKEN=""
 GMAIL_WATCH_RENEWAL_BUFFER_SECONDS="43200"
 GMAIL_WATCH_LABEL_IDS=""
 GMAIL_WATCH_LABEL_FILTER_ACTION="include"
+
 INTERNAL_TEAM_EMAIL_DOMAINS="christophholz.com"
 OPENROUTER_API_KEY=""
 WOODY_OPENROUTER_MODEL="openai/gpt-4.1-mini"
 WOODY_OPENROUTER_TIMEOUT_MS="25000"
 WOODY_SUPPORTED_LANGUAGES="english,en,german,de,french,fr,spanish,es"
+
 GMAIL_RECONCILE_PUSH_STALE_SECONDS="21600"
 GMAIL_RECONCILE_SYNC_STALE_SECONDS="7200"
 GMAIL_RECONCILE_RETRY_COOLDOWN_SECONDS="900"
+
 TELEGRAM_BOT_TOKEN=""
 TELEGRAM_CHAT_ID=""
-
-# SvelteKit -> Worker internal auth
-ATTRIBUTION_WORKER_URL="http://127.0.0.1:8787"
-ATTRIBUTION_INTERNAL_TOKEN=""

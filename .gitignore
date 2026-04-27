@@ -22,6 +22,7 @@ Thumbs.db
 worker/.dev.vars
 worker/.dev.vars.*
 *.dev.vars*
+!worker/.dev.vars.example
 
 # Vite
 vite.config.js.timestamp-*

@@ -24,7 +24,9 @@
 		"test": "vitest run",
 		"test:worker": "pnpm --filter ./worker test",
 		"worker:dev": "pnpm --filter ./worker dev",
-		"worker:deploy": "pnpm --filter ./worker exec wrangler deploy",
+		"worker:deploy": "pnpm --filter ./worker exec wrangler deploy --env staging",
+		"worker:deploy:staging": "pnpm --filter ./worker exec wrangler deploy --env staging",
+		"worker:deploy:production": "pnpm --filter ./worker exec wrangler deploy --env production",
 		"worker:check": "pnpm --filter ./worker check"
 	},
 	"devDependencies": {

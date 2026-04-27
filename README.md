@@ -46,3 +46,11 @@ pnpm run build
 ```
 
 The Supabase schema is rooted in `/supabase`, so use the Supabase CLI from the repo root when you need migrations, Studio, or other platform tools.
+
+## Environment deployment
+
+- App runtime uses environment-specific variables (`.env.local` for local, Vercel env vars for staging/production).
+- Worker runtime uses `worker/.dev.vars` for local and Wrangler environments for remote.
+- Deploy worker explicitly per remote environment:
+  - `pnpm worker:deploy:staging`
+  - `pnpm worker:deploy:production`
