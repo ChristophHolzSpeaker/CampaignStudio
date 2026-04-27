@@ -1,6 +1,6 @@
 import { db } from '$lib/server/db';
-import { campaigns, campaign_visit_metrics } from '$lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { campaigns, campaign_visit_metrics, profiles } from '$lib/server/db/schema';
+import { desc, eq, sql } from 'drizzle-orm';
 import {
 	campaignVisitMetricsSchema,
 	type CampaignVisitMetrics
@@ -37,6 +37,7 @@ export interface CampaignRecord {
 	created_at: Date;
 	updated_at: Date;
 	created_by: string | null;
+	created_by_display_name?: string | null;
 }
 
 export interface CampaignRecordWithMetrics extends CampaignRecord {
@@ -79,12 +80,14 @@ export async function listCampaignsWithMetrics(): Promise<CampaignRecordWithMetr
 			created_at: campaigns.created_at,
 			updated_at: campaigns.updated_at,
 			created_by: campaigns.created_by,
+			created_by_display_name: profiles.display_name,
 			campaignId: campaign_visit_metrics.campaign_id,
 			visitCount: campaign_visit_metrics.visit_count,
 			uniqueVisitorCount: campaign_visit_metrics.unique_visitor_count,
 			lastVisitedAt: campaign_visit_metrics.last_visited_at
 		})
 		.from(campaigns)
+		.leftJoin(profiles, sql`${campaigns.created_by} = ${profiles.id}::text`)
 		.leftJoin(campaign_visit_metrics, eq(campaign_visit_metrics.campaign_id, campaigns.id))
 		.orderBy(desc(campaigns.created_at));
 
@@ -110,6 +113,7 @@ export async function listCampaignsWithMetrics(): Promise<CampaignRecordWithMetr
 			created_at: row.created_at,
 			updated_at: row.updated_at,
 			created_by: row.created_by,
+			created_by_display_name: row.created_by_display_name,
 			visitCount: metrics.visitCount,
 			uniqueVisitorCount: metrics.uniqueVisitorCount,
 			lastVisitedAt: metrics.lastVisitedAt
