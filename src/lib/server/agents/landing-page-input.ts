@@ -45,7 +45,14 @@ export async function loadLandingPageGenerationInput(
 		throw new Error(`Invalid ad package strategy_json: ${parsedStrategy.error.message}`);
 	}
 
-	const landingPageAssets = await loadLandingPageAssets();
+	const landingPageAssets = await loadLandingPageAssets({
+		topic: campaign.topic,
+		audience: campaign.audience,
+		format: campaign.format,
+		intentSummary: singleAdGroup.intent_summary ?? '',
+		messagingAngle: parsedStrategy.data.messagingAngle,
+		conversionGoal: parsedStrategy.data.conversionGoal
+	});
 
 	const normalized = landingPageGenerationInputSchema.parse({
 		campaign: {
