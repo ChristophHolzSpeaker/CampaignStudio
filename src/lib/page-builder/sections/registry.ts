@@ -8,6 +8,7 @@ import ImmediateAuthorityHero from '$lib/components/page-sections/ImmediateAutho
 import LogosOfTrustRibbon from '$lib/components/page-sections/LogosOfTrustRibbon.svelte';
 import ProofOfPerformanceSection from '$lib/components/page-sections/ProofOfPerformanceSection.svelte';
 import SEO from '$lib/components/page-sections/SEO.svelte';
+import SpeakerInAction from '$lib/components/page-sections/SpeakerInAction.svelte';
 import { sectionSpecs } from './specs';
 import type { PageSectionSpec, PageSectionType } from './types';
 
@@ -29,6 +30,7 @@ export const sectionComponentRegistry: SectionComponentRegistry = {
 	hero_large_email_cta: HeroLargeEmailCta,
 	booklet_download_cta: BookletDownloadCta,
 	logos_of_trust_ribbon: LogosOfTrustRibbon,
+	speaker_in_action: SpeakerInAction,
 	hybrid_content_section: HybridContentSection,
 	proof_of_performance: ProofOfPerformanceSection,
 	frictionless_funnel_booking: FrictionlessFunnelSection,
@@ -55,6 +57,10 @@ export const sectionRegistry: SectionRegistry = {
 	logos_of_trust_ribbon: {
 		...sectionSpecs.logos_of_trust_ribbon,
 		component: sectionComponentRegistry.logos_of_trust_ribbon
+	},
+	speaker_in_action: {
+		...sectionSpecs.speaker_in_action,
+		component: sectionComponentRegistry.speaker_in_action
 	},
 	hybrid_content_section: {
 		...sectionSpecs.hybrid_content_section,

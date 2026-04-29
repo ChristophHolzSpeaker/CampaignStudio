@@ -6,6 +6,7 @@ import {
 	landingPageAssetsSchema,
 	type HeroVideoOption,
 	type HybridSupportingImageOption,
+	type SpeakerInActionVideoOption,
 	type LandingPageAssets
 } from '../schemas/landing-page-assets';
 
@@ -177,12 +178,33 @@ function sortMediaAssetsByRelevance(
 	});
 }
 
+function fillHeroDefaultsFromCatalog(
+	assets: LandingPageAssets,
+	catalog: { heroVideos: HeroVideoOption[] }
+): LandingPageAssets {
+	const fallbackHero = catalog.heroVideos[0];
+	if (!fallbackHero) {
+		return assets;
+	}
+
+	return {
+		...assets,
+		heroDefaults: {
+			...assets.heroDefaults,
+			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? fallbackHero.videoThumbnailUrl,
+			videoThumbnailAlt: assets.heroDefaults.videoThumbnailAlt ?? fallbackHero.videoThumbnailAlt
+		}
+	};
+}
+
 function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	heroVideos: HeroVideoOption[];
 	hybridSupportingImages: HybridSupportingImageOption[];
+	speakerInActionVideos: SpeakerInActionVideoOption[];
 } {
 	const heroVideos: HeroVideoOption[] = [];
 	const hybridSupportingImages: HybridSupportingImageOption[] = [];
+	const speakerInActionVideos: SpeakerInActionVideoOption[] = [];
 
 	for (const asset of rows) {
 		if (asset.kind === 'video' && asset.sectionTypes.includes('immediate_authority_hero')) {
@@ -191,6 +213,23 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 			}
 
 			heroVideos.push({
+				id: asset.id,
+				title: asset.title,
+				description: asset.description,
+				usageNotes: asset.usageNotes,
+				avoidNotes: asset.avoidNotes ?? undefined,
+				videoEmbedUrl: asset.primaryUrl,
+				videoThumbnailUrl: asset.thumbnailUrl,
+				videoThumbnailAlt: asset.thumbnailAlt
+			});
+		}
+
+		if (asset.kind === 'video' && asset.sectionTypes.includes('speaker_in_action')) {
+			if (!asset.thumbnailUrl || !asset.thumbnailAlt) {
+				continue;
+			}
+
+			speakerInActionVideos.push({
 				id: asset.id,
 				title: asset.title,
 				description: asset.description,
@@ -215,7 +254,7 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 		}
 	}
 
-	return { heroVideos, hybridSupportingImages };
+	return { heroVideos, hybridSupportingImages, speakerInActionVideos };
 }
 
 export async function loadLandingPageAssets(
@@ -227,13 +266,17 @@ export async function loadLandingPageAssets(
 		const catalog = buildCatalogFromMediaAssets(mediaRows);
 
 		if (!activeSet) {
-			return {
-				...landingPageAssets,
-				assetCatalog: {
-					heroVideos: catalog.heroVideos,
-					hybridSupportingImages: catalog.hybridSupportingImages
-				}
-			};
+			return fillHeroDefaultsFromCatalog(
+				{
+					...landingPageAssets,
+					assetCatalog: {
+						heroVideos: catalog.heroVideos,
+						hybridSupportingImages: catalog.hybridSupportingImages,
+						speakerInActionVideos: catalog.speakerInActionVideos
+					}
+				},
+				catalog
+			);
 		}
 
 		const parsedAssets = landingPageAssetsSchema.safeParse(activeSet.assetsJson);
@@ -242,22 +285,30 @@ export async function loadLandingPageAssets(
 				`Invalid landing page assets in set ${activeSet.assetKey}. Falling back to static defaults.`,
 				parsedAssets.error.flatten()
 			);
-			return {
-				...landingPageAssets,
-				assetCatalog: {
-					heroVideos: catalog.heroVideos,
-					hybridSupportingImages: catalog.hybridSupportingImages
-				}
-			};
+			return fillHeroDefaultsFromCatalog(
+				{
+					...landingPageAssets,
+					assetCatalog: {
+						heroVideos: catalog.heroVideos,
+						hybridSupportingImages: catalog.hybridSupportingImages,
+						speakerInActionVideos: catalog.speakerInActionVideos
+					}
+				},
+				catalog
+			);
 		}
 
-		return {
-			...parsedAssets.data,
-			assetCatalog: {
-				heroVideos: catalog.heroVideos,
-				hybridSupportingImages: catalog.hybridSupportingImages
-			}
-		};
+		return fillHeroDefaultsFromCatalog(
+			{
+				...parsedAssets.data,
+				assetCatalog: {
+					heroVideos: catalog.heroVideos,
+					hybridSupportingImages: catalog.hybridSupportingImages,
+					speakerInActionVideos: catalog.speakerInActionVideos
+				}
+			},
+			catalog
+		);
 	} catch (error) {
 		console.warn(
 			'Unable to load landing page assets from database. Falling back to static defaults.',

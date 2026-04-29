@@ -8,10 +8,16 @@ import { z } from 'zod';
 const heroDefaultsSchema = z
 	.object({
 		videoEmbedUrl: z.string().trim().url(),
-		videoThumbnailUrl: z.string().trim().url(),
-		videoThumbnailAlt: z.string().trim().min(1),
+		videoThumbnailUrl: z.string().trim().url().optional(),
+		videoThumbnailAlt: z.string().trim().min(1).optional(),
 		primaryCtaLabelDefault: z.string().trim().min(1),
-		primaryCtaHref: z.string().trim().url().optional(),
+		primaryCtaHref: z
+			.string()
+			.trim()
+			.refine((value) => value.startsWith('#') || z.string().url().safeParse(value).success, {
+				message: 'primaryCtaHref must be an absolute URL or an in-page anchor (e.g. #briefing).'
+			})
+			.optional(),
 		primaryCtaAction: z.string().trim().min(1).optional()
 	})
 	.refine((value) => Boolean(value.primaryCtaHref || value.primaryCtaAction), {
@@ -50,9 +56,21 @@ export const hybridSupportingImageOptionSchema = z.object({
 	caption: z.string().trim().min(1).optional()
 });
 
+export const speakerInActionVideoOptionSchema = z.object({
+	id: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	description: z.string().trim().min(1),
+	usageNotes: z.string().trim().min(1),
+	avoidNotes: z.string().trim().min(1).optional(),
+	videoEmbedUrl: z.string().trim().url(),
+	videoThumbnailUrl: z.string().trim().url(),
+	videoThumbnailAlt: z.string().trim().min(1)
+});
+
 const assetCatalogSchema = z.object({
 	heroVideos: z.array(heroVideoOptionSchema),
-	hybridSupportingImages: z.array(hybridSupportingImageOptionSchema)
+	hybridSupportingImages: z.array(hybridSupportingImageOptionSchema),
+	speakerInActionVideos: z.array(speakerInActionVideoOptionSchema)
 });
 
 export const landingPageAssetsSchema = z.object({
@@ -63,10 +81,12 @@ export const landingPageAssetsSchema = z.object({
 	complianceDefaults: complianceTransparencyFooterPropsSchema,
 	assetCatalog: assetCatalogSchema.default({
 		heroVideos: [],
-		hybridSupportingImages: []
+		hybridSupportingImages: [],
+		speakerInActionVideos: []
 	})
 });
 
 export type LandingPageAssets = z.infer<typeof landingPageAssetsSchema>;
 export type HeroVideoOption = z.infer<typeof heroVideoOptionSchema>;
 export type HybridSupportingImageOption = z.infer<typeof hybridSupportingImageOptionSchema>;
+export type SpeakerInActionVideoOption = z.infer<typeof speakerInActionVideoOptionSchema>;

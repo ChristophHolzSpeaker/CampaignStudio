@@ -6,6 +6,7 @@ import {
 	hybridContentSectionPropsSchema,
 	immediateAuthorityHeroPropsSchema,
 	logosOfTrustRibbonPropsSchema,
+	speakerInActionPropsSchema,
 	proofOfPerformancePropsSchema,
 	seoPropsSchema
 } from './schema';
@@ -143,6 +144,28 @@ export const sectionSpecs: PageSectionSpecMap = {
 			'Use accurate alt text for accessibility and clarity.'
 		],
 		propsSchema: logosOfTrustRibbonPropsSchema
+	},
+	speaker_in_action: {
+		type: 'speaker_in_action',
+		label: 'Speaker in Action',
+		description:
+			'Video-first proof gallery section that showcases Christoph on stage through curated clips and supporting stills.',
+		whenToUse: [
+			'Use when at least four approved stage videos are available in the media asset catalog.',
+			'Use before proof_of_performance when visual authority should be established before written testimonials.',
+			'Use when the campaign audience values speaking style, stage presence, and delivery energy as decision factors.'
+		],
+		whenNotToUse: [
+			'Do not use when fewer than four suitable approved video assets are available.',
+			'Do not use with unverified, off-brand, or non-stage footage.',
+			'Do not replace proof_of_performance if strong testimonial evidence should also be shown.'
+		],
+		contentGuidance: [
+			'Prefer high-authority keynote footage aligned to audience and event format intent.',
+			'Grid assets should feel cohesive in quality, framing, and visual tone.',
+			'Asset titles should be short and informative for accessibility and editorial clarity.'
+		],
+		propsSchema: speakerInActionPropsSchema
 	},
 	hybrid_content_section: {
 		type: 'hybrid_content_section',

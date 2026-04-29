@@ -99,6 +99,7 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 	},
 	assetCatalog: {
 		heroVideos: [],
-		hybridSupportingImages: []
+		hybridSupportingImages: [],
+		speakerInActionVideos: []
 	}
 });

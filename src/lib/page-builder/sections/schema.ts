@@ -49,6 +49,19 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 	logos: z.array(trustLogoItemSchema).min(1)
 });
 
+export const speakerInActionMediaItemSchema = z.object({
+	assetId: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	videoEmbedUrl: z.string().trim().url(),
+	thumbnailUrl: z.string().trim().url(),
+	thumbnailAlt: z.string().trim().min(1)
+});
+
+export const speakerInActionPropsSchema = z.object({
+	title: z.string().trim().min(1).optional(),
+	mediaAssets: z.array(speakerInActionMediaItemSchema).min(4)
+});
+
 export const heroLargeEmailCtaPropsSchema = z.object({
 	heading: z.string().trim().min(1),
 	labelText: z.string().trim().min(1)
@@ -147,6 +160,11 @@ export const logosOfTrustRibbonSectionSchema = z.object({
 	props: logosOfTrustRibbonPropsSchema
 });
 
+export const speakerInActionSectionSchema = z.object({
+	type: z.literal('speaker_in_action'),
+	props: speakerInActionPropsSchema
+});
+
 export const heroLargeEmailCtaSectionSchema = z.object({
 	type: z.literal('hero_large_email_cta'),
 	props: heroLargeEmailCtaPropsSchema
@@ -188,6 +206,7 @@ export const pageSectionSchema = z.discriminatedUnion('type', [
 	heroLargeEmailCtaSectionSchema,
 	bookletDownloadCtaSectionSchema,
 	logosOfTrustRibbonSectionSchema,
+	speakerInActionSectionSchema,
 	hybridContentSectionSchema,
 	proofOfPerformanceSectionSchema,
 	frictionlessFunnelBookingSectionSchema,
@@ -200,6 +219,7 @@ export type ImmediateAuthorityHeroSection = z.infer<typeof immediateAuthorityHer
 export type HeroLargeEmailCtaSection = z.infer<typeof heroLargeEmailCtaSectionSchema>;
 export type BookletDownloadCtaSection = z.infer<typeof bookletDownloadCtaSectionSchema>;
 export type LogosOfTrustRibbonSection = z.infer<typeof logosOfTrustRibbonSectionSchema>;
+export type SpeakerInActionSection = z.infer<typeof speakerInActionSectionSchema>;
 export type HybridContentSection = z.infer<typeof hybridContentSectionSchema>;
 export type ProofOfPerformanceSection = z.infer<typeof proofOfPerformanceSectionSchema>;
 export type FrictionlessFunnelBookingSection = z.infer<
