@@ -16,6 +16,11 @@ const hybridAssetSelectionSchema = z.object({
 	rationale: z.string().trim().min(1)
 });
 
+const speakerInActionAssetSelectionSchema = z.object({
+	videoAssetIds: z.array(z.string().trim().min(1)).min(4).max(4),
+	rationale: z.string().trim().min(1)
+});
+
 export const landingPagePlanSchema = z
 	.object({
 		pageTitle: z.string().trim().min(1),
@@ -25,7 +30,8 @@ export const landingPagePlanSchema = z
 		assetPlan: z
 			.object({
 				hero: heroAssetSelectionSchema.optional(),
-				hybridContentSection: hybridAssetSelectionSchema.optional()
+				hybridContentSection: hybridAssetSelectionSchema.optional(),
+				speakerInAction: speakerInActionAssetSelectionSchema.optional()
 			})
 			.optional()
 	})
@@ -67,6 +73,21 @@ export const landingPagePlanSchema = z
 			message:
 				'assetPlan.hybridContentSection is required when hybrid_content_section is included in sectionPlan.',
 			path: ['assetPlan', 'hybridContentSection']
+		}
+	)
+	.refine(
+		(plan) => {
+			const sectionTypes = new Set(plan.sectionPlan.map((section) => section.type));
+			if (!sectionTypes.has('speaker_in_action')) {
+				return true;
+			}
+
+			return Boolean(plan.assetPlan?.speakerInAction);
+		},
+		{
+			message:
+				'assetPlan.speakerInAction is required when speaker_in_action is included in sectionPlan.',
+			path: ['assetPlan', 'speakerInAction']
 		}
 	);
 
