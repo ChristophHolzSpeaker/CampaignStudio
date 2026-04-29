@@ -4,6 +4,8 @@ import type { ZodType } from 'zod';
 export const pageSectionTypes = [
 	'seo',
 	'immediate_authority_hero',
+	'hero_large_email_cta',
+	'booklet_download_cta',
 	'logos_of_trust_ribbon',
 	'hybrid_content_section',
 	'proof_of_performance',
@@ -36,6 +38,18 @@ export interface LogosOfTrustRibbonProps {
 	title?: string;
 	label?: string;
 	logos: TrustLogoItem[];
+}
+
+export interface HeroLargeEmailCtaProps {
+	heading: string;
+	labelText: string;
+}
+
+export interface BookletDownloadCtaProps {
+	labelText: string;
+	heading: string;
+	paragraph: string;
+	buttonCtaText: string;
 }
 
 export interface HybridBenefitItem {
@@ -133,6 +147,8 @@ export interface SeoProps {
 export interface SectionPropsByType {
 	seo: SeoProps;
 	immediate_authority_hero: ImmediateAuthorityHeroProps;
+	hero_large_email_cta: HeroLargeEmailCtaProps;
+	booklet_download_cta: BookletDownloadCtaProps;
 	logos_of_trust_ribbon: LogosOfTrustRibbonProps;
 	hybrid_content_section: HybridContentSectionProps;
 	proof_of_performance: ProofOfPerformanceProps;

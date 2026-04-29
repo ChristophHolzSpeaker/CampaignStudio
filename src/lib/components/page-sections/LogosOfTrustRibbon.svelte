@@ -52,7 +52,7 @@
 						<img
 							src={logo.imageUrl}
 							alt={logo.alt}
-							class="h-auto max-h-12 w-auto object-contain sm:max-h-20"
+							class="h-auto max-h-12 w-auto object-contain sm:max-h-16"
 						/>
 					{:else}
 						<span class="text-center text-base tracking-tight text-on-surface">{logo.name}</span>

@@ -49,6 +49,18 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 	logos: z.array(trustLogoItemSchema).min(1)
 });
 
+export const heroLargeEmailCtaPropsSchema = z.object({
+	heading: z.string().trim().min(1),
+	labelText: z.string().trim().min(1)
+});
+
+export const bookletDownloadCtaPropsSchema = z.object({
+	labelText: z.string().trim().min(1),
+	heading: z.string().trim().min(1),
+	paragraph: z.string().trim().min(1),
+	buttonCtaText: z.string().trim().min(1)
+});
+
 export const hybridBenefitItemSchema = z.object({
 	title: z.string().trim().min(1),
 	body: z.string().trim().min(1),
@@ -135,6 +147,16 @@ export const logosOfTrustRibbonSectionSchema = z.object({
 	props: logosOfTrustRibbonPropsSchema
 });
 
+export const heroLargeEmailCtaSectionSchema = z.object({
+	type: z.literal('hero_large_email_cta'),
+	props: heroLargeEmailCtaPropsSchema
+});
+
+export const bookletDownloadCtaSectionSchema = z.object({
+	type: z.literal('booklet_download_cta'),
+	props: bookletDownloadCtaPropsSchema
+});
+
 export const hybridContentSectionSchema = z.object({
 	type: z.literal('hybrid_content_section'),
 	props: hybridContentSectionPropsSchema
@@ -163,6 +185,8 @@ export const seoSectionSchema = z.object({
 export const pageSectionSchema = z.discriminatedUnion('type', [
 	seoSectionSchema,
 	immediateAuthorityHeroSectionSchema,
+	heroLargeEmailCtaSectionSchema,
+	bookletDownloadCtaSectionSchema,
 	logosOfTrustRibbonSectionSchema,
 	hybridContentSectionSchema,
 	proofOfPerformanceSectionSchema,
@@ -173,6 +197,8 @@ export const pageSectionSchema = z.discriminatedUnion('type', [
 export const pageSectionsSchema = z.array(pageSectionSchema).min(1);
 
 export type ImmediateAuthorityHeroSection = z.infer<typeof immediateAuthorityHeroSectionSchema>;
+export type HeroLargeEmailCtaSection = z.infer<typeof heroLargeEmailCtaSectionSchema>;
+export type BookletDownloadCtaSection = z.infer<typeof bookletDownloadCtaSectionSchema>;
 export type LogosOfTrustRibbonSection = z.infer<typeof logosOfTrustRibbonSectionSchema>;
 export type HybridContentSection = z.infer<typeof hybridContentSectionSchema>;
 export type ProofOfPerformanceSection = z.infer<typeof proofOfPerformanceSectionSchema>;
