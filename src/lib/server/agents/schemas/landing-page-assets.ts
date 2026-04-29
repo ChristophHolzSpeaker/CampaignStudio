@@ -8,10 +8,16 @@ import { z } from 'zod';
 const heroDefaultsSchema = z
 	.object({
 		videoEmbedUrl: z.string().trim().url(),
-		videoThumbnailUrl: z.string().trim().url(),
-		videoThumbnailAlt: z.string().trim().min(1),
+		videoThumbnailUrl: z.string().trim().url().optional(),
+		videoThumbnailAlt: z.string().trim().min(1).optional(),
 		primaryCtaLabelDefault: z.string().trim().min(1),
-		primaryCtaHref: z.string().trim().url().optional(),
+		primaryCtaHref: z
+			.string()
+			.trim()
+			.refine((value) => value.startsWith('#') || z.string().url().safeParse(value).success, {
+				message: 'primaryCtaHref must be an absolute URL or an in-page anchor (e.g. #briefing).'
+			})
+			.optional(),
 		primaryCtaAction: z.string().trim().min(1).optional()
 	})
 	.refine((value) => Boolean(value.primaryCtaHref || value.primaryCtaAction), {

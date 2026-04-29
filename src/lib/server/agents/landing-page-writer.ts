@@ -250,6 +250,20 @@ function hydrateSectionWithAssets(
 			const selectedHeroVideo = resolveHeroVideoSelection(input, plan);
 			const primaryCtaLabel =
 				section.props.primaryCtaLabel?.trim() || assets.heroDefaults.primaryCtaLabelDefault;
+			const resolvedVideoThumbnailUrl =
+				selectedHeroVideo?.videoThumbnailUrl ??
+				section.props.videoThumbnailUrl ??
+				assets.heroDefaults.videoThumbnailUrl;
+			const resolvedVideoThumbnailAlt =
+				selectedHeroVideo?.videoThumbnailAlt ||
+				section.props.videoThumbnailAlt ||
+				assets.heroDefaults.videoThumbnailAlt;
+
+			if (!resolvedVideoThumbnailUrl || !resolvedVideoThumbnailAlt) {
+				throw new Error(
+					'Landing page writer: missing hero thumbnail defaults. Provide thumbnail values in heroDefaults or media assets.'
+				);
+			}
 
 			const ctaHref = section.props.primaryCtaHref ?? assets.heroDefaults.primaryCtaHref;
 			const ctaAction = section.props.primaryCtaAction ?? assets.heroDefaults.primaryCtaAction;
@@ -267,14 +281,8 @@ function hydrateSectionWithAssets(
 						selectedHeroVideo?.videoEmbedUrl ??
 						section.props.videoEmbedUrl ??
 						assets.heroDefaults.videoEmbedUrl,
-					videoThumbnailUrl:
-						selectedHeroVideo?.videoThumbnailUrl ??
-						section.props.videoThumbnailUrl ??
-						assets.heroDefaults.videoThumbnailUrl,
-					videoThumbnailAlt:
-						selectedHeroVideo?.videoThumbnailAlt ||
-						section.props.videoThumbnailAlt ||
-						assets.heroDefaults.videoThumbnailAlt
+					videoThumbnailUrl: resolvedVideoThumbnailUrl,
+					videoThumbnailAlt: resolvedVideoThumbnailAlt
 				}
 			};
 		}

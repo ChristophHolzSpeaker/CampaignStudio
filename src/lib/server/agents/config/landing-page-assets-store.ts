@@ -177,6 +177,25 @@ function sortMediaAssetsByRelevance(
 	});
 }
 
+function fillHeroDefaultsFromCatalog(
+	assets: LandingPageAssets,
+	catalog: { heroVideos: HeroVideoOption[] }
+): LandingPageAssets {
+	const fallbackHero = catalog.heroVideos[0];
+	if (!fallbackHero) {
+		return assets;
+	}
+
+	return {
+		...assets,
+		heroDefaults: {
+			...assets.heroDefaults,
+			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? fallbackHero.videoThumbnailUrl,
+			videoThumbnailAlt: assets.heroDefaults.videoThumbnailAlt ?? fallbackHero.videoThumbnailAlt
+		}
+	};
+}
+
 function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	heroVideos: HeroVideoOption[];
 	hybridSupportingImages: HybridSupportingImageOption[];
@@ -227,13 +246,16 @@ export async function loadLandingPageAssets(
 		const catalog = buildCatalogFromMediaAssets(mediaRows);
 
 		if (!activeSet) {
-			return {
-				...landingPageAssets,
-				assetCatalog: {
-					heroVideos: catalog.heroVideos,
-					hybridSupportingImages: catalog.hybridSupportingImages
-				}
-			};
+			return fillHeroDefaultsFromCatalog(
+				{
+					...landingPageAssets,
+					assetCatalog: {
+						heroVideos: catalog.heroVideos,
+						hybridSupportingImages: catalog.hybridSupportingImages
+					}
+				},
+				catalog
+			);
 		}
 
 		const parsedAssets = landingPageAssetsSchema.safeParse(activeSet.assetsJson);
@@ -242,22 +264,28 @@ export async function loadLandingPageAssets(
 				`Invalid landing page assets in set ${activeSet.assetKey}. Falling back to static defaults.`,
 				parsedAssets.error.flatten()
 			);
-			return {
-				...landingPageAssets,
+			return fillHeroDefaultsFromCatalog(
+				{
+					...landingPageAssets,
+					assetCatalog: {
+						heroVideos: catalog.heroVideos,
+						hybridSupportingImages: catalog.hybridSupportingImages
+					}
+				},
+				catalog
+			);
+		}
+
+		return fillHeroDefaultsFromCatalog(
+			{
+				...parsedAssets.data,
 				assetCatalog: {
 					heroVideos: catalog.heroVideos,
 					hybridSupportingImages: catalog.hybridSupportingImages
 				}
-			};
-		}
-
-		return {
-			...parsedAssets.data,
-			assetCatalog: {
-				heroVideos: catalog.heroVideos,
-				hybridSupportingImages: catalog.hybridSupportingImages
-			}
-		};
+			},
+			catalog
+		);
 	} catch (error) {
 		console.warn(
 			'Unable to load landing page assets from database. Falling back to static defaults.',
