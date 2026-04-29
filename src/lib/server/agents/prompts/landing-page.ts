@@ -114,9 +114,12 @@ Rules:
 * avoid selecting adjacent sections that do the same job or repeat the same narrative function
 * section purpose and contentDirection are internal planning artifacts, not final customer-facing copy
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
-* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID
-* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
-* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
+	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID
+	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID
+	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
+	* soft preference: include speaker_in_action when eligible and strategically useful
+	* when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
+	* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 * use only IDs that exist in input.assets.assetCatalog
 * never invent media IDs or media URLs
 * section order should reflect a strong conversion narrative
@@ -223,8 +226,9 @@ Asset usage requirements:
 
 * landing page generation input includes input.assets with pre-approved media, proof, and compliance records
 * for logos_of_trust_ribbon, use input.assets.fixedLogosRibbon.logos
-* for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
-* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
+	* for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
+	* for speaker_in_action media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
+	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
 * for hybrid supporting visuals, resolve IDs from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages
 * for compliance footer fields, use input.assets.complianceDefaults
 * use only approved assets listed in input.assets

@@ -236,6 +236,76 @@ function resolveHybridSupportingVisualSelection(
 	return selectedItems;
 }
 
+function resolveSpeakerInActionSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): {
+	assetId: string;
+	title: string;
+	videoEmbedUrl: string;
+	thumbnailUrl: string;
+	thumbnailAlt: string;
+}[] {
+	const selectedIds = plan.assetPlan?.speakerInAction?.videoAssetIds ?? [];
+	const catalog = input.assets.assetCatalog.speakerInActionVideos;
+	const catalogById = new Map(catalog.map((asset) => [asset.id, asset]));
+	const resolved: {
+		assetId: string;
+		title: string;
+		videoEmbedUrl: string;
+		thumbnailUrl: string;
+		thumbnailAlt: string;
+	}[] = [];
+
+	for (const id of selectedIds) {
+		const selected = catalogById.get(id);
+		if (!selected) {
+			console.warn(
+				`Landing page writer: speaker_in_action video '${id}' not found in approved catalog; skipping this asset.`
+			);
+			continue;
+		}
+
+		resolved.push({
+			assetId: selected.id,
+			title: selected.title,
+			videoEmbedUrl: selected.videoEmbedUrl,
+			thumbnailUrl: selected.videoThumbnailUrl,
+			thumbnailAlt: selected.videoThumbnailAlt
+		});
+	}
+
+	if (resolved.length >= 4) {
+		return resolved.slice(0, 4);
+	}
+
+	for (const fallbackAsset of catalog) {
+		if (resolved.length >= 4) {
+			break;
+		}
+
+		if (resolved.some((item) => item.assetId === fallbackAsset.id)) {
+			continue;
+		}
+
+		resolved.push({
+			assetId: fallbackAsset.id,
+			title: fallbackAsset.title,
+			videoEmbedUrl: fallbackAsset.videoEmbedUrl,
+			thumbnailUrl: fallbackAsset.videoThumbnailUrl,
+			thumbnailAlt: fallbackAsset.videoThumbnailAlt
+		});
+	}
+
+	if (resolved.length < 4) {
+		throw new Error(
+			'Landing page writer: speaker_in_action requires at least 4 approved video assets in input.assets.assetCatalog.speakerInActionVideos.'
+		);
+	}
+
+	return resolved.slice(0, 4);
+}
+
 function hydrateSectionWithAssets(
 	section: PageSection,
 	input: LandingPageGenerationInput,
@@ -306,6 +376,18 @@ function hydrateSectionWithAssets(
 					...section.props,
 					title: section.props.title ?? assets.fixedProofOfPerformance.title,
 					testimonials: assets.fixedProofOfPerformance.testimonials
+				}
+			};
+		}
+
+		case 'speaker_in_action': {
+			const mediaAssets = resolveSpeakerInActionSelection(input, plan);
+			return {
+				...section,
+				props: {
+					...section.props,
+					title: section.props.title?.trim() || 'Speaker in action',
+					mediaAssets
 				}
 			};
 		}
@@ -523,6 +605,20 @@ function ensureSeoSection(
 	return [seoSection, ...withoutSeo];
 }
 
+function enforceSpeakerSectionOrder(sections: PageSection[]): PageSection[] {
+	const speakerIndex = sections.findIndex((section) => section.type === 'speaker_in_action');
+	const proofIndex = sections.findIndex((section) => section.type === 'proof_of_performance');
+
+	if (speakerIndex < 0 || proofIndex < 0 || speakerIndex < proofIndex) {
+		return sections;
+	}
+
+	const ordered = [...sections];
+	const [speakerSection] = ordered.splice(speakerIndex, 1);
+	ordered.splice(proofIndex, 0, speakerSection);
+	return ordered;
+}
+
 function normalizeRootResponse(response: unknown): unknown {
 	if (Array.isArray(response)) {
 		const sectionCandidates = response
@@ -617,12 +713,14 @@ Corrective rules:
 - Do not output markdown.
 - Use assets from input.assets for proof, media, and compliance values.
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
+- For speaker_in_action media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
 - Place seo as the first section.
+- If both speaker_in_action and proof_of_performance are present, place speaker_in_action above proof_of_performance.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -694,7 +792,12 @@ function hydrateLandingPageWithAssets(
 		})
 		.map((section) => hydrateSectionWithAssets(section, input, plan));
 
-	const sectionsWithSeo = ensureSeoSection(sections, fallbackPageTitle, fallbackSeoDescription);
+	const orderedSections = enforceSpeakerSectionOrder(sections);
+	const sectionsWithSeo = ensureSeoSection(
+		orderedSections,
+		fallbackPageTitle,
+		fallbackSeoDescription
+	);
 
 	return {
 		...hydrated,

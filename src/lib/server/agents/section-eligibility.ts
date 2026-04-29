@@ -38,6 +38,14 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 					disallowedReasonByType[sectionType] = 'No trust logos are configured.';
 				}
 				break;
+			case 'speaker_in_action':
+				if (input.assets.assetCatalog.speakerInActionVideos.length >= 4) {
+					allowedSectionTypes.push(sectionType);
+				} else {
+					disallowedReasonByType[sectionType] =
+						'At least 4 speaker_in_action video assets are required.';
+				}
+				break;
 			case 'proof_of_performance':
 				if (input.assets.fixedProofOfPerformance.testimonials.length > 0) {
 					allowedSectionTypes.push(sectionType);

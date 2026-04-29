@@ -6,6 +6,7 @@ import {
 	landingPageAssetsSchema,
 	type HeroVideoOption,
 	type HybridSupportingImageOption,
+	type SpeakerInActionVideoOption,
 	type LandingPageAssets
 } from '../schemas/landing-page-assets';
 
@@ -199,9 +200,11 @@ function fillHeroDefaultsFromCatalog(
 function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	heroVideos: HeroVideoOption[];
 	hybridSupportingImages: HybridSupportingImageOption[];
+	speakerInActionVideos: SpeakerInActionVideoOption[];
 } {
 	const heroVideos: HeroVideoOption[] = [];
 	const hybridSupportingImages: HybridSupportingImageOption[] = [];
+	const speakerInActionVideos: SpeakerInActionVideoOption[] = [];
 
 	for (const asset of rows) {
 		if (asset.kind === 'video' && asset.sectionTypes.includes('immediate_authority_hero')) {
@@ -210,6 +213,23 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 			}
 
 			heroVideos.push({
+				id: asset.id,
+				title: asset.title,
+				description: asset.description,
+				usageNotes: asset.usageNotes,
+				avoidNotes: asset.avoidNotes ?? undefined,
+				videoEmbedUrl: asset.primaryUrl,
+				videoThumbnailUrl: asset.thumbnailUrl,
+				videoThumbnailAlt: asset.thumbnailAlt
+			});
+		}
+
+		if (asset.kind === 'video' && asset.sectionTypes.includes('speaker_in_action')) {
+			if (!asset.thumbnailUrl || !asset.thumbnailAlt) {
+				continue;
+			}
+
+			speakerInActionVideos.push({
 				id: asset.id,
 				title: asset.title,
 				description: asset.description,
@@ -234,7 +254,7 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 		}
 	}
 
-	return { heroVideos, hybridSupportingImages };
+	return { heroVideos, hybridSupportingImages, speakerInActionVideos };
 }
 
 export async function loadLandingPageAssets(
@@ -251,7 +271,8 @@ export async function loadLandingPageAssets(
 					...landingPageAssets,
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
-						hybridSupportingImages: catalog.hybridSupportingImages
+						hybridSupportingImages: catalog.hybridSupportingImages,
+						speakerInActionVideos: catalog.speakerInActionVideos
 					}
 				},
 				catalog
@@ -269,7 +290,8 @@ export async function loadLandingPageAssets(
 					...landingPageAssets,
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
-						hybridSupportingImages: catalog.hybridSupportingImages
+						hybridSupportingImages: catalog.hybridSupportingImages,
+						speakerInActionVideos: catalog.speakerInActionVideos
 					}
 				},
 				catalog
@@ -281,7 +303,8 @@ export async function loadLandingPageAssets(
 				...parsedAssets.data,
 				assetCatalog: {
 					heroVideos: catalog.heroVideos,
-					hybridSupportingImages: catalog.hybridSupportingImages
+					hybridSupportingImages: catalog.hybridSupportingImages,
+					speakerInActionVideos: catalog.speakerInActionVideos
 				}
 			},
 			catalog

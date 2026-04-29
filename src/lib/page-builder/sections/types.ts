@@ -7,6 +7,7 @@ export const pageSectionTypes = [
 	'hero_large_email_cta',
 	'booklet_download_cta',
 	'logos_of_trust_ribbon',
+	'speaker_in_action',
 	'hybrid_content_section',
 	'proof_of_performance',
 	'frictionless_funnel_booking',
@@ -67,6 +68,19 @@ export interface HybridSupportingVisualItem {
 	imageUrl: string;
 	alt: string;
 	caption?: string;
+}
+
+export interface SpeakerInActionMediaItem {
+	assetId: string;
+	title: string;
+	videoEmbedUrl: string;
+	thumbnailUrl: string;
+	thumbnailAlt: string;
+}
+
+export interface SpeakerInActionProps {
+	title?: string;
+	mediaAssets: SpeakerInActionMediaItem[];
 }
 
 export interface HybridContentSectionProps {
@@ -150,6 +164,7 @@ export interface SectionPropsByType {
 	hero_large_email_cta: HeroLargeEmailCtaProps;
 	booklet_download_cta: BookletDownloadCtaProps;
 	logos_of_trust_ribbon: LogosOfTrustRibbonProps;
+	speaker_in_action: SpeakerInActionProps;
 	hybrid_content_section: HybridContentSectionProps;
 	proof_of_performance: ProofOfPerformanceProps;
 	frictionless_funnel_booking: FrictionlessFunnelBookingProps;
