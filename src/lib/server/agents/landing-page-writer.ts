@@ -46,18 +46,18 @@ type HybridBenefitItem = HybridTextItem & {
 	imageUrl: string;
 };
 
-const hybridBenefitImageFallbackUrl =
-	'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40';
-
 const inputFallbackBenefitBody =
 	'Your audience leaves with practical outcomes they can apply immediately in their role.';
 
 function pickImageUrl(imageUrls: string[], index: number): string {
-	if (imageUrls.length === 0) {
-		return hybridBenefitImageFallbackUrl;
+	const selected = imageUrls[index % imageUrls.length];
+	if (!selected) {
+		throw new Error(
+			'Landing page writer: no approved hybrid benefit image available in media assets catalog.'
+		);
 	}
 
-	return imageUrls[index % imageUrls.length] ?? hybridBenefitImageFallbackUrl;
+	return selected;
 }
 
 function buildBenefitImagePool(
@@ -89,7 +89,9 @@ function buildBenefitImagePool(
 		return existingUrls;
 	}
 
-	return [hybridBenefitImageFallbackUrl];
+	throw new Error(
+		'Landing page writer: no approved hybrid image URLs available. Add active hybrid_content_section media assets.'
+	);
 }
 
 function buildHybridBenefitFallbacks(input: LandingPageGenerationInput): HybridTextItem[] {
