@@ -1,6 +1,8 @@
 import type { Component } from 'svelte';
+import BookletDownloadCta from '$lib/components/page-sections/BookletDownloadCta.svelte';
 import ComplianceFooterSection from '$lib/components/page-sections/ComplianceFooterSection.svelte';
 import FrictionlessFunnelSection from '$lib/components/page-sections/FrictionlessFunnelSection.svelte';
+import HeroLargeEmailCta from '$lib/components/page-sections/HeroLargeEmailCta.svelte';
 import HybridContentSection from '$lib/components/page-sections/HybridContentSection.svelte';
 import ImmediateAuthorityHero from '$lib/components/page-sections/ImmediateAuthorityHero.svelte';
 import LogosOfTrustRibbon from '$lib/components/page-sections/LogosOfTrustRibbon.svelte';
@@ -24,6 +26,8 @@ export type SectionRegistry = {
 export const sectionComponentRegistry: SectionComponentRegistry = {
 	seo: SEO,
 	immediate_authority_hero: ImmediateAuthorityHero,
+	hero_large_email_cta: HeroLargeEmailCta,
+	booklet_download_cta: BookletDownloadCta,
 	logos_of_trust_ribbon: LogosOfTrustRibbon,
 	hybrid_content_section: HybridContentSection,
 	proof_of_performance: ProofOfPerformanceSection,
@@ -39,6 +43,14 @@ export const sectionRegistry: SectionRegistry = {
 	immediate_authority_hero: {
 		...sectionSpecs.immediate_authority_hero,
 		component: sectionComponentRegistry.immediate_authority_hero
+	},
+	hero_large_email_cta: {
+		...sectionSpecs.hero_large_email_cta,
+		component: sectionComponentRegistry.hero_large_email_cta
+	},
+	booklet_download_cta: {
+		...sectionSpecs.booklet_download_cta,
+		component: sectionComponentRegistry.booklet_download_cta
 	},
 	logos_of_trust_ribbon: {
 		...sectionSpecs.logos_of_trust_ribbon,

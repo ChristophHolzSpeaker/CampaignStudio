@@ -1,18 +1,21 @@
 <script lang="ts">
-	type HeroLargeEmailCtaProps = {
-		heading: string;
-		labelText: string;
-		mailto: string;
-	};
+	import type { HeroLargeEmailCtaProps } from '$lib/page-builder/sections/types';
 
-	let { props }: { props?: HeroLargeEmailCtaProps } = $props();
+	let {
+		props,
+		mailtoHref
+	}: {
+		props?: HeroLargeEmailCtaProps;
+		mailtoHref?: string;
+	} = $props();
 
 	let headingSplit = $derived(props?.heading.trim().split(/\s+/));
 
 	let firstPart = $derived(headingSplit?.slice(0, -1).join(' '));
 	let lastWord = $derived(headingSplit?.at(-1));
-
-	$inspect(props);
+	let emailHref = $derived(
+		mailtoHref ?? 'mailto:speaker@christophholz.com?subject=Request%20a%20talk'
+	);
 </script>
 
 <section class="relative flex min-h-screen items-center justify-center overflow-hidden bg-black">
@@ -45,7 +48,7 @@
 			</p>
 			<a
 				class="block border-l-8 border-primary bg-white p-8 transition-colors duration-300 group-hover:border-white md:border-l-16 md:p-12"
-				href={props?.mailto}
+				href={emailHref}
 			>
 				<div class="flex flex-col items-center justify-between gap-8 md:flex-row">
 					<span

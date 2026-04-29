@@ -5,38 +5,13 @@ import {
 	getOrCreateVisitorIdentifier,
 	logCampaignVisit
 } from '$lib/server/attribution/campaign-visits';
+import {
+	buildSpeakerMailtoHref,
+	DEFAULT_SPEAKER_EMAIL_SUBJECT
+} from '$lib/server/attribution/mailto';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
-
-const SPEAKER_EMAIL_LOCAL_PART = 'speaker';
-const SPEAKER_EMAIL_DOMAIN = 'christophholz.com';
-const DEFAULT_SPEAKER_EMAIL_SUBJECT = 'Request a talk';
-
-function buildSpeakerMailtoHref(input: {
-	campaignId: number | null;
-	campaignPageId: number | null;
-	subject?: string;
-}): string {
-	const hasCampaignContext =
-		typeof input.campaignId === 'number' &&
-		input.campaignId > 0 &&
-		typeof input.campaignPageId === 'number' &&
-		input.campaignPageId > 0;
-
-	const aliasToken = hasCampaignContext ? `+cmp${input.campaignId}_cp${input.campaignPageId}` : '';
-	const emailAddress = `${SPEAKER_EMAIL_LOCAL_PART}${aliasToken}@${SPEAKER_EMAIL_DOMAIN}`;
-	const searchParams = new URLSearchParams();
-	const subject = input.subject?.trim();
-
-	if (subject) {
-		searchParams.set('subject', subject);
-	}
-
-	const queryString = searchParams.toString();
-
-	return `mailto:${emailAddress}${queryString ? `?${queryString}` : ''}`;
-}
 
 export const load: PageServerLoad = async ({ params, cookies, url, request }) => {
 	const slug = params.slug?.trim();
