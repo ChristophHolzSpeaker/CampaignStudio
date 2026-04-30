@@ -105,6 +105,8 @@
 		}
 		busy = false;
 	};
+
+	$inspect(data);
 </script>
 
 <section class="flex flex-col gap-6 p-6 lg:p-10">
