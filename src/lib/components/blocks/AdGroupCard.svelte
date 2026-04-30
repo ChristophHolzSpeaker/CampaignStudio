@@ -62,7 +62,11 @@
 						</div>
 					{:else}
 						{#each keywords as keyword (keyword.id)}
-							<div class="flex items-center justify-between rounded-lg bg-stone-100 p-4">
+							<div
+								class="flex items-center justify-between rounded-lg p-4"
+								class:bg-stone-100={!keyword.is_negative}
+								class:bg-rose-100={keyword.is_negative}
+							>
 								<div class="flex items-center gap-2">
 									<code class="font-['Space_Grotesk'] font-bold">
 										{formatAdwordsKeyword(keyword.keyword_text, keyword.match_type)}
@@ -98,8 +102,8 @@
 				</div>
 				<div class="p-8">
 					<div class="mb-2 flex items-center gap-2">
-						<span class="text-xs font-bold text-slate-800">cloud.example.com</span>
-						<span class="text-xs text-slate-400">› enterprise › migration</span>
+						<span class="text-xs font-bold text-slate-800">speaker.christophholz.com</span>
+						<span class="text-xs text-slate-400">› {ads[0]?.path_1} › {ads[0]?.path_2}</span>
 					</div>
 					{#if ads.length > 0}
 						{@const previewAd = ads[0]}
@@ -119,6 +123,29 @@
 						<p class="max-w-2xl text-sm leading-relaxed text-slate-600 italic">
 							Responsive search ads will appear here once this ad group has ads.
 						</p>
+					{/if}
+				</div>
+			</div>
+			<div class="space-y-4 py-8">
+				<h3>Ad copy alternatives</h3>
+				<div>
+					<h4>Headlines</h4>
+					{#if ads.length > 0}
+						<ul class="list-decimal pl-4">
+							{#each ads[0].headlines_json as headline}
+								<li>{headline}</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
+				<div>
+					<h4>Descriptions</h4>
+					{#if ads.length > 0}
+						<ul class="list-decimal pl-4">
+							{#each ads[0].descriptions_json as desc}
+								<li>{desc}</li>
+							{/each}
+						</ul>
 					{/if}
 				</div>
 			</div>
