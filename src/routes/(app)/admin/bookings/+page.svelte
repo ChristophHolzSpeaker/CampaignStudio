@@ -60,26 +60,28 @@
 
 	const navItems: readonly AdminSidebarNavItem[] = [
 		{
-			label: 'Editor',
+			label: 'Campaigns',
 			icon: 'material-symbols--edit-note',
-			href: '/(app)/admin/prompts',
+			href: '/campaigns',
 			match: 'prefix'
 		},
 		{
-			label: 'Library',
+			label: 'Prompts',
 			icon: 'material-symbols--book',
-			href: '/(app)/admin/library',
+			href: '/prompts',
 			match: 'prefix'
 		},
 		{
 			label: 'Bookings',
 			href: '/(app)/admin/bookings',
-			match: 'prefix'
+			match: 'prefix',
+			icon: 'mdi--calendar-clock-outline'
 		},
 		{
 			label: 'Documentation',
 			href: '/(app)/admin/documentation',
-			match: 'prefix'
+			match: 'prefix',
+			icon: 'mdi--file-document'
 		}
 	];
 </script>

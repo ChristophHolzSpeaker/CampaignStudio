@@ -27,21 +27,37 @@
 				: undefined;
 
 			return [
-				{ label: 'Ads', href: `/campaigns/${campaign.id}`, match: 'exact' },
+				{
+					label: 'Ads',
+					href: `/campaigns/${campaign.id}`,
+					match: 'exact',
+					icon: 'mdi--google-ads'
+				},
 				{
 					label: 'Landing Page Preview',
 					href: previewHref,
 					match: 'prefix',
-					disabled: !previewHref
+					disabled: !previewHref,
+					icon: 'mdi--page-layout-header'
 				},
-				{ label: 'Analytics', href: `/campaigns/${campaign.id}/analytics`, match: 'prefix' },
+				{
+					icon: 'mdi--chart-areaspline',
+					label: 'Analytics',
+					href: `/campaigns/${campaign.id}/analytics`,
+					match: 'prefix'
+				},
 				{ label: 'History', disabled: true }
 			];
 		}
 
 		return [
-			{ label: 'Library', href: '/campaigns', match: 'prefix' },
-			{ label: 'Analytics', href: '/campaigns/analytics', match: 'prefix' }
+			{ label: 'Library', href: '/campaigns', match: 'exact', icon: 'material-symbols--book' },
+			{
+				label: 'Analytics',
+				href: '/campaigns/analytics',
+				match: 'exact',
+				icon: 'mdi--chart-areaspline'
+			}
 		];
 	});
 </script>
