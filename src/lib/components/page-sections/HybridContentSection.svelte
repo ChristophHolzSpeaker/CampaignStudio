@@ -2,6 +2,30 @@
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
 
 	let { props }: { props?: HybridContentSectionProps } = $props();
+	let scrollY = $state(0);
+	let innerHeight = $state(0);
+
+	let itemRefs = $state<HTMLElement[]>([]);
+	let visibleItems = $state<Set<number>>(new Set());
+	const revealOffset = 400;
+	function checkInView() {
+		for (const [index, el] of itemRefs.entries()) {
+			if (!el || visibleItems.has(index)) continue;
+
+			const rect = el.getBoundingClientRect();
+			const isInView = rect.top < innerHeight + revealOffset && rect.bottom > 0;
+
+			if (isInView) {
+				visibleItems = new Set(visibleItems).add(index);
+			}
+		}
+	}
+
+	$effect(() => {
+		scrollY;
+		innerHeight;
+		checkInView();
+	});
 
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
 	const intro = $derived(
@@ -14,6 +38,7 @@
 	const primaryVisual = $derived(props?.supportingVisualItems?.[0]);
 </script>
 
+<svelte:window bind:scrollY />
 <section
 	class="bg-surface px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
@@ -34,7 +59,14 @@
 		{#if benefits.length > 0}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each benefits as benefit, index (`hybrid-benefit-${benefit.title}`)}
-					<article class="flex h-full flex-col gap-4">
+					<article
+						class={[
+							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
+							visibleItems.has(index) ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+						]}
+						style={`transition-delay: ${index * 120}ms`}
+						bind:this={itemRefs[index]}
+					>
 						<span>0{index + 1}</span>
 
 						<img
