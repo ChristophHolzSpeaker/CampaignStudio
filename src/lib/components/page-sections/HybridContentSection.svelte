@@ -81,9 +81,9 @@
 				<div class="absolute h-3/4 w-3/4 bg-primary/20 blur-3xl"></div>
 				{#if primaryVisual}
 					<img
-						src={primaryVisual.imageUrl}
+						src="https://tiuljkhdhhmvscujnslz.supabase.co/storage/v1/object/public/campaign-assets/christoph-holz-portrait-smiling-red-bowtie.webp"
 						alt={primaryVisual.alt}
-						class="relative z-10 h-full w-full object-cover grayscale"
+						class="relative z-10 h-full w-full object-cover"
 					/>
 				{:else}
 					<div class="relative z-10 p-10 text-center">
