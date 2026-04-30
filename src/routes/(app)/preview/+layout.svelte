@@ -18,20 +18,23 @@
 			label: 'Ads',
 			href: campaignId ? `/campaigns/${campaignId}` : undefined,
 			match: 'prefix',
-			disabled: !campaignId
+			disabled: !campaignId,
+			icon: 'mdi--google-ads'
 		},
 		{
 			label: 'Landing Page Preview',
 			href: campaignPageId
 				? `/preview/landing-page?campaignPageId=${campaignPageId}`
 				: '/preview/landing-page',
-			match: 'prefix'
+			match: 'prefix',
+			icon: 'mdi--page-layout-header'
 		},
 		{
 			label: 'Analytics',
 			href: campaignId ? `/campaigns/${campaignId}/analytics` : undefined,
 			match: 'prefix',
-			disabled: !campaignId
+			disabled: !campaignId,
+			icon: 'mdi--chart-areaspline'
 		},
 		{ label: 'History', disabled: true }
 	]);
