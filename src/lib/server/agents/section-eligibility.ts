@@ -7,7 +7,11 @@ export type SectionEligibility = {
 	disallowedReasonByType: Partial<Record<PageSectionType, string>>;
 };
 
-const requiredSectionTypes: PageSectionType[] = ['seo', 'compliance_transparency_footer'];
+const requiredSectionTypes: PageSectionType[] = [
+	'seo',
+	'keynote_speeches',
+	'compliance_transparency_footer'
+];
 
 export function getSectionEligibility(input: LandingPageGenerationInput): SectionEligibility {
 	const allowedSectionTypes: PageSectionType[] = [];
@@ -32,10 +36,22 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 				}
 				break;
 			case 'logos_of_trust_ribbon':
-				if (input.assets.fixedLogosRibbon.logos.length > 0) {
+				if (
+					input.assets.assetCatalog.clientCatalog.length > 0 ||
+					input.assets.fixedLogosRibbon.logos.length > 0
+				) {
 					allowedSectionTypes.push(sectionType);
 				} else {
-					disallowedReasonByType[sectionType] = 'No trust logos are configured.';
+					disallowedReasonByType[sectionType] =
+						'No trust clients or fallback logos are configured.';
+				}
+				break;
+			case 'keynote_speeches':
+				if (input.assets.assetCatalog.keynoteCatalog.length >= 3) {
+					allowedSectionTypes.push(sectionType);
+				} else {
+					disallowedReasonByType[sectionType] =
+						'At least 3 active keynotes are required in keynote catalog.';
 				}
 				break;
 			case 'speaker_in_action':

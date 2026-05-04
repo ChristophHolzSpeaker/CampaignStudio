@@ -78,6 +78,18 @@
 			icon: 'mdi--calendar-clock-outline'
 		},
 		{
+			label: 'Clients',
+			href: '/admin/clients',
+			match: 'prefix',
+			icon: 'mdi--account-box-multiple'
+		},
+		{
+			label: 'Keynotes',
+			href: '/admin/keynotes',
+			match: 'prefix',
+			icon: 'mdi--presentation-play'
+		},
+		{
 			label: 'Documentation',
 			href: '/(app)/admin/documentation',
 			match: 'prefix',

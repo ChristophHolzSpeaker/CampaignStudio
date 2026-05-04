@@ -457,7 +457,7 @@ export async function runLandingPageEditFromPrompt(
 	}
 
 	if (pageRecord.campaignStatus === 'published') {
-		throw new Error('Cannot edit landing page while campaign is published. Unpublish first.');
+		throw new Error('Cannot edit landing page while campaign is published. Archive first.');
 	}
 
 	const currentPage = parseLandingPageDocument(pageRecord.structuredContentJson);

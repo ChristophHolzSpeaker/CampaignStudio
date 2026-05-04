@@ -5,6 +5,7 @@ import {
 	heroLargeEmailCtaPropsSchema,
 	hybridContentSectionPropsSchema,
 	immediateAuthorityHeroPropsSchema,
+	keynoteSpeechesPropsSchema,
 	logosOfTrustRibbonPropsSchema,
 	speakerInActionPropsSchema,
 	proofOfPerformancePropsSchema,
@@ -144,6 +145,28 @@ export const sectionSpecs: PageSectionSpecMap = {
 			'Use accurate alt text for accessibility and clarity.'
 		],
 		propsSchema: logosOfTrustRibbonPropsSchema
+	},
+	keynote_speeches: {
+		type: 'keynote_speeches',
+		label: 'Keynote Speeches',
+		description:
+			'Curated keynote gallery section with three approved talks resolved from the keynote library by ID.',
+		whenToUse: [
+			'Use directly after logos_of_trust_ribbon to transition from trust markers into concrete keynote topics.',
+			'Use when at least three approved keynotes are available in the keynote catalog.',
+			'Use when visitors need specific talk options before deeper proof and conversion sections.'
+		],
+		whenNotToUse: [
+			'Do not use when fewer than three approved keynotes are available.',
+			'Do not invent keynote titles, summaries, or images outside the curated keynote catalog.',
+			'Do not place this section below conversion-heavy sections where keynote discovery is no longer useful.'
+		],
+		contentGuidance: [
+			'Write a clear section title and intro aligned to campaign audience and topic.',
+			'Select exactly three keynote IDs from approved catalog entries.',
+			'Keep keynote cards concrete, distinctive, and aligned to real talk themes.'
+		],
+		propsSchema: keynoteSpeechesPropsSchema
 	},
 	speaker_in_action: {
 		type: 'speaker_in_action',

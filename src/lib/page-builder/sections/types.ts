@@ -7,6 +7,7 @@ export const pageSectionTypes = [
 	'hero_large_email_cta',
 	'booklet_download_cta',
 	'logos_of_trust_ribbon',
+	'keynote_speeches',
 	'speaker_in_action',
 	'hybrid_content_section',
 	'proof_of_performance',
@@ -44,6 +45,20 @@ export interface LogosOfTrustRibbonProps {
 export interface HeroLargeEmailCtaProps {
 	heading: string;
 	labelText: string;
+}
+
+export interface KeynoteSpeechItem {
+	id: string;
+	title: string;
+	imageUrl: string;
+	summary: string;
+}
+
+export interface KeynoteSpeechesProps {
+	title: string;
+	intro: string;
+	keynoteIds: string[];
+	keynotes: KeynoteSpeechItem[];
 }
 
 export interface BookletDownloadCtaProps {
@@ -164,6 +179,7 @@ export interface SectionPropsByType {
 	hero_large_email_cta: HeroLargeEmailCtaProps;
 	booklet_download_cta: BookletDownloadCtaProps;
 	logos_of_trust_ribbon: LogosOfTrustRibbonProps;
+	keynote_speeches: KeynoteSpeechesProps;
 	speaker_in_action: SpeakerInActionProps;
 	hybrid_content_section: HybridContentSectionProps;
 	proof_of_performance: ProofOfPerformanceProps;

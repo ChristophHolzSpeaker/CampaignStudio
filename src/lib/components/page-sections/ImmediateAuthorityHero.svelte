@@ -167,7 +167,7 @@
 				<img
 					src={thumbnailUrl}
 					alt={thumbnailAlt}
-					class="h-full w-full object-cover grayscale transition-all duration-500 hover:grayscale-0"
+					class="h-full w-full object-cover transition-all duration-500"
 				/>
 			</div>
 			<div class="absolute -right-6 -bottom-6 -z-10 h-28 w-28 bg-primary/20 blur-3xl"></div>

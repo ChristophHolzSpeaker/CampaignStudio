@@ -6,12 +6,10 @@
 
 	type PreviewSidebarData = {
 		campaignId?: number | null;
-		campaignPageId?: number | null;
 	};
 
 	const sidebarData = $derived(($page.data as PreviewSidebarData) ?? {});
 	const campaignId = $derived(sidebarData.campaignId ?? null);
-	const campaignPageId = $derived(sidebarData.campaignPageId ?? null);
 
 	const navItems = $derived.by<readonly AdminSidebarNavItem[]>(() => [
 		{
@@ -23,10 +21,9 @@
 		},
 		{
 			label: 'Landing Page Preview',
-			href: campaignPageId
-				? `/preview/landing-page?campaignPageId=${campaignPageId}`
-				: '/preview/landing-page',
+			href: campaignId ? `/campaigns/${campaignId}/landing-page` : undefined,
 			match: 'prefix',
+			disabled: !campaignId,
 			icon: 'mdi--page-layout-header'
 		},
 		{

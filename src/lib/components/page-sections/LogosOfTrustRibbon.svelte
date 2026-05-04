@@ -31,20 +31,10 @@
 	const logos = $derived(props?.logos?.length ? props.logos : fallbackLogos);
 </script>
 
-<section
-	class="bg-surface-container-low px-6 py-12 sm:px-8"
-	aria-label="Logos of Trust Ribbon section"
->
+<section class="bg-[#435a9f] px-6 py-12 sm:px-8" aria-label="Logos of Trust Ribbon section">
 	<div class="mx-auto max-w-7xl">
-		{#if title}
-			<p class="mb-3 text-center text-sm tracking-[0.08em] text-on-surface">{title}</p>
-		{/if}
-		<p class="mb-8 text-center text-[11px] tracking-[0.2em] text-on-surface/70 sm:mb-10 sm:text-xs">
-			{label}
-		</p>
-
 		<div
-			class="grid grid-cols-2 items-center justify-items-center gap-x-8 gap-y-8 lg:grid-cols-4 lg:gap-x-12"
+			class="grid grid-cols-2 items-center justify-center justify-items-center gap-x-8 gap-y-8 lg:flex lg:gap-x-12"
 		>
 			{#each logos as logo (logo.name)}
 				<div class="flex min-h-20 w-full max-w-60 items-center justify-center">
@@ -52,7 +42,7 @@
 						<img
 							src={logo.imageUrl}
 							alt={logo.alt}
-							class="h-auto max-h-12 w-auto object-contain sm:max-h-16"
+							class="h-auto max-h-8 w-auto object-contain brightness-0 grayscale invert sm:max-h-10"
 						/>
 					{:else}
 						<span class="text-center text-base tracking-tight text-on-surface">{logo.name}</span>
