@@ -8,12 +8,13 @@
 	type CampaignSidebarData = {
 		campaign?: {
 			id: number;
+			name?: string;
 			status?: string;
 		};
 		campaignPageId?: number | null;
 	};
 
-	const isDetailRoute = $derived(/^\/campaigns\/\d+(?:\/analytics)?$/.test($page.url.pathname));
+	const isDetailRoute = $derived(/^\/campaigns\/\d+(?:\/.*)?$/.test($page.url.pathname));
 	const sidebarData = $derived(($page.data as CampaignSidebarData) ?? {});
 	const campaign = $derived(sidebarData.campaign ?? null);
 	const campaignPageId = $derived(sidebarData.campaignPageId ?? null);
@@ -22,11 +23,15 @@
 
 	const navItems = $derived.by<readonly AdminSidebarNavItem[]>(() => {
 		if (isDetailRoute && campaign) {
-			const previewHref = campaignPageId
-				? `/preview/landing-page?campaignPageId=${campaignPageId}`
-				: undefined;
+			const previewHref = campaignPageId ? `/campaigns/${campaign.id}/landing-page` : undefined;
 
 			return [
+				{
+					label: 'All Campaigns',
+					href: '/campaigns',
+					match: 'exact',
+					icon: 'material-symbols--arrow-back'
+				},
 				{
 					label: 'Ads',
 					href: `/campaigns/${campaign.id}`,
@@ -62,6 +67,21 @@
 	});
 </script>
 
+{#snippet headerContent()}
+	{#if isDetailRoute && campaign}
+		<div class="campaign-context">
+			<span
+				class="campaign-context-status"
+				class:campaign-context-status--draft={campaign.status !== 'published'}
+				class:campaign-context-status--published={campaign.status === 'published'}
+			>
+				{(campaign.status ?? 'draft').toUpperCase()}
+			</span>
+			<p class="campaign-context-name">{campaign.name ?? `Campaign #${campaign.id}`}</p>
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet primaryAction()}
 	{#if isDetailRoute && campaign}
 		<form
@@ -85,6 +105,7 @@
 		<AdminSidebar
 			title="Campaign Console"
 			subtitle="Operational Navigation"
+			{headerContent}
 			{navItems}
 			{primaryAction}
 		/>
@@ -108,6 +129,45 @@
 
 	.campaign-sidebar-action {
 		display: grid;
+	}
+
+	.campaign-context {
+		display: grid;
+		gap: 0.5rem;
+		margin-bottom: 0.5rem;
+		padding-bottom: 1.25rem;
+		border-bottom: 1px solid rgba(15, 23, 42, 0.12);
+	}
+
+	.campaign-context-status {
+		display: inline-flex;
+		width: fit-content;
+		padding: 0.15rem 0.5rem;
+		border-radius: 0.25rem;
+		font-family: 'Space Grotesk', sans-serif;
+		font-size: 0.625rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.campaign-context-status--draft {
+		background: #e0f2fe;
+		color: #0369a1;
+	}
+
+	.campaign-context-status--published {
+		background: #dcfce7;
+		color: #166534;
+	}
+
+	.campaign-context-name {
+		margin: 0;
+		font-family: 'Space Grotesk', sans-serif;
+		font-size: 0.925rem;
+		font-weight: 700;
+		line-height: 1.35;
+		color: #0f172a;
 	}
 
 	@media (max-width: 1200px) {

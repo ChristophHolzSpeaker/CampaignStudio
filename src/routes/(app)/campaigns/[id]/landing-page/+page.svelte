@@ -23,7 +23,7 @@
 	const getViewData = () =>
 		data as {
 			page: LandingPageDocument;
-			campaignId: number | null;
+			campaignId: number;
 			campaignPageId: number | null;
 			campaignStatus: string | null;
 		};
@@ -56,22 +56,17 @@
 	const handleEditSubmit: SubmitFunction = () => {
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
-				const actionData = result.data as { pageEdit?: LandingPageEditState } | undefined;
-				const nextCampaignPageId = actionData?.pageEdit?.campaignPageId;
-
-				if (typeof nextCampaignPageId === 'number' && Number.isFinite(nextCampaignPageId)) {
-					await goto(`/preview/landing-page?campaignPageId=${nextCampaignPageId}`, {
-						replaceState: true,
-						invalidateAll: true,
-						noScroll: true,
-						keepFocus: true
-					});
-					return;
-				}
+				await goto(`/campaigns/${getViewData().campaignId}/landing-page`, {
+					replaceState: true,
+					invalidateAll: true,
+					noScroll: true,
+					keepFocus: true
+				});
+				return;
 			}
 
-			if (result.type === 'success' || result.type === 'failure') {
-				await update({ reset: result.type === 'success' });
+			if (result.type === 'failure') {
+				await update({ reset: false });
 				return;
 			}
 
