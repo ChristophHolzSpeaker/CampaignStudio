@@ -56,7 +56,7 @@
 	};
 
 	const publishLabel = (status?: string) =>
-		status === 'published' ? 'Revert to draft' : 'Publish campaign';
+		status === 'published' ? 'Archive' : 'Publish campaign';
 	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
 </script>
 
@@ -153,7 +153,7 @@
 			<button type="button" class="btn" onclick={clearFilters}>Reset filters</button>
 		</div>
 	{:else}
-		<section class="grid gap-20">
+		<section class="grid gap-4">
 			{#each filteredCampaigns as campaign (campaign.id)}
 				<form
 					method="POST"
@@ -166,7 +166,7 @@
 					<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
 					<CampaignCard {campaign} />
 					<div class=" flex gap-4 border-b border-stone-200 px-6 pb-10">
-						<button type="submit" class="btn text-primary"
+						<button type="submit" class="btn -ml-4 text-primary"
 							><span
 								class="relative top-0.5"
 								class:mdi--publish={campaign.status === 'draft'}
@@ -218,7 +218,7 @@
 		padding: 0.75rem;
 		display: flex;
 		flex-direction: column;
-		gap: 1rem;
+		gap: 0.5rem;
 	}
 
 	.filter-shell {

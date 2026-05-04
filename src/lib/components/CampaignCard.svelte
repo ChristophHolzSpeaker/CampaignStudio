@@ -8,11 +8,7 @@
 			{ label: campaign?.audience ?? '', tone: 'muted' },
 			{ label: campaign?.format ?? '', tone: 'muted' },
 			{ label: campaign?.language ?? '', tone: 'muted' },
-			{ label: campaign?.geography ?? '', tone: 'muted' },
-			{
-				label: campaign?.status ?? '',
-				tone: campaign?.status === 'published' ? 'published' : 'draft'
-			}
+			{ label: campaign?.geography ?? '', tone: 'muted' }
 		].filter((badge) => badge.label)
 	);
 
@@ -53,34 +49,94 @@
 </script>
 
 <article class="campaign-card">
-	<div class="card-head">
-		<p class="purpose" aria-label="campaign topic">{campaign?.topic ?? 'Campaign'}</p>
-	</div>
-	<h3 class="text-4xl uppercase">{campaign?.name}</h3>
-	<p class="meta">
-		{creatorLabel ? `By ${creatorLabel}` : ''}
-		{creatorLabel && campaign?.created_at ? ' · ' : ''}
-		{formatDate(campaign?.created_at)}
-	</p>
-	<p class="meta meta-secondary">
-		Visits {visitDisplay.totalVisits}
-		· Unique {visitDisplay.uniqueVisitors}
-		{#if visitDisplay.lastVisitedAt}
-			· Last visit {formatDate(visitDisplay.lastVisitedAt)}
-		{/if}
-	</p>
-	<div class="badge-row">
-		{#each badges as badge (badge.label)}
-			<span class={`badge ${badge.tone ?? ''}`}>{badge.label}</span>
-		{/each}
-	</div>
+	<div class="campaign-main">
+		<div class="campaign-left">
+			<div class="badge-row">
+				<span class={`badge ${campaign?.status ?? ''}`}>{campaign?.status}</span>
+			</div>
 
-	{#if snippet}
-		<p class=" rounded-xs bg-stone-100 p-3 text-stone-600 italic">{snippet}</p>
-	{/if}
+			<h3 class="campaign-title">{campaign?.name}</h3>
+		</div>
+
+		<div class="campaign-right">
+			<p class="meta campaign-stats">
+				{creatorLabel ? `By ${creatorLabel}` : ''}
+				{creatorLabel && campaign?.created_at ? ' · ' : ''}
+				{formatDate(campaign?.created_at)}
+				Visits {visitDisplay.totalVisits}
+				· Unique {visitDisplay.uniqueVisitors}
+				{#if visitDisplay.lastVisitedAt}
+					· Last visit {formatDate(visitDisplay.lastVisitedAt)}
+				{/if}
+			</p>
+
+			<div class="badge-row right-badges">
+				{#each badges as badge (badge.label)}
+					<span class={`badge ${badge.tone ?? ''}`}>{badge.label}</span>
+				{/each}
+			</div>
+		</div>
+	</div>
 </article>
 
 <style>
+	.campaign-card {
+		padding: 0.5rem;
+		border-radius: 0;
+		border: 0;
+	}
+
+	.campaign-main {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 2rem;
+	}
+
+	.campaign-left {
+		min-width: 0;
+		flex: 1.2;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+	}
+
+	.campaign-right {
+		min-width: 18rem;
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.75rem;
+		text-align: right;
+	}
+
+	.campaign-title {
+		margin: 0;
+		font-size: 2.25rem;
+		line-height: 0.95;
+		text-transform: uppercase;
+	}
+
+	.campaign-stats {
+		color: #876868;
+	}
+
+	.right-badges {
+		justify-content: flex-end;
+	}
+
+	.snippet {
+		margin: 0;
+		max-width: 32rem;
+		border-radius: 2px;
+		background: #f5f5f4;
+		padding: 0.75rem;
+		color: #57534e;
+		font-style: italic;
+		line-height: 1.5;
+	}
+
 	.badge-row {
 		display: flex;
 		flex-wrap: wrap;
@@ -106,7 +162,7 @@
 	}
 
 	.badge.muted {
-		background: #f3f3f3;
+		background: #dddcdc;
 		color: #5d3f3f;
 	}
 
@@ -120,47 +176,31 @@
 		color: #fff;
 	}
 
-	.campaign-card {
-		padding: 1.5rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-		border-radius: 0;
-		border: 0;
-	}
-
-	.card-head {
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-start;
-		gap: 1rem;
-	}
-
-	.purpose {
-		font-family: 'Bureau Grot', 'Space Grotesk', sans-serif;
-		font-size: 0.75rem;
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-		color: #b8002a;
-		margin: 0;
-	}
-
 	.meta {
 		margin: 0;
 		font-size: 0.9rem;
 		color: #5d3f3f;
 	}
 
-	.meta-secondary {
-		font-size: 0.8rem;
-		color: #876868;
-		margin-top: -0.5rem;
-	}
+	@media (max-width: 768px) {
+		.campaign-main {
+			flex-direction: column;
+			gap: 1.25rem;
+		}
 
-	.snippet {
-		margin: 0;
-		color: #1a1c1c;
-		font-family: 'Bureau Grot', sans-serif;
-		line-height: 1.6;
+		.campaign-right {
+			width: 100%;
+			min-width: 0;
+			align-items: flex-start;
+			text-align: left;
+		}
+
+		.right-badges {
+			justify-content: flex-start;
+		}
+
+		.snippet {
+			max-width: none;
+		}
 	}
 </style>
