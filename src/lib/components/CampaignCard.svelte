@@ -12,12 +12,6 @@
 		].filter((badge) => badge.label)
 	);
 
-	const snippet = $derived.by(() => {
-		const notes = (campaign?.notes ?? '').trim();
-		if (!notes.length) return '';
-		return notes.length > 140 ? `${notes.slice(0, 140)}…` : notes;
-	});
-
 	const visitDisplay = $derived.by(() => {
 		const withMetrics = campaign as Partial<CampaignRecordWithMetrics> | null | undefined;
 		const totalVisits = typeof withMetrics?.visitCount === 'number' ? withMetrics.visitCount : 0;
@@ -48,36 +42,35 @@
 	});
 </script>
 
-<article class="campaign-card">
-	<div class="campaign-main">
-		<div class="campaign-left">
-			<div class="badge-row">
-				<span class={`badge ${campaign?.status ?? ''}`}>{campaign?.status}</span>
+<td class="px-6 py-2">
+	<div class="flex items-center gap-4">
+		<div>
+			<div class="font-headline-md text-sm font-bold text-gray-900 uppercase">
+				{campaign?.name}
 			</div>
-
-			<h3 class="campaign-title">{campaign?.name}</h3>
-		</div>
-
-		<div class="campaign-right">
-			<p class="meta campaign-stats">
-				{creatorLabel ? `By ${creatorLabel}` : ''}
-				{creatorLabel && campaign?.created_at ? ' · ' : ''}
-				{formatDate(campaign?.created_at)}
-				Visits {visitDisplay.totalVisits}
-				· Unique {visitDisplay.uniqueVisitors}
-				{#if visitDisplay.lastVisitedAt}
-					· Last visit {formatDate(visitDisplay.lastVisitedAt)}
-				{/if}
-			</p>
-
-			<div class="badge-row right-badges">
-				{#each badges as badge (badge.label)}
-					<span class={`badge ${badge.tone ?? ''}`}>{badge.label}</span>
-				{/each}
-			</div>
+			<div class="font-body-sm mt-1 text-xs text-secondary">Campaign ID: {campaign?.id}</div>
 		</div>
 	</div>
-</article>
+</td>
+<td class="px-6 py-2 text-center">
+	<div class="badge-row">
+		<span class={`badge ${campaign?.status ?? ''}`}>{campaign?.status}</span>
+	</div>
+</td>
+<td class="px-6 py-2 text-xs">
+	<div class="flex flex-col gap-1">
+		{creatorLabel ? `By ${creatorLabel}` : ''}
+		{creatorLabel && campaign?.created_at ? ' · ' : ''}
+		{formatDate(campaign?.created_at)}
+	</div>
+</td>
+<td class="px-6 py-2 text-right text-xs">
+	Visits {visitDisplay.totalVisits}
+	· Unique {visitDisplay.uniqueVisitors}
+	{#if visitDisplay.lastVisitedAt}
+		· Last visit {formatDate(visitDisplay.lastVisitedAt)}
+	{/if}
+</td>
 
 <style>
 	.campaign-card {

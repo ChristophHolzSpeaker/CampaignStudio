@@ -155,45 +155,68 @@
 		</div>
 	{:else}
 		<section class="grid gap-4">
-			{#each filteredCampaigns as campaign (campaign.id)}
-				<form
-					method="POST"
-					action="?/publish"
-					use:enhance
-					animate:flip={flipParams}
-					class="campaign-shell"
-				>
-					<input type="hidden" name="id" value={campaign.id} />
-					<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
-					<CampaignCard {campaign} />
-					<div class="flex flex-wrap items-center gap-4 border-b border-stone-200 px-6 pb-10">
-						<button type="submit" class="btn -ml-4 text-primary"
-							><span
-								class="relative top-0.5"
-								class:mdi--publish={campaign.status !== 'published'}
-								class:mdi--publish-off={campaign.status === 'published'}
-							></span>{publishLabel(campaign.status)}</button
-						>
-						<input
-							type="text"
-							name="duplicate_name"
-							value={duplicateName(campaign.name)}
-							class="duplicate-name-input"
-							aria-label="Duplicated campaign name"
-						/>
-						<button type="submit" formaction="?/duplicate" class="btn">
-							<span class="material-symbols--content-copy relative top-1"></span> Duplicate
-						</button>
-						<button
-							type="button"
-							class="btn"
-							onclick={() => window.location.assign(`/campaigns/${campaign.id}`)}
-						>
-							<span class="material-symbols--edit-note relative top-1"></span> Edit
-						</button>
-					</div>
-				</form>
-			{/each}
+			<table class="w-full border-collapse text-left">
+				<thead>
+					<tr class="border-b border-gray-200 bg-gray-50 text-stone-500">
+						<th class="font-table-header text-table-header px-6 py-4 text-sm uppercase">
+							Campaign Details
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-center text-sm uppercase">
+							Status
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-sm uppercase">
+							Metadata
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-right text-sm uppercase">
+							Performance
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-right text-sm uppercase">
+							Actions
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-stone-200">
+					{#each filteredCampaigns as campaign (campaign.id)}
+						<tr animate:flip={flipParams} class="transition-colors hover:bg-gray-50">
+							<CampaignCard {campaign} />
+							<td class="px-6 py-5 text-right">
+								<form method="POST" action="?/publish" use:enhance>
+									<input type="hidden" name="id" value={campaign.id} />
+									<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
+									<div class="flex flex-wrap items-end justify-end gap-4 p-2">
+										<button
+											type="button"
+											class="btn"
+											onclick={() => window.location.assign(`/campaigns/${campaign.id}`)}
+										>
+											<span class="material-symbols--edit-note relative top-1"></span> Edit
+										</button>
+										<button type="submit" class="btn text-primary"
+											><span
+												class="relative top-0.5"
+												class:mdi--publish={campaign.status !== 'published'}
+												class:mdi--publish-off={campaign.status === 'published'}
+											></span>{publishLabel(campaign.status)}</button
+										>
+										<div>
+											<input
+												type="text"
+												name="duplicate_name"
+												value={duplicateName(campaign.name)}
+												class="duplicate-name-input"
+												aria-label="Duplicated campaign name"
+											/>
+											<button type="submit" formaction="?/duplicate" class="btn">
+												<span class="material-symbols--content-copy relative top-1"></span> Duplicate
+											</button>
+										</div>
+									</div>
+								</form>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</section>
 	{/if}
 </section>
@@ -224,12 +247,6 @@
 		mask-repeat: no-repeat;
 		-webkit-mask-size: 100% 100%;
 		mask-size: 100% 100%;
-	}
-	.campaign-shell {
-		padding: 0.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
 	}
 
 	.filter-shell {
