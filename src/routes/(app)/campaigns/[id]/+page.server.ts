@@ -1,10 +1,11 @@
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import type {
 	CampaignAdGroupWithDetails,
 	CampaignAdPackageWithDetails
 } from '$lib/server/campaigns/client';
 import {
+	duplicateCampaign,
 	getCampaignAdPackageWithDetails,
 	getCampaignAdPackages,
 	getCampaignById,
@@ -160,5 +161,31 @@ export const actions: Actions = {
 				}
 			});
 		}
+	},
+	duplicate: async ({ request, params, locals }) => {
+		const sourceCampaignId = Number(params.id);
+		const formData = await request.formData();
+		const name = formData.get('duplicate_name')?.toString().trim() ?? '';
+
+		if (!Number.isFinite(sourceCampaignId) || sourceCampaignId <= 0) {
+			return fail(400, { success: false, message: 'Invalid campaign selected for duplication.' });
+		}
+
+		if (!name.length) {
+			return fail(400, {
+				success: false,
+				message: 'Please provide a name for the duplicated campaign.'
+			});
+		}
+
+		const { data: userData } = await locals.supabase.auth.getUser();
+		const createdBy = userData?.user?.id ?? null;
+		const duplicated = await duplicateCampaign({
+			sourceCampaignId,
+			name,
+			createdBy
+		});
+
+		throw redirect(303, `/campaigns/${duplicated.campaignId}`);
 	}
 };

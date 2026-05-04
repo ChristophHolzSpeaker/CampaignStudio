@@ -49,6 +49,7 @@ export async function loadLandingPageGenerationInput(
 		topic: campaign.topic,
 		audience: campaign.audience,
 		format: campaign.format,
+		geography: campaign.geography,
 		intentSummary: singleAdGroup.intent_summary ?? '',
 		messagingAngle: parsedStrategy.data.messagingAngle,
 		conversionGoal: parsedStrategy.data.conversionGoal

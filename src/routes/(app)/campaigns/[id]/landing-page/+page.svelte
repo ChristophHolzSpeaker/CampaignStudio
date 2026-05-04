@@ -23,7 +23,7 @@
 	const getViewData = () =>
 		data as {
 			page: LandingPageDocument;
-			campaignId: number | null;
+			campaignId: number;
 			campaignPageId: number | null;
 			campaignStatus: string | null;
 		};
@@ -47,7 +47,7 @@
 		}
 
 		if (viewData.campaignStatus === 'published') {
-			return 'This campaign is published. Unpublish it before editing the landing page.';
+			return 'This campaign is published. Archive it before editing the landing page.';
 		}
 
 		return 'Describe text, section order, section removal, or approved media changes.';
@@ -56,22 +56,17 @@
 	const handleEditSubmit: SubmitFunction = () => {
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
-				const actionData = result.data as { pageEdit?: LandingPageEditState } | undefined;
-				const nextCampaignPageId = actionData?.pageEdit?.campaignPageId;
-
-				if (typeof nextCampaignPageId === 'number' && Number.isFinite(nextCampaignPageId)) {
-					await goto(`/preview/landing-page?campaignPageId=${nextCampaignPageId}`, {
-						replaceState: true,
-						invalidateAll: true,
-						noScroll: true,
-						keepFocus: true
-					});
-					return;
-				}
+				await goto(`/campaigns/${getViewData().campaignId}/landing-page`, {
+					replaceState: true,
+					invalidateAll: true,
+					noScroll: true,
+					keepFocus: true
+				});
+				return;
 			}
 
-			if (result.type === 'success' || result.type === 'failure') {
-				await update({ reset: result.type === 'success' });
+			if (result.type === 'failure') {
+				await update({ reset: false });
 				return;
 			}
 
@@ -119,10 +114,11 @@
 
 	.edit-composer {
 		position: fixed;
-		right: 1rem;
+		right: auto;
 		bottom: 1rem;
 		left: 1rem;
 		z-index: 40;
+		width: calc(280px - 1rem);
 		border: 1px solid #d9dbcf;
 		background: #faf8f1;
 		box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
@@ -137,6 +133,7 @@
 
 	.composer-top-row {
 		display: flex;
+		flex-direction: column;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 0.75rem;
@@ -159,7 +156,7 @@
 	}
 
 	.composer-controls {
-		display: grid;
+		display: block;
 		grid-template-columns: minmax(0, 1fr) auto;
 		gap: 0.75rem;
 	}

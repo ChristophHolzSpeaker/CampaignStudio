@@ -67,10 +67,39 @@ export const speakerInActionVideoOptionSchema = z.object({
 	videoThumbnailAlt: z.string().trim().min(1)
 });
 
+export const clientOptionSchema = z.object({
+	id: z.string().trim().min(1),
+	name: z.string().trim().min(1),
+	logoUrl: z.string().trim().min(1),
+	logoAlt: z.string().trim().min(1),
+	industry: z.string().trim().min(1),
+	keynoteCaseStudy: z.string().trim().min(1),
+	audiences: z.array(z.string().trim().min(1)).default([]),
+	topics: z.array(z.string().trim().min(1)).default([]),
+	formats: z.array(z.string().trim().min(1)).default([]),
+	geographies: z.array(z.string().trim().min(1)).default([]),
+	intentTags: z.array(z.string().trim().min(1)).default([])
+});
+
+export const keynoteOptionSchema = z.object({
+	id: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	summary: z.string().trim().min(1),
+	imageUrl: z.string().trim().url(),
+	imageAlt: z.string().trim().min(1),
+	audiences: z.array(z.string().trim().min(1)).default([]),
+	topics: z.array(z.string().trim().min(1)).default([]),
+	formats: z.array(z.string().trim().min(1)).default([]),
+	geographies: z.array(z.string().trim().min(1)).default([]),
+	intentTags: z.array(z.string().trim().min(1)).default([])
+});
+
 const assetCatalogSchema = z.object({
 	heroVideos: z.array(heroVideoOptionSchema),
 	hybridSupportingImages: z.array(hybridSupportingImageOptionSchema),
-	speakerInActionVideos: z.array(speakerInActionVideoOptionSchema)
+	speakerInActionVideos: z.array(speakerInActionVideoOptionSchema),
+	clientCatalog: z.array(clientOptionSchema).default([]),
+	keynoteCatalog: z.array(keynoteOptionSchema).default([])
 });
 
 export const landingPageAssetsSchema = z.object({
@@ -82,7 +111,9 @@ export const landingPageAssetsSchema = z.object({
 	assetCatalog: assetCatalogSchema.default({
 		heroVideos: [],
 		hybridSupportingImages: [],
-		speakerInActionVideos: []
+		speakerInActionVideos: [],
+		clientCatalog: [],
+		keynoteCatalog: []
 	})
 });
 
@@ -90,3 +121,5 @@ export type LandingPageAssets = z.infer<typeof landingPageAssetsSchema>;
 export type HeroVideoOption = z.infer<typeof heroVideoOptionSchema>;
 export type HybridSupportingImageOption = z.infer<typeof hybridSupportingImageOptionSchema>;
 export type SpeakerInActionVideoOption = z.infer<typeof speakerInActionVideoOptionSchema>;
+export type ClientOption = z.infer<typeof clientOptionSchema>;
+export type KeynoteOption = z.infer<typeof keynoteOptionSchema>;

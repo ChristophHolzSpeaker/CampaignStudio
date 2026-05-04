@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { campaigns, campaign_visit_metrics, profiles } from '$lib/server/db/schema';
+import { campaign_pages, campaigns, campaign_visit_metrics, profiles } from '$lib/server/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
 import {
 	campaignVisitMetricsSchema,
@@ -21,6 +21,8 @@ import {
 	getCampaignAdPackageWithDetails,
 	getCampaignAdPackages
 } from './ads';
+import { parseLandingPageDocument } from '$lib/page-builder/page';
+import { persistGeneratedLandingPage } from '$lib/server/agents/landing-page-pipeline';
 
 export type CampaignStatus = 'draft' | 'published' | 'generated' | 'scheduled' | 'archived';
 
@@ -203,4 +205,124 @@ export type {
 };
 export async function setCampaignStatus(id: number, status: string): Promise<void> {
 	await db.update(campaigns).set({ status, updated_at: new Date() }).where(eq(campaigns.id, id));
+}
+
+export async function duplicateCampaign(input: {
+	sourceCampaignId: number;
+	name: string;
+	createdBy: string | null;
+}): Promise<{ campaignId: number }> {
+	const sourceCampaign = await getCampaignById(input.sourceCampaignId);
+	if (!sourceCampaign) {
+		throw new Error('Source campaign not found.');
+	}
+
+	const nextName = input.name.trim();
+	if (!nextName.length) {
+		throw new Error('Campaign name is required for duplication.');
+	}
+
+	const [latestCampaignPage] = await db
+		.select({
+			structuredContentJson: campaign_pages.structured_content_json,
+			versionNumber: campaign_pages.version_number
+		})
+		.from(campaign_pages)
+		.where(eq(campaign_pages.campaign_id, input.sourceCampaignId))
+		.orderBy(desc(campaign_pages.version_number))
+		.limit(1);
+
+	const adPackages = await getCampaignAdPackages(input.sourceCampaignId);
+	const latestAdPackage = adPackages.at(-1);
+	const latestAdPackageWithDetails = latestAdPackage
+		? await getCampaignAdPackageWithDetails(latestAdPackage.id)
+		: null;
+
+	return db.transaction(async (tx) => {
+		const [createdCampaign] = await tx
+			.insert(campaigns)
+			.values({
+				name: nextName,
+				audience: sourceCampaign.audience,
+				format: sourceCampaign.format,
+				topic: sourceCampaign.topic,
+				language: sourceCampaign.language,
+				geography: sourceCampaign.geography,
+				notes: sourceCampaign.notes,
+				status: 'draft',
+				created_by: input.createdBy
+			})
+			.returning({ id: campaigns.id });
+
+		if (!createdCampaign) {
+			throw new Error('Failed to duplicate campaign metadata.');
+		}
+
+		let duplicatedCampaignPageId: number | null = null;
+		if (latestCampaignPage) {
+			const parsedLandingPage = parseLandingPageDocument(latestCampaignPage.structuredContentJson);
+			const duplicatedLandingPage = await persistGeneratedLandingPage(
+				createdCampaign.id,
+				parsedLandingPage,
+				tx
+			);
+			duplicatedCampaignPageId = duplicatedLandingPage.campaignPageId;
+		}
+
+		if (latestAdPackageWithDetails) {
+			const createdAdPackage = await createAdPackage(
+				{
+					campaign_id: createdCampaign.id,
+					version_number: 1,
+					channel: latestAdPackageWithDetails.channel,
+					status: 'draft',
+					strategy_json: latestAdPackageWithDetails.strategy_json
+				},
+				tx
+			);
+
+			for (const group of latestAdPackageWithDetails.groups) {
+				const createdGroup = await createAdGroup(
+					{
+						ad_package_id: createdAdPackage.id,
+						campaign_page_id: duplicatedCampaignPageId,
+						name: group.name,
+						intent_summary: group.intent_summary ?? undefined,
+						position: group.position
+					},
+					tx
+				);
+
+				for (const keyword of group.keywords) {
+					await createKeyword(
+						{
+							ad_group_id: createdGroup.id,
+							keyword_text: keyword.keyword_text,
+							match_type: keyword.match_type,
+							is_negative: keyword.is_negative,
+							rationale: keyword.rationale ?? undefined,
+							position: keyword.position
+						},
+						tx
+					);
+				}
+
+				for (const ad of group.ads) {
+					await createCampaignAd(
+						{
+							ad_group_id: createdGroup.id,
+							ad_type: ad.ad_type,
+							headlines_json: ad.headlines_json,
+							descriptions_json: ad.descriptions_json,
+							path_1: ad.path_1 ?? undefined,
+							path_2: ad.path_2 ?? undefined
+						},
+						tx
+					);
+				}
+			}
+		}
+
+		return { campaignId: createdCampaign.id };
+	});
 }

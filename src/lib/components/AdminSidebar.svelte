@@ -15,6 +15,7 @@
 	type SidebarProps = {
 		navItems?: readonly AdminSidebarNavItem[];
 		primaryAction?: Snippet;
+		headerContent?: Snippet;
 		title?: string;
 		subtitle?: string;
 	};
@@ -31,12 +32,19 @@
 			icon: 'material-symbols--book',
 			match: 'prefix',
 			href: '/(app)/admin/library'
+		},
+		{
+			label: 'Clients',
+			icon: 'material-symbols--book',
+			match: 'prefix',
+			href: '/(app)/admin/clients'
 		}
 	];
 
 	let {
 		navItems = defaultNavItems,
 		primaryAction,
+		headerContent,
 		title = 'Prompt Engine',
 		subtitle = 'V2.4 Architectural'
 	}: SidebarProps = $props();
@@ -56,6 +64,10 @@
 <aside
 	class="fixed top-18 bottom-0 left-0 z-20 flex w-70 flex-col gap-8 overflow-y-auto bg-[#f4f4f4] px-6 py-8"
 >
+	{#if headerContent}
+		{@render headerContent()}
+	{/if}
+
 	{#snippet navItem(item: AdminSidebarNavItem)}
 		{#if item.disabled || !item.href}
 			<div
@@ -189,6 +201,34 @@
 		width: 24px;
 		height: 24px;
 		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M13 9h5.5L13 3.5zM6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4c0-1.11.89-2 2-2m9 16v-2H6v2zm3-4v-2H6v2z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
+	}
+
+	.material-symbols--arrow-back {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='m7.825 13l2.9 2.9L9.3 17.325L4 12.025l5.3-5.3l1.425 1.425l-2.9 2.9H20v1.95z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
+	}
+
+	.mdi--account-box-multiple {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 6H2v14a2 2 0 0 0 2 2h14v-2H4zm16-4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm-3 5a3 3 0 0 0-3-3a3 3 0 0 0-3 3a3 3 0 0 0 3 3a3 3 0 0 0 3-3m-9 8v1h12v-1c0-2-4-3.1-6-3.1S8 13 8 15'/%3E%3C/svg%3E");
 		background-color: currentColor;
 		-webkit-mask-image: var(--svg);
 		mask-image: var(--svg);

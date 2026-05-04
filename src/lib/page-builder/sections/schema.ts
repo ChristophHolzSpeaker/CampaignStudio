@@ -10,9 +10,9 @@ export const twitterCardTypeSchema = z.enum(['summary', 'summary_large_image']);
 export const seoPropsSchema = z.object({
 	title: z.string().trim().min(1),
 	description: z.string().trim().min(1),
-	canonicalUrl: z.string().trim().url().optional(),
+	canonicalUrl: z.string().trim().optional(),
 	robots: z.string().trim().min(1).optional(),
-	ogImageUrl: z.string().trim().url().optional(),
+	ogImageUrl: z.string().trim().optional(),
 	ogImageAlt: z.string().trim().min(1).optional(),
 	ogType: ogTypeSchema.optional(),
 	twitterCard: twitterCardTypeSchema.optional(),
@@ -24,10 +24,10 @@ export const immediateAuthorityHeroPropsSchema = z
 		headline: z.string().trim().min(1),
 		subheadline: z.string().trim().min(1),
 		primaryCtaLabel: z.string().trim().min(1),
-		primaryCtaHref: z.string().trim().url().optional(),
+		primaryCtaHref: z.string().trim().optional(),
 		primaryCtaAction: z.string().trim().min(1).optional(),
-		videoEmbedUrl: z.string().trim().url(),
-		videoThumbnailUrl: z.string().trim().url(),
+		videoEmbedUrl: z.string().trim(),
+		videoThumbnailUrl: z.string().trim(),
 		videoThumbnailAlt: z.string().trim().min(1),
 		eyebrow: z.string().trim().min(1).optional(),
 		supportingBullets: z.array(z.string().trim().min(1)).optional()
@@ -49,11 +49,25 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 	logos: z.array(trustLogoItemSchema).min(1)
 });
 
+export const keynoteSpeechItemSchema = z.object({
+	id: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	imageUrl: z.string().trim().url(),
+	summary: z.string().trim().min(1)
+});
+
+export const keynoteSpeechesPropsSchema = z.object({
+	title: z.string().trim().min(1),
+	intro: z.string().trim().min(1),
+	keynoteIds: z.array(z.string().trim().min(1)).min(3).max(3),
+	keynotes: z.array(keynoteSpeechItemSchema).min(3).max(3)
+});
+
 export const speakerInActionMediaItemSchema = z.object({
 	assetId: z.string().trim().min(1),
 	title: z.string().trim().min(1),
-	videoEmbedUrl: z.string().trim().url(),
-	thumbnailUrl: z.string().trim().url(),
+	videoEmbedUrl: z.string().trim(),
+	thumbnailUrl: z.string().trim(),
 	thumbnailAlt: z.string().trim().min(1)
 });
 
@@ -86,7 +100,7 @@ export const hybridDeepDiveItemSchema = z.object({
 });
 
 export const hybridSupportingVisualItemSchema = z.object({
-	imageUrl: z.string().trim().url(),
+	imageUrl: z.string().trim(),
 	alt: z.string().trim().min(1),
 	caption: z.string().trim().min(1).optional()
 });
@@ -131,18 +145,18 @@ export const frictionlessFunnelBookingPropsSchema = z.object({
 	description: z.string().trim().min(1),
 	primaryCtaLabel: z.string().trim().min(1),
 	introQuestions: z.array(introQuestionItemSchema).optional(),
-	calendlyUrl: z.string().trim().url().optional(),
+	calendlyUrl: z.string().trim().optional(),
 	trustNote: z.string().trim().min(1).optional(),
 	formDisclaimer: z.string().trim().min(1).optional()
 });
 
 export const complianceLinkItemSchema = z.object({
 	label: z.string().trim().min(1),
-	href: z.string().trim().url()
+	href: z.string().trim()
 });
 
 export const complianceTransparencyFooterPropsSchema = z.object({
-	privacyPolicyUrl: z.string().trim().url(),
+	privacyPolicyUrl: z.string().trim(),
 	contactEmail: z.string().trim().email(),
 	businessAddress: z.string().trim().min(1),
 	phone: z.string().trim().min(1).optional(),
@@ -163,6 +177,11 @@ export const logosOfTrustRibbonSectionSchema = z.object({
 export const speakerInActionSectionSchema = z.object({
 	type: z.literal('speaker_in_action'),
 	props: speakerInActionPropsSchema
+});
+
+export const keynoteSpeechesSectionSchema = z.object({
+	type: z.literal('keynote_speeches'),
+	props: keynoteSpeechesPropsSchema
 });
 
 export const heroLargeEmailCtaSectionSchema = z.object({
@@ -206,6 +225,7 @@ export const pageSectionSchema = z.discriminatedUnion('type', [
 	heroLargeEmailCtaSectionSchema,
 	bookletDownloadCtaSectionSchema,
 	logosOfTrustRibbonSectionSchema,
+	keynoteSpeechesSectionSchema,
 	speakerInActionSectionSchema,
 	hybridContentSectionSchema,
 	proofOfPerformanceSectionSchema,
@@ -219,6 +239,7 @@ export type ImmediateAuthorityHeroSection = z.infer<typeof immediateAuthorityHer
 export type HeroLargeEmailCtaSection = z.infer<typeof heroLargeEmailCtaSectionSchema>;
 export type BookletDownloadCtaSection = z.infer<typeof bookletDownloadCtaSectionSchema>;
 export type LogosOfTrustRibbonSection = z.infer<typeof logosOfTrustRibbonSectionSchema>;
+export type KeynoteSpeechesSection = z.infer<typeof keynoteSpeechesSectionSchema>;
 export type SpeakerInActionSection = z.infer<typeof speakerInActionSectionSchema>;
 export type HybridContentSection = z.infer<typeof hybridContentSectionSchema>;
 export type ProofOfPerformanceSection = z.infer<typeof proofOfPerformanceSectionSchema>;

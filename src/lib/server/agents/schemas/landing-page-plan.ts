@@ -21,6 +21,16 @@ const speakerInActionAssetSelectionSchema = z.object({
 	rationale: z.string().trim().min(1)
 });
 
+const logosOfTrustRibbonSelectionSchema = z.object({
+	clientIds: z.array(z.string().trim().min(1)).min(1).max(4),
+	rationale: z.string().trim().min(1)
+});
+
+const keynoteSpeechesSelectionSchema = z.object({
+	keynoteIds: z.array(z.string().trim().min(1)).min(3).max(3),
+	rationale: z.string().trim().min(1)
+});
+
 export const landingPagePlanSchema = z
 	.object({
 		pageTitle: z.string().trim().min(1),
@@ -31,7 +41,9 @@ export const landingPagePlanSchema = z
 			.object({
 				hero: heroAssetSelectionSchema.optional(),
 				hybridContentSection: hybridAssetSelectionSchema.optional(),
-				speakerInAction: speakerInActionAssetSelectionSchema.optional()
+				speakerInAction: speakerInActionAssetSelectionSchema.optional(),
+				logosOfTrustRibbon: logosOfTrustRibbonSelectionSchema.optional(),
+				keynoteSpeeches: keynoteSpeechesSelectionSchema.optional()
 			})
 			.optional()
 	})
@@ -88,6 +100,36 @@ export const landingPagePlanSchema = z
 			message:
 				'assetPlan.speakerInAction is required when speaker_in_action is included in sectionPlan.',
 			path: ['assetPlan', 'speakerInAction']
+		}
+	)
+	.refine(
+		(plan) => {
+			const sectionTypes = new Set(plan.sectionPlan.map((section) => section.type));
+			if (!sectionTypes.has('logos_of_trust_ribbon')) {
+				return true;
+			}
+
+			return Boolean(plan.assetPlan?.logosOfTrustRibbon?.clientIds?.length);
+		},
+		{
+			message:
+				'assetPlan.logosOfTrustRibbon.clientIds is required when logos_of_trust_ribbon is included in sectionPlan.',
+			path: ['assetPlan', 'logosOfTrustRibbon', 'clientIds']
+		}
+	)
+	.refine(
+		(plan) => {
+			const sectionTypes = new Set(plan.sectionPlan.map((section) => section.type));
+			if (!sectionTypes.has('keynote_speeches')) {
+				return true;
+			}
+
+			return Boolean(plan.assetPlan?.keynoteSpeeches?.keynoteIds?.length === 3);
+		},
+		{
+			message:
+				'assetPlan.keynoteSpeeches.keynoteIds is required when keynote_speeches is included in sectionPlan.',
+			path: ['assetPlan', 'keynoteSpeeches', 'keynoteIds']
 		}
 	);
 

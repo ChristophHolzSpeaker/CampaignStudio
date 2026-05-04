@@ -2,9 +2,10 @@ import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { christophSampleLandingPage, parseLandingPageDocument } from '$lib/page-builder/page';
 import { db } from '$lib/server/db';
-import { campaign_pages, campaigns } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { campaign_pages } from '$lib/server/db/schema';
+import { desc, eq } from 'drizzle-orm';
 import { runLandingPageEditFromPrompt } from '$lib/server/agents/landing-page-editor';
+import { getCampaignById } from '$lib/server/campaigns/client';
 
 type LandingPageEditFormState = {
 	values: {
@@ -19,48 +20,38 @@ export type LandingPagePreviewActionData = {
 	pageEdit?: LandingPageEditFormState;
 };
 
-export const load: PageServerLoad = async ({ url }) => {
-	const candidatePageId = url.searchParams.get('campaignPageId');
+export const load: PageServerLoad = async ({ params }) => {
+	const campaignId = Number(params.id);
 
-	if (!candidatePageId) {
-		const page = parseLandingPageDocument(christophSampleLandingPage);
-
-		return {
-			page,
-			campaignId: null,
-			campaignPageId: null,
-			campaignStatus: null
-		};
+	if (!Number.isFinite(campaignId) || campaignId <= 0) {
+		throw error(400, 'Invalid campaign id');
 	}
 
-	const campaignPageId = Number(candidatePageId);
-	if (!Number.isFinite(campaignPageId) || campaignPageId <= 0) {
-		throw error(400, 'Invalid campaignPageId');
+	const campaign = await getCampaignById(campaignId);
+	if (!campaign) {
+		throw error(404, 'Campaign not found');
 	}
 
 	const [pageRecord] = await db
 		.select({
 			structuredContentJson: campaign_pages.structured_content_json,
-			campaignId: campaign_pages.campaign_id,
-			campaignPageId: campaign_pages.id,
-			campaignStatus: campaigns.status
+			campaignPageId: campaign_pages.id
 		})
 		.from(campaign_pages)
-		.innerJoin(campaigns, eq(campaigns.id, campaign_pages.campaign_id))
-		.where(eq(campaign_pages.id, campaignPageId))
+		.where(eq(campaign_pages.campaign_id, campaignId))
+		.orderBy(desc(campaign_pages.version_number))
 		.limit(1);
 
-	if (!pageRecord) {
-		throw error(404, `Campaign page ${campaignPageId} not found`);
-	}
-
-	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
+	const page = pageRecord
+		? parseLandingPageDocument(pageRecord.structuredContentJson)
+		: parseLandingPageDocument(christophSampleLandingPage);
 
 	return {
 		page,
-		campaignId: pageRecord.campaignId,
-		campaignPageId: pageRecord.campaignPageId,
-		campaignStatus: pageRecord.campaignStatus
+		campaign,
+		campaignId,
+		campaignPageId: pageRecord?.campaignPageId ?? null,
+		campaignStatus: campaign.status
 	};
 };
 

@@ -306,6 +306,110 @@ function resolveSpeakerInActionSelection(
 	return resolved.slice(0, 4);
 }
 
+function resolveLogosOfTrustSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): { name: string; imageUrl: string; alt: string }[] {
+	const clientCatalog = input.assets.assetCatalog.clientCatalog;
+	if (clientCatalog.length === 0) {
+		return input.assets.fixedLogosRibbon.logos.slice(0, 4);
+	}
+
+	const selectedIds = plan.assetPlan?.logosOfTrustRibbon?.clientIds ?? [];
+	const catalogById = new Map(clientCatalog.map((client) => [client.id, client]));
+	const resolved: { name: string; imageUrl: string; alt: string }[] = [];
+
+	for (const id of selectedIds) {
+		const selected = catalogById.get(id);
+		if (!selected) {
+			console.warn(
+				`Landing page writer: logos_of_trust_ribbon client '${id}' not found in approved catalog; skipping this client.`
+			);
+			continue;
+		}
+
+		resolved.push({
+			name: selected.name,
+			imageUrl: selected.logoUrl,
+			alt: selected.logoAlt
+		});
+	}
+
+	if (resolved.length >= 1) {
+		return resolved.slice(0, 4);
+	}
+
+	const fallbackFromCatalog = clientCatalog.slice(0, 4).map((client) => ({
+		name: client.name,
+		imageUrl: client.logoUrl,
+		alt: client.logoAlt
+	}));
+
+	if (fallbackFromCatalog.length >= 1) {
+		return fallbackFromCatalog;
+	}
+
+	return input.assets.fixedLogosRibbon.logos.slice(0, 4);
+}
+
+function resolveKeynoteSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan,
+	requestedIds: string[] = []
+): { id: string; title: string; imageUrl: string; summary: string }[] {
+	const catalog = input.assets.assetCatalog.keynoteCatalog;
+	const selectedIds =
+		requestedIds.length > 0 ? requestedIds : (plan.assetPlan?.keynoteSpeeches?.keynoteIds ?? []);
+	const catalogById = new Map(catalog.map((keynote) => [keynote.id, keynote]));
+	const resolved: { id: string; title: string; imageUrl: string; summary: string }[] = [];
+
+	for (const id of selectedIds) {
+		const keynote = catalogById.get(id);
+		if (!keynote) {
+			console.warn(
+				`Landing page writer: keynote '${id}' not found in approved catalog; skipping this keynote.`
+			);
+			continue;
+		}
+
+		resolved.push({
+			id: keynote.id,
+			title: keynote.title,
+			imageUrl: keynote.imageUrl,
+			summary: keynote.summary
+		});
+	}
+
+	if (resolved.length >= 3) {
+		return resolved.slice(0, 3);
+	}
+
+	for (const fallbackKeynote of catalog) {
+		if (resolved.length >= 3) {
+			break;
+		}
+
+		if (resolved.some((item) => item.id === fallbackKeynote.id)) {
+			continue;
+		}
+
+		resolved.push({
+			id: fallbackKeynote.id,
+			title: fallbackKeynote.title,
+			imageUrl: fallbackKeynote.imageUrl,
+			summary: fallbackKeynote.summary
+		});
+	}
+
+	if (resolved.length < 3) {
+		throw new Error(
+			'Landing page writer: keynote_speeches requires at least 3 approved keynotes in input.assets.assetCatalog.keynoteCatalog.'
+		);
+	}
+
+	return resolved.slice(0, 3);
+}
+
 function hydrateSectionWithAssets(
 	section: PageSection,
 	input: LandingPageGenerationInput,
@@ -358,13 +462,14 @@ function hydrateSectionWithAssets(
 		}
 
 		case 'logos_of_trust_ribbon': {
+			const logos = resolveLogosOfTrustSelection(input, plan);
 			return {
 				...section,
 				props: {
 					...section.props,
 					title: section.props.title ?? assets.fixedLogosRibbon.title,
 					label: section.props.label ?? assets.fixedLogosRibbon.label,
-					logos: assets.fixedLogosRibbon.logos
+					logos
 				}
 			};
 		}
@@ -376,6 +481,28 @@ function hydrateSectionWithAssets(
 					...section.props,
 					title: section.props.title ?? assets.fixedProofOfPerformance.title,
 					testimonials: assets.fixedProofOfPerformance.testimonials
+				}
+			};
+		}
+
+		case 'keynote_speeches': {
+			const keynoteIdsFromProps = Array.isArray(section.props.keynoteIds)
+				? section.props.keynoteIds
+						.map((value) => (typeof value === 'string' ? value.trim() : ''))
+						.filter((value) => value.length > 0)
+				: [];
+			const keynotes = resolveKeynoteSelection(input, plan, keynoteIdsFromProps);
+
+			return {
+				...section,
+				props: {
+					...section.props,
+					title: section.props.title?.trim() || 'Keynote topics that resonate with this audience',
+					intro:
+						section.props.intro?.trim() ||
+						`Choose from proven keynote topics tailored for ${input.campaign.audience}. Each talk is optimized for ${input.campaign.format} impact and practical relevance.`,
+					keynoteIds: keynotes.map((keynote) => keynote.id),
+					keynotes
 				}
 			};
 		}
@@ -567,10 +694,26 @@ function removeHybridSections(response: unknown): { result: unknown; removed: bo
 	};
 }
 
+export function includeGeographyInSeoText(value: string, geography: string): string {
+	const normalizedValue = value.trim();
+	const normalizedGeography = geography.trim();
+
+	if (!normalizedValue.length || !normalizedGeography.length) {
+		return normalizedValue;
+	}
+
+	if (normalizedValue.toLowerCase().includes(normalizedGeography.toLowerCase())) {
+		return normalizedValue;
+	}
+
+	return `${normalizedValue} in ${normalizedGeography}`;
+}
+
 function ensureSeoSection(
 	sections: PageSection[],
 	fallbackTitle: string,
-	fallbackDescription: string
+	fallbackDescription: string,
+	fallbackGeography: string
 ): PageSection[] {
 	const seoIndex = sections.findIndex((section) => section.type === 'seo');
 	const existingSeo = seoIndex >= 0 ? sections[seoIndex] : null;
@@ -579,11 +722,16 @@ function ensureSeoSection(
 			? existingSeo.props
 			: ({} as Record<string, unknown>);
 
+	const seoTitleBase = getString(existingSeoProps.title) ?? fallbackTitle;
+	const seoDescriptionBase = getString(existingSeoProps.description) ?? fallbackDescription;
+	const seoTitle = includeGeographyInSeoText(seoTitleBase, fallbackGeography);
+	const seoDescription = includeGeographyInSeoText(seoDescriptionBase, fallbackGeography);
+
 	const seoSection: PageSection = {
 		type: 'seo',
 		props: {
-			title: getString(existingSeoProps.title) ?? fallbackTitle,
-			description: getString(existingSeoProps.description) ?? fallbackDescription,
+			title: seoTitle,
+			description: seoDescription,
 			canonicalUrl: getString(existingSeoProps.canonicalUrl),
 			robots: getString(existingSeoProps.robots),
 			ogImageUrl: getString(existingSeoProps.ogImageUrl),
@@ -616,6 +764,20 @@ function enforceSpeakerSectionOrder(sections: PageSection[]): PageSection[] {
 	const ordered = [...sections];
 	const [speakerSection] = ordered.splice(speakerIndex, 1);
 	ordered.splice(proofIndex, 0, speakerSection);
+	return ordered;
+}
+
+function enforceKeynoteSectionOrder(sections: PageSection[]): PageSection[] {
+	const logosIndex = sections.findIndex((section) => section.type === 'logos_of_trust_ribbon');
+	const keynoteIndex = sections.findIndex((section) => section.type === 'keynote_speeches');
+
+	if (logosIndex < 0 || keynoteIndex < 0 || keynoteIndex === logosIndex + 1) {
+		return sections;
+	}
+
+	const ordered = [...sections];
+	const [keynoteSection] = ordered.splice(keynoteIndex, 1);
+	ordered.splice(logosIndex + 1, 0, keynoteSection);
 	return ordered;
 }
 
@@ -715,12 +877,14 @@ Corrective rules:
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
 - For speaker_in_action media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
+- For keynote_speeches, use plan.assetPlan.keynoteSpeeches.keynoteIds with input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
 - Place seo as the first section.
 - If both speaker_in_action and proof_of_performance are present, place speaker_in_action above proof_of_performance.
+- If keynote_speeches is present and logos_of_trust_ribbon is present, place keynote_speeches immediately after logos_of_trust_ribbon.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -729,6 +893,8 @@ Corrective rules:
 - For hybrid_content_section, each benefit imageUrl must resolve from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages.
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 - For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
+- For keynote_speeches, title and intro are required.
+- For keynote_speeches, include keynoteIds with exactly 3 values from plan.assetPlan.keynoteSpeeches.keynoteIds.
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}
@@ -770,7 +936,12 @@ function hydrateLandingPageWithAssets(
 	if (!Array.isArray(hydrated.sections)) {
 		return {
 			...hydrated,
-			sections: ensureSeoSection([], fallbackPageTitle, fallbackSeoDescription)
+			sections: ensureSeoSection(
+				[],
+				fallbackPageTitle,
+				fallbackSeoDescription,
+				input.campaign.geography
+			)
 		};
 	}
 
@@ -792,11 +963,12 @@ function hydrateLandingPageWithAssets(
 		})
 		.map((section) => hydrateSectionWithAssets(section, input, plan));
 
-	const orderedSections = enforceSpeakerSectionOrder(sections);
+	const orderedSections = enforceKeynoteSectionOrder(enforceSpeakerSectionOrder(sections));
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
-		fallbackSeoDescription
+		fallbackSeoDescription,
+		input.campaign.geography
 	);
 
 	return {

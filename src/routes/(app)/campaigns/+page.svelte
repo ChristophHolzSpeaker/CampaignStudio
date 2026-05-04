@@ -56,8 +56,9 @@
 	};
 
 	const publishLabel = (status?: string) =>
-		status === 'published' ? 'Revert to draft' : 'Publish campaign';
-	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
+		status === 'published' ? 'Archive' : 'Publish campaign';
+	const targetStatus = (status?: string) => (status === 'published' ? 'archived' : 'published');
+	const duplicateName = (name: string) => `${name} Copy`;
 </script>
 
 <svelte:head>
@@ -153,36 +154,69 @@
 			<button type="button" class="btn" onclick={clearFilters}>Reset filters</button>
 		</div>
 	{:else}
-		<section class="grid gap-20">
-			{#each filteredCampaigns as campaign (campaign.id)}
-				<form
-					method="POST"
-					action="?/publish"
-					use:enhance
-					animate:flip={flipParams}
-					class="campaign-shell"
-				>
-					<input type="hidden" name="id" value={campaign.id} />
-					<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
-					<CampaignCard {campaign} />
-					<div class=" flex gap-4 border-b border-stone-200 px-6 pb-10">
-						<button type="submit" class="btn text-primary"
-							><span
-								class="relative top-0.5"
-								class:mdi--publish={campaign.status === 'draft'}
-								class:mdi--publish-off={campaign.status === 'published'}
-							></span>{publishLabel(campaign.status)}</button
-						>
-						<button
-							type="button"
-							class="btn"
-							onclick={() => window.location.assign(`/campaigns/${campaign.id}`)}
-						>
-							<span class="material-symbols--edit-note relative top-1"></span> Edit
-						</button>
-					</div>
-				</form>
-			{/each}
+		<section class="grid gap-4">
+			<table class="w-full border-collapse text-left">
+				<thead>
+					<tr class="border-b border-gray-200 bg-gray-50 text-stone-500">
+						<th class="font-table-header text-table-header px-6 py-4 text-sm uppercase">
+							Campaign Details
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-center text-sm uppercase">
+							Status
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-sm uppercase">
+							Metadata
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-right text-sm uppercase">
+							Performance
+						</th>
+						<th class="font-table-header text-table-header px-6 py-4 text-right text-sm uppercase">
+							Actions
+						</th>
+					</tr>
+				</thead>
+				<tbody class="divide-y divide-stone-200">
+					{#each filteredCampaigns as campaign (campaign.id)}
+						<tr animate:flip={flipParams} class="transition-colors hover:bg-gray-50">
+							<CampaignCard {campaign} />
+							<td class="px-6 py-5 text-right">
+								<form method="POST" action="?/publish" use:enhance>
+									<input type="hidden" name="id" value={campaign.id} />
+									<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
+									<div class="flex flex-wrap items-end justify-end gap-4 p-2">
+										<button
+											type="button"
+											class="btn"
+											onclick={() => window.location.assign(`/campaigns/${campaign.id}`)}
+										>
+											<span class="material-symbols--edit-note relative top-1"></span> Edit
+										</button>
+										<button type="submit" class="btn text-primary"
+											><span
+												class="relative top-0.5"
+												class:mdi--publish={campaign.status !== 'published'}
+												class:mdi--publish-off={campaign.status === 'published'}
+											></span>{publishLabel(campaign.status)}</button
+										>
+										<div>
+											<input
+												type="text"
+												name="duplicate_name"
+												value={duplicateName(campaign.name)}
+												class="duplicate-name-input"
+												aria-label="Duplicated campaign name"
+											/>
+											<button type="submit" formaction="?/duplicate" class="btn">
+												<span class="material-symbols--content-copy relative top-1"></span> Duplicate
+											</button>
+										</div>
+									</div>
+								</form>
+							</td>
+						</tr>
+					{/each}
+				</tbody>
+			</table>
 		</section>
 	{/if}
 </section>
@@ -213,12 +247,6 @@
 		mask-repeat: no-repeat;
 		-webkit-mask-size: 100% 100%;
 		mask-size: 100% 100%;
-	}
-	.campaign-shell {
-		padding: 0.75rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
 	}
 
 	.filter-shell {
@@ -292,5 +320,27 @@
 		mask-repeat: no-repeat;
 		-webkit-mask-size: 100% 100%;
 		mask-size: 100% 100%;
+	}
+
+	.material-symbols--content-copy {
+		display: inline-block;
+		width: 18px;
+		height: 18px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 21H8a2 2 0 0 1-2-2V7h2v12h11zM16 3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H5v10h11z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
+	}
+
+	.duplicate-name-input {
+		min-width: 13rem;
+		border: 1px solid #e7e5e4;
+		background: #fff;
+		padding: 0.55rem 0.7rem;
+		font-size: 0.82rem;
 	}
 </style>
