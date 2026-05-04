@@ -26,6 +26,11 @@ const logosOfTrustRibbonSelectionSchema = z.object({
 	rationale: z.string().trim().min(1)
 });
 
+const keynoteSpeechesSelectionSchema = z.object({
+	keynoteIds: z.array(z.string().trim().min(1)).min(3).max(3),
+	rationale: z.string().trim().min(1)
+});
+
 export const landingPagePlanSchema = z
 	.object({
 		pageTitle: z.string().trim().min(1),
@@ -37,7 +42,8 @@ export const landingPagePlanSchema = z
 				hero: heroAssetSelectionSchema.optional(),
 				hybridContentSection: hybridAssetSelectionSchema.optional(),
 				speakerInAction: speakerInActionAssetSelectionSchema.optional(),
-				logosOfTrustRibbon: logosOfTrustRibbonSelectionSchema.optional()
+				logosOfTrustRibbon: logosOfTrustRibbonSelectionSchema.optional(),
+				keynoteSpeeches: keynoteSpeechesSelectionSchema.optional()
 			})
 			.optional()
 	})
@@ -109,6 +115,21 @@ export const landingPagePlanSchema = z
 			message:
 				'assetPlan.logosOfTrustRibbon.clientIds is required when logos_of_trust_ribbon is included in sectionPlan.',
 			path: ['assetPlan', 'logosOfTrustRibbon', 'clientIds']
+		}
+	)
+	.refine(
+		(plan) => {
+			const sectionTypes = new Set(plan.sectionPlan.map((section) => section.type));
+			if (!sectionTypes.has('keynote_speeches')) {
+				return true;
+			}
+
+			return Boolean(plan.assetPlan?.keynoteSpeeches?.keynoteIds?.length === 3);
+		},
+		{
+			message:
+				'assetPlan.keynoteSpeeches.keynoteIds is required when keynote_speeches is included in sectionPlan.',
+			path: ['assetPlan', 'keynoteSpeeches', 'keynoteIds']
 		}
 	);
 

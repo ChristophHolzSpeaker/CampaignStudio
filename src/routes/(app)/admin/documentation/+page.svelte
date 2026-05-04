@@ -30,6 +30,12 @@
 			icon: 'mdi--account-box-multiple'
 		},
 		{
+			label: 'Keynotes',
+			href: '/admin/keynotes',
+			match: 'prefix',
+			icon: 'mdi--presentation-play'
+		},
+		{
 			label: 'Documentation',
 			href: '/(app)/admin/documentation',
 			match: 'prefix'

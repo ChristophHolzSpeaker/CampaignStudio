@@ -5,6 +5,7 @@ import FrictionlessFunnelSection from '$lib/components/page-sections/Frictionles
 import HeroLargeEmailCta from '$lib/components/page-sections/HeroLargeEmailCta.svelte';
 import HybridContentSection from '$lib/components/page-sections/HybridContentSection.svelte';
 import ImmediateAuthorityHero from '$lib/components/page-sections/ImmediateAuthorityHero.svelte';
+import KeynoteSpeeches from '$lib/components/page-sections/KeynoteSpeeches.svelte';
 import LogosOfTrustRibbon from '$lib/components/page-sections/LogosOfTrustRibbon.svelte';
 import ProofOfPerformanceSection from '$lib/components/page-sections/ProofOfPerformanceSection.svelte';
 import SEO from '$lib/components/page-sections/SEO.svelte';
@@ -30,6 +31,7 @@ export const sectionComponentRegistry: SectionComponentRegistry = {
 	hero_large_email_cta: HeroLargeEmailCta,
 	booklet_download_cta: BookletDownloadCta,
 	logos_of_trust_ribbon: LogosOfTrustRibbon,
+	keynote_speeches: KeynoteSpeeches,
 	speaker_in_action: SpeakerInAction,
 	hybrid_content_section: HybridContentSection,
 	proof_of_performance: ProofOfPerformanceSection,
@@ -57,6 +59,10 @@ export const sectionRegistry: SectionRegistry = {
 	logos_of_trust_ribbon: {
 		...sectionSpecs.logos_of_trust_ribbon,
 		component: sectionComponentRegistry.logos_of_trust_ribbon
+	},
+	keynote_speeches: {
+		...sectionSpecs.keynote_speeches,
+		component: sectionComponentRegistry.keynote_speeches
 	},
 	speaker_in_action: {
 		...sectionSpecs.speaker_in_action,

@@ -1,6 +1,8 @@
 <script lang="ts">
 	import AdminSidebar, { type AdminSidebarNavItem } from '$lib/components/AdminSidebar.svelte';
+
 	let { children } = $props();
+
 	const navItems: readonly AdminSidebarNavItem[] = [
 		{
 			label: 'Campaigns',

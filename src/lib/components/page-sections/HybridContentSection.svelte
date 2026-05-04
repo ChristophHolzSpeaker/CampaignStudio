@@ -69,11 +69,11 @@
 					>
 						<span>0{index + 1}</span>
 
-						<img
+						<!--<img
 							src={benefit.imageUrl ?? '/momentum.png'}
 							alt={benefit.title}
 							class="aspect-4/2 object-cover"
-						/>
+						/>-->
 						<h3 class="text-3xl leading-tight font-bold tracking-tight text-on-surface">
 							{benefit.title}
 						</h3>

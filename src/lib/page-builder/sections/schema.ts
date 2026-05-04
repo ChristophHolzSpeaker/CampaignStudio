@@ -49,6 +49,20 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 	logos: z.array(trustLogoItemSchema).min(1)
 });
 
+export const keynoteSpeechItemSchema = z.object({
+	id: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	imageUrl: z.string().trim().url(),
+	summary: z.string().trim().min(1)
+});
+
+export const keynoteSpeechesPropsSchema = z.object({
+	title: z.string().trim().min(1),
+	intro: z.string().trim().min(1),
+	keynoteIds: z.array(z.string().trim().min(1)).min(3).max(3),
+	keynotes: z.array(keynoteSpeechItemSchema).min(3).max(3)
+});
+
 export const speakerInActionMediaItemSchema = z.object({
 	assetId: z.string().trim().min(1),
 	title: z.string().trim().min(1),
@@ -165,6 +179,11 @@ export const speakerInActionSectionSchema = z.object({
 	props: speakerInActionPropsSchema
 });
 
+export const keynoteSpeechesSectionSchema = z.object({
+	type: z.literal('keynote_speeches'),
+	props: keynoteSpeechesPropsSchema
+});
+
 export const heroLargeEmailCtaSectionSchema = z.object({
 	type: z.literal('hero_large_email_cta'),
 	props: heroLargeEmailCtaPropsSchema
@@ -206,6 +225,7 @@ export const pageSectionSchema = z.discriminatedUnion('type', [
 	heroLargeEmailCtaSectionSchema,
 	bookletDownloadCtaSectionSchema,
 	logosOfTrustRibbonSectionSchema,
+	keynoteSpeechesSectionSchema,
 	speakerInActionSectionSchema,
 	hybridContentSectionSchema,
 	proofOfPerformanceSectionSchema,
@@ -219,6 +239,7 @@ export type ImmediateAuthorityHeroSection = z.infer<typeof immediateAuthorityHer
 export type HeroLargeEmailCtaSection = z.infer<typeof heroLargeEmailCtaSectionSchema>;
 export type BookletDownloadCtaSection = z.infer<typeof bookletDownloadCtaSectionSchema>;
 export type LogosOfTrustRibbonSection = z.infer<typeof logosOfTrustRibbonSectionSchema>;
+export type KeynoteSpeechesSection = z.infer<typeof keynoteSpeechesSectionSchema>;
 export type SpeakerInActionSection = z.infer<typeof speakerInActionSectionSchema>;
 export type HybridContentSection = z.infer<typeof hybridContentSectionSchema>;
 export type ProofOfPerformanceSection = z.infer<typeof proofOfPerformanceSectionSchema>;

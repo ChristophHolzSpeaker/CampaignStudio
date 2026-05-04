@@ -118,7 +118,10 @@ Rules:
 	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
 	* when logos_of_trust_ribbon is selected, choose 1-4 clients from input.assets.assetCatalog.clientCatalog by ID
+	* when keynote_speeches is selected, choose exactly three keynotes from input.assets.assetCatalog.keynoteCatalog by ID
 	* soft preference: include speaker_in_action when eligible and strategically useful
+	* keynote_speeches is required when it is in requiredSectionTypes
+	* when both logos_of_trust_ribbon and keynote_speeches are selected, place keynote_speeches immediately after logos_of_trust_ribbon
 	* when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
 	* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 	* use only IDs that exist in input.assets.assetCatalog
@@ -155,6 +158,10 @@ Return exactly one valid JSON object with this shape:
     "hybridContentSection": {
       "supportingImageAssetIds": ["string"],
       "rationale": "string"
+		},
+		"keynoteSpeeches": {
+		  "keynoteIds": ["string"],
+		  "rationale": "string"
     }
   }
 }`;
@@ -238,6 +245,7 @@ Asset usage requirements:
 	* for speaker_in_action media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
 	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
 * for hybrid supporting visuals, resolve IDs from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages
+* for keynote_speeches, resolve IDs from plan.assetPlan.keynoteSpeeches.keynoteIds against input.assets.assetCatalog.keynoteCatalog
 * for compliance footer fields, use input.assets.complianceDefaults
 * use only approved assets listed in input.assets
 	* do not invent assets outside input.assets
@@ -255,7 +263,16 @@ Hybrid section contract requirements:
 * if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]
 * if hybrid_content_section is included, deepDiveItems should justify why Christoph is qualified to deliver the promised outcomes (proof, lived experience, delivery fit, practical execution)`;
 
-	return appendPromptLibraryGuidance(basePrompt, promptLibraryGuidance);
+	return appendPromptLibraryGuidance(
+		`${basePrompt}
+
+Keynote speeches contract requirements:
+
+* if keynote_speeches is included, props.title and props.intro are required
+* if keynote_speeches is included, props.keynoteIds must contain exactly 3 IDs from plan.assetPlan.keynoteSpeeches.keynoteIds
+* if keynote_speeches is included, do not invent keynote entries or media URLs; IDs are resolved server-side from approved catalog`,
+		promptLibraryGuidance
+	);
 };
 
 export const landingPageWriterUserPrompt = (

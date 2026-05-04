@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { clients, landing_page_asset_sets, media_assets } from '$lib/server/db/schema';
+import { clients, keynotes, landing_page_asset_sets, media_assets } from '$lib/server/db/schema';
 import { asc, desc, eq } from 'drizzle-orm';
 import { landingPageAssets } from './landing-page-assets';
 import {
@@ -8,6 +8,7 @@ import {
 	type HybridSupportingImageOption,
 	type SpeakerInActionVideoOption,
 	type ClientOption,
+	type KeynoteOption,
 	type LandingPageAssets
 } from '../schemas/landing-page-assets';
 
@@ -51,6 +52,20 @@ type ClientRow = {
 	logoAlt: string;
 	industry: string;
 	keynoteCaseStudy: string;
+	audiences: string[];
+	topics: string[];
+	formats: string[];
+	geographies: string[];
+	intentTags: string[];
+	priority: number;
+};
+
+type KeynoteRow = {
+	id: string;
+	title: string;
+	summary: string;
+	imageUrl: string;
+	imageAlt: string;
 	audiences: string[];
 	topics: string[];
 	formats: string[];
@@ -118,6 +133,28 @@ async function loadActiveClients(): Promise<ClientRow[]> {
 		.from(clients)
 		.where(eq(clients.is_active, true))
 		.orderBy(asc(clients.priority), asc(clients.id));
+
+	return rows;
+}
+
+async function loadActiveKeynotes(): Promise<KeynoteRow[]> {
+	const rows = await db
+		.select({
+			id: keynotes.id,
+			title: keynotes.keynote_title,
+			summary: keynotes.keynote_summary,
+			imageUrl: keynotes.image_url,
+			imageAlt: keynotes.image_alt,
+			audiences: keynotes.audiences,
+			topics: keynotes.topics,
+			formats: keynotes.formats,
+			geographies: keynotes.geographies,
+			intentTags: keynotes.intent_tags,
+			priority: keynotes.priority
+		})
+		.from(keynotes)
+		.where(eq(keynotes.is_active, true))
+		.orderBy(asc(keynotes.priority), asc(keynotes.keynote_title), asc(keynotes.id));
 
 	return rows;
 }
@@ -268,6 +305,56 @@ function sortClientsByRelevance(rows: ClientRow[], context?: LandingPageAssetCon
 	});
 }
 
+function sortKeynotesByRelevance(
+	rows: KeynoteRow[],
+	context?: LandingPageAssetContext
+): KeynoteRow[] {
+	if (!context) {
+		return rows;
+	}
+
+	const contextTokens = uniqueTokens([
+		context.topic,
+		context.audience,
+		context.format,
+		context.geography,
+		context.intentSummary,
+		context.messagingAngle,
+		context.conversionGoal
+	]);
+
+	if (contextTokens.size === 0) {
+		return rows;
+	}
+
+	return [...rows].sort((left, right) => {
+		const leftScore =
+			scoreOverlap(left.topics, contextTokens) * 4 +
+			scoreOverlap(left.audiences, contextTokens) * 4 +
+			scoreOverlap(left.formats, contextTokens) * 2 +
+			scoreOverlap(left.geographies, contextTokens) * 2 +
+			scoreOverlap(left.intentTags, contextTokens) * 5 +
+			scoreOverlap([left.title, left.summary], contextTokens) * 2;
+		const rightScore =
+			scoreOverlap(right.topics, contextTokens) * 4 +
+			scoreOverlap(right.audiences, contextTokens) * 4 +
+			scoreOverlap(right.formats, contextTokens) * 2 +
+			scoreOverlap(right.geographies, contextTokens) * 2 +
+			scoreOverlap(right.intentTags, contextTokens) * 5 +
+			scoreOverlap([right.title, right.summary], contextTokens) * 2;
+
+		if (leftScore !== rightScore) {
+			return rightScore - leftScore;
+		}
+
+		if (left.priority !== right.priority) {
+			return left.priority - right.priority;
+		}
+
+		return left.id.localeCompare(right.id);
+	});
+}
+
 function fillHeroDefaultsFromCatalog(
 	assets: LandingPageAssets,
 	catalog: { heroVideos: HeroVideoOption[] }
@@ -363,6 +450,21 @@ function buildClientCatalog(rows: ClientRow[]): ClientOption[] {
 	}));
 }
 
+function buildKeynoteCatalog(rows: KeynoteRow[]): KeynoteOption[] {
+	return rows.map((keynote) => ({
+		id: keynote.id,
+		title: keynote.title,
+		summary: keynote.summary,
+		imageUrl: keynote.imageUrl,
+		imageAlt: keynote.imageAlt,
+		audiences: keynote.audiences,
+		topics: keynote.topics,
+		formats: keynote.formats,
+		geographies: keynote.geographies,
+		intentTags: keynote.intentTags
+	}));
+}
+
 export async function loadLandingPageAssets(
 	context?: LandingPageAssetContext
 ): Promise<LandingPageAssets> {
@@ -373,6 +475,9 @@ export async function loadLandingPageAssets(
 		const clientsCatalog = buildClientCatalog(
 			sortClientsByRelevance(await loadActiveClients(), context)
 		);
+		const keynoteCatalog = buildKeynoteCatalog(
+			sortKeynotesByRelevance(await loadActiveKeynotes(), context)
+		);
 
 		if (!activeSet) {
 			return fillHeroDefaultsFromCatalog(
@@ -382,7 +487,8 @@ export async function loadLandingPageAssets(
 						heroVideos: catalog.heroVideos,
 						hybridSupportingImages: catalog.hybridSupportingImages,
 						speakerInActionVideos: catalog.speakerInActionVideos,
-						clientCatalog: clientsCatalog
+						clientCatalog: clientsCatalog,
+						keynoteCatalog
 					}
 				},
 				catalog
@@ -402,7 +508,8 @@ export async function loadLandingPageAssets(
 						heroVideos: catalog.heroVideos,
 						hybridSupportingImages: catalog.hybridSupportingImages,
 						speakerInActionVideos: catalog.speakerInActionVideos,
-						clientCatalog: clientsCatalog
+						clientCatalog: clientsCatalog,
+						keynoteCatalog
 					}
 				},
 				catalog
@@ -416,7 +523,8 @@ export async function loadLandingPageAssets(
 					heroVideos: catalog.heroVideos,
 					hybridSupportingImages: catalog.hybridSupportingImages,
 					speakerInActionVideos: catalog.speakerInActionVideos,
-					clientCatalog: clientsCatalog
+					clientCatalog: clientsCatalog,
+					keynoteCatalog
 				}
 			},
 			catalog

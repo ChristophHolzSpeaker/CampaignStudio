@@ -688,6 +688,47 @@ export const clients = pgTable(
 	})
 );
 
+export const keynotes = pgTable(
+	'keynotes',
+	{
+		id: text('id').primaryKey(),
+		keynote_title: text('keynote_title').notNull(),
+		keynote_summary: text('keynote_summary').notNull(),
+		image_url: text('image_url').notNull(),
+		image_bucket: text('image_bucket'),
+		image_path: text('image_path'),
+		image_alt: text('image_alt').notNull(),
+		audiences: text('audiences')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		topics: text('topics')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		formats: text('formats')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		geographies: text('geographies')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		intent_tags: text('intent_tags')
+			.array()
+			.notNull()
+			.default(sql`'{}'::text[]`),
+		is_active: boolean('is_active').notNull().default(true),
+		priority: integer('priority').notNull().default(100),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		activeIdx: index('keynotes_active_idx').on(table.is_active),
+		priorityIdx: index('keynotes_priority_idx').on(table.priority)
+	})
+);
+
 export const media_assets = pgTable(
 	'media_assets',
 	{

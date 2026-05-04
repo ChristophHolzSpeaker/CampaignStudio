@@ -101,6 +101,7 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 		heroVideos: [],
 		hybridSupportingImages: [],
 		speakerInActionVideos: [],
-		clientCatalog: []
+		clientCatalog: [],
+		keynoteCatalog: []
 	}
 });

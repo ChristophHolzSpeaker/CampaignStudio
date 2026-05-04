@@ -7,7 +7,11 @@ export type SectionEligibility = {
 	disallowedReasonByType: Partial<Record<PageSectionType, string>>;
 };
 
-const requiredSectionTypes: PageSectionType[] = ['seo', 'compliance_transparency_footer'];
+const requiredSectionTypes: PageSectionType[] = [
+	'seo',
+	'keynote_speeches',
+	'compliance_transparency_footer'
+];
 
 export function getSectionEligibility(input: LandingPageGenerationInput): SectionEligibility {
 	const allowedSectionTypes: PageSectionType[] = [];
@@ -40,6 +44,14 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 				} else {
 					disallowedReasonByType[sectionType] =
 						'No trust clients or fallback logos are configured.';
+				}
+				break;
+			case 'keynote_speeches':
+				if (input.assets.assetCatalog.keynoteCatalog.length >= 3) {
+					allowedSectionTypes.push(sectionType);
+				} else {
+					disallowedReasonByType[sectionType] =
+						'At least 3 active keynotes are required in keynote catalog.';
 				}
 				break;
 			case 'speaker_in_action':

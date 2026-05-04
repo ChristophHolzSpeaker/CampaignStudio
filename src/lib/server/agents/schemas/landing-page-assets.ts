@@ -81,11 +81,25 @@ export const clientOptionSchema = z.object({
 	intentTags: z.array(z.string().trim().min(1)).default([])
 });
 
+export const keynoteOptionSchema = z.object({
+	id: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	summary: z.string().trim().min(1),
+	imageUrl: z.string().trim().url(),
+	imageAlt: z.string().trim().min(1),
+	audiences: z.array(z.string().trim().min(1)).default([]),
+	topics: z.array(z.string().trim().min(1)).default([]),
+	formats: z.array(z.string().trim().min(1)).default([]),
+	geographies: z.array(z.string().trim().min(1)).default([]),
+	intentTags: z.array(z.string().trim().min(1)).default([])
+});
+
 const assetCatalogSchema = z.object({
 	heroVideos: z.array(heroVideoOptionSchema),
 	hybridSupportingImages: z.array(hybridSupportingImageOptionSchema),
 	speakerInActionVideos: z.array(speakerInActionVideoOptionSchema),
-	clientCatalog: z.array(clientOptionSchema).default([])
+	clientCatalog: z.array(clientOptionSchema).default([]),
+	keynoteCatalog: z.array(keynoteOptionSchema).default([])
 });
 
 export const landingPageAssetsSchema = z.object({
@@ -98,7 +112,8 @@ export const landingPageAssetsSchema = z.object({
 		heroVideos: [],
 		hybridSupportingImages: [],
 		speakerInActionVideos: [],
-		clientCatalog: []
+		clientCatalog: [],
+		keynoteCatalog: []
 	})
 });
 
@@ -107,3 +122,4 @@ export type HeroVideoOption = z.infer<typeof heroVideoOptionSchema>;
 export type HybridSupportingImageOption = z.infer<typeof hybridSupportingImageOptionSchema>;
 export type SpeakerInActionVideoOption = z.infer<typeof speakerInActionVideoOptionSchema>;
 export type ClientOption = z.infer<typeof clientOptionSchema>;
+export type KeynoteOption = z.infer<typeof keynoteOptionSchema>;

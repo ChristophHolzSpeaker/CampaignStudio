@@ -352,6 +352,64 @@ function resolveLogosOfTrustSelection(
 	return input.assets.fixedLogosRibbon.logos.slice(0, 4);
 }
 
+function resolveKeynoteSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan,
+	requestedIds: string[] = []
+): { id: string; title: string; imageUrl: string; summary: string }[] {
+	const catalog = input.assets.assetCatalog.keynoteCatalog;
+	const selectedIds =
+		requestedIds.length > 0 ? requestedIds : (plan.assetPlan?.keynoteSpeeches?.keynoteIds ?? []);
+	const catalogById = new Map(catalog.map((keynote) => [keynote.id, keynote]));
+	const resolved: { id: string; title: string; imageUrl: string; summary: string }[] = [];
+
+	for (const id of selectedIds) {
+		const keynote = catalogById.get(id);
+		if (!keynote) {
+			console.warn(
+				`Landing page writer: keynote '${id}' not found in approved catalog; skipping this keynote.`
+			);
+			continue;
+		}
+
+		resolved.push({
+			id: keynote.id,
+			title: keynote.title,
+			imageUrl: keynote.imageUrl,
+			summary: keynote.summary
+		});
+	}
+
+	if (resolved.length >= 3) {
+		return resolved.slice(0, 3);
+	}
+
+	for (const fallbackKeynote of catalog) {
+		if (resolved.length >= 3) {
+			break;
+		}
+
+		if (resolved.some((item) => item.id === fallbackKeynote.id)) {
+			continue;
+		}
+
+		resolved.push({
+			id: fallbackKeynote.id,
+			title: fallbackKeynote.title,
+			imageUrl: fallbackKeynote.imageUrl,
+			summary: fallbackKeynote.summary
+		});
+	}
+
+	if (resolved.length < 3) {
+		throw new Error(
+			'Landing page writer: keynote_speeches requires at least 3 approved keynotes in input.assets.assetCatalog.keynoteCatalog.'
+		);
+	}
+
+	return resolved.slice(0, 3);
+}
+
 function hydrateSectionWithAssets(
 	section: PageSection,
 	input: LandingPageGenerationInput,
@@ -423,6 +481,28 @@ function hydrateSectionWithAssets(
 					...section.props,
 					title: section.props.title ?? assets.fixedProofOfPerformance.title,
 					testimonials: assets.fixedProofOfPerformance.testimonials
+				}
+			};
+		}
+
+		case 'keynote_speeches': {
+			const keynoteIdsFromProps = Array.isArray(section.props.keynoteIds)
+				? section.props.keynoteIds
+						.map((value) => (typeof value === 'string' ? value.trim() : ''))
+						.filter((value) => value.length > 0)
+				: [];
+			const keynotes = resolveKeynoteSelection(input, plan, keynoteIdsFromProps);
+
+			return {
+				...section,
+				props: {
+					...section.props,
+					title: section.props.title?.trim() || 'Keynote topics that resonate with this audience',
+					intro:
+						section.props.intro?.trim() ||
+						`Choose from proven keynote topics tailored for ${input.campaign.audience}. Each talk is optimized for ${input.campaign.format} impact and practical relevance.`,
+					keynoteIds: keynotes.map((keynote) => keynote.id),
+					keynotes
 				}
 			};
 		}
@@ -687,6 +767,20 @@ function enforceSpeakerSectionOrder(sections: PageSection[]): PageSection[] {
 	return ordered;
 }
 
+function enforceKeynoteSectionOrder(sections: PageSection[]): PageSection[] {
+	const logosIndex = sections.findIndex((section) => section.type === 'logos_of_trust_ribbon');
+	const keynoteIndex = sections.findIndex((section) => section.type === 'keynote_speeches');
+
+	if (logosIndex < 0 || keynoteIndex < 0 || keynoteIndex === logosIndex + 1) {
+		return sections;
+	}
+
+	const ordered = [...sections];
+	const [keynoteSection] = ordered.splice(keynoteIndex, 1);
+	ordered.splice(logosIndex + 1, 0, keynoteSection);
+	return ordered;
+}
+
 function normalizeRootResponse(response: unknown): unknown {
 	if (Array.isArray(response)) {
 		const sectionCandidates = response
@@ -783,12 +877,14 @@ Corrective rules:
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
 - For speaker_in_action media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
+- For keynote_speeches, use plan.assetPlan.keynoteSpeeches.keynoteIds with input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
 - Place seo as the first section.
 - If both speaker_in_action and proof_of_performance are present, place speaker_in_action above proof_of_performance.
+- If keynote_speeches is present and logos_of_trust_ribbon is present, place keynote_speeches immediately after logos_of_trust_ribbon.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -797,6 +893,8 @@ Corrective rules:
 - For hybrid_content_section, each benefit imageUrl must resolve from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages.
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 - For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
+- For keynote_speeches, title and intro are required.
+- For keynote_speeches, include keynoteIds with exactly 3 values from plan.assetPlan.keynoteSpeeches.keynoteIds.
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}
@@ -865,7 +963,7 @@ function hydrateLandingPageWithAssets(
 		})
 		.map((section) => hydrateSectionWithAssets(section, input, plan));
 
-	const orderedSections = enforceSpeakerSectionOrder(sections);
+	const orderedSections = enforceKeynoteSectionOrder(enforceSpeakerSectionOrder(sections));
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
