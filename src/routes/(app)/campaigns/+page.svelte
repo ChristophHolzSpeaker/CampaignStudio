@@ -58,6 +58,7 @@
 	const publishLabel = (status?: string) =>
 		status === 'published' ? 'Archive' : 'Publish campaign';
 	const targetStatus = (status?: string) => (status === 'published' ? 'archived' : 'published');
+	const duplicateName = (name: string) => `${name} Copy`;
 </script>
 
 <svelte:head>
@@ -165,7 +166,7 @@
 					<input type="hidden" name="id" value={campaign.id} />
 					<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
 					<CampaignCard {campaign} />
-					<div class=" flex gap-4 border-b border-stone-200 px-6 pb-10">
+					<div class="flex flex-wrap items-center gap-4 border-b border-stone-200 px-6 pb-10">
 						<button type="submit" class="btn -ml-4 text-primary"
 							><span
 								class="relative top-0.5"
@@ -173,6 +174,16 @@
 								class:mdi--publish-off={campaign.status === 'published'}
 							></span>{publishLabel(campaign.status)}</button
 						>
+						<input
+							type="text"
+							name="duplicate_name"
+							value={duplicateName(campaign.name)}
+							class="duplicate-name-input"
+							aria-label="Duplicated campaign name"
+						/>
+						<button type="submit" formaction="?/duplicate" class="btn">
+							<span class="material-symbols--content-copy relative top-1"></span> Duplicate
+						</button>
 						<button
 							type="button"
 							class="btn"
@@ -292,5 +303,27 @@
 		mask-repeat: no-repeat;
 		-webkit-mask-size: 100% 100%;
 		mask-size: 100% 100%;
+	}
+
+	.material-symbols--content-copy {
+		display: inline-block;
+		width: 18px;
+		height: 18px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M19 21H8a2 2 0 0 1-2-2V7h2v12h11zM16 3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zm0 2H5v10h11z'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
+	}
+
+	.duplicate-name-input {
+		min-width: 13rem;
+		border: 1px solid #e7e5e4;
+		background: #fff;
+		padding: 0.55rem 0.7rem;
+		font-size: 0.82rem;
 	}
 </style>

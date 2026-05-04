@@ -79,6 +79,10 @@
 	};
 	const getUpdatedPackageId = () => getStrategyUpdateState()?.adPackageId ?? null;
 	const getUpdatedPageId = () => getStrategyUpdateState()?.campaignPageId ?? null;
+	const getDuplicateName = () => {
+		const name = getCampaign()?.name?.trim();
+		return name?.length ? `${name} Copy` : 'Campaign Copy';
+	};
 
 	let copyStatus = $state<'idle' | 'copied' | 'error'>('idle');
 	let busy = $state(false);
@@ -135,6 +139,24 @@
 						{getCampaign()?.topic ?? 'Campaign topic pending.'}
 						{getCampaign()?.audience ? ` · ${getCampaign()?.audience}` : ''}
 					</p>
+					<form method="POST" action="?/duplicate" class="duplicate-campaign-form">
+						<label
+							for="duplicate-name"
+							class="block font-['Space_Grotesk'] text-[10px] font-bold text-slate-500 uppercase"
+						>
+							Duplicate campaign
+						</label>
+						<div class="duplicate-campaign-controls">
+							<input
+								id="duplicate-name"
+								type="text"
+								name="duplicate_name"
+								value={getDuplicateName()}
+								class="duplicate-campaign-input"
+							/>
+							<Button variant="dark">Duplicate</Button>
+						</div>
+					</form>
 				</header>
 				<div class="space-y-8 rounded-xl bg-stone-100 p-8">
 					<div>
@@ -328,6 +350,27 @@
 </section>
 
 <style>
+	.duplicate-campaign-form {
+		margin-top: 1rem;
+		display: grid;
+		gap: 0.5rem;
+	}
+
+	.duplicate-campaign-controls {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 0.5rem;
+		align-items: end;
+	}
+
+	.duplicate-campaign-input {
+		border: 1px solid #e2e8f0;
+		background: #ffffff;
+		padding: 0.45rem 0.6rem;
+		font-size: 0.8rem;
+		color: #0f172a;
+	}
+
 	.material-symbols--search-rounded {
 		display: inline-block;
 		width: 24px;
