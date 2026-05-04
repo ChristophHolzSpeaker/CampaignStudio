@@ -567,10 +567,26 @@ function removeHybridSections(response: unknown): { result: unknown; removed: bo
 	};
 }
 
+export function includeGeographyInSeoText(value: string, geography: string): string {
+	const normalizedValue = value.trim();
+	const normalizedGeography = geography.trim();
+
+	if (!normalizedValue.length || !normalizedGeography.length) {
+		return normalizedValue;
+	}
+
+	if (normalizedValue.toLowerCase().includes(normalizedGeography.toLowerCase())) {
+		return normalizedValue;
+	}
+
+	return `${normalizedValue} in ${normalizedGeography}`;
+}
+
 function ensureSeoSection(
 	sections: PageSection[],
 	fallbackTitle: string,
-	fallbackDescription: string
+	fallbackDescription: string,
+	fallbackGeography: string
 ): PageSection[] {
 	const seoIndex = sections.findIndex((section) => section.type === 'seo');
 	const existingSeo = seoIndex >= 0 ? sections[seoIndex] : null;
@@ -579,11 +595,16 @@ function ensureSeoSection(
 			? existingSeo.props
 			: ({} as Record<string, unknown>);
 
+	const seoTitleBase = getString(existingSeoProps.title) ?? fallbackTitle;
+	const seoDescriptionBase = getString(existingSeoProps.description) ?? fallbackDescription;
+	const seoTitle = includeGeographyInSeoText(seoTitleBase, fallbackGeography);
+	const seoDescription = includeGeographyInSeoText(seoDescriptionBase, fallbackGeography);
+
 	const seoSection: PageSection = {
 		type: 'seo',
 		props: {
-			title: getString(existingSeoProps.title) ?? fallbackTitle,
-			description: getString(existingSeoProps.description) ?? fallbackDescription,
+			title: seoTitle,
+			description: seoDescription,
 			canonicalUrl: getString(existingSeoProps.canonicalUrl),
 			robots: getString(existingSeoProps.robots),
 			ogImageUrl: getString(existingSeoProps.ogImageUrl),
@@ -770,7 +791,12 @@ function hydrateLandingPageWithAssets(
 	if (!Array.isArray(hydrated.sections)) {
 		return {
 			...hydrated,
-			sections: ensureSeoSection([], fallbackPageTitle, fallbackSeoDescription)
+			sections: ensureSeoSection(
+				[],
+				fallbackPageTitle,
+				fallbackSeoDescription,
+				input.campaign.geography
+			)
 		};
 	}
 
@@ -796,7 +822,8 @@ function hydrateLandingPageWithAssets(
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
-		fallbackSeoDescription
+		fallbackSeoDescription,
+		input.campaign.geography
 	);
 
 	return {

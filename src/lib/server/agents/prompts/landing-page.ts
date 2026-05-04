@@ -210,6 +210,8 @@ General requirements:
 * include every section type in requiredSectionTypes
 * place seo as the first section
 * use section props exactly as required by each section contract
+* ensure seo.props.description includes campaign geography naturally
+* include campaign geography in seo.props.title when it fits naturally and remains readable
 * preserve message match with ad group and strategy
 * section catalog rules are binding generation constraints, including whenNotToUse and contentGuidance
 * return JSON only
