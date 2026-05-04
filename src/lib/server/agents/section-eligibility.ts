@@ -32,10 +32,14 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 				}
 				break;
 			case 'logos_of_trust_ribbon':
-				if (input.assets.fixedLogosRibbon.logos.length > 0) {
+				if (
+					input.assets.assetCatalog.clientCatalog.length > 0 ||
+					input.assets.fixedLogosRibbon.logos.length > 0
+				) {
 					allowedSectionTypes.push(sectionType);
 				} else {
-					disallowedReasonByType[sectionType] = 'No trust logos are configured.';
+					disallowedReasonByType[sectionType] =
+						'No trust clients or fallback logos are configured.';
 				}
 				break;
 			case 'speaker_in_action':

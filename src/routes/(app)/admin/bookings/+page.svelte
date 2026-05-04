@@ -78,6 +78,12 @@
 			icon: 'mdi--calendar-clock-outline'
 		},
 		{
+			label: 'Clients',
+			href: '/admin/clients',
+			match: 'prefix',
+			icon: 'mdi--account-box-multiple'
+		},
+		{
 			label: 'Documentation',
 			href: '/(app)/admin/documentation',
 			match: 'prefix',

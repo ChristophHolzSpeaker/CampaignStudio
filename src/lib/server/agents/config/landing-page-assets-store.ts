@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db';
-import { landing_page_asset_sets, media_assets } from '$lib/server/db/schema';
+import { clients, landing_page_asset_sets, media_assets } from '$lib/server/db/schema';
 import { asc, desc, eq } from 'drizzle-orm';
 import { landingPageAssets } from './landing-page-assets';
 import {
@@ -7,6 +7,7 @@ import {
 	type HeroVideoOption,
 	type HybridSupportingImageOption,
 	type SpeakerInActionVideoOption,
+	type ClientOption,
 	type LandingPageAssets
 } from '../schemas/landing-page-assets';
 
@@ -37,9 +38,25 @@ type LandingPageAssetContext = {
 	topic?: string;
 	audience?: string;
 	format?: string;
+	geography?: string;
 	intentSummary?: string;
 	messagingAngle?: string;
 	conversionGoal?: string;
+};
+
+type ClientRow = {
+	id: string;
+	name: string;
+	logoUrl: string;
+	logoAlt: string;
+	industry: string;
+	keynoteCaseStudy: string;
+	audiences: string[];
+	topics: string[];
+	formats: string[];
+	geographies: string[];
+	intentTags: string[];
+	priority: number;
 };
 
 async function loadActiveLandingPageAssetSet(): Promise<AssetSetRow | null> {
@@ -78,6 +95,29 @@ async function loadActiveMediaAssets(): Promise<MediaAssetRow[]> {
 		.from(media_assets)
 		.where(eq(media_assets.is_active, true))
 		.orderBy(asc(media_assets.priority), asc(media_assets.id));
+
+	return rows;
+}
+
+async function loadActiveClients(): Promise<ClientRow[]> {
+	const rows = await db
+		.select({
+			id: clients.id,
+			name: clients.name,
+			logoUrl: clients.logo_url,
+			logoAlt: clients.logo_alt,
+			industry: clients.industry,
+			keynoteCaseStudy: clients.keynote_case_study,
+			audiences: clients.audiences,
+			topics: clients.topics,
+			formats: clients.formats,
+			geographies: clients.geographies,
+			intentTags: clients.intent_tags,
+			priority: clients.priority
+		})
+		.from(clients)
+		.where(eq(clients.is_active, true))
+		.orderBy(asc(clients.priority), asc(clients.id));
 
 	return rows;
 }
@@ -145,6 +185,7 @@ function sortMediaAssetsByRelevance(
 		context.topic,
 		context.audience,
 		context.format,
+		context.geography,
 		context.intentSummary,
 		context.messagingAngle,
 		context.conversionGoal
@@ -165,6 +206,55 @@ function sortMediaAssetsByRelevance(
 			scoreOverlap(right.audiences, contextTokens) * 3 +
 			scoreOverlap(right.formats, contextTokens) * 2 +
 			scoreOverlap(right.intentTags, contextTokens) * 4;
+
+		if (leftScore !== rightScore) {
+			return rightScore - leftScore;
+		}
+
+		if (left.priority !== right.priority) {
+			return left.priority - right.priority;
+		}
+
+		return left.id.localeCompare(right.id);
+	});
+}
+
+function sortClientsByRelevance(rows: ClientRow[], context?: LandingPageAssetContext): ClientRow[] {
+	if (!context) {
+		return rows;
+	}
+
+	const contextTokens = uniqueTokens([
+		context.topic,
+		context.audience,
+		context.format,
+		context.geography,
+		context.intentSummary,
+		context.messagingAngle,
+		context.conversionGoal
+	]);
+
+	if (contextTokens.size === 0) {
+		return rows;
+	}
+
+	return [...rows].sort((left, right) => {
+		const leftScore =
+			scoreOverlap([left.industry], contextTokens) * 5 +
+			scoreOverlap(left.audiences, contextTokens) * 4 +
+			scoreOverlap(left.topics, contextTokens) * 3 +
+			scoreOverlap(left.formats, contextTokens) * 2 +
+			scoreOverlap(left.geographies, contextTokens) * 2 +
+			scoreOverlap(left.intentTags, contextTokens) * 4 +
+			scoreOverlap([left.keynoteCaseStudy], contextTokens) * 2;
+		const rightScore =
+			scoreOverlap([right.industry], contextTokens) * 5 +
+			scoreOverlap(right.audiences, contextTokens) * 4 +
+			scoreOverlap(right.topics, contextTokens) * 3 +
+			scoreOverlap(right.formats, contextTokens) * 2 +
+			scoreOverlap(right.geographies, contextTokens) * 2 +
+			scoreOverlap(right.intentTags, contextTokens) * 4 +
+			scoreOverlap([right.keynoteCaseStudy], contextTokens) * 2;
 
 		if (leftScore !== rightScore) {
 			return rightScore - leftScore;
@@ -257,6 +347,22 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	return { heroVideos, hybridSupportingImages, speakerInActionVideos };
 }
 
+function buildClientCatalog(rows: ClientRow[]): ClientOption[] {
+	return rows.map((client) => ({
+		id: client.id,
+		name: client.name,
+		logoUrl: client.logoUrl,
+		logoAlt: client.logoAlt,
+		industry: client.industry,
+		keynoteCaseStudy: client.keynoteCaseStudy,
+		audiences: client.audiences,
+		topics: client.topics,
+		formats: client.formats,
+		geographies: client.geographies,
+		intentTags: client.intentTags
+	}));
+}
+
 export async function loadLandingPageAssets(
 	context?: LandingPageAssetContext
 ): Promise<LandingPageAssets> {
@@ -264,6 +370,9 @@ export async function loadLandingPageAssets(
 		const activeSet = await loadActiveLandingPageAssetSet();
 		const mediaRows = sortMediaAssetsByRelevance(await loadActiveMediaAssets(), context);
 		const catalog = buildCatalogFromMediaAssets(mediaRows);
+		const clientsCatalog = buildClientCatalog(
+			sortClientsByRelevance(await loadActiveClients(), context)
+		);
 
 		if (!activeSet) {
 			return fillHeroDefaultsFromCatalog(
@@ -272,7 +381,8 @@ export async function loadLandingPageAssets(
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
 						hybridSupportingImages: catalog.hybridSupportingImages,
-						speakerInActionVideos: catalog.speakerInActionVideos
+						speakerInActionVideos: catalog.speakerInActionVideos,
+						clientCatalog: clientsCatalog
 					}
 				},
 				catalog
@@ -291,7 +401,8 @@ export async function loadLandingPageAssets(
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
 						hybridSupportingImages: catalog.hybridSupportingImages,
-						speakerInActionVideos: catalog.speakerInActionVideos
+						speakerInActionVideos: catalog.speakerInActionVideos,
+						clientCatalog: clientsCatalog
 					}
 				},
 				catalog
@@ -304,7 +415,8 @@ export async function loadLandingPageAssets(
 				assetCatalog: {
 					heroVideos: catalog.heroVideos,
 					hybridSupportingImages: catalog.hybridSupportingImages,
-					speakerInActionVideos: catalog.speakerInActionVideos
+					speakerInActionVideos: catalog.speakerInActionVideos,
+					clientCatalog: clientsCatalog
 				}
 			},
 			catalog

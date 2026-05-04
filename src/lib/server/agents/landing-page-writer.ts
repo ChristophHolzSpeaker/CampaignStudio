@@ -306,6 +306,52 @@ function resolveSpeakerInActionSelection(
 	return resolved.slice(0, 4);
 }
 
+function resolveLogosOfTrustSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): { name: string; imageUrl: string; alt: string }[] {
+	const clientCatalog = input.assets.assetCatalog.clientCatalog;
+	if (clientCatalog.length === 0) {
+		return input.assets.fixedLogosRibbon.logos.slice(0, 4);
+	}
+
+	const selectedIds = plan.assetPlan?.logosOfTrustRibbon?.clientIds ?? [];
+	const catalogById = new Map(clientCatalog.map((client) => [client.id, client]));
+	const resolved: { name: string; imageUrl: string; alt: string }[] = [];
+
+	for (const id of selectedIds) {
+		const selected = catalogById.get(id);
+		if (!selected) {
+			console.warn(
+				`Landing page writer: logos_of_trust_ribbon client '${id}' not found in approved catalog; skipping this client.`
+			);
+			continue;
+		}
+
+		resolved.push({
+			name: selected.name,
+			imageUrl: selected.logoUrl,
+			alt: selected.logoAlt
+		});
+	}
+
+	if (resolved.length >= 1) {
+		return resolved.slice(0, 4);
+	}
+
+	const fallbackFromCatalog = clientCatalog.slice(0, 4).map((client) => ({
+		name: client.name,
+		imageUrl: client.logoUrl,
+		alt: client.logoAlt
+	}));
+
+	if (fallbackFromCatalog.length >= 1) {
+		return fallbackFromCatalog;
+	}
+
+	return input.assets.fixedLogosRibbon.logos.slice(0, 4);
+}
+
 function hydrateSectionWithAssets(
 	section: PageSection,
 	input: LandingPageGenerationInput,
@@ -358,13 +404,14 @@ function hydrateSectionWithAssets(
 		}
 
 		case 'logos_of_trust_ribbon': {
+			const logos = resolveLogosOfTrustSelection(input, plan);
 			return {
 				...section,
 				props: {
 					...section.props,
 					title: section.props.title ?? assets.fixedLogosRibbon.title,
 					label: section.props.label ?? assets.fixedLogosRibbon.label,
-					logos: assets.fixedLogosRibbon.logos
+					logos
 				}
 			};
 		}
