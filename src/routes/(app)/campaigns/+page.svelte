@@ -57,7 +57,7 @@
 
 	const publishLabel = (status?: string) =>
 		status === 'published' ? 'Archive' : 'Publish campaign';
-	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
+	const targetStatus = (status?: string) => (status === 'published' ? 'archived' : 'published');
 </script>
 
 <svelte:head>
@@ -169,7 +169,7 @@
 						<button type="submit" class="btn -ml-4 text-primary"
 							><span
 								class="relative top-0.5"
-								class:mdi--publish={campaign.status === 'draft'}
+								class:mdi--publish={campaign.status !== 'published'}
 								class:mdi--publish-off={campaign.status === 'published'}
 							></span>{publishLabel(campaign.status)}</button
 						>

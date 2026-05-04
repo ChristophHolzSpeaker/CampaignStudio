@@ -120,6 +120,7 @@
 							class="rounded px-3 py-1 font-['Space_Grotesk'] text-[10px] font-bold text-white uppercase"
 							class:bg-sky-400={getCampaign()?.status === 'draft'}
 							class:bg-green-400={getCampaign()?.status === 'published'}
+							class:bg-slate-400={getCampaign()?.status === 'archived'}
 						>
 							{(getCampaign()?.status ?? 'draft').toUpperCase()}
 						</span>

@@ -11,7 +11,7 @@
 
 	const message = $derived(
 		page.status === 404
-			? 'This speaker page may be unpublished or temporarily unavailable.'
+			? 'This speaker page may be archived or temporarily unavailable.'
 			: 'Please try again in a moment.'
 	);
 </script>

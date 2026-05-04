@@ -19,7 +19,7 @@
 	const campaign = $derived(sidebarData.campaign ?? null);
 	const campaignPageId = $derived(sidebarData.campaignPageId ?? null);
 
-	const targetStatus = (status?: string) => (status === 'published' ? 'draft' : 'published');
+	const targetStatus = (status?: string) => (status === 'published' ? 'archived' : 'published');
 
 	const navItems = $derived.by<readonly AdminSidebarNavItem[]>(() => {
 		if (isDetailRoute && campaign) {
@@ -72,8 +72,9 @@
 		<div class="campaign-context">
 			<span
 				class="campaign-context-status"
-				class:campaign-context-status--draft={campaign.status !== 'published'}
+				class:campaign-context-status--draft={campaign.status === 'draft'}
 				class:campaign-context-status--published={campaign.status === 'published'}
+				class:campaign-context-status--archived={campaign.status === 'archived'}
 			>
 				{(campaign.status ?? 'draft').toUpperCase()}
 			</span>
@@ -92,7 +93,7 @@
 			<input type="hidden" name="id" value={campaign.id} />
 			<input type="hidden" name="target_status" value={targetStatus(campaign.status)} />
 			<button type="submit" class="btn-dark">
-				{campaign.status === 'published' ? 'Unpublish' : 'Publish Campaign'}
+				{campaign.status === 'published' ? 'Archive' : 'Publish Campaign'}
 			</button>
 		</form>
 	{:else}
@@ -159,6 +160,11 @@
 	.campaign-context-status--published {
 		background: #dcfce7;
 		color: #166534;
+	}
+
+	.campaign-context-status--archived {
+		background: #e5e7eb;
+		color: #374151;
 	}
 
 	.campaign-context-name {

@@ -176,6 +176,11 @@
 		color: #fff;
 	}
 
+	.badge.archived {
+		background: #9ca3af;
+		color: #fff;
+	}
+
 	.meta {
 		margin: 0;
 		font-size: 0.9rem;

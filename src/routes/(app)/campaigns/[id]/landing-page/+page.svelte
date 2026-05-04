@@ -47,7 +47,7 @@
 		}
 
 		if (viewData.campaignStatus === 'published') {
-			return 'This campaign is published. Unpublish it before editing the landing page.';
+			return 'This campaign is published. Archive it before editing the landing page.';
 		}
 
 		return 'Describe text, section order, section removal, or approved media changes.';
