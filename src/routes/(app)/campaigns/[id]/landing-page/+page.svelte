@@ -114,10 +114,11 @@
 
 	.edit-composer {
 		position: fixed;
-		right: 1rem;
+		right: auto;
 		bottom: 1rem;
 		left: 1rem;
 		z-index: 40;
+		width: calc(280px - 1rem);
 		border: 1px solid #d9dbcf;
 		background: #faf8f1;
 		box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
@@ -132,6 +133,7 @@
 
 	.composer-top-row {
 		display: flex;
+		flex-direction: column;
 		align-items: baseline;
 		justify-content: space-between;
 		gap: 0.75rem;
@@ -154,7 +156,7 @@
 	}
 
 	.composer-controls {
-		display: grid;
+		display: block;
 		grid-template-columns: minmax(0, 1fr) auto;
 		gap: 0.75rem;
 	}
