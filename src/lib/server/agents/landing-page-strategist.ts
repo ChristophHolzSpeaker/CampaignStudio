@@ -34,14 +34,14 @@ Corrective rules:
 - when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos
 - when speaker_in_action is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 4 IDs from input.assets.assetCatalog.speakerInActionVideos
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.supportingImageAssetIds from input.assets.assetCatalog.hybridSupportingImages
-- when logos_of_trust_ribbon is selected, include assetPlan.logosOfTrustRibbon.clientIds with 1-4 IDs from input.assets.assetCatalog.clientCatalog
+- when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
 - when keynote_speeches is selected, include assetPlan.keynoteSpeeches.keynoteIds with exactly 3 IDs from input.assets.assetCatalog.keynoteCatalog
 - when hybrid_content_section is selected, prefer 3 supportingImageAssetIds mapped to distinct audience outcomes
 - soft preference: include speaker_in_action when eligible and useful for conversion
 - keynote_speeches is required when it appears in requiredSectionTypes
 - when both logos_of_trust_ribbon and keynote_speeches are selected, place keynote_speeches immediately after logos_of_trust_ribbon
 - when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
-- never invent client IDs
+- never invent logo IDs
 - never invent media IDs or media URLs
 - do not output commentary or markdown
 - return JSON only

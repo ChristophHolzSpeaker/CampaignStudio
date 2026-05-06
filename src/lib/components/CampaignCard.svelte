@@ -44,7 +44,7 @@
 
 <td class="px-6 py-2">
 	<div class="flex items-center gap-4">
-		<a href="/campaigns/{campaign.id}">
+		<a href="/campaigns/{campaign?.id}">
 			<div class="font-headline-md text-sm font-bold text-gray-900 uppercase">
 				{campaign?.name}
 			</div>

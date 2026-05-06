@@ -23,10 +23,28 @@
 	const getViewData = () =>
 		data as {
 			page: LandingPageDocument;
+			availableLogos: Array<{ id: string; name: string; logoUrl: string; logoAlt: string }>;
 			campaignId: number;
 			campaignPageId: number | null;
 			campaignStatus: string | null;
 		};
+
+	const getCurrentLogoIds = () => {
+		const section = getViewData().page.sections.find(
+			(item) => item.type === 'logos_of_trust_ribbon'
+		);
+		if (!section || !('logos' in section.props) || !Array.isArray(section.props.logos)) {
+			return [] as string[];
+		}
+
+		const byName = new Map(
+			getViewData().availableLogos.map((logo) => [logo.name.trim().toLowerCase(), logo.id])
+		);
+
+		return section.props.logos
+			.map((logo) => byName.get(logo.name.trim().toLowerCase()))
+			.filter((id): id is string => Boolean(id));
+	};
 
 	const getEditState = (): LandingPageEditState | null => {
 		const actionData = form as { pageEdit?: LandingPageEditState } | null | undefined;
@@ -98,6 +116,29 @@
 		{#if getEditMessage()}
 			<p class="composer-message" class:success={getEditMessageIsSuccess()}>{getEditMessage()}</p>
 		{/if}
+	</form>
+</aside>
+
+<aside class="logo-picker" aria-label="Landing page logo picker">
+	<form method="POST" use:enhance={handleEditSubmit} action="?/setLogos" class="picker-form">
+		<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+		<p class="picker-title">Logos for trust ribbon</p>
+		<div class="picker-grid">
+			{#each getViewData().availableLogos as logo}
+				<label class="picker-item">
+					<input
+						type="checkbox"
+						name="logoIds"
+						value={logo.id}
+						checked={getCurrentLogoIds().includes(logo.id)}
+						disabled={!canEditPage()}
+					/>
+					<img src={logo.logoUrl} alt={logo.logoAlt} class="picker-logo" />
+					<span>{logo.name}</span>
+				</label>
+			{/each}
+		</div>
+		<button type="submit" disabled={!canEditPage()}>Save logos</button>
 	</form>
 </aside>
 
@@ -222,5 +263,52 @@
 		.composer-controls button {
 			justify-self: stretch;
 		}
+	}
+
+	.logo-picker {
+		position: fixed;
+		right: 1rem;
+		bottom: 1rem;
+		z-index: 40;
+		width: 320px;
+		border: 1px solid #d9dbcf;
+		background: #ffffff;
+		box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+	}
+
+	.picker-form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0.875rem;
+	}
+
+	.picker-title {
+		margin: 0;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #1f2937;
+	}
+
+	.picker-grid {
+		display: grid;
+		max-height: 200px;
+		overflow: auto;
+		gap: 0.5rem;
+	}
+
+	.picker-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+	}
+
+	.picker-logo {
+		height: 20px;
+		max-width: 70px;
+		object-fit: contain;
 	}
 </style>

@@ -1,10 +1,10 @@
 import type { Actions, PageServerLoad } from './$types';
-import { deleteClient, listClients, toggleClientActive } from '$lib/server/clients/client';
+import { deleteLogo, listLogos, toggleLogoActive } from '$lib/server/logos/logo';
 import { fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async () => {
-	const clients = await listClients();
-	return { clients };
+	const logos = await listLogos();
+	return { logos };
 };
 
 export const actions: Actions = {
@@ -14,10 +14,10 @@ export const actions: Actions = {
 		const active = String(formData.get('active') ?? 'false') === 'true';
 
 		if (!id) {
-			return fail(400, { success: false, message: 'Client ID is required.' });
+			return fail(400, { success: false, message: 'Logo ID is required.' });
 		}
 
-		await toggleClientActive(id, active);
+		await toggleLogoActive(id, active);
 		return { success: true };
 	},
 	delete: async ({ request, locals }) => {
@@ -25,10 +25,10 @@ export const actions: Actions = {
 		const id = String(formData.get('id') ?? '').trim();
 
 		if (!id) {
-			return fail(400, { success: false, message: 'Client ID is required.' });
+			return fail(400, { success: false, message: 'Logo ID is required.' });
 		}
 
-		await deleteClient(id, locals.supabase);
+		await deleteLogo(id, locals.supabase);
 		return { success: true };
 	}
 };
