@@ -35,7 +35,7 @@ Corrective rules:
 - when speaker_in_action is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 4 IDs from input.assets.assetCatalog.speakerInActionVideos
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.supportingImageAssetIds from input.assets.assetCatalog.hybridSupportingImages
 - when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
-- when keynote_speeches is selected, include assetPlan.keynoteSpeeches.keynoteIds with exactly 3 IDs from input.assets.assetCatalog.keynoteCatalog
+- when keynote_speeches is selected, keynote selection is automatic from the first three entries in input.assets.assetCatalog.keynoteCatalog
 - when hybrid_content_section is selected, prefer 3 supportingImageAssetIds mapped to distinct audience outcomes
 - soft preference: include speaker_in_action when eligible and useful for conversion
 - keynote_speeches is required when it appears in requiredSectionTypes

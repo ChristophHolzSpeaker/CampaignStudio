@@ -16,13 +16,7 @@ export const actions: Actions = {
 		const parsed = keynoteFormSchema.safeParse({
 			keynoteTitle: getString(formData, 'keynoteTitle'),
 			keynoteSummary: getString(formData, 'keynoteSummary'),
-			imageAlt: getString(formData, 'imageAlt'),
-			audiences: getString(formData, 'audiences'),
-			topics: getString(formData, 'topics'),
-			formats: getString(formData, 'formats'),
-			geographies: getString(formData, 'geographies'),
-			intentTags: getString(formData, 'intentTags'),
-			priority: getString(formData, 'priority')
+			imageAlt: getString(formData, 'imageAlt')
 		});
 
 		if (!parsed.success) {

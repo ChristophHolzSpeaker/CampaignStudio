@@ -13,7 +13,7 @@
 		<div>
 			<h1 class="text-3xl font-semibold tracking-tight">Keynotes</h1>
 			<p class="mt-2 text-sm text-neutral-600">
-				Manage keynote entries and relevance metadata used by landing page generation.
+				Manage keynote entries used by landing page generation.
 			</p>
 		</div>
 		<NavButton href="/admin/keynotes/new">Add keynote</NavButton>
@@ -24,7 +24,6 @@
 			<thead class="bg-neutral-50 text-left text-xs tracking-wider text-neutral-600 uppercase">
 				<tr>
 					<th class="px-4 py-3">Keynote</th>
-					<th class="px-4 py-3">Priority</th>
 					<th class="px-4 py-3">Status</th>
 					<th class="px-4 py-3">Actions</th>
 				</tr>
@@ -45,7 +44,6 @@
 								</div>
 							</div>
 						</td>
-						<td class="px-4 py-3 text-neutral-700">{keynote.priority}</td>
 						<td class="px-4 py-3">
 							<span
 								class={`rounded-full px-2 py-1 text-xs ${keynote.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-700'}`}
@@ -85,7 +83,7 @@
 					</tr>
 				{:else}
 					<tr>
-						<td class="px-4 py-8 text-sm text-neutral-500" colspan="4">
+						<td class="px-4 py-8 text-sm text-neutral-500" colspan="3">
 							No keynotes found. Add your first keynote to enable curated keynote selection.
 						</td>
 					</tr>

@@ -94,10 +94,7 @@ async function removeKeynoteImage(
 }
 
 export async function listKeynotes() {
-	return db
-		.select()
-		.from(keynotes)
-		.orderBy(asc(keynotes.priority), asc(keynotes.keynote_title), asc(keynotes.id));
+	return db.select().from(keynotes).orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
 }
 
 export async function getKeynoteById(id: string) {
@@ -125,13 +122,7 @@ export async function createKeynote(
 		image_url: uploaded.publicUrl,
 		image_bucket: uploaded.bucket,
 		image_path: uploaded.path,
-		image_alt: input.imageAlt,
-		audiences: input.audiences,
-		topics: input.topics,
-		formats: input.formats,
-		geographies: input.geographies,
-		intent_tags: input.intentTags,
-		priority: input.priority
+		image_alt: input.imageAlt
 	});
 
 	return id;
@@ -169,12 +160,6 @@ export async function updateKeynote(
 			image_bucket: imageBucket,
 			image_path: imagePath,
 			image_alt: input.imageAlt,
-			audiences: input.audiences,
-			topics: input.topics,
-			formats: input.formats,
-			geographies: input.geographies,
-			intent_tags: input.intentTags,
-			priority: input.priority,
 			updated_at: new Date()
 		})
 		.where(eq(keynotes.id, id));

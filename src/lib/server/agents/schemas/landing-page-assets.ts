@@ -79,12 +79,7 @@ export const keynoteOptionSchema = z.object({
 	title: z.string().trim().min(1),
 	summary: z.string().trim().min(1),
 	imageUrl: z.string().trim().url(),
-	imageAlt: z.string().trim().min(1),
-	audiences: z.array(z.string().trim().min(1)).default([]),
-	topics: z.array(z.string().trim().min(1)).default([]),
-	formats: z.array(z.string().trim().min(1)).default([]),
-	geographies: z.array(z.string().trim().min(1)).default([]),
-	intentTags: z.array(z.string().trim().min(1)).default([])
+	imageAlt: z.string().trim().min(1)
 });
 
 const assetCatalogSchema = z.object({
