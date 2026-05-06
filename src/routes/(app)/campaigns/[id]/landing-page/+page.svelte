@@ -8,6 +8,7 @@
 	import type { LandingPageDocument } from '$lib/page-builder/page';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
+	import Button from '$lib/components/elements/Button.svelte';
 
 	type LandingPageEditState = {
 		values: {
@@ -53,14 +54,6 @@
 			.filter((id): id is string => Boolean(id));
 	};
 
-	const getEditState = (): LandingPageEditState | null => {
-		const actionData = form as { pageEdit?: LandingPageEditState } | null | undefined;
-		return actionData?.pageEdit ?? null;
-	};
-
-	const getPromptValue = () => getEditState()?.values.changePrompt ?? '';
-	const getEditMessage = () => getEditState()?.message ?? null;
-	const getEditMessageIsSuccess = () => getEditState()?.success === true;
 	const canEditPage = () => {
 		const viewData = getViewData();
 		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
@@ -92,24 +85,17 @@
 		return selected.length >= 3 && !selected.includes(keynoteId);
 	};
 
+	let busy = $state(false);
+
 	const handleEditSubmit: SubmitFunction = () => {
-		return async ({ result, update }) => {
-			if (result.type === 'success') {
-				await goto(`/campaigns/${getViewData().campaignId}/landing-page`, {
-					replaceState: true,
-					invalidateAll: true,
-					noScroll: true,
-					keepFocus: true
-				});
-				return;
-			}
+		busy = true;
 
-			if (result.type === 'failure') {
-				await update({ reset: false });
-				return;
+		return async ({ update }) => {
+			try {
+				await update({ reset: true, invalidateAll: true });
+			} finally {
+				busy = false;
 			}
-
-			await update();
 		};
 	};
 </script>
@@ -127,15 +113,18 @@
 		</div>
 		<div class="composer-controls">
 			<textarea
+				value={form?.pageEdit?.values?.changePrompt ?? ''}
 				name="change_prompt"
 				rows="3"
 				placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
-				disabled={!canEditPage()}>{getPromptValue()}</textarea
-			>
-			<button type="submit" disabled={!canEditPage()}>Apply changes</button>
+				disabled={!canEditPage()}
+			></textarea>
+			<Button variant="dark" isSubmitting={busy} disabled={!canEditPage()}>Apply changes</Button>
 		</div>
-		{#if getEditMessage()}
-			<p class="composer-message" class:success={getEditMessageIsSuccess()}>{getEditMessage()}</p>
+		{#if form?.pageEdit}
+			<p class="composer-message" class:success={form?.pageEdit?.success ?? false}>
+				{form?.pageEdit?.message ?? ''}
+			</p>
 		{/if}
 	</form>
 </aside>

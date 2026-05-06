@@ -19,23 +19,18 @@ export const seoPropsSchema = z.object({
 	twitterSite: z.string().trim().min(1).optional()
 });
 
-export const immediateAuthorityHeroPropsSchema = z
-	.object({
-		headline: z.string().trim().min(1),
-		subheadline: z.string().trim().min(1),
-		primaryCtaLabel: z.string().trim().min(1),
-		primaryCtaHref: z.string().trim().optional(),
-		primaryCtaAction: z.string().trim().min(1).optional(),
-		videoEmbedUrl: z.string().trim(),
-		videoThumbnailUrl: z.string().trim(),
-		videoThumbnailAlt: z.string().trim().min(1),
-		eyebrow: z.string().trim().min(1).optional(),
-		supportingBullets: z.array(z.string().trim().min(1)).optional()
-	})
-	.refine((props) => Boolean(props.primaryCtaHref || props.primaryCtaAction), {
-		message: 'Either primaryCtaHref or primaryCtaAction is required.',
-		path: ['primaryCtaHref']
-	});
+export const immediateAuthorityHeroPropsSchema = z.object({
+	headline: z.string().trim().min(1),
+	subheadline: z.string().trim().min(1),
+	primaryCtaLabel: z.string().trim().min(1),
+	primaryCtaHref: z.string().trim().optional(),
+	primaryCtaAction: z.string().trim().min(1).optional(),
+	videoEmbedUrl: z.string().trim(),
+	videoThumbnailUrl: z.string().trim(),
+	videoThumbnailAlt: z.string().trim().min(1),
+	eyebrow: z.string().trim().min(1).optional(),
+	supportingBullets: z.array(z.string().trim().min(1)).optional()
+});
 
 export const trustLogoItemSchema = z.object({
 	name: z.string().trim().min(1),

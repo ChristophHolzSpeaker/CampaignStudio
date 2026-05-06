@@ -5,25 +5,20 @@ import {
 } from '$lib/page-builder/sections';
 import { z } from 'zod';
 
-const heroDefaultsSchema = z
-	.object({
-		videoEmbedUrl: z.string().trim().url(),
-		videoThumbnailUrl: z.string().trim().url().optional(),
-		videoThumbnailAlt: z.string().trim().min(1).optional(),
-		primaryCtaLabelDefault: z.string().trim().min(1),
-		primaryCtaHref: z
-			.string()
-			.trim()
-			.refine((value) => value.startsWith('#') || z.string().url().safeParse(value).success, {
-				message: 'primaryCtaHref must be an absolute URL or an in-page anchor (e.g. #briefing).'
-			})
-			.optional(),
-		primaryCtaAction: z.string().trim().min(1).optional()
-	})
-	.refine((value) => Boolean(value.primaryCtaHref || value.primaryCtaAction), {
-		message: 'Either primaryCtaHref or primaryCtaAction must be provided in heroDefaults.',
-		path: ['primaryCtaHref']
-	});
+const heroDefaultsSchema = z.object({
+	videoEmbedUrl: z.string().trim().url(),
+	videoThumbnailUrl: z.string().trim().url().optional(),
+	videoThumbnailAlt: z.string().trim().min(1).optional(),
+	primaryCtaLabelDefault: z.string().trim().min(1),
+	primaryCtaHref: z
+		.string()
+		.trim()
+		.refine((value) => value.startsWith('#') || z.string().safeParse(value).success, {
+			message: 'primaryCtaHref must be an absolute URL or an in-page anchor (e.g. #briefing).'
+		})
+		.optional(),
+	primaryCtaAction: z.string().trim().min(1).optional()
+});
 
 const bookingDefaultsSchema = z.object({
 	defaultSectionTitle: z.string().trim().min(1),

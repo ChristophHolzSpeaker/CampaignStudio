@@ -7,7 +7,7 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 			'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6130408552ea140d707aab8e_christoph-contact-bg.jpg',
 		videoThumbnailAlt: 'Keynote speaker presenting to a business audience',
 		primaryCtaLabelDefault: 'Request Speaking Availability',
-		primaryCtaHref: 'https://christophholz.com/contact'
+		primaryCtaHref: '#contact'
 	},
 	fixedLogosRibbon: {
 		label: "Trusted by the world's bold leaders",
