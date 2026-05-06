@@ -330,12 +330,11 @@ function resolveLogosOfTrustSelection(
 
 function resolveKeynoteSelection(
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan,
+	_plan: LandingPagePlan,
 	requestedIds: string[] = []
 ): { id: string; title: string; imageUrl: string; summary: string }[] {
 	const catalog = input.assets.assetCatalog.keynoteCatalog;
-	const selectedIds =
-		requestedIds.length > 0 ? requestedIds : (plan.assetPlan?.keynoteSpeeches?.keynoteIds ?? []);
+	const selectedIds = requestedIds;
 	const catalogById = new Map(catalog.map((keynote) => [keynote.id, keynote]));
 	const resolved: { id: string; title: string; imageUrl: string; summary: string }[] = [];
 
@@ -853,7 +852,7 @@ Corrective rules:
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
 - For speaker_in_action media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
-- For keynote_speeches, use plan.assetPlan.keynoteSpeeches.keynoteIds with input.assets.assetCatalog.keynoteCatalog.
+- For keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
@@ -870,7 +869,7 @@ Corrective rules:
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 - For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
 - For keynote_speeches, title and intro are required.
-- For keynote_speeches, include keynoteIds with exactly 3 values from plan.assetPlan.keynoteSpeeches.keynoteIds.
+- For keynote_speeches, include keynoteIds with exactly 3 values from input.assets.assetCatalog.keynoteCatalog order.
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}

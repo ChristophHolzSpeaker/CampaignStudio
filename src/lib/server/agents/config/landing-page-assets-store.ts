@@ -59,12 +59,6 @@ type KeynoteRow = {
 	summary: string;
 	imageUrl: string;
 	imageAlt: string;
-	audiences: string[];
-	topics: string[];
-	formats: string[];
-	geographies: string[];
-	intentTags: string[];
-	priority: number;
 };
 
 async function loadActiveLandingPageAssetSet(): Promise<AssetSetRow | null> {
@@ -130,17 +124,11 @@ async function loadActiveKeynotes(): Promise<KeynoteRow[]> {
 			title: keynotes.keynote_title,
 			summary: keynotes.keynote_summary,
 			imageUrl: keynotes.image_url,
-			imageAlt: keynotes.image_alt,
-			audiences: keynotes.audiences,
-			topics: keynotes.topics,
-			formats: keynotes.formats,
-			geographies: keynotes.geographies,
-			intentTags: keynotes.intent_tags,
-			priority: keynotes.priority
+			imageAlt: keynotes.image_alt
 		})
 		.from(keynotes)
 		.where(eq(keynotes.is_active, true))
-		.orderBy(asc(keynotes.priority), asc(keynotes.keynote_title), asc(keynotes.id));
+		.orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
 
 	return rows;
 }
@@ -229,56 +217,6 @@ function sortMediaAssetsByRelevance(
 			scoreOverlap(right.audiences, contextTokens) * 3 +
 			scoreOverlap(right.formats, contextTokens) * 2 +
 			scoreOverlap(right.intentTags, contextTokens) * 4;
-
-		if (leftScore !== rightScore) {
-			return rightScore - leftScore;
-		}
-
-		if (left.priority !== right.priority) {
-			return left.priority - right.priority;
-		}
-
-		return left.id.localeCompare(right.id);
-	});
-}
-
-function sortKeynotesByRelevance(
-	rows: KeynoteRow[],
-	context?: LandingPageAssetContext
-): KeynoteRow[] {
-	if (!context) {
-		return rows;
-	}
-
-	const contextTokens = uniqueTokens([
-		context.topic,
-		context.audience,
-		context.format,
-		context.geography,
-		context.intentSummary,
-		context.messagingAngle,
-		context.conversionGoal
-	]);
-
-	if (contextTokens.size === 0) {
-		return rows;
-	}
-
-	return [...rows].sort((left, right) => {
-		const leftScore =
-			scoreOverlap(left.topics, contextTokens) * 4 +
-			scoreOverlap(left.audiences, contextTokens) * 4 +
-			scoreOverlap(left.formats, contextTokens) * 2 +
-			scoreOverlap(left.geographies, contextTokens) * 2 +
-			scoreOverlap(left.intentTags, contextTokens) * 5 +
-			scoreOverlap([left.title, left.summary], contextTokens) * 2;
-		const rightScore =
-			scoreOverlap(right.topics, contextTokens) * 4 +
-			scoreOverlap(right.audiences, contextTokens) * 4 +
-			scoreOverlap(right.formats, contextTokens) * 2 +
-			scoreOverlap(right.geographies, contextTokens) * 2 +
-			scoreOverlap(right.intentTags, contextTokens) * 5 +
-			scoreOverlap([right.title, right.summary], contextTokens) * 2;
 
 		if (leftScore !== rightScore) {
 			return rightScore - leftScore;
@@ -386,12 +324,7 @@ function buildKeynoteCatalog(rows: KeynoteRow[]): KeynoteOption[] {
 		title: keynote.title,
 		summary: keynote.summary,
 		imageUrl: keynote.imageUrl,
-		imageAlt: keynote.imageAlt,
-		audiences: keynote.audiences,
-		topics: keynote.topics,
-		formats: keynote.formats,
-		geographies: keynote.geographies,
-		intentTags: keynote.intentTags
+		imageAlt: keynote.imageAlt
 	}));
 }
 
@@ -403,9 +336,7 @@ export async function loadLandingPageAssets(
 		const mediaRows = sortMediaAssetsByRelevance(await loadActiveMediaAssets(), context);
 		const catalog = buildCatalogFromMediaAssets(mediaRows);
 		const logosCatalog = buildLogoCatalog(await loadActiveLogos());
-		const keynoteCatalog = buildKeynoteCatalog(
-			sortKeynotesByRelevance(await loadActiveKeynotes(), context)
-		);
+		const keynoteCatalog = buildKeynoteCatalog(await loadActiveKeynotes());
 
 		if (!activeSet) {
 			return fillHeroDefaultsFromCatalog(

@@ -24,6 +24,13 @@
 		data as {
 			page: LandingPageDocument;
 			availableLogos: Array<{ id: string; name: string; logoUrl: string; logoAlt: string }>;
+			availableKeynotes: Array<{
+				id: string;
+				title: string;
+				summary: string;
+				imageUrl: string;
+				imageAlt: string;
+			}>;
 			campaignId: number;
 			campaignPageId: number | null;
 			campaignStatus: string | null;
@@ -69,6 +76,20 @@
 		}
 
 		return 'Describe text, section order, section removal, or approved media changes.';
+	};
+
+	const getCurrentKeynoteIds = () => {
+		const section = getViewData().page.sections.find((item) => item.type === 'keynote_speeches');
+		if (!section || !('keynoteIds' in section.props) || !Array.isArray(section.props.keynoteIds)) {
+			return [] as string[];
+		}
+
+		return section.props.keynoteIds.filter((id): id is string => typeof id === 'string');
+	};
+
+	const isKeynoteSelectionDisabled = (keynoteId: string) => {
+		const selected = getCurrentKeynoteIds();
+		return selected.length >= 3 && !selected.includes(keynoteId);
 	};
 
 	const handleEditSubmit: SubmitFunction = () => {
@@ -119,28 +140,53 @@
 	</form>
 </aside>
 
-<aside class="logo-picker" aria-label="Landing page logo picker">
-	<form method="POST" use:enhance={handleEditSubmit} action="?/setLogos" class="picker-form">
-		<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
-		<p class="picker-title">Logos for trust ribbon</p>
-		<div class="picker-grid">
-			{#each getViewData().availableLogos as logo}
-				<label class="picker-item">
-					<input
-						type="checkbox"
-						name="logoIds"
-						value={logo.id}
-						checked={getCurrentLogoIds().includes(logo.id)}
-						disabled={!canEditPage()}
-					/>
-					<img src={logo.logoUrl} alt={logo.logoAlt} class="picker-logo" />
-					<span>{logo.name}</span>
-				</label>
-			{/each}
-		</div>
-		<button type="submit" disabled={!canEditPage()}>Save logos</button>
-	</form>
-</aside>
+<div class="picker-stack">
+	<aside class="logo-picker" aria-label="Landing page logo picker">
+		<form method="POST" use:enhance={handleEditSubmit} action="?/setLogos" class="picker-form">
+			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+			<p class="picker-title">Logos for trust ribbon</p>
+			<div class="picker-grid">
+				{#each getViewData().availableLogos as logo (logo.id)}
+					<label class="picker-item">
+						<input
+							type="checkbox"
+							name="logoIds"
+							value={logo.id}
+							checked={getCurrentLogoIds().includes(logo.id)}
+							disabled={!canEditPage()}
+						/>
+						<img src={logo.logoUrl} alt={logo.logoAlt} class="picker-logo" />
+						<span>{logo.name}</span>
+					</label>
+				{/each}
+			</div>
+			<button type="submit" disabled={!canEditPage()}>Save logos</button>
+		</form>
+	</aside>
+
+	<aside class="keynote-picker" aria-label="Landing page keynote picker">
+		<form method="POST" use:enhance={handleEditSubmit} action="?/setKeynotes" class="picker-form">
+			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+			<p class="picker-title">Keynotes</p>
+			<div class="picker-grid keynote-picker-grid">
+				{#each getViewData().availableKeynotes as keynote (keynote.id)}
+					<label class="picker-item keynote-item">
+						<input
+							type="checkbox"
+							name="keynoteIds"
+							value={keynote.id}
+							checked={getCurrentKeynoteIds().includes(keynote.id)}
+							disabled={!canEditPage()}
+						/>
+						<img src={keynote.imageUrl} alt={keynote.imageAlt} class="picker-keynote-image" />
+						<span>{keynote.title}</span>
+					</label>
+				{/each}
+			</div>
+			<button type="submit" disabled={!canEditPage()}>Save keynotes</button>
+		</form>
+	</aside>
+</div>
 
 {#if page.state.modal?.kind === 'youtube'}
 	<ShallowRouteModal title="Showreel" onclose={() => history.back()}>
@@ -265,11 +311,17 @@
 		}
 	}
 
-	.logo-picker {
+	.picker-stack {
 		position: fixed;
 		right: 1rem;
 		bottom: 1rem;
 		z-index: 40;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.logo-picker,
+	.keynote-picker {
 		width: 320px;
 		border: 1px solid #d9dbcf;
 		background: #ffffff;
@@ -310,5 +362,20 @@
 		height: 20px;
 		max-width: 70px;
 		object-fit: contain;
+	}
+
+	.keynote-picker-grid {
+		max-height: 260px;
+	}
+
+	.keynote-item {
+		align-items: flex-start;
+	}
+
+	.picker-keynote-image {
+		width: 56px;
+		height: 42px;
+		object-fit: cover;
+		border: 1px solid #d1d5db;
 	}
 </style>

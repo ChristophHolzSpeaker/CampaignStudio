@@ -4,8 +4,6 @@
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 
 	let { data, form } = $props();
-
-	const csv = (values: string[]) => values.join(', ');
 </script>
 
 <svelte:head>
@@ -15,9 +13,7 @@
 <section class="bookings-content space-y-8 p-6 lg:p-10">
 	<header class="mb-6">
 		<h1 class="text-3xl font-semibold tracking-tight">Edit keynote</h1>
-		<p class="mt-2 text-sm text-neutral-600">
-			Update keynote image and relevance metadata for campaign generation.
-		</p>
+		<p class="mt-2 text-sm text-neutral-600">Update keynote title, summary, and image.</p>
 	</header>
 
 	<form
@@ -72,61 +68,6 @@
 				class="rounded border border-neutral-300 px-3 py-2">{data.keynote.keynote_summary}</textarea
 			>
 		</label>
-
-		<div class="grid gap-4 sm:grid-cols-2">
-			<label class="flex flex-col gap-1 text-sm">
-				<span>Audiences (comma-separated)</span>
-				<input
-					name="audiences"
-					value={csv(data.keynote.audiences)}
-					class="rounded border border-neutral-300 px-3 py-2"
-				/>
-			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				<span>Topics (comma-separated)</span>
-				<input
-					name="topics"
-					value={csv(data.keynote.topics)}
-					class="rounded border border-neutral-300 px-3 py-2"
-				/>
-			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				<span>Formats (comma-separated)</span>
-				<input
-					name="formats"
-					value={csv(data.keynote.formats)}
-					class="rounded border border-neutral-300 px-3 py-2"
-				/>
-			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				<span>Geographies (comma-separated)</span>
-				<input
-					name="geographies"
-					value={csv(data.keynote.geographies)}
-					class="rounded border border-neutral-300 px-3 py-2"
-				/>
-			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				<span>Intent tags (comma-separated)</span>
-				<input
-					name="intentTags"
-					value={csv(data.keynote.intent_tags)}
-					class="rounded border border-neutral-300 px-3 py-2"
-				/>
-			</label>
-			<label class="flex flex-col gap-1 text-sm">
-				<span>Priority</span>
-				<input
-					name="priority"
-					type="number"
-					min="1"
-					max="999"
-					value={data.keynote.priority}
-					required
-					class="rounded border border-neutral-300 px-3 py-2"
-				/>
-			</label>
-		</div>
 
 		{#if form?.formError}
 			<p class="text-sm text-rose-700">{form.formError}</p>
