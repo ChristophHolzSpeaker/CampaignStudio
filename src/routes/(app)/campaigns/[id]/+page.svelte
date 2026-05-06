@@ -113,8 +113,8 @@
 	$inspect(data);
 </script>
 
-<section class="flex flex-col gap-6 p-6 lg:p-10">
-	<div class="mx-auto grid max-w-7xl grid-cols-12 gap-10">
+<section class="bookings-content space-y-8 p-6 lg:p-10">
+	<div class="mx-auto grid grid-cols-12 gap-10">
 		<!-- Left Column: Campaign Summary -->
 		<section class="col-span-12 space-y-8 lg:col-span-4">
 			<div class="sticky top-24">

@@ -12,9 +12,9 @@
 	<title>Edit Client</title>
 </svelte:head>
 
-<section class="mx-auto max-w-3xl px-6 py-10">
+<section class="bookings-content space-y-8 p-6 lg:p-10">
 	<header class="mb-6">
-		<h1 class="text-3xl font-semibold tracking-tight">Edit client</h1>
+		<h1 class="text-3xl font-semibold tracking-tight">Edit logo</h1>
 		<p class="mt-2 text-sm text-neutral-600">
 			Update logo and relevance metadata for campaign generation.
 		</p>

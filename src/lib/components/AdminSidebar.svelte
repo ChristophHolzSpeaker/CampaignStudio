@@ -1,8 +1,6 @@
 <script lang="ts">
-	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-
-	import type { Snippet } from 'svelte';
+	import type { AppNavCategory } from '$lib/navigation/app-nav';
 
 	export type AdminSidebarNavItem = {
 		label: string;
@@ -12,39 +10,16 @@
 		match?: 'exact' | 'prefix';
 	};
 
+	export type AdminSidebarNavCategory = AppNavCategory;
+
 	type SidebarProps = {
-		navItems?: readonly AdminSidebarNavItem[];
-		primaryAction?: Snippet;
-		headerContent?: Snippet;
+		categories: readonly AdminSidebarNavCategory[];
 		title?: string;
 		subtitle?: string;
 	};
 
-	const defaultNavItems: readonly AdminSidebarNavItem[] = [
-		{
-			label: 'Editor',
-			icon: 'material-symbols--edit-note',
-			match: 'prefix',
-			href: '/(app)/admin/prompts'
-		},
-		{
-			label: 'Library',
-			icon: 'material-symbols--book',
-			match: 'prefix',
-			href: '/(app)/admin/library'
-		},
-		{
-			label: 'Clients',
-			icon: 'material-symbols--book',
-			match: 'prefix',
-			href: '/(app)/admin/clients'
-		}
-	];
-
 	let {
-		navItems = defaultNavItems,
-		primaryAction,
-		headerContent,
+		categories,
 		title = 'Prompt Engine',
 		subtitle = 'V2.4 Architectural'
 	}: SidebarProps = $props();
@@ -61,12 +36,11 @@
 	};
 </script>
 
-<aside
-	class="fixed top-18 bottom-0 left-0 z-20 flex w-70 flex-col gap-8 overflow-y-auto bg-[#f4f4f4] px-6 py-8"
->
-	{#if headerContent}
-		{@render headerContent()}
-	{/if}
+<aside class="flex h-full min-h-screen flex-col gap-8 overflow-y-auto bg-[#f4f4f4] px-6 py-8">
+	<div>
+		<p class="text-[0.65rem] tracking-[0.18em] text-[#777] uppercase">{subtitle}</p>
+		<h2 class="mt-2 text-xl">{title}</h2>
+	</div>
 
 	{#snippet navItem(item: AdminSidebarNavItem)}
 		{#if item.disabled || !item.href}
@@ -96,18 +70,19 @@
 			</a>
 		{/if}
 	{/snippet}
-	<nav class="flex flex-col gap-2">
-		{#each navItems as item (item.label)}
-			{@render navItem(item)}
+	<nav class="flex flex-col gap-5">
+		{#each categories as category (category.label)}
+			<section class="flex flex-col gap-2">
+				<p class="px-2 text-[0.62rem] tracking-[0.2em] text-[#777] uppercase">{category.label}</p>
+				{#each category.items as item (item.label)}
+					{@render navItem(item)}
+				{/each}
+			</section>
 		{/each}
 	</nav>
 
-	{#if primaryAction}
-		{@render primaryAction()}
-	{/if}
-
 	<div class="mt-auto flex flex-col gap-2 uppercase">
-		<a class=" no-underline" href={resolve('/(app)/admin/documentation')}>Documentation</a>
+		<a class=" no-underline" href="/admin/documentation">Documentation</a>
 		<a href="/signout" class="text-left no-underline">Log Out</a>
 	</div>
 </aside>
@@ -229,6 +204,20 @@
 		width: 24px;
 		height: 24px;
 		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M4 6H2v14a2 2 0 0 0 2 2h14v-2H4zm16-4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm-3 5a3 3 0 0 0-3-3a3 3 0 0 0-3 3a3 3 0 0 0 3 3a3 3 0 0 0 3-3m-9 8v1h12v-1c0-2-4-3.1-6-3.1S8 13 8 15'/%3E%3C/svg%3E");
+		background-color: currentColor;
+		-webkit-mask-image: var(--svg);
+		mask-image: var(--svg);
+		-webkit-mask-repeat: no-repeat;
+		mask-repeat: no-repeat;
+		-webkit-mask-size: 100% 100%;
+		mask-size: 100% 100%;
+	}
+
+	.mdi--microphone-variant {
+		display: inline-block;
+		width: 24px;
+		height: 24px;
+		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M9 3a4 4 0 0 1 4 4H5a4 4 0 0 1 4-4m2.84 6.82L11 18h-1v1a2 2 0 0 0 2 2a2 2 0 0 0 2-2v-5a4 4 0 0 1 4-4h2l-1 1l1 1h-2a2 2 0 0 0-2 2v5a4 4 0 0 1-4 4a4 4 0 0 1-4-4v-1H7l-.84-8.18C5.67 9.32 5.31 8.7 5.13 8h7.74c-.18.7-.54 1.32-1.03 1.82M9 11a1 1 0 0 0-1 1a1 1 0 0 0 1 1a1 1 0 0 0 1-1a1 1 0 0 0-1-1'/%3E%3C/svg%3E");
 		background-color: currentColor;
 		-webkit-mask-image: var(--svg);
 		mask-image: var(--svg);

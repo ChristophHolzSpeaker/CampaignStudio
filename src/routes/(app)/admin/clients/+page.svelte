@@ -8,10 +8,10 @@
 	<title>Clients Library</title>
 </svelte:head>
 
-<section class="mx-auto max-w-6xl px-6 py-10">
+<section class="bookings-content space-y-8 p-6 lg:p-10">
 	<header class="mb-6 flex items-center justify-between gap-4">
 		<div>
-			<h1 class="text-3xl font-semibold tracking-tight">Clients</h1>
+			<h1 class="text-3xl font-semibold tracking-tight">Logos</h1>
 			<p class="mt-2 text-sm text-neutral-600">
 				Manage trusted client logos and relevance metadata used by landing page generation.
 			</p>

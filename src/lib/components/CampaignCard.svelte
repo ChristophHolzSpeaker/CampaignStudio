@@ -44,12 +44,12 @@
 
 <td class="px-6 py-2">
 	<div class="flex items-center gap-4">
-		<div>
+		<a href="/campaigns/{campaign.id}">
 			<div class="font-headline-md text-sm font-bold text-gray-900 uppercase">
 				{campaign?.name}
 			</div>
 			<div class="font-body-sm mt-1 text-xs text-secondary">Campaign ID: {campaign?.id}</div>
-		</div>
+		</a>
 	</div>
 </td>
 <td class="px-6 py-2 text-center">
@@ -200,5 +200,13 @@
 		.snippet {
 			max-width: none;
 		}
+	}
+
+	a {
+		font-family: 'Bureau Grot', sans-serif;
+		font-weight: 500;
+		text-transform: uppercase;
+		font-stretch: condensed;
+		letter-spacing: -0.02em;
 	}
 </style>
