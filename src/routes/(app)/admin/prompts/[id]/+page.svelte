@@ -1,5 +1,4 @@
 <script lang="ts">
-	import AdminHeader from '$lib/components/AdminShellHeader.svelte';
 	import Button from '$lib/components/elements/Button.svelte';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import PromptCard from '$lib/components/PromptCard.svelte';
