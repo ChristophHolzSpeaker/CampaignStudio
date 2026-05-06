@@ -48,7 +48,7 @@ const baseCategories: readonly AppNavCategory[] = [
 			},
 			{
 				label: 'Logos',
-				href: '/admin/clients',
+				href: '/admin/logos',
 				match: 'prefix',
 				icon: 'mdi--account-box-multiple'
 			},

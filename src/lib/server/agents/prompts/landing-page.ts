@@ -117,7 +117,7 @@ Rules:
 	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID
 	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
-	* when logos_of_trust_ribbon is selected, choose 1-4 clients from input.assets.assetCatalog.clientCatalog by ID
+	* when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
 	* when keynote_speeches is selected, choose exactly three keynotes from input.assets.assetCatalog.keynoteCatalog by ID
 	* soft preference: include speaker_in_action when eligible and strategically useful
 	* keynote_speeches is required when it is in requiredSectionTypes
@@ -125,7 +125,7 @@ Rules:
 	* when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
 	* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 	* use only IDs that exist in input.assets.assetCatalog
-	* never invent client IDs
+	* never invent logo IDs
 	* never invent media IDs or media URLs
 * section order should reflect a strong conversion narrative
 * avoid bloated or repetitive pages
@@ -151,10 +151,9 @@ Return exactly one valid JSON object with this shape:
       "videoAssetId": "string",
       "rationale": "string"
     },
-    "logosOfTrustRibbon": {
-      "clientIds": ["string"],
-      "rationale": "string"
-    },
+		"logosOfTrustRibbon": {
+		  "rationale": "string"
+		},
     "hybridContentSection": {
       "supportingImageAssetIds": ["string"],
       "rationale": "string"
@@ -240,7 +239,7 @@ ${buildSelectedSectionGuidanceBlock(context, sectionTypesForGuidance)}
 Asset usage requirements:
 
 	* landing page generation input includes input.assets with pre-approved media, proof, and compliance records
-	* for logos_of_trust_ribbon, resolve IDs from plan.assetPlan.logosOfTrustRibbon.clientIds against input.assets.assetCatalog.clientCatalog
+	* for logos_of_trust_ribbon, use the first four entries from input.assets.assetCatalog.logoCatalog
 	* for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
 	* for speaker_in_action media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
 	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos

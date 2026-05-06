@@ -308,41 +308,17 @@ function resolveSpeakerInActionSelection(
 
 function resolveLogosOfTrustSelection(
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	_plan: LandingPagePlan
 ): { name: string; imageUrl: string; alt: string }[] {
-	const clientCatalog = input.assets.assetCatalog.clientCatalog;
-	if (clientCatalog.length === 0) {
+	const logoCatalog = input.assets.assetCatalog.logoCatalog;
+	if (logoCatalog.length === 0) {
 		return input.assets.fixedLogosRibbon.logos.slice(0, 4);
 	}
 
-	const selectedIds = plan.assetPlan?.logosOfTrustRibbon?.clientIds ?? [];
-	const catalogById = new Map(clientCatalog.map((client) => [client.id, client]));
-	const resolved: { name: string; imageUrl: string; alt: string }[] = [];
-
-	for (const id of selectedIds) {
-		const selected = catalogById.get(id);
-		if (!selected) {
-			console.warn(
-				`Landing page writer: logos_of_trust_ribbon client '${id}' not found in approved catalog; skipping this client.`
-			);
-			continue;
-		}
-
-		resolved.push({
-			name: selected.name,
-			imageUrl: selected.logoUrl,
-			alt: selected.logoAlt
-		});
-	}
-
-	if (resolved.length >= 1) {
-		return resolved.slice(0, 4);
-	}
-
-	const fallbackFromCatalog = clientCatalog.slice(0, 4).map((client) => ({
-		name: client.name,
-		imageUrl: client.logoUrl,
-		alt: client.logoAlt
+	const fallbackFromCatalog = logoCatalog.slice(0, 4).map((logo) => ({
+		name: logo.name,
+		imageUrl: logo.logoUrl,
+		alt: logo.logoAlt
 	}));
 
 	if (fallbackFromCatalog.length >= 1) {
