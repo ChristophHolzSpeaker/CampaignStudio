@@ -82,7 +82,7 @@
 			</div>
 		</div>
 	</div>
-	<div class="filter-shell sticky top-18 z-10">
+	<div class="filter-shell sticky top-0 z-10">
 		<div class="filter-grid">
 			<label class="filter-field">
 				<span>Format</span>
