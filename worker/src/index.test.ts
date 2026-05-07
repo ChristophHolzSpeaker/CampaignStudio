@@ -17,6 +17,10 @@ vi.mock('./routes/gmail-watch-activate', () => ({
 	handleGmailWatchActivate: vi.fn()
 }));
 
+vi.mock('./routes/gmail-watch-stop', () => ({
+	handleGmailWatchStop: vi.fn()
+}));
+
 vi.mock('./routes/booking-calendar-event', () => ({
 	handleBookingCalendarEvent: vi.fn()
 }));
@@ -42,6 +46,7 @@ import { renewGmailWatches } from './lib/gmail/watch';
 import { reconcileMailboxHealth } from './lib/gmail/reconcile';
 import { handleGmailPush } from './routes/gmail-push';
 import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
+import { handleGmailWatchStop } from './routes/gmail-watch-stop';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
 import { handleBookingCalendarEventUpdate } from './routes/booking-calendar-event-update';
 import { handleBookingCalendarBusy } from './routes/booking-calendar-busy';
@@ -53,6 +58,7 @@ const mockedRenewGmailWatches = vi.mocked(renewGmailWatches);
 const mockedReconcileMailboxHealth = vi.mocked(reconcileMailboxHealth);
 const mockedHandleGmailPush = vi.mocked(handleGmailPush);
 const mockedHandleGmailWatchActivate = vi.mocked(handleGmailWatchActivate);
+const mockedHandleGmailWatchStop = vi.mocked(handleGmailWatchStop);
 const mockedHandleBookingCalendarEvent = vi.mocked(handleBookingCalendarEvent);
 const mockedHandleBookingCalendarEventUpdate = vi.mocked(handleBookingCalendarEventUpdate);
 const mockedHandleBookingCalendarBusy = vi.mocked(handleBookingCalendarBusy);
@@ -85,6 +91,7 @@ describe('worker fetch handler', () => {
 	beforeEach(() => {
 		mockedHandleGmailPush.mockReset();
 		mockedHandleGmailWatchActivate.mockReset();
+		mockedHandleGmailWatchStop.mockReset();
 		mockedHandleBookingCalendarEvent.mockReset();
 		mockedHandleBookingCalendarEventUpdate.mockReset();
 		mockedHandleBookingCalendarBusy.mockReset();
@@ -159,6 +166,42 @@ describe('worker fetch handler', () => {
 		const response = await worker.fetch(request, makeTestEnv(), ctx);
 		expect(response.status).toBe(200);
 		expect(mockedHandleGmailWatchActivate).toHaveBeenCalledTimes(1);
+	});
+
+	it('returns unauthorized for /gmail/watch/stop without auth', async () => {
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/gmail/watch/stop', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ gmail_user: 'podcast@christophholz.com' })
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(401);
+		expect(mockedHandleGmailWatchStop).not.toHaveBeenCalled();
+	});
+
+	it('dispatches authorized /gmail/watch/stop to route handler', async () => {
+		mockedHandleGmailWatchStop.mockResolvedValueOnce(
+			new Response(JSON.stringify({ ok: true, status: 'stopped' }), {
+				status: 200,
+				headers: { 'Content-Type': 'application/json' }
+			})
+		);
+
+		const { ctx } = makeTestExecutionContext();
+		const request = new Request('https://worker.test/gmail/watch/stop', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				authorization: 'Bearer test'
+			},
+			body: JSON.stringify({ gmail_user: 'podcast@christophholz.com' })
+		});
+
+		const response = await worker.fetch(request, makeTestEnv(), ctx);
+		expect(response.status).toBe(200);
+		expect(mockedHandleGmailWatchStop).toHaveBeenCalledTimes(1);
 	});
 
 	it('returns unauthorized for /booking/calendar-event without auth', async () => {

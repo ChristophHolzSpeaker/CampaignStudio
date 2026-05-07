@@ -7,6 +7,7 @@ import { renewGmailWatches } from './lib/gmail/watch';
 import { reconcileMailboxHealth } from './lib/gmail/reconcile';
 import { handleGmailPush } from './routes/gmail-push';
 import { handleGmailWatchActivate } from './routes/gmail-watch-activate';
+import { handleGmailWatchStop } from './routes/gmail-watch-stop';
 import { handleHealth } from './routes/health';
 import { handleTrackCTA } from './routes/track-cta';
 import { handleBookingCalendarEvent } from './routes/booking-calendar-event';
@@ -47,6 +48,13 @@ export default {
 					return json({ ok: false, error: 'Unauthorized' }, 401);
 				}
 				return await handleGmailWatchActivate(request, env);
+			}
+
+			if (pathname === '/gmail/watch/stop' && request.method === 'POST') {
+				if (!requireInternalAuth(request, env)) {
+					return json({ ok: false, error: 'Unauthorized' }, 401);
+				}
+				return await handleGmailWatchStop(request, env);
 			}
 
 			if (pathname === '/booking/link' && request.method === 'POST') {

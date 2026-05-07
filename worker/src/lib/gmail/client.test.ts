@@ -11,6 +11,7 @@ import {
 	gmailGetMessage,
 	gmailListHistory,
 	gmailSendMessage,
+	gmailStop,
 	gmailWatch,
 	isHistoryCursorStale
 } from './client';
@@ -114,6 +115,20 @@ describe('gmail client', () => {
 
 		const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
 		expect(body.labelFilterBehavior).toBe('INCLUDE');
+	});
+
+	it('calls stop endpoint for mailbox watch unsubscribe', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValue(new Response(null, { status: 204 }));
+
+		await gmailStop(makeTestEnv(), {
+			gmailUser: 'podcast@christophholz.com'
+		});
+
+		const calledUrl = String(fetchSpy.mock.calls[0]?.[0]);
+		expect(calledUrl).toContain('/users/me/stop');
+		expect(fetchSpy.mock.calls[0]?.[1]?.method).toBe('POST');
 	});
 
 	it('throws GmailApiError with parsed response body on non-2xx', async () => {
