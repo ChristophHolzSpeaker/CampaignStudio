@@ -248,3 +248,15 @@ export async function gmailWatch(
 		}
 	);
 }
+
+export async function gmailStop(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+	}
+): Promise<Record<string, never>> {
+	return gmailRequest<Record<string, never>>(env, params.gmailUser, '/users/me/stop', {
+		method: 'POST',
+		body: {}
+	});
+}
