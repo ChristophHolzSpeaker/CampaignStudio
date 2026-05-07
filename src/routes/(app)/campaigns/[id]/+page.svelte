@@ -109,8 +109,9 @@
 		}
 		busy = false;
 	};
-
-	$inspect(data);
+	const targetStatus = (status?: string) => (status === 'published' ? 'archived' : 'published');
+	const publishLabel = (status?: string) =>
+		status === 'published' ? 'Archive' : 'Publish campaign';
 </script>
 
 <section class="bookings-content space-y-8 p-6 lg:p-10">
@@ -139,6 +140,44 @@
 						{getCampaign()?.topic ?? 'Campaign topic pending.'}
 						{getCampaign()?.audience ? ` · ${getCampaign()?.audience}` : ''}
 					</p>
+					<form action="?/publish" use:enhance method="POST" class="mt-4 flex justify-end">
+						<input type="hidden" name="id" value={getCampaign()?.id} />
+						<input type="hidden" name="target_status" value={targetStatus(getCampaign()?.status)} />
+						<Button>
+							{publishLabel(getCampaign()?.status)}
+						</Button>
+					</form>
+					{#if getCampaign()?.status === 'published'}
+						<div>
+							<span
+								class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
+							>
+								Live Landing Page
+							</span>
+							{#if getLiveLandingUrl()}
+								<div class="space-y-3 rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+									<p class="font-['Space_Grotesk'] text-[11px] break-all text-slate-700">
+										{getLiveLandingUrl()}
+									</p>
+									<Button
+										onclick={copyLiveLandingUrl}
+										isSubmitting={busy}
+										type="button"
+										variant="dark">{copyStatus === 'copied' ? 'Copied' : 'Copy link'}</Button
+									>
+									{#if copyStatus === 'error'}
+										<p class="text-[11px] text-red-500">
+											Couldn't copy automatically. Copy it manually.
+										</p>
+									{/if}
+								</div>
+							{:else}
+								<p class="text-xs text-slate-500 italic">
+									Live URL will appear once the landing page slug is available.
+								</p>
+							{/if}
+						</div>
+					{/if}
 					<form method="POST" action="?/duplicate" class="duplicate-campaign-form">
 						<label
 							for="duplicate-name"
@@ -278,37 +317,7 @@
 							</div>
 						</div>
 					</div>
-					{#if getCampaign()?.status === 'published'}
-						<div>
-							<span
-								class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
-							>
-								Live Landing Page
-							</span>
-							{#if getLiveLandingUrl()}
-								<div class="space-y-3 rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-									<p class="font-['Space_Grotesk'] text-[11px] break-all text-slate-700">
-										{getLiveLandingUrl()}
-									</p>
-									<Button
-										onclick={copyLiveLandingUrl}
-										isSubmitting={busy}
-										type="button"
-										variant="dark">{copyStatus === 'copied' ? 'Copied' : 'Copy link'}</Button
-									>
-									{#if copyStatus === 'error'}
-										<p class="text-[11px] text-red-500">
-											Couldn't copy automatically. Copy it manually.
-										</p>
-									{/if}
-								</div>
-							{:else}
-								<p class="text-xs text-slate-500 italic">
-									Live URL will appear once the landing page slug is available.
-								</p>
-							{/if}
-						</div>
-					{/if}
+
 					<div>
 						<span
 							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"

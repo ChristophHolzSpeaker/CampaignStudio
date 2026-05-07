@@ -5,25 +5,20 @@ import {
 } from '$lib/page-builder/sections';
 import { z } from 'zod';
 
-const heroDefaultsSchema = z
-	.object({
-		videoEmbedUrl: z.string().trim().url(),
-		videoThumbnailUrl: z.string().trim().url().optional(),
-		videoThumbnailAlt: z.string().trim().min(1).optional(),
-		primaryCtaLabelDefault: z.string().trim().min(1),
-		primaryCtaHref: z
-			.string()
-			.trim()
-			.refine((value) => value.startsWith('#') || z.string().url().safeParse(value).success, {
-				message: 'primaryCtaHref must be an absolute URL or an in-page anchor (e.g. #briefing).'
-			})
-			.optional(),
-		primaryCtaAction: z.string().trim().min(1).optional()
-	})
-	.refine((value) => Boolean(value.primaryCtaHref || value.primaryCtaAction), {
-		message: 'Either primaryCtaHref or primaryCtaAction must be provided in heroDefaults.',
-		path: ['primaryCtaHref']
-	});
+const heroDefaultsSchema = z.object({
+	videoEmbedUrl: z.string().trim().url(),
+	videoThumbnailUrl: z.string().trim().url().optional(),
+	videoThumbnailAlt: z.string().trim().min(1).optional(),
+	primaryCtaLabelDefault: z.string().trim().min(1),
+	primaryCtaHref: z
+		.string()
+		.trim()
+		.refine((value) => value.startsWith('#') || z.string().safeParse(value).success, {
+			message: 'primaryCtaHref must be an absolute URL or an in-page anchor (e.g. #briefing).'
+		})
+		.optional(),
+	primaryCtaAction: z.string().trim().min(1).optional()
+});
 
 const bookingDefaultsSchema = z.object({
 	defaultSectionTitle: z.string().trim().min(1),
@@ -67,18 +62,11 @@ export const speakerInActionVideoOptionSchema = z.object({
 	videoThumbnailAlt: z.string().trim().min(1)
 });
 
-export const clientOptionSchema = z.object({
+export const logoOptionSchema = z.object({
 	id: z.string().trim().min(1),
 	name: z.string().trim().min(1),
 	logoUrl: z.string().trim().min(1),
-	logoAlt: z.string().trim().min(1),
-	industry: z.string().trim().min(1),
-	keynoteCaseStudy: z.string().trim().min(1),
-	audiences: z.array(z.string().trim().min(1)).default([]),
-	topics: z.array(z.string().trim().min(1)).default([]),
-	formats: z.array(z.string().trim().min(1)).default([]),
-	geographies: z.array(z.string().trim().min(1)).default([]),
-	intentTags: z.array(z.string().trim().min(1)).default([])
+	logoAlt: z.string().trim().min(1)
 });
 
 export const keynoteOptionSchema = z.object({
@@ -86,19 +74,14 @@ export const keynoteOptionSchema = z.object({
 	title: z.string().trim().min(1),
 	summary: z.string().trim().min(1),
 	imageUrl: z.string().trim().url(),
-	imageAlt: z.string().trim().min(1),
-	audiences: z.array(z.string().trim().min(1)).default([]),
-	topics: z.array(z.string().trim().min(1)).default([]),
-	formats: z.array(z.string().trim().min(1)).default([]),
-	geographies: z.array(z.string().trim().min(1)).default([]),
-	intentTags: z.array(z.string().trim().min(1)).default([])
+	imageAlt: z.string().trim().min(1)
 });
 
 const assetCatalogSchema = z.object({
 	heroVideos: z.array(heroVideoOptionSchema),
 	hybridSupportingImages: z.array(hybridSupportingImageOptionSchema),
 	speakerInActionVideos: z.array(speakerInActionVideoOptionSchema),
-	clientCatalog: z.array(clientOptionSchema).default([]),
+	logoCatalog: z.array(logoOptionSchema).default([]),
 	keynoteCatalog: z.array(keynoteOptionSchema).default([])
 });
 
@@ -112,7 +95,7 @@ export const landingPageAssetsSchema = z.object({
 		heroVideos: [],
 		hybridSupportingImages: [],
 		speakerInActionVideos: [],
-		clientCatalog: [],
+		logoCatalog: [],
 		keynoteCatalog: []
 	})
 });
@@ -121,5 +104,5 @@ export type LandingPageAssets = z.infer<typeof landingPageAssetsSchema>;
 export type HeroVideoOption = z.infer<typeof heroVideoOptionSchema>;
 export type HybridSupportingImageOption = z.infer<typeof hybridSupportingImageOptionSchema>;
 export type SpeakerInActionVideoOption = z.infer<typeof speakerInActionVideoOptionSchema>;
-export type ClientOption = z.infer<typeof clientOptionSchema>;
+export type LogoOption = z.infer<typeof logoOptionSchema>;
 export type KeynoteOption = z.infer<typeof keynoteOptionSchema>;

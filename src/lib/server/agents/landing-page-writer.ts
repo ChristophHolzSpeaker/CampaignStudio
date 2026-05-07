@@ -308,41 +308,17 @@ function resolveSpeakerInActionSelection(
 
 function resolveLogosOfTrustSelection(
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	_plan: LandingPagePlan
 ): { name: string; imageUrl: string; alt: string }[] {
-	const clientCatalog = input.assets.assetCatalog.clientCatalog;
-	if (clientCatalog.length === 0) {
+	const logoCatalog = input.assets.assetCatalog.logoCatalog;
+	if (logoCatalog.length === 0) {
 		return input.assets.fixedLogosRibbon.logos.slice(0, 4);
 	}
 
-	const selectedIds = plan.assetPlan?.logosOfTrustRibbon?.clientIds ?? [];
-	const catalogById = new Map(clientCatalog.map((client) => [client.id, client]));
-	const resolved: { name: string; imageUrl: string; alt: string }[] = [];
-
-	for (const id of selectedIds) {
-		const selected = catalogById.get(id);
-		if (!selected) {
-			console.warn(
-				`Landing page writer: logos_of_trust_ribbon client '${id}' not found in approved catalog; skipping this client.`
-			);
-			continue;
-		}
-
-		resolved.push({
-			name: selected.name,
-			imageUrl: selected.logoUrl,
-			alt: selected.logoAlt
-		});
-	}
-
-	if (resolved.length >= 1) {
-		return resolved.slice(0, 4);
-	}
-
-	const fallbackFromCatalog = clientCatalog.slice(0, 4).map((client) => ({
-		name: client.name,
-		imageUrl: client.logoUrl,
-		alt: client.logoAlt
+	const fallbackFromCatalog = logoCatalog.slice(0, 4).map((logo) => ({
+		name: logo.name,
+		imageUrl: logo.logoUrl,
+		alt: logo.logoAlt
 	}));
 
 	if (fallbackFromCatalog.length >= 1) {
@@ -354,12 +330,11 @@ function resolveLogosOfTrustSelection(
 
 function resolveKeynoteSelection(
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan,
+	_plan: LandingPagePlan,
 	requestedIds: string[] = []
 ): { id: string; title: string; imageUrl: string; summary: string }[] {
 	const catalog = input.assets.assetCatalog.keynoteCatalog;
-	const selectedIds =
-		requestedIds.length > 0 ? requestedIds : (plan.assetPlan?.keynoteSpeeches?.keynoteIds ?? []);
+	const selectedIds = requestedIds;
 	const catalogById = new Map(catalog.map((keynote) => [keynote.id, keynote]));
 	const resolved: { id: string; title: string; imageUrl: string; summary: string }[] = [];
 
@@ -877,7 +852,7 @@ Corrective rules:
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
 - For speaker_in_action media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
-- For keynote_speeches, use plan.assetPlan.keynoteSpeeches.keynoteIds with input.assets.assetCatalog.keynoteCatalog.
+- For keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
@@ -894,7 +869,7 @@ Corrective rules:
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 - For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
 - For keynote_speeches, title and intro are required.
-- For keynote_speeches, include keynoteIds with exactly 3 values from plan.assetPlan.keynoteSpeeches.keynoteIds.
+- For keynote_speeches, include keynoteIds with exactly 3 values from input.assets.assetCatalog.keynoteCatalog order.
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}

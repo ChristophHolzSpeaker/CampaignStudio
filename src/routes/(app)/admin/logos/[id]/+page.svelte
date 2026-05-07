@@ -7,13 +7,13 @@
 </script>
 
 <svelte:head>
-	<title>Edit Keynote</title>
+	<title>Edit Logo</title>
 </svelte:head>
 
 <section class="bookings-content space-y-8 p-6 lg:p-10">
 	<header class="mb-6">
-		<h1 class="text-3xl font-semibold tracking-tight">Edit keynote</h1>
-		<p class="mt-2 text-sm text-neutral-600">Update keynote title, summary, and image.</p>
+		<h1 class="text-3xl font-semibold tracking-tight">Edit logo</h1>
+		<p class="mt-2 text-sm text-neutral-600">Update logo details for campaign generation.</p>
 	</header>
 
 	<form
@@ -23,35 +23,35 @@
 		use:enhance
 	>
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Keynote title</span>
+			<span>Client name</span>
 			<input
-				name="keynoteTitle"
+				name="name"
 				required
-				value={data.keynote.keynote_title}
+				value={data.logo.name}
 				class="rounded border border-neutral-300 px-3 py-2"
 			/>
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Image alt text</span>
+			<span>Logo alt text</span>
 			<input
-				name="imageAlt"
+				name="logoAlt"
 				required
-				value={data.keynote.image_alt}
+				value={data.logo.logo_alt}
 				class="rounded border border-neutral-300 px-3 py-2"
 			/>
 		</label>
 
 		<div class="flex items-center gap-4 rounded border border-neutral-200 p-3">
 			<img
-				src={data.keynote.image_url}
-				alt={data.keynote.image_alt}
-				class="h-16 w-24 rounded object-cover"
+				src={data.logo.logo_url}
+				alt={data.logo.logo_alt}
+				class="h-10 w-auto max-w-32 object-contain"
 			/>
 			<label class="flex flex-col gap-1 text-sm">
-				<span>Replace image (optional)</span>
+				<span>Replace logo (optional)</span>
 				<input
-					name="imageFile"
+					name="logoFile"
 					type="file"
 					accept="image/png,image/jpeg,image/webp"
 					class="rounded border border-neutral-300 px-3 py-2"
@@ -60,13 +60,16 @@
 		</div>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Keynote summary</span>
-			<textarea
-				name="keynoteSummary"
+			<span>Priority</span>
+			<input
+				name="priority"
+				type="number"
+				min="1"
+				max="999"
+				value={data.logo.priority}
 				required
-				rows="6"
-				class="rounded border border-neutral-300 px-3 py-2">{data.keynote.keynote_summary}</textarea
-			>
+				class="rounded border border-neutral-300 px-3 py-2"
+			/>
 		</label>
 
 		{#if form?.formError}
@@ -75,7 +78,7 @@
 
 		<div class="flex items-center gap-3">
 			<Button>Save changes</Button>
-			<NavButton href="/admin/keynotes" variant="outline">Cancel</NavButton>
+			<NavButton href="/admin/logos" variant="outline">Cancel</NavButton>
 		</div>
 	</form>
 </section>

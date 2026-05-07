@@ -1,13 +1,17 @@
 <script lang="ts">
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
+	import DirectAccess from './DirectAccess.svelte';
 
-	let { props }: { props?: HybridContentSectionProps } = $props();
+	let {
+		props,
+		mailtoHref = 'mailto:speaker@christophholz.com'
+	}: { props?: HybridContentSectionProps; mailtoHref?: string } = $props();
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
 
 	let itemRefs = $state<HTMLElement[]>([]);
 	let visibleItems = $state<Set<number>>(new Set());
-	const revealOffset = 400;
+	const revealOffset = 600;
 	function checkInView() {
 		for (const [index, el] of itemRefs.entries()) {
 			if (!el || visibleItems.has(index)) continue;
@@ -85,7 +89,7 @@
 	</div>
 </section>
 
-<section class="overflow-hidden bg-on-surface px-6 py-20 text-surface sm:px-8 lg:px-12 lg:py-28">
+<section class="overflow-hidden bg-on-surface px-6 pt-20 text-surface sm:px-8 lg:px-12 lg:pt-28">
 	<div class="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2 lg:gap-16">
 		<div>
 			<h2 class="mb-10 text-4xl leading-[0.95] font-bold tracking-tight lg:text-6xl">
@@ -94,7 +98,16 @@
 			{#if deepDiveItems.length > 0}
 				<div class="space-y-10">
 					{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
-						<div class="flex gap-4 sm:gap-6">
+						<div
+							class={[
+								'flex gap-4 transition-all duration-500 ease-out sm:gap-6',
+								visibleItems.has(index + benefits.length)
+									? 'translate-y-0 opacity-100'
+									: 'translate-y-8 opacity-0'
+							]}
+							style={`transition-delay: ${index * 120}ms`}
+							bind:this={itemRefs[index + benefits.length]}
+						>
 							<span class="text-lg text-primary">{`0${index + 1}`}</span>
 							<div>
 								<h4 class="mb-2 text-2xl leading-tight font-bold tracking-tight">{item.title}</h4>
@@ -127,3 +140,5 @@
 		</div>
 	</div>
 </section>
+
+<DirectAccess props={{ mailtoHref }}></DirectAccess>

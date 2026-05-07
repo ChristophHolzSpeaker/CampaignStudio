@@ -105,7 +105,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 		const targetStatus = formData.get('target_status')?.toString() ?? 'draft';
-		console.log('publishing campaign', { id, targetStatus });
+
 		if (!id) {
 			return { success: false };
 		}

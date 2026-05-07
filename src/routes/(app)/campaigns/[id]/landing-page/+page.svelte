@@ -8,6 +8,7 @@
 	import type { LandingPageDocument } from '$lib/page-builder/page';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
+	import Button from '$lib/components/elements/Button.svelte';
 
 	type LandingPageEditState = {
 		values: {
@@ -23,19 +24,36 @@
 	const getViewData = () =>
 		data as {
 			page: LandingPageDocument;
+			availableLogos: Array<{ id: string; name: string; logoUrl: string; logoAlt: string }>;
+			availableKeynotes: Array<{
+				id: string;
+				title: string;
+				summary: string;
+				imageUrl: string;
+				imageAlt: string;
+			}>;
 			campaignId: number;
 			campaignPageId: number | null;
 			campaignStatus: string | null;
 		};
 
-	const getEditState = (): LandingPageEditState | null => {
-		const actionData = form as { pageEdit?: LandingPageEditState } | null | undefined;
-		return actionData?.pageEdit ?? null;
+	const getCurrentLogoIds = () => {
+		const section = getViewData().page.sections.find(
+			(item) => item.type === 'logos_of_trust_ribbon'
+		);
+		if (!section || !('logos' in section.props) || !Array.isArray(section.props.logos)) {
+			return [] as string[];
+		}
+
+		const byName = new Map(
+			getViewData().availableLogos.map((logo) => [logo.name.trim().toLowerCase(), logo.id])
+		);
+
+		return section.props.logos
+			.map((logo) => byName.get(logo.name.trim().toLowerCase()))
+			.filter((id): id is string => Boolean(id));
 	};
 
-	const getPromptValue = () => getEditState()?.values.changePrompt ?? '';
-	const getEditMessage = () => getEditState()?.message ?? null;
-	const getEditMessageIsSuccess = () => getEditState()?.success === true;
 	const canEditPage = () => {
 		const viewData = getViewData();
 		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
@@ -53,24 +71,31 @@
 		return 'Describe text, section order, section removal, or approved media changes.';
 	};
 
+	const getCurrentKeynoteIds = () => {
+		const section = getViewData().page.sections.find((item) => item.type === 'keynote_speeches');
+		if (!section || !('keynoteIds' in section.props) || !Array.isArray(section.props.keynoteIds)) {
+			return [] as string[];
+		}
+
+		return section.props.keynoteIds.filter((id): id is string => typeof id === 'string');
+	};
+
+	const isKeynoteSelectionDisabled = (keynoteId: string) => {
+		const selected = getCurrentKeynoteIds();
+		return selected.length >= 3 && !selected.includes(keynoteId);
+	};
+
+	let busy = $state(false);
+
 	const handleEditSubmit: SubmitFunction = () => {
-		return async ({ result, update }) => {
-			if (result.type === 'success') {
-				await goto(`/campaigns/${getViewData().campaignId}/landing-page`, {
-					replaceState: true,
-					invalidateAll: true,
-					noScroll: true,
-					keepFocus: true
-				});
-				return;
-			}
+		busy = true;
 
-			if (result.type === 'failure') {
-				await update({ reset: false });
-				return;
+		return async ({ update }) => {
+			try {
+				await update({ reset: true, invalidateAll: true });
+			} finally {
+				busy = false;
 			}
-
-			await update();
 		};
 	};
 </script>
@@ -88,18 +113,69 @@
 		</div>
 		<div class="composer-controls">
 			<textarea
+				value={form?.pageEdit?.values?.changePrompt ?? ''}
 				name="change_prompt"
 				rows="3"
 				placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
-				disabled={!canEditPage()}>{getPromptValue()}</textarea
-			>
-			<button type="submit" disabled={!canEditPage()}>Apply changes</button>
+				disabled={!canEditPage()}
+			></textarea>
+			<Button variant="dark" isSubmitting={busy} disabled={!canEditPage()}>Apply changes</Button>
 		</div>
-		{#if getEditMessage()}
-			<p class="composer-message" class:success={getEditMessageIsSuccess()}>{getEditMessage()}</p>
+		{#if form?.pageEdit}
+			<p class="composer-message" class:success={form?.pageEdit?.success ?? false}>
+				{form?.pageEdit?.message ?? ''}
+			</p>
 		{/if}
 	</form>
 </aside>
+
+<div class="picker-stack">
+	<aside class="logo-picker" aria-label="Landing page logo picker">
+		<form method="POST" use:enhance={handleEditSubmit} action="?/setLogos" class="picker-form">
+			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+			<p class="picker-title">Logos for trust ribbon</p>
+			<div class="picker-grid">
+				{#each getViewData().availableLogos as logo (logo.id)}
+					<label class="picker-item">
+						<input
+							type="checkbox"
+							name="logoIds"
+							value={logo.id}
+							checked={getCurrentLogoIds().includes(logo.id)}
+							disabled={!canEditPage()}
+						/>
+						<img src={logo.logoUrl} alt={logo.logoAlt} class="picker-logo" />
+						<span>{logo.name}</span>
+					</label>
+				{/each}
+			</div>
+			<button type="submit" disabled={!canEditPage()}>Save logos</button>
+		</form>
+	</aside>
+
+	<aside class="keynote-picker" aria-label="Landing page keynote picker">
+		<form method="POST" use:enhance={handleEditSubmit} action="?/setKeynotes" class="picker-form">
+			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+			<p class="picker-title">Keynotes</p>
+			<div class="picker-grid keynote-picker-grid">
+				{#each getViewData().availableKeynotes as keynote (keynote.id)}
+					<label class="picker-item keynote-item">
+						<input
+							type="checkbox"
+							name="keynoteIds"
+							value={keynote.id}
+							checked={getCurrentKeynoteIds().includes(keynote.id)}
+							disabled={!canEditPage()}
+						/>
+						<img src={keynote.imageUrl} alt={keynote.imageAlt} class="picker-keynote-image" />
+						<span>{keynote.title}</span>
+					</label>
+				{/each}
+			</div>
+			<button type="submit" disabled={!canEditPage()}>Save keynotes</button>
+		</form>
+	</aside>
+</div>
 
 {#if page.state.modal?.kind === 'youtube'}
 	<ShallowRouteModal title="Showreel" onclose={() => history.back()}>
@@ -222,5 +298,73 @@
 		.composer-controls button {
 			justify-self: stretch;
 		}
+	}
+
+	.picker-stack {
+		position: fixed;
+		right: 1rem;
+		bottom: 1rem;
+		z-index: 40;
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.logo-picker,
+	.keynote-picker {
+		width: 320px;
+		border: 1px solid #d9dbcf;
+		background: #ffffff;
+		box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
+	}
+
+	.picker-form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 0.875rem;
+	}
+
+	.picker-title {
+		margin: 0;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #1f2937;
+	}
+
+	.picker-grid {
+		display: grid;
+		max-height: 200px;
+		overflow: auto;
+		gap: 0.5rem;
+	}
+
+	.picker-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.8rem;
+	}
+
+	.picker-logo {
+		height: 20px;
+		max-width: 70px;
+		object-fit: contain;
+	}
+
+	.keynote-picker-grid {
+		max-height: 260px;
+	}
+
+	.keynote-item {
+		align-items: flex-start;
+	}
+
+	.picker-keynote-image {
+		width: 56px;
+		height: 42px;
+		object-fit: cover;
+		border: 1px solid #d1d5db;
 	}
 </style>

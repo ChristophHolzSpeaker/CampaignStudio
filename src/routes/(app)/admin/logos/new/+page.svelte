@@ -7,14 +7,13 @@
 </script>
 
 <svelte:head>
-	<title>New Keynote</title>
+	<title>New Logo</title>
 </svelte:head>
+
 <section class="bookings-content space-y-8 p-6 lg:p-10">
 	<header class="mb-6">
-		<h1 class="text-3xl font-semibold tracking-tight">Add keynote</h1>
-		<p class="mt-2 text-sm text-neutral-600">
-			Create a keynote profile with title, summary, and image.
-		</p>
+		<h1 class="text-3xl font-semibold tracking-tight">Add logo</h1>
+		<p class="mt-2 text-sm text-neutral-600">Create a trusted logo for landing page generation.</p>
 	</header>
 
 	<form
@@ -24,34 +23,37 @@
 		use:enhance
 	>
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Keynote title</span>
-			<input name="keynoteTitle" required class="rounded border border-neutral-300 px-3 py-2" />
+			<span>Client name</span>
+			<input name="name" required class="rounded border border-neutral-300 px-3 py-2" />
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Image alt text</span>
-			<input name="imageAlt" required class="rounded border border-neutral-300 px-3 py-2" />
+			<span>Logo alt text</span>
+			<input name="logoAlt" required class="rounded border border-neutral-300 px-3 py-2" />
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Image file (PNG, JPG, WEBP, max 5MB)</span>
+			<span>Logo file (PNG, SVG, WEBP, max 1MB)</span>
 			<input
-				name="imageFile"
+				name="logoFile"
 				type="file"
-				accept="image/png,image/jpeg,image/webp"
+				accept="image/png ,image/webp, image/svg+xml"
 				required
 				class="rounded border border-neutral-300 px-3 py-2"
 			/>
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Keynote summary</span>
-			<textarea
-				name="keynoteSummary"
+			<span>Priority</span>
+			<input
+				name="priority"
+				type="number"
+				min="1"
+				max="999"
+				value="100"
 				required
-				rows="6"
 				class="rounded border border-neutral-300 px-3 py-2"
-			></textarea>
+			/>
 		</label>
 
 		{#if form?.formError}
@@ -59,8 +61,8 @@
 		{/if}
 
 		<div class="flex items-center gap-3">
-			<Button>Create keynote</Button>
-			<NavButton variant="outline" href="/admin/keynotes">Cancel</NavButton>
+			<Button>Create logo</Button>
+			<NavButton variant="outline" href="/admin/logos">Cancel</NavButton>
 		</div>
 	</form>
 </section>

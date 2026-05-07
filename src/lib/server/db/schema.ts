@@ -645,8 +645,8 @@ export const prompts = pgTable('prompts', {
 	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
 
-export const clients = pgTable(
-	'clients',
+export const logos = pgTable(
+	'logos',
 	{
 		id: text('id').primaryKey(),
 		name: text('name').notNull(),
@@ -654,37 +654,14 @@ export const clients = pgTable(
 		logo_bucket: text('logo_bucket'),
 		logo_path: text('logo_path'),
 		logo_alt: text('logo_alt').notNull(),
-		industry: text('industry').notNull(),
-		keynote_case_study: text('keynote_case_study').notNull(),
-		audiences: text('audiences')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		topics: text('topics')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		formats: text('formats')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		geographies: text('geographies')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		intent_tags: text('intent_tags')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
 		is_active: boolean('is_active').notNull().default(true),
 		priority: integer('priority').notNull().default(100),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
 	},
 	(table) => ({
-		activeIdx: index('clients_active_idx').on(table.is_active),
-		industryIdx: index('clients_industry_idx').on(table.industry),
-		priorityIdx: index('clients_priority_idx').on(table.priority)
+		activeIdx: index('logos_active_idx').on(table.is_active),
+		priorityIdx: index('logos_priority_idx').on(table.priority)
 	})
 );
 
@@ -698,34 +675,12 @@ export const keynotes = pgTable(
 		image_bucket: text('image_bucket'),
 		image_path: text('image_path'),
 		image_alt: text('image_alt').notNull(),
-		audiences: text('audiences')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		topics: text('topics')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		formats: text('formats')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		geographies: text('geographies')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
-		intent_tags: text('intent_tags')
-			.array()
-			.notNull()
-			.default(sql`'{}'::text[]`),
 		is_active: boolean('is_active').notNull().default(true),
-		priority: integer('priority').notNull().default(100),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
 	},
 	(table) => ({
-		activeIdx: index('keynotes_active_idx').on(table.is_active),
-		priorityIdx: index('keynotes_priority_idx').on(table.priority)
+		activeIdx: index('keynotes_active_idx').on(table.is_active)
 	})
 );
 
