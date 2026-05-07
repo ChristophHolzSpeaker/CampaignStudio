@@ -24,10 +24,10 @@ BOOKING_LINK_TTL_SECONDS = "2592000"
 crons = ["*/15 * * * *"]
 
 [env.production]
-name = "campaignstudio-attribution-worker-production"
+name = "campaignstudio-attribution-worker"
 
 [env.production.vars]
-BOOKING_BASE_URL = "https://campaignstudio-attribution-worker-production.speaker.workers.dev"
+BOOKING_BASE_URL = "https://campaignstudio-attribution-worker.speaker.workers.dev"
 BOOKING_CALENDAR_ID = "podcast@christophholz.com"
 BOOKING_LINK_TTL_SECONDS = "2592000"
 
