@@ -3,6 +3,24 @@ import { getGmailAccessToken } from './auth';
 
 const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1';
 
+function isGmailDebugLoggingEnabled(env: WorkerEnv): boolean {
+	return env.GMAIL_DEBUG_LOGGING?.trim().toLowerCase() === 'true';
+}
+
+function redactEmailAddress(value: string): string {
+	const parts = value.split('@');
+	if (parts.length !== 2) {
+		return 'invalid_email';
+	}
+
+	const [localPart, domain] = parts;
+	if (localPart.length <= 2) {
+		return `**@${domain}`;
+	}
+
+	return `${localPart.slice(0, 2)}***@${domain}`;
+}
+
 export type GmailHeader = {
 	name?: string;
 	value?: string;
@@ -108,6 +126,17 @@ async function gmailRequest<T>(
 		} catch {
 			body = text;
 		}
+
+		if (isGmailDebugLoggingEnabled(env)) {
+			console.error('gmail_api_request_failed', {
+				status: response.status,
+				method: options.method ?? 'GET',
+				path,
+				delegated_user: redactEmailAddress(delegatedUser),
+				response_body: body
+			});
+		}
+
 		throw new GmailApiError(
 			response.status,
 			`Gmail API request failed (${response.status}) ${options.method ?? 'GET'} ${path}`,
