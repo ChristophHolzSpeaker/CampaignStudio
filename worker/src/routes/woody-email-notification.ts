@@ -7,6 +7,7 @@ import type {
 	WoodyEmailNotificationResponse
 } from '../../../shared/woody-email-notifications';
 import { sendOutboundEmail } from '../lib/gmail/send';
+import { GmailApiError } from '../lib/gmail/client';
 
 const bookingTypeSchema = z.enum(['lead', 'general']);
 
@@ -134,6 +135,37 @@ export async function handleWoodyEmailNotification(
 		return json(response);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'Woody email send failed';
+		if (env.GMAIL_DEBUG_LOGGING?.trim().toLowerCase() === 'true') {
+			console.error('woody_email_send_failed', {
+				intent: input.intent,
+				recipient_email: input.recipient_email,
+				gmail_user: requireEnv(env, 'GOOGLE_IMPERSONATED_USER'),
+				error_message: message,
+				error_details:
+					error instanceof GmailApiError
+						? {
+								status: error.status,
+								body: error.body
+							}
+						: null
+			});
+
+			return json(
+				{
+					ok: false,
+					error: message,
+					details:
+						error instanceof GmailApiError
+							? {
+									status: error.status,
+									body: error.body
+								}
+							: null
+				},
+				502
+			);
+		}
+
 		return json({ ok: false, error: message }, 502);
 	}
 }
