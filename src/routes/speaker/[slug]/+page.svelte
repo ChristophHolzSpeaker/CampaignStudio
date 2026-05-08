@@ -6,6 +6,7 @@
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
 	import LeadBookingPage from '../../book/l/[token]/+page.svelte';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
+	import type { PageData } from './$types';
 
 	let {
 		data
@@ -15,6 +16,7 @@
 			campaignId: number | null;
 			campaignPageId: number | null;
 			speakerMailtoHref: string;
+			bookingSlotGroups: PageData['bookingSlotGroups'];
 		};
 	} = $props();
 
@@ -31,6 +33,7 @@
 	campaignId={data.campaignId}
 	campaignPageId={data.campaignPageId}
 	mailtoHref={data.speakerMailtoHref}
+	bookingSlotGroups={data.bookingSlotGroups}
 />
 
 {#if modal?.kind === 'youtube'}

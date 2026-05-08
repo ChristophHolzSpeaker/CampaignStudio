@@ -147,10 +147,15 @@
 	<div class="mx-auto w-full max-w-7xl">
 		<div class="hidden justify-between lg:flex">
 			<div class="w-full">
-				<a href="/" aria-current="page" class="mr-2 text-5xl" aria-label="home">Christoph Holz</a>
+				<a
+					href="https://www.christophholz.com/"
+					aria-current="page"
+					class="mr-2 text-5xl"
+					aria-label="home">Christoph Holz</a
+				>
 			</div>
 			<nav class="flex w-full justify-end gap-4">
-				<button
+				<a
 					bind:this={trigger}
 					onclick={() => {
 						categoriesDropdown = !categoriesDropdown;
@@ -159,20 +164,17 @@
 					class="nav-normal h-full border-b-2 border-transparent p-2 leading-6 hover:border-black"
 				>
 					Categories
-				</button>
-				<button
-					onclick={() =>
-						goto(
-							'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6308862c3f689acc1eee77e7_Speaker.Christoph.Holz.Booklet_EN.2022.pdf'
-						)}
+				</a>
+				<a
+					href="https://cdn.prod.website-files.com/61263e0de406f497361dca55/6308862c3f689acc1eee77e7_Speaker.Christoph.Holz.Booklet_EN.2022.pdf"
+					target="_blank"
 					id="booklet-link"
 					class="nav-normal h-full border-b-2 border-transparent p-2 leading-6 hover:border-black"
 					>Booklet
-				</button>
-				<button
-					onclick={() => goto('#contact')}
-					class="nav-normal h-full border-b-2 border-transparent p-2 hover:border-black"
-					>Contact</button
+				</a>
+				<a
+					href="#booking"
+					class="nav-normal h-full border-b-2 border-transparent p-2 hover:border-black">Contact</a
 				>
 				<div class="flex h-full items-center gap-4">
 					{#snippet socialIcon({ href, icon }: { href: string; icon: string })}

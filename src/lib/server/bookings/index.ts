@@ -15,3 +15,4 @@ export * from './admin-settings-service';
 export * from './woody-email-service';
 export * from './lead-intake-context';
 export * from './link-creation';
+export * from './intent-classification';

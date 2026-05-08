@@ -12,6 +12,7 @@ import {
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { resolvePublicBookingSlotPreview } from '$lib/server/bookings';
 
 export const load: PageServerLoad = async ({ params, cookies, url, request }) => {
 	const slug = params.slug?.trim();
@@ -36,6 +37,7 @@ export const load: PageServerLoad = async ({ params, cookies, url, request }) =>
 	}
 
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
+	const slotPreview = await resolvePublicBookingSlotPreview({ bookingType: 'lead' });
 
 	const visitorIdentifier = getOrCreateVisitorIdentifier({
 		cookies,
@@ -59,6 +61,7 @@ export const load: PageServerLoad = async ({ params, cookies, url, request }) =>
 		page,
 		campaignId: pageRecord.campaignId,
 		campaignPageId: pageRecord.campaignPageId,
+		bookingSlotGroups: slotPreview.slotGroups,
 		speakerMailtoHref: buildSpeakerMailtoHref({
 			campaignId: pageRecord.campaignId,
 			campaignPageId: pageRecord.campaignPageId,

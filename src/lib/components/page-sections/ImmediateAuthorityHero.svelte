@@ -14,7 +14,7 @@
 		campaignPageId?: number | null;
 	} = $props();
 
-	const ctaHref = $derived(props?.primaryCtaHref ?? '#booking');
+	const ctaHref = $derived('#booking');
 	const ctaLabel = $derived(props?.primaryCtaLabel ?? 'Request Speaking Availability');
 	const eyebrow = $derived(props?.eyebrow ?? 'The Digital Future Authority');
 	const headline = $derived(
