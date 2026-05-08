@@ -8,7 +8,6 @@
 	import type { LandingPageDocument } from '$lib/page-builder/page';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
-	import Button from '$lib/components/elements/Button.svelte';
 
 	type LandingPageEditState = {
 		values: {
@@ -119,7 +118,9 @@
 				placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
 				disabled={!canEditPage()}
 			></textarea>
-			<Button variant="dark" isSubmitting={busy} disabled={!canEditPage()}>Apply changes</Button>
+			<button type="submit" disabled={!canEditPage() || busy}>
+				{busy ? 'Applying...' : 'Apply changes'}
+			</button>
 		</div>
 		{#if form?.pageEdit}
 			<p class="composer-message" class:success={form?.pageEdit?.success ?? false}>

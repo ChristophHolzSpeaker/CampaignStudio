@@ -17,6 +17,8 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
+.secrets
+.secrets.*
 
 # Worker local secrets
 worker/.dev.vars

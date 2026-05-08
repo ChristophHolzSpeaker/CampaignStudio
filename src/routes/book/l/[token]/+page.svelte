@@ -436,7 +436,7 @@
 											aria-controls={`booking-day-panel-${day.dateKey}`}
 											aria-selected={resolvedDayKey === day.dateKey}
 											class={[
-												'border px-3 py-2 text-xl font-(--font-sans) uppercase transition',
+												'border px-3 py-2 text-xl  uppercase transition',
 												resolvedDayKey === day.dateKey
 													? 'border-(--accent-strong) bg-(--accent-strong) text-white'
 													: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'

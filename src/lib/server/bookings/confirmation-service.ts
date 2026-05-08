@@ -25,7 +25,7 @@ import { randomBytes } from 'node:crypto';
 const SLOT_UNAVAILABLE_MESSAGE =
 	'That slot is no longer available. Please choose another available time.';
 const CALENDAR_SYNC_FAILED_MESSAGE =
-	'Your booking was received, but calendar sync is temporarily unavailable. We will follow up shortly.';
+	'Your booking was received, but calendar sync is temporarily unavailable. Please feel free to email directly speaker@christophholz.com';
 
 function generateRescheduleToken(): string {
 	return randomBytes(32).toString('base64url');

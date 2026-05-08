@@ -30,6 +30,13 @@ export type PublicBookingResolution = {
 	slotGroups: PublicBookingSlotDayGroup[];
 };
 
+export type PublicBookingSlotPreview = {
+	availability: BookingAvailabilityResult;
+	searchStartsAt: Date;
+	searchEndsAt: Date;
+	slotGroups: PublicBookingSlotDayGroup[];
+};
+
 export function getPublicBookingSearchWindow(input?: { now?: Date; windowDays?: number }): {
 	searchStartsAt: Date;
 	searchEndsAt: Date;
@@ -108,6 +115,30 @@ export async function resolvePublicBookingSlots(input: {
 
 	return {
 		classification,
+		availability,
+		searchStartsAt,
+		searchEndsAt,
+		slotGroups: toSlotGroups(availability)
+	};
+}
+
+export async function resolvePublicBookingSlotPreview(input: {
+	bookingType: BookingType;
+	now?: Date;
+}): Promise<PublicBookingSlotPreview> {
+	const now = input.now ?? new Date();
+	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({ now });
+
+	const availability = await getBookingAvailability({
+		bookingType: input.bookingType,
+		searchStartsAt,
+		searchEndsAt,
+		calendarProvider: createPublicBookingCalendarProvider(),
+		calendarId: PUBLIC_BOOKING_CALENDAR_ID,
+		now
+	});
+
+	return {
 		availability,
 		searchStartsAt,
 		searchEndsAt,
