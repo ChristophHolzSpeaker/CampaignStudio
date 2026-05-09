@@ -105,6 +105,7 @@ export interface HybridContentSectionProps {
 	deepDiveTitle: string;
 	deepDiveItems: HybridDeepDiveItem[];
 	supportingVisualItems?: HybridSupportingVisualItem[];
+	emailCtaTitle?: string;
 }
 
 export interface TestimonialItem {
