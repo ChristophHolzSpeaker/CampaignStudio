@@ -44,7 +44,7 @@
 
 <svelte:window bind:scrollY />
 <section
-	class="bg-surface px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
+	class="bg-surface-container px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
 >
 	<div class="mx-auto max-w-7xl">
@@ -141,4 +141,4 @@
 	</div>
 </section>
 
-<DirectAccess props={{ mailtoHref }}></DirectAccess>
+<DirectAccess props={{ mailtoHref, emailCtaTitle: props?.emailCtaTitle }}></DirectAccess>

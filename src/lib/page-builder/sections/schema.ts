@@ -106,7 +106,8 @@ export const hybridContentSectionPropsSchema = z.object({
 	benefits: z.array(hybridBenefitItemSchema).min(1),
 	deepDiveTitle: z.string().trim().min(1),
 	deepDiveItems: z.array(hybridDeepDiveItemSchema).min(1),
-	supportingVisualItems: z.array(hybridSupportingVisualItemSchema).optional()
+	supportingVisualItems: z.array(hybridSupportingVisualItemSchema).optional(),
+	emailCtaTitle: z.string().optional()
 });
 
 export const testimonialItemSchema = z.object({
