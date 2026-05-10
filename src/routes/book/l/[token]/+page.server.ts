@@ -14,6 +14,7 @@ import {
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
 import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
+import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
 import {
 	bookingConfirmationSchema,
 	bookingIntakeSchema,
@@ -296,6 +297,26 @@ export const actions: Actions = {
 				});
 			}
 
+			try {
+				await notifyBookingFormSubmission({
+					flow: 'book_l_new',
+					email: parseResult.data.email,
+					name: parseResult.data.name ?? null,
+					phone: parseResult.data.phone ?? null,
+					company: parseResult.data.company ?? null,
+					scope: parseResult.data.scope,
+					campaignId,
+					campaignPageId,
+					pageSlug: utmPageSlug,
+					pagePath: '/book/l/new'
+				});
+			} catch (error) {
+				console.error('booking_form_submission_notification_failed', {
+					flow: 'book_l_new',
+					error: error instanceof Error ? error.message : 'unknown_error'
+				});
+			}
+
 			// Read visitor identifier
 			const visitorIdentifier = readVisitorIdentifier(cookies);
 
@@ -425,6 +446,26 @@ export const actions: Actions = {
 			return fail<LeadBookingActionData>(400, {
 				values,
 				errors: toBookingIntakeFieldErrors(parseResult.error)
+			});
+		}
+
+		try {
+			await notifyBookingFormSubmission({
+				flow: 'book_l_existing',
+				email: parseResult.data.email,
+				name: parseResult.data.name ?? null,
+				phone: parseResult.data.phone ?? null,
+				company: parseResult.data.company ?? null,
+				scope: parseResult.data.scope,
+				campaignId: tokenResolution.context.campaignId,
+				campaignPageId: null,
+				pageSlug: null,
+				pagePath: '/book/l/[token]'
+			});
+		} catch (error) {
+			console.error('booking_form_submission_notification_failed', {
+				flow: 'book_l_existing',
+				error: error instanceof Error ? error.message : 'unknown_error'
 			});
 		}
 

@@ -4,6 +4,7 @@ import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-con
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
+import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
 import {
 	classifyLeadBookingIntent,
 	confirmBookingSelection,
@@ -67,6 +68,26 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 			message: 'Missing page context. Please refresh and try again.',
 			confirmationState: 'booking_unavailable'
 		};
+	}
+
+	try {
+		await notifyBookingFormSubmission({
+			flow: 'inline_lead_sequence',
+			email: parseResult.data.email,
+			name: parseResult.data.name ?? null,
+			phone: parseResult.data.phone ?? null,
+			company: parseResult.data.company ?? null,
+			scope: parseResult.data.scope,
+			campaignId,
+			campaignPageId,
+			pageSlug,
+			pagePath: requestEvent.url.pathname
+		});
+	} catch (error) {
+		console.error('booking_form_submission_notification_failed', {
+			flow: 'inline_lead_sequence',
+			error: error instanceof Error ? error.message : 'unknown_error'
+		});
 	}
 
 	const policy = await getBookingPolicy('lead');
