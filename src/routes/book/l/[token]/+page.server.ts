@@ -39,6 +39,7 @@ type IntakeSummaryView = {
 	email: string;
 	scope: string;
 	requestSummary: string;
+	phone: string | null;
 	company: string | null;
 };
 
@@ -323,6 +324,7 @@ export const actions: Actions = {
 						email: parseResult.data.email,
 						scope: parseResult.data.scope,
 						name: parseResult.data.name ?? null,
+						phone: parseResult.data.phone ?? null,
 						company: parseResult.data.company ?? null
 					}
 				}
@@ -345,6 +347,7 @@ export const actions: Actions = {
 					form: {
 						email: parseResult.data.email,
 						full_name: parseResult.data.name ?? '',
+						phone: parseResult.data.phone ?? '',
 						organization: parseResult.data.company ?? '',
 						meeting_scope: parseResult.data.scope,
 						form_type: 'booking_modal_intake'
@@ -367,6 +370,7 @@ export const actions: Actions = {
 				email: parseResult.data.email,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name ?? '',
+				phone: parseResult.data.phone ?? '',
 				company: parseResult.data.company ?? ''
 			};
 
@@ -388,6 +392,7 @@ export const actions: Actions = {
 					email: normalizedValues.email,
 					scope: normalizedValues.scope,
 					requestSummary: normalizedValues.scope,
+					phone: normalizedValues.phone || null,
 					company: normalizedValues.company || null
 				},
 				message:
@@ -432,6 +437,7 @@ export const actions: Actions = {
 			email: parseResult.data.email,
 			scope: parseResult.data.scope,
 			name: parseResult.data.name ?? '',
+			phone: parseResult.data.phone ?? '',
 			company: parseResult.data.company ?? ''
 		};
 
@@ -452,6 +458,7 @@ export const actions: Actions = {
 				email: normalizedValues.email,
 				scope: normalizedValues.scope,
 				requestSummary: normalizedValues.scope,
+				phone: normalizedValues.phone || null,
 				company: normalizedValues.company || null
 			},
 			message:
@@ -502,6 +509,7 @@ export const actions: Actions = {
 				email: parseResult.data.email,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name,
+				phone: parseResult.data.phone,
 				company: parseResult.data.company
 			},
 			selectedStartsAt: new Date(parseResult.data.selectedStartsAtIso),

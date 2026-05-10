@@ -502,6 +502,7 @@ export const bookings = pgTable(
 		}),
 		email: text('email').notNull(),
 		name: text('name'),
+		phone: text('phone'),
 		company: text('company'),
 		scope: text('scope').notNull(),
 		status: booking_status('status').notNull().default('pending_calendar_sync'),

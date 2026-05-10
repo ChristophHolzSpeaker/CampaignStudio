@@ -10,7 +10,7 @@ const requiredLeadIntakeSchema = bookingIntakeSchema.pick({
 });
 
 type RequiredLeadIntakeField = 'email' | 'scope';
-type OptionalLeadIntakeField = 'name' | 'company';
+type OptionalLeadIntakeField = 'name' | 'phone' | 'company';
 
 type LeadBookingPrefillKnownFields = Record<
 	RequiredLeadIntakeField | OptionalLeadIntakeField,
@@ -22,6 +22,7 @@ export type LeadBookingIntakeSummary = {
 	email: string;
 	scope: string;
 	requestSummary: string;
+	phone: string | null;
 	company: string | null;
 };
 
@@ -80,12 +81,14 @@ function evaluateLeadBookingIntakeValues(input: {
 	email: string | null;
 	scope: string | null;
 	name: string | null;
+	phone: string | null;
 	company: string | null;
 }): LeadBookingIntakeEvaluation {
 	const values: BookingIntakeSubmission = {
 		email: input.email ?? '',
 		scope: input.scope ?? '',
 		name: input.name ?? '',
+		phone: input.phone ?? '',
 		company: input.company ?? ''
 	};
 
@@ -93,6 +96,7 @@ function evaluateLeadBookingIntakeValues(input: {
 		email: Boolean(input.email),
 		scope: Boolean(input.scope),
 		name: Boolean(input.name),
+		phone: Boolean(input.phone),
 		company: Boolean(input.company)
 	};
 
@@ -123,6 +127,7 @@ function evaluateLeadBookingIntakeValues(input: {
 						email: values.email,
 						scope: values.scope,
 						requestSummary: values.scope,
+						phone: values.phone || null,
 						company: values.company || null
 					}
 				: null
@@ -154,6 +159,7 @@ export async function resolveLeadBookingIntakeContext(input: {
 					'message'
 				]),
 				name: readFirstString(metadataRecord, ['name', 'contact_name']),
+				phone: readFirstString(metadataRecord, ['phone', 'contact_phone']),
 				company: readFirstString(metadataRecord, ['company', 'organization'])
 			}),
 			source: {
@@ -191,6 +197,10 @@ export async function resolveLeadBookingIntakeContext(input: {
 			readFirstString(formPayload, ['full_name', 'name', 'contact_name']) ??
 			readFirstString(intakePayload, ['name', 'contact_name']) ??
 			readFirstString(metadataRecord, ['name', 'contact_name']),
+		phone:
+			readFirstString(formPayload, ['phone', 'contact_phone']) ??
+			readFirstString(intakePayload, ['phone', 'contact_phone']) ??
+			readFirstString(metadataRecord, ['phone', 'contact_phone']),
 		company:
 			readFirstString(formPayload, ['organization', 'company']) ??
 			readFirstString(intakePayload, ['company', 'organization']) ??

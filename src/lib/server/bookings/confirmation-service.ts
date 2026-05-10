@@ -92,6 +92,7 @@ function toCalendarPayload(input: {
 	bookingType: BookingType;
 	email: string;
 	name: string | null;
+	phone: string | null;
 	company: string | null;
 	scope: string;
 	startsAt: Date;
@@ -105,6 +106,7 @@ function toCalendarPayload(input: {
 		booking_type: input.bookingType,
 		attendee_email: input.email,
 		attendee_name: input.name,
+		attendee_phone: input.phone,
 		company: input.company,
 		meeting_scope: input.scope,
 		starts_at_iso: input.startsAt.toISOString(),
@@ -183,6 +185,7 @@ export async function confirmBookingSelection(
 		requester: {
 			email: normalizedEmail,
 			name: input.intake.name?.trim() || null,
+			phone: input.intake.phone?.trim() || null,
 			company: input.intake.company?.trim() || null,
 			scope: input.intake.scope,
 			leadJourneyId: input.leadTokenContext?.leadJourneyId ?? null
@@ -215,6 +218,7 @@ export async function confirmBookingSelection(
 				bookingType: input.bookingType,
 				email: created.booking.email,
 				name: created.booking.name,
+				phone: created.booking.phone,
 				company: created.booking.company,
 				scope: created.booking.scope,
 				startsAt: created.booking.starts_at,
@@ -236,6 +240,7 @@ export async function confirmBookingSelection(
 				booking_type: attached.booking.booking_type,
 				attendee_name: attached.booking.name,
 				attendee_email: attached.booking.email,
+				attendee_phone: attached.booking.phone,
 				company: attached.booking.company,
 				meeting_scope: attached.booking.scope,
 				booking_time: {

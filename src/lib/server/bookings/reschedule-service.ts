@@ -334,6 +334,7 @@ export async function confirmBookingReschedule(
 			booking_type: rescheduled.booking.booking_type,
 			attendee_email: rescheduled.booking.email,
 			attendee_name: rescheduled.booking.name,
+			attendee_phone: rescheduled.booking.phone,
 			meeting_scope: rescheduled.booking.scope,
 			starts_at_iso: rescheduled.booking.starts_at.toISOString(),
 			ends_at_iso: rescheduled.booking.ends_at.toISOString(),
@@ -360,6 +361,7 @@ export async function confirmBookingReschedule(
 				booking_type: syncedBooking.booking_type,
 				attendee_name: syncedBooking.name,
 				attendee_email: syncedBooking.email,
+				attendee_phone: syncedBooking.phone,
 				company: syncedBooking.company,
 				meeting_scope: syncedBooking.scope,
 				previous_booking_time: {

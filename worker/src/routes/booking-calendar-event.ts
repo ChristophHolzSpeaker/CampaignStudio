@@ -12,6 +12,12 @@ const bookingCalendarEventSchema = z.object({
 	booking_type: z.enum(bookingCalendarEventTypes),
 	attendee_email: z.string().trim().email(),
 	attendee_name: z.string().trim().max(120).nullable().optional(),
+	attendee_phone: z
+		.string()
+		.trim()
+		.regex(/^\+?\d{8,15}$/)
+		.nullable()
+		.optional(),
 	meeting_scope: z.string().trim().min(2).max(1000),
 	starts_at_iso: z.string().datetime({ offset: true }),
 	ends_at_iso: z.string().datetime({ offset: true }),
@@ -51,6 +57,7 @@ function buildDescription(input: CreateBookingCalendarEventRequest): string {
 		`Type: ${input.booking_type}`,
 		`Attendee email: ${input.attendee_email}`,
 		input.attendee_name ? `Attendee name: ${input.attendee_name}` : null,
+		input.attendee_phone ? `Attendee phone: ${input.attendee_phone}` : null,
 		input.company ? `Company: ${input.company}` : null,
 		`Repeat interaction: ${input.is_repeat_interaction ? 'yes' : 'no'}`,
 		input.lead_context?.lead_journey_id

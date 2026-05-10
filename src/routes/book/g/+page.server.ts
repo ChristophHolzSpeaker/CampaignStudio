@@ -154,6 +154,7 @@ export const actions: Actions = {
 				email: parseResult.data.email,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name,
+				phone: parseResult.data.phone,
 				company: parseResult.data.company
 			},
 			selectedStartsAt: new Date(parseResult.data.selectedStartsAtIso),

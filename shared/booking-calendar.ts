@@ -12,6 +12,7 @@ export type CreateBookingCalendarEventRequest = {
 	booking_type: BookingCalendarEventType;
 	attendee_email: string;
 	attendee_name?: string | null;
+	attendee_phone?: string | null;
 	meeting_scope: string;
 	starts_at_iso: string;
 	ends_at_iso: string;
@@ -33,6 +34,7 @@ export type UpdateBookingCalendarEventRequest = {
 	booking_type: BookingCalendarEventType;
 	attendee_email: string;
 	attendee_name?: string | null;
+	attendee_phone?: string | null;
 	meeting_scope: string;
 	starts_at_iso: string;
 	ends_at_iso: string;

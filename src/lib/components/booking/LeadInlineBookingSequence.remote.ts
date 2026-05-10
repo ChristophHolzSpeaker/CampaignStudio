@@ -146,6 +146,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 				email: normalizedEmail,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name ?? null,
+				phone: parseResult.data.phone ?? null,
 				company: parseResult.data.company ?? null
 			},
 			intent: intentDecision
@@ -158,6 +159,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 			email: normalizedEmail,
 			scope: parseResult.data.scope,
 			name: parseResult.data.name,
+			phone: parseResult.data.phone,
 			company: parseResult.data.company
 		},
 		selectedStartsAt: new Date(parseResult.data.selectedStartsAtIso),
@@ -187,6 +189,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 			form: {
 				email: normalizedEmail,
 				full_name: parseResult.data.name ?? '',
+				phone: parseResult.data.phone ?? '',
 				organization: parseResult.data.company ?? '',
 				meeting_scope: parseResult.data.scope,
 				form_type: 'inline_booking_sequence'

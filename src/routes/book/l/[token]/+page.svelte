@@ -32,6 +32,7 @@
 	const emptyValues = {
 		email: '',
 		name: '',
+		phone: '',
 		company: '',
 		scope: ''
 	};
@@ -322,6 +323,17 @@
 						</div>
 
 						<Input
+							id="phone"
+							name="phone"
+							label="Phone (optional)"
+							type="tel"
+							placeholder="+491234567890"
+							value={activeValues.phone}
+							error={form?.errors?.phone}
+							autocomplete="tel"
+						/>
+
+						<Input
 							id="company"
 							name="company"
 							label="Company (optional)"
@@ -372,6 +384,14 @@
 										{activeIntakeSummary?.email ?? activeValues.email}
 									</dd>
 								</div>
+								{#if activeIntakeSummary?.phone || activeValues.phone}
+									<div>
+										<dt class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Phone</dt>
+										<dd class="text-base text-slate-900">
+											{activeIntakeSummary?.phone ?? activeValues.phone}
+										</dd>
+									</div>
+								{/if}
 								{#if activeIntakeSummary?.company || activeValues.company}
 									<div>
 										<dt class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">
@@ -466,6 +486,7 @@
 								>
 									<input type="hidden" name="email" value={activeValues.email} />
 									<input type="hidden" name="name" value={activeValues.name} />
+									<input type="hidden" name="phone" value={activeValues.phone} />
 									<input type="hidden" name="company" value={activeValues.company} />
 									<input type="hidden" name="scope" value={activeValues.scope} />
 									<input

@@ -15,6 +15,7 @@ describe('/book/l/[token] +page.svelte', () => {
 					prefillValues: {
 						email: 'lead@example.com',
 						name: 'Lead User',
+						phone: '',
 						company: '',
 						scope: 'Discuss launch strategy'
 					},
@@ -31,6 +32,7 @@ describe('/book/l/[token] +page.svelte', () => {
 						email: 'lead@example.com',
 						scope: 'Discuss launch strategy',
 						requestSummary: 'Discuss launch strategy',
+						phone: null,
 						company: null
 					},
 					slotGroups: [
@@ -72,6 +74,7 @@ describe('/book/l/[token] +page.svelte', () => {
 					prefillValues: {
 						email: 'lead@example.com',
 						name: 'Lead User',
+						phone: '+43123456789',
 						company: 'ACME',
 						scope: 'Discuss launch strategy'
 					},

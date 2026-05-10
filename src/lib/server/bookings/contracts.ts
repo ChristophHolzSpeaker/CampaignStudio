@@ -63,6 +63,7 @@ export type NewBookingRescheduleRecord = typeof booking_reschedules.$inferInsert
 export type BookingRequester = {
 	email: string;
 	name?: string | null;
+	phone?: string | null;
 	company?: string | null;
 	scope: string;
 	leadJourneyId?: string | null;
@@ -278,6 +279,7 @@ export type BookingConfirmationIntake = {
 	email: string;
 	scope: string;
 	name?: string;
+	phone?: string;
 	company?: string;
 };
 

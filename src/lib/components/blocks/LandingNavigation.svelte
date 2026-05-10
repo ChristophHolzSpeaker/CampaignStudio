@@ -20,7 +20,7 @@
 
 	let dropdown = $state<HTMLElement | null>(null);
 
-	let trigger: HTMLButtonElement | null = null;
+	let trigger: HTMLAnchorElement | null = null;
 	let mobileMenuTrigger: HTMLButtonElement | null = null;
 	type CategoryItem = {
 		href: string;
