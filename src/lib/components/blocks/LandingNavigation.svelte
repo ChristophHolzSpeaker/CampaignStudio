@@ -156,6 +156,7 @@
 			</div>
 			<nav class="flex w-full justify-end gap-4">
 				<a
+					aria-roledescription="Open Category"
 					bind:this={trigger}
 					onclick={() => {
 						categoriesDropdown = !categoriesDropdown;

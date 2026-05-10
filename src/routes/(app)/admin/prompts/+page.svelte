@@ -49,36 +49,11 @@
 </section>
 
 <style>
-	.hero {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-
-		padding: 3rem 2rem;
-		gap: 1.5rem;
-		margin-bottom: 2rem;
-	}
-
-	.hero-copy {
-		max-width: 720px;
-	}
-
 	h1 {
 		margin: 0.4rem 0;
 		font-size: 2.75rem;
 		font-family: 'Bureau Grot Compressed', 'Space Grotesk', sans-serif;
 		text-transform: uppercase;
-	}
-
-	.hero p {
-		margin: 0;
-		font-family: 'Bureau Grot', 'Space Grotesk', sans-serif;
-		line-height: 1.8;
-	}
-
-	.hero-actions {
-		display: flex;
-		align-items: center;
 	}
 
 	.prompt-grid {
