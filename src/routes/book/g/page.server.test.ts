@@ -273,7 +273,7 @@ describe('/book/g +page.server', () => {
 		} as never)) as any;
 
 		expect(response.availabilityState).toBe('no_slots');
-		expect(response.message).toContain('No slots');
+		expect(response.message).toContain('No briefing slots are currently available');
 	});
 
 	it('confirm action returns booking confirmed state', async () => {

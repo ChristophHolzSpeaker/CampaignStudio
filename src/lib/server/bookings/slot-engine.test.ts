@@ -76,7 +76,8 @@ describe('generateBookingSlots', () => {
 					endsAt: new Date('2026-05-01T11:00:00.000Z'),
 					source: 'calendar'
 				}
-			]
+			],
+			now: new Date('2026-05-01T00:00:00.000Z')
 		});
 
 		expect(result.state).toBe('slots_available');
@@ -92,7 +93,8 @@ describe('generateBookingSlots', () => {
 			searchStartsAt: new Date('2026-05-01T18:00:00.000Z'),
 			searchEndsAt: new Date('2026-05-01T21:00:00.000Z'),
 			rules: makeRules(),
-			busyIntervals: []
+			busyIntervals: [],
+			now: new Date('2026-05-01T00:00:00.000Z')
 		});
 
 		expect(result.state).toBe('slots_available');
@@ -131,6 +133,7 @@ describe('evaluateBookingAvailability', () => {
 			policy: makeActivePolicy(makeRules({ slotDurationMinutes: 60, slotIntervalMinutes: 60 })),
 			searchStartsAt: new Date('2026-05-01T10:00:00.000Z'),
 			searchEndsAt: new Date('2026-05-01T12:00:00.000Z'),
+			now: new Date('2026-05-01T00:00:00.000Z'),
 			busyIntervals: [
 				{
 					startsAt: new Date('2026-05-01T10:00:00.000Z'),
