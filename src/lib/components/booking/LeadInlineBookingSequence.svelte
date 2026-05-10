@@ -36,6 +36,7 @@
 	let intakePhone = $state('');
 	let intakeCompany = $state('');
 	let intakeScope = $state('');
+	let hideFailureMessage = $state(false);
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
 	const hasSlots = $derived(normalizedSlotGroups.length > 0);
@@ -100,6 +101,10 @@
 		!selectedStartsAt || !selectedEndsAt || Boolean(submitInlineLeadBooking.pending)
 	);
 	const submitResult = $derived(submitInlineLeadBooking.result);
+	const isSubmitSuccess = $derived(Boolean(submitResult?.success));
+	const showFailureMessage = $derived(
+		Boolean(submitResult?.message && !submitResult.success && !hideFailureMessage)
+	);
 	const resultTone = $derived(
 		submitResult?.success
 			? 'border-emerald-400/70 bg-emerald-50 text-emerald-700'
@@ -145,6 +150,17 @@
 		selectedEndsAt = '';
 	}
 
+	function resetBookingFormUi(): void {
+		resetToSlotStage();
+		dayPreference = null;
+		intakeEmail = '';
+		intakeName = '';
+		intakePhone = '';
+		intakeCompany = '';
+		intakeScope = '';
+		hideFailureMessage = true;
+	}
+
 	const meetingScopePlaceholder = `Wir planen einen Event:
 Datum und Uhrzeit:
 Veranstaltungsort:`;
@@ -155,12 +171,33 @@ Veranstaltungsort:`;
 		Please select an available slot first, then share your details to confirm your briefing request.
 	</p>
 
-	{#if submitResult?.message}
+	{#if isSubmitSuccess && submitResult?.message}
 		<div class={`rounded-none border px-4 py-3 text-xs font-semibold  uppercase ${resultTone}`}>
 			{submitResult.message}
 		</div>
 	{:else}
-		<form {...submitInlineLeadBooking} class="space-y-8">
+		<form
+			{...submitInlineLeadBooking}
+			class="space-y-8"
+			onsubmit={() => {
+				hideFailureMessage = false;
+			}}
+		>
+			{#if showFailureMessage}
+				<div class={`rounded-none border px-4 py-3 text-xs font-semibold uppercase ${resultTone}`}>
+					<p>{submitResult?.message}</p>
+					<a
+						href="?retry=1"
+						class="mt-2 inline-flex text-xs tracking-[0.15em] text-rose-700 uppercase underline hover:text-rose-900"
+						onclick={(event) => {
+							event.preventDefault();
+							resetBookingFormUi();
+						}}
+					>
+						Retry booking request
+					</a>
+				</div>
+			{/if}
 			<input type="hidden" name="campaignId" value={campaignId ?? ''} />
 			<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
 			<input type="hidden" name="pageSlug" value={pageSlug ?? ''} />
@@ -337,7 +374,7 @@ Veranstaltungsort:`;
 				>
 					<p>No slots are currently available from this page context.</p>
 					<a
-						href="mailto:hello@christoph.com"
+						href="mailto:speaker@christophholz.com"
 						class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
 					>
 						Contact us to request a custom time

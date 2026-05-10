@@ -7,7 +7,9 @@ vi.mock('$lib/server/notifications/form-submission-worker-client', () => ({
 import { sendFormSubmissionNotificationViaWorker } from '$lib/server/notifications/form-submission-worker-client';
 import { notifyBookingFormSubmission } from './booking-form-submission';
 
-const mockedSendFormSubmissionNotificationViaWorker = vi.mocked(sendFormSubmissionNotificationViaWorker);
+const mockedSendFormSubmissionNotificationViaWorker = vi.mocked(
+	sendFormSubmissionNotificationViaWorker
+);
 
 describe('notifyBookingFormSubmission', () => {
 	beforeEach(() => {
