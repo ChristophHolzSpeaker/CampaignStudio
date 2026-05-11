@@ -81,15 +81,18 @@ export function isHistoryCursorStale(error: unknown): boolean {
 		return false;
 	}
 
+	const details = JSON.stringify(error.body).toLowerCase();
+
 	if (error.status === 404) {
-		return true;
+		return (
+			details.includes('history') || details.includes('stale') || details.includes('starthistoryid')
+		);
 	}
 
 	if (error.status !== 400) {
 		return false;
 	}
 
-	const details = JSON.stringify(error.body).toLowerCase();
 	return details.includes('stale') || details.includes('invalid') || details.includes('history');
 }
 

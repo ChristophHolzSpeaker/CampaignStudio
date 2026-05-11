@@ -2,6 +2,7 @@ import { selectMany, selectOne, updateMany } from '../db';
 import type { WorkerEnv } from '../env';
 import { GoogleAuthError } from '../google-auth/errors';
 import {
+	GmailApiError,
 	gmailGetMessage,
 	gmailListHistory,
 	isHistoryCursorStale,
@@ -151,40 +152,10 @@ export async function syncMailboxHistory(
 	}
 
 	const startHistoryId = cursor.last_processed_history_id;
+	let historyResult: { messageIds: string[]; lastHistoryId: string };
 
 	try {
-		const historyResult = await collectHistoryMessageIds(env, params.gmailUser, startHistoryId);
-		let processed = 0;
-
-		for (const messageId of historyResult.messageIds) {
-			const gmailMessage = await gmailGetMessage(env, {
-				gmailUser: params.gmailUser,
-				messageId
-			});
-			const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
-			if (inserted) {
-				processed += 1;
-			}
-		}
-
-		const nextHistoryId = maxHistoryId(
-			historyResult.lastHistoryId,
-			params.hintedHistoryId ?? cursor.last_processed_history_id
-		);
-
-		await updateCursor(env, params.gmailUser, {
-			last_processed_history_id: nextHistoryId,
-			last_sync_at: nowIso,
-			sync_status: 'active',
-			updated_at: nowIso
-		});
-
-		return {
-			ok: true,
-			status: 'active',
-			processed_messages: processed,
-			last_history_id: nextHistoryId
-		};
+		historyResult = await collectHistoryMessageIds(env, params.gmailUser, startHistoryId);
 	} catch (error) {
 		const authDetails =
 			error instanceof GoogleAuthError
@@ -236,6 +207,78 @@ export async function syncMailboxHistory(
 			last_history_id: startHistoryId
 		};
 	}
+
+	let processed = 0;
+
+	for (const messageId of historyResult.messageIds) {
+		try {
+			const gmailMessage = await gmailGetMessage(env, {
+				gmailUser: params.gmailUser,
+				messageId
+			});
+			const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
+			if (inserted) {
+				processed += 1;
+			}
+		} catch (error) {
+			if (error instanceof GmailApiError && error.status === 404) {
+				console.warn('gmail_sync_message_missing', {
+					gmail_user: params.gmailUser,
+					message_id: messageId,
+					error: error.message
+				});
+				continue;
+			}
+
+			const authDetails =
+				error instanceof GoogleAuthError
+					? {
+							error_code: error.code,
+							google_status:
+								typeof error.details?.status === 'number' ? error.details.status : undefined,
+							google_response: error.details?.response
+						}
+					: {};
+
+			await updateCursor(env, params.gmailUser, {
+				sync_status: 'sync_failed',
+				last_sync_at: nowIso,
+				updated_at: nowIso
+			});
+
+			console.error('gmail_sync_failed', {
+				gmail_user: params.gmailUser,
+				error: error instanceof Error ? error.message : 'unknown',
+				...authDetails
+			});
+
+			return {
+				ok: false,
+				status: 'sync_failed',
+				processed_messages: processed,
+				last_history_id: startHistoryId
+			};
+		}
+	}
+
+	const nextHistoryId = maxHistoryId(
+		historyResult.lastHistoryId,
+		params.hintedHistoryId ?? cursor.last_processed_history_id
+	);
+
+	await updateCursor(env, params.gmailUser, {
+		last_processed_history_id: nextHistoryId,
+		last_sync_at: nowIso,
+		sync_status: 'active',
+		updated_at: nowIso
+	});
+
+	return {
+		ok: true,
+		status: 'active',
+		processed_messages: processed,
+		last_history_id: nextHistoryId
+	};
 }
 
 export async function touchMailboxPush(

@@ -145,7 +145,12 @@ describe('gmail client', () => {
 	});
 
 	it('detects stale history cursor correctly', () => {
-		expect(isHistoryCursorStale(new GmailApiError(404, 'not found', {}))).toBe(true);
+		expect(isHistoryCursorStale(new GmailApiError(404, 'not found', {}))).toBe(false);
+		expect(
+			isHistoryCursorStale(
+				new GmailApiError(404, 'not found', { error: { message: 'History record not found' } })
+			)
+		).toBe(true);
 		expect(
 			isHistoryCursorStale(new GmailApiError(400, 'bad request', { error: 'historyId is stale' }))
 		).toBe(true);

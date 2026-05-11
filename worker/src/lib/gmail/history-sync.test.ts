@@ -8,11 +8,15 @@ vi.mock('../db', () => ({
 	updateMany: vi.fn()
 }));
 
-vi.mock('./client', () => ({
-	gmailGetMessage: vi.fn(),
-	gmailListHistory: vi.fn(),
-	isHistoryCursorStale: vi.fn()
-}));
+vi.mock('./client', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('./client')>();
+	return {
+		...actual,
+		gmailGetMessage: vi.fn(),
+		gmailListHistory: vi.fn(),
+		isHistoryCursorStale: vi.fn()
+	};
+});
 
 vi.mock('./messages', () => ({
 	normalizeGmailMessage: vi.fn()
@@ -23,7 +27,7 @@ vi.mock('./process-inbound-message', () => ({
 }));
 
 import { insertOne, selectMany, selectOne, updateMany } from '../db';
-import { gmailGetMessage, gmailListHistory, isHistoryCursorStale } from './client';
+import { GmailApiError, gmailGetMessage, gmailListHistory, isHistoryCursorStale } from './client';
 import { normalizeGmailMessage } from './messages';
 import { processInboundGmailMessage } from './process-inbound-message';
 import { listMailboxCursors, syncMailboxHistory, touchMailboxPush } from './history-sync';
@@ -133,6 +137,30 @@ describe('history sync', () => {
 
 		expect(result.status).toBe('sync_failed');
 		expect(result.ok).toBe(false);
+	});
+
+	it('skips missing messages and keeps sync active', async () => {
+		mockedSelectOne.mockResolvedValue(cursorRow);
+		mockedGmailListHistory.mockResolvedValue({
+			historyId: '110',
+			history: [{ id: '109', messagesAdded: [{ message: { id: 'missing_1' } }] }],
+			nextPageToken: undefined
+		});
+		mockedGmailGetMessage.mockRejectedValue(
+			new GmailApiError(404, 'not found', {
+				error: { message: 'Requested entity was not found.' }
+			})
+		);
+
+		const result = await syncMailboxHistory(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com'
+		});
+
+		expect(result.ok).toBe(true);
+		expect(result.status).toBe('active');
+		expect(result.processed_messages).toBe(0);
+		expect(result.last_history_id).toBe('110');
+		expect(mockedUpdateMany).toHaveBeenCalled();
 	});
 
 	it('touchMailboxPush returns null when cursor missing and no history id', async () => {
