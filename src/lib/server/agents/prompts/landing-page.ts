@@ -123,6 +123,7 @@ Rules:
 	* keynote_speeches is required when it is in requiredSectionTypes
 	* when both logos_of_trust_ribbon and keynote_speeches are selected, place keynote_speeches immediately after logos_of_trust_ribbon
 	* when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
+	* soft preference: when both frictionless_funnel_booking and proof_of_performance are selected, place frictionless_funnel_booking above proof_of_performance
 	* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 	* use only IDs that exist in input.assets.assetCatalog
 	* never invent logo IDs
@@ -221,6 +222,7 @@ General requirements:
 * use only section types in allowedSectionTypes
 * include every section type in requiredSectionTypes
 * place seo as the first section
+* soft preference: when both frictionless_funnel_booking and proof_of_performance are present, place frictionless_funnel_booking above proof_of_performance
 * use section props exactly as required by each section contract
 * ensure seo.props.description includes campaign geography naturally
 * include campaign geography in seo.props.title when it fits naturally and remains readable

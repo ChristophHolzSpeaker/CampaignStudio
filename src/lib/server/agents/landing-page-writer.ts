@@ -897,6 +897,7 @@ Corrective rules:
 - Top-level JSON must be a single object, never an array.
 - Place seo as the first section.
 - If both speaker_in_action and proof_of_performance are present, place speaker_in_action above proof_of_performance.
+- Soft preference: if both frictionless_funnel_booking and proof_of_performance are present, place frictionless_funnel_booking above proof_of_performance.
 - If keynote_speeches is present and logos_of_trust_ribbon is present, place keynote_speeches immediately after logos_of_trust_ribbon.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
