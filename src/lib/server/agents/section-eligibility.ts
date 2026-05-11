@@ -28,11 +28,12 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 			case 'immediate_authority_hero':
 				if (
 					input.assets.heroDefaults.videoEmbedUrl &&
-					input.assets.heroDefaults.videoThumbnailUrl
+					(input.assets.heroDefaults.heroImageUrl || input.assets.heroDefaults.videoThumbnailUrl)
 				) {
 					allowedSectionTypes.push(sectionType);
 				} else {
-					disallowedReasonByType[sectionType] = 'Hero media defaults are missing.';
+					disallowedReasonByType[sectionType] =
+						'Hero media defaults are missing (video + hero image).';
 				}
 				break;
 			case 'logos_of_trust_ribbon':

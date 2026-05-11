@@ -26,6 +26,8 @@ export const immediateAuthorityHeroPropsSchema = z.object({
 	primaryCtaHref: z.string().trim().optional(),
 	primaryCtaAction: z.string().trim().min(1).optional(),
 	videoEmbedUrl: z.string().trim(),
+	heroImageUrl: z.string().trim().optional(),
+	heroImageAlt: z.string().trim().min(1).optional(),
 	videoThumbnailUrl: z.string().trim(),
 	videoThumbnailAlt: z.string().trim().min(1),
 	eyebrow: z.string().trim().min(1).optional(),

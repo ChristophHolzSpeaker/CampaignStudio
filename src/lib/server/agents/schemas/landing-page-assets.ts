@@ -7,6 +7,8 @@ import { z } from 'zod';
 
 const heroDefaultsSchema = z.object({
 	videoEmbedUrl: z.string().trim().url(),
+	heroImageUrl: z.string().trim().url().optional(),
+	heroImageAlt: z.string().trim().min(1).optional(),
 	videoThumbnailUrl: z.string().trim().url().optional(),
 	videoThumbnailAlt: z.string().trim().min(1).optional(),
 	primaryCtaLabelDefault: z.string().trim().min(1),
@@ -38,6 +40,17 @@ export const heroVideoOptionSchema = z.object({
 	videoEmbedUrl: z.string().trim().url(),
 	videoThumbnailUrl: z.string().trim().url(),
 	videoThumbnailAlt: z.string().trim().min(1)
+});
+
+export const heroImageOptionSchema = z.object({
+	id: z.string().trim().min(1),
+	title: z.string().trim().min(1),
+	description: z.string().trim().min(1),
+	usageNotes: z.string().trim().min(1),
+	avoidNotes: z.string().trim().min(1).optional(),
+	imageUrl: z.string().trim().url(),
+	alt: z.string().trim().min(1),
+	caption: z.string().trim().min(1).optional()
 });
 
 export const hybridSupportingImageOptionSchema = z.object({
@@ -79,6 +92,7 @@ export const keynoteOptionSchema = z.object({
 
 const assetCatalogSchema = z.object({
 	heroVideos: z.array(heroVideoOptionSchema),
+	heroImages: z.array(heroImageOptionSchema),
 	hybridSupportingImages: z.array(hybridSupportingImageOptionSchema),
 	speakerInActionVideos: z.array(speakerInActionVideoOptionSchema),
 	logoCatalog: z.array(logoOptionSchema).default([]),
@@ -93,6 +107,7 @@ export const landingPageAssetsSchema = z.object({
 	complianceDefaults: complianceTransparencyFooterPropsSchema,
 	assetCatalog: assetCatalogSchema.default({
 		heroVideos: [],
+		heroImages: [],
 		hybridSupportingImages: [],
 		speakerInActionVideos: [],
 		logoCatalog: [],
@@ -102,6 +117,7 @@ export const landingPageAssetsSchema = z.object({
 
 export type LandingPageAssets = z.infer<typeof landingPageAssetsSchema>;
 export type HeroVideoOption = z.infer<typeof heroVideoOptionSchema>;
+export type HeroImageOption = z.infer<typeof heroImageOptionSchema>;
 export type HybridSupportingImageOption = z.infer<typeof hybridSupportingImageOptionSchema>;
 export type SpeakerInActionVideoOption = z.infer<typeof speakerInActionVideoOptionSchema>;
 export type LogoOption = z.infer<typeof logoOptionSchema>;
