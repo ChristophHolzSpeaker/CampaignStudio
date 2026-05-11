@@ -18,6 +18,10 @@ vi.mock('$lib/server/bookings/repository', () => ({
 	markBookingConfirmationEmailSent: vi.fn()
 }));
 
+vi.mock('$lib/server/campaigns/client', () => ({
+	getCampaignById: vi.fn()
+}));
+
 vi.mock('$lib/server/notifications/woody-email', () => ({
 	sendBookingLinkInviteWoodyEmail: vi.fn(),
 	sendBookingConfirmedWoodyEmail: vi.fn()
@@ -29,6 +33,7 @@ import {
 	getLeadJourneyById,
 	markLeadJourneyBookingLinkInviteEmailSent
 } from '$lib/server/attribution/lead-journeys';
+import { getCampaignById } from '$lib/server/campaigns/client';
 import { getBookingById, markBookingConfirmationEmailSent } from '$lib/server/bookings/repository';
 import {
 	sendBookingLinkInviteWoodyEmail,
@@ -48,6 +53,7 @@ const mockedGetLatestFormSubmissionEventForJourney = vi.mocked(
 	getLatestFormSubmissionEventForJourney
 );
 const mockedGetLeadJourneyById = vi.mocked(getLeadJourneyById);
+const mockedGetCampaignById = vi.mocked(getCampaignById);
 const mockedMarkLeadJourneyBookingLinkInviteEmailSent = vi.mocked(
 	markLeadJourneyBookingLinkInviteEmailSent
 );
@@ -61,6 +67,7 @@ describe('woody-email-service', () => {
 		mockedCreateBookingLink.mockReset();
 		mockedGetLatestFormSubmissionEventForJourney.mockReset();
 		mockedGetLeadJourneyById.mockReset();
+		mockedGetCampaignById.mockReset();
 		mockedMarkLeadJourneyBookingLinkInviteEmailSent.mockReset();
 		mockedGetBookingById.mockReset();
 		mockedMarkBookingConfirmationEmailSent.mockReset();
@@ -124,6 +131,7 @@ describe('woody-email-service', () => {
 			campaign_id: 7,
 			campaign_page_id: 11
 		} as never);
+		mockedGetCampaignById.mockResolvedValueOnce({ language: 'German' } as never);
 
 		const context = await buildBookingConfirmedEmailContext({
 			bookingId: '2dd66b8f-0bd5-45f6-8d6b-7fd90d0ddf9a',
@@ -134,7 +142,8 @@ describe('woody-email-service', () => {
 			expect.objectContaining({
 				bookingId: '2dd66b8f-0bd5-45f6-8d6b-7fd90d0ddf9a',
 				meetingScope: 'Discuss launch strategy',
-				calendarEventUrl: 'https://calendar.google.com/event?eid=evt_1'
+				calendarEventUrl: 'https://calendar.google.com/event?eid=evt_1',
+				language: 'de'
 			})
 		);
 	});
@@ -160,11 +169,12 @@ describe('woody-email-service', () => {
 		expect(composed.bodyText).toContain('https://book.example.com/book/l/token-1');
 	});
 
-	it('composeBookingConfirmedEmail includes confirmation language and calendar URL', () => {
+	it('composeBookingConfirmedEmail includes localized confirmation language and zoom link', () => {
 		const composed = composeBookingConfirmedEmail({
 			intent: 'booking_confirmed',
 			recipientEmail: 'lead@example.com',
 			recipientName: 'Lead User',
+			language: 'en',
 			leadJourneyId: 'journey-1',
 			campaignId: 7,
 			campaignPageId: 11,
@@ -178,8 +188,16 @@ describe('woody-email-service', () => {
 			calendarEventUrl: 'https://calendar.google.com/event?eid=evt_1'
 		});
 
+		expect(composed.subject).toBe('Your video briefing with Christoph is confirmed');
 		expect(composed.bodyText.toLowerCase()).toContain('locked in');
-		expect(composed.bodyText).toContain('https://calendar.google.com/event?eid=evt_1');
+		expect(composed.bodyText).toContain('https://zoom.christophholz.com');
+		expect(composed.bodyText).toContain(
+			'If you prefer another video calling tool please schedule it and reply with the link for Christoph.'
+		);
+		expect(composed.bodyText).toContain(
+			'If anything is urgent please feel free to call this number directly: +4369917407401'
+		);
+		expect(composed.bodyHtml).toContain('<a href="https://zoom.christophholz.com">');
 	});
 
 	it('sendBookingLinkInviteEmailForLeadSubmission triggers worker invocation with expected payload', async () => {
@@ -260,6 +278,7 @@ describe('woody-email-service', () => {
 			campaign_id: 7,
 			campaign_page_id: 11
 		} as never);
+		mockedGetCampaignById.mockResolvedValueOnce({ language: 'Spanish' } as never);
 		mockedSendBookingConfirmedWoodyEmail.mockResolvedValueOnce({
 			ok: true,
 			provider_message_id: 'gmail-message-2',
@@ -274,7 +293,12 @@ describe('woody-email-service', () => {
 		expect(mockedSendBookingConfirmedWoodyEmail).toHaveBeenCalledWith(
 			expect.objectContaining({
 				intent: 'booking_confirmed',
-				calendar_event_url: 'https://calendar.google.com/event?eid=evt_1'
+				calendar_event_url: 'https://calendar.google.com/event?eid=evt_1',
+				email_content: expect.objectContaining({
+					subject: 'Tu video briefing con Christoph esta confirmado',
+					body_html: expect.stringContaining('https://zoom.christophholz.com'),
+					body_text: expect.stringContaining('+4369917407401')
+				})
 			})
 		);
 		expect(mockedMarkBookingConfirmationEmailSent).toHaveBeenCalledWith(

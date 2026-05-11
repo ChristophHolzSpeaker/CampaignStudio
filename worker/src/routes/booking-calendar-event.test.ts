@@ -42,6 +42,7 @@ describe('handleBookingCalendarEvent', () => {
 				body: JSON.stringify({
 					booking_id: '3fdb8e65-2ed6-4f56-a6d7-d749ccdc4690',
 					booking_type: 'lead',
+					language: 'Spanish',
 					attendee_email: 'lead@example.com',
 					attendee_name: 'Lead User',
 					company: 'ACME',
@@ -66,14 +67,58 @@ describe('handleBookingCalendarEvent', () => {
 			expect.any(Object),
 			expect.objectContaining({
 				calendarId: 'speaker@christophholz.com',
-				summary: 'Lead call - Lead User',
+				summary: 'Video briefing with Christoph + Lead User from ACME',
+				description: expect.stringContaining('Request summary:\nDiscuss growth campaign'),
 				startsAtIso: '2026-06-01T10:00:00.000Z',
 				endsAtIso: '2026-06-01T10:30:00.000Z'
 			})
 		);
+		expect(mockedCreateCalendarEvent.mock.calls[0]?.[1].description).toContain(
+			'https://zoom.christophholz.com'
+		);
+		expect(mockedCreateCalendarEvent.mock.calls[0]?.[1].description).toContain(
+			'Reschedule link: https://book.example.com/book/r/resched123'
+		);
+		expect(mockedCreateCalendarEvent.mock.calls[0]?.[1].description).toContain(
+			'Si algo es urgente, no dudes en llamar directamente a este numero: +4369917407401'
+		);
+		expect(mockedCreateCalendarEvent.mock.calls[0]?.[1].description).not.toContain('Booking ID:');
 
 		const payload = (await response.json()) as { ok: boolean; event_id: string };
 		expect(payload.ok).toBe(true);
 		expect(payload.event_id).toBe('evt_123');
+	});
+
+	it('omits from-company in summary when company is missing', async () => {
+		mockedCreateCalendarEvent.mockResolvedValueOnce({
+			id: 'evt_124',
+			htmlLink: 'https://calendar.google.com/event?eid=124'
+		});
+
+		await handleBookingCalendarEvent(
+			new Request('https://worker.test/booking/calendar-event', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					booking_id: '3fdb8e65-2ed6-4f56-a6d7-d749ccdc4690',
+					booking_type: 'lead',
+					attendee_email: 'lead@example.com',
+					attendee_name: 'Lead User',
+					company: null,
+					meeting_scope: 'Discuss growth campaign',
+					starts_at_iso: '2026-06-01T10:00:00.000Z',
+					ends_at_iso: '2026-06-01T10:30:00.000Z',
+					reschedule_url: 'https://book.example.com/book/r/resched123',
+					is_repeat_interaction: false,
+					lead_context: null
+				})
+			}),
+			makeTestEnv({ GOOGLE_IMPERSONATED_USER: 'speaker@christophholz.com' })
+		);
+
+		expect(mockedCreateCalendarEvent).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ summary: 'Video briefing with Christoph + Lead User' })
+		);
 	});
 });

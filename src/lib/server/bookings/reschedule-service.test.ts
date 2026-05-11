@@ -53,6 +53,7 @@ const existingBooking = {
 	lead_journey_id: 'journey-1',
 	email: 'lead@example.com',
 	name: 'Lead User',
+	phone: null,
 	company: 'ACME',
 	scope: 'Discuss launch',
 	status: 'confirmed' as const,

@@ -172,6 +172,7 @@ export async function createBookingRecord(input: CreateBookingInput): Promise<Bo
 			lead_journey_id: input.requester.leadJourneyId ?? null,
 			email: input.requester.email,
 			name: input.requester.name ?? null,
+			phone: input.requester.phone ?? null,
 			company: input.requester.company ?? null,
 			scope: input.requester.scope,
 			status: input.status ?? 'pending_calendar_sync',

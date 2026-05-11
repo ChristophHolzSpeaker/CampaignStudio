@@ -19,6 +19,7 @@ import { isSlotInsideBookingWindow } from './booking-window';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { sendBookingConfirmedEmail } from '$lib/server/bookings/woody-email-service';
 import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
+import { getCampaignById } from '$lib/server/campaigns/client';
 import type { CreateBookingCalendarEventRequest } from '../../../../shared/booking-calendar';
 import { randomBytes } from 'node:crypto';
 
@@ -92,19 +93,23 @@ function toCalendarPayload(input: {
 	bookingType: BookingType;
 	email: string;
 	name: string | null;
+	phone: string | null;
 	company: string | null;
 	scope: string;
 	startsAt: Date;
 	endsAt: Date;
 	rescheduleUrl: string;
 	isRepeatInteraction: boolean;
+	language: string | null;
 	leadTokenContext?: BookingConfirmationLeadTokenContext;
 }): CreateBookingCalendarEventRequest {
 	return {
 		booking_id: input.bookingId,
 		booking_type: input.bookingType,
+		language: input.language,
 		attendee_email: input.email,
 		attendee_name: input.name,
+		attendee_phone: input.phone,
 		company: input.company,
 		meeting_scope: input.scope,
 		starts_at_iso: input.startsAt.toISOString(),
@@ -113,6 +118,17 @@ function toCalendarPayload(input: {
 		is_repeat_interaction: input.isRepeatInteraction,
 		lead_context: toLeadContext(input.leadTokenContext)
 	};
+}
+
+async function resolveCampaignLanguage(
+	campaignId: number | null | undefined
+): Promise<string | null> {
+	if (!campaignId) {
+		return null;
+	}
+
+	const campaign = await getCampaignById(campaignId);
+	return campaign?.language ?? null;
 }
 
 function toSyncErrorMessage(error: unknown): string {
@@ -183,6 +199,7 @@ export async function confirmBookingSelection(
 		requester: {
 			email: normalizedEmail,
 			name: input.intake.name?.trim() || null,
+			phone: input.intake.phone?.trim() || null,
 			company: input.intake.company?.trim() || null,
 			scope: input.intake.scope,
 			leadJourneyId: input.leadTokenContext?.leadJourneyId ?? null
@@ -206,6 +223,7 @@ export async function confirmBookingSelection(
 		requestOrigin: input.requestOrigin,
 		rescheduleToken
 	});
+	const campaignLanguage = await resolveCampaignLanguage(input.leadTokenContext?.campaignId);
 	const eventProvider = deps?.calendarEventProvider ?? new WorkerBookingCalendarEventProvider();
 
 	try {
@@ -215,12 +233,14 @@ export async function confirmBookingSelection(
 				bookingType: input.bookingType,
 				email: created.booking.email,
 				name: created.booking.name,
+				phone: created.booking.phone,
 				company: created.booking.company,
 				scope: created.booking.scope,
 				startsAt: created.booking.starts_at,
 				endsAt: created.booking.ends_at,
 				rescheduleUrl,
 				isRepeatInteraction: created.booking.is_repeat_interaction,
+				language: campaignLanguage,
 				leadTokenContext: input.leadTokenContext
 			})
 		);
@@ -236,6 +256,7 @@ export async function confirmBookingSelection(
 				booking_type: attached.booking.booking_type,
 				attendee_name: attached.booking.name,
 				attendee_email: attached.booking.email,
+				attendee_phone: attached.booking.phone,
 				company: attached.booking.company,
 				meeting_scope: attached.booking.scope,
 				booking_time: {

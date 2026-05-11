@@ -20,6 +20,10 @@ type ExistingLeadMessageRow = {
 	provider_thread_id: string;
 };
 
+type CampaignLanguageRow = {
+	language: string;
+};
+
 type MatchedBy = 'duplicate' | 'thread' | 'plus_address_email_campaign' | 'new_journey';
 
 type AutoResponseDecision =
@@ -84,6 +88,158 @@ function mapDecisionEventType(decision: AutoResponseDecision): LegacyEventType {
 		case 'do_not_autorespond_already_sent':
 			return 'autoresponse_skipped_already_sent';
 	}
+}
+
+function normalizeLanguageTag(language: string | null | undefined): string | null {
+	if (!language) {
+		return null;
+	}
+
+	const normalized = language.trim().toLowerCase();
+	if (!normalized) {
+		return null;
+	}
+
+	if (normalized.startsWith('de') || normalized === 'german') {
+		return 'German';
+	}
+
+	if (normalized.startsWith('fr') || normalized === 'french') {
+		return 'French';
+	}
+
+	if (normalized.startsWith('es') || normalized === 'spanish') {
+		return 'Spanish';
+	}
+
+	if (normalized.startsWith('en') || normalized === 'english') {
+		return 'English';
+	}
+
+	return null;
+}
+
+async function resolveCampaignLanguage(
+	env: WorkerEnv,
+	campaignId: number | null
+): Promise<string | null> {
+	if (campaignId === null) {
+		return null;
+	}
+
+	const query = new URLSearchParams({
+		select: 'language',
+		id: `eq.${campaignId}`,
+		limit: '1'
+	});
+
+	const campaign = await selectOne<CampaignLanguageRow>(env, 'campaigns', query);
+	return normalizeLanguageTag(campaign?.language ?? null);
+}
+
+function readLanguageHeader(
+	rawMetadata: Record<string, unknown>,
+	headerName: string
+): string | null {
+	const gmail = rawMetadata.gmail;
+	if (!gmail || typeof gmail !== 'object') {
+		return null;
+	}
+
+	const headers = (gmail as { headers?: unknown }).headers;
+	if (!Array.isArray(headers)) {
+		return null;
+	}
+
+	for (const entry of headers) {
+		if (!entry || typeof entry !== 'object') {
+			continue;
+		}
+
+		const name = (entry as { name?: unknown }).name;
+		const value = (entry as { value?: unknown }).value;
+		if (typeof name !== 'string' || typeof value !== 'string') {
+			continue;
+		}
+
+		if (name.trim().toLowerCase() === headerName.toLowerCase()) {
+			const trimmed = value.trim();
+			return trimmed.length > 0 ? trimmed : null;
+		}
+	}
+
+	return null;
+}
+
+function resolveLanguageFromHeaders(rawMetadata: Record<string, unknown>): string | null {
+	const contentLanguage = readLanguageHeader(rawMetadata, 'Content-Language');
+	const normalizedContentLanguage = normalizeLanguageTag(contentLanguage);
+	if (normalizedContentLanguage) {
+		return normalizedContentLanguage;
+	}
+
+	const acceptLanguage = readLanguageHeader(rawMetadata, 'Accept-Language');
+	if (!acceptLanguage) {
+		return null;
+	}
+
+	const primary = acceptLanguage.split(',')[0]?.trim() ?? '';
+	return normalizeLanguageTag(primary);
+}
+
+function resolveLanguageFromMessageText(input: { subject: string; bodyText: string }): string {
+	const sample = `${input.subject} ${input.bodyText}`.toLowerCase();
+
+	const germanSignals = [' und ', ' der ', ' die ', ' das ', ' bitte ', ' fuer ', ' mit '];
+	const frenchSignals = [' le ', ' la ', ' les ', ' bonjour ', ' merci ', ' pour ', ' avec '];
+	const spanishSignals = [' el ', ' la ', ' los ', ' gracias ', ' para ', ' con ', ' por favor '];
+
+	const score = (signals: string[]): number =>
+		signals.reduce((count, token) => (sample.includes(token) ? count + 1 : count), 0);
+
+	const germanScore = score(germanSignals);
+	const frenchScore = score(frenchSignals);
+	const spanishScore = score(spanishSignals);
+
+	const maxScore = Math.max(germanScore, frenchScore, spanishScore);
+	if (maxScore < 2) {
+		return 'English';
+	}
+
+	if (germanScore === maxScore) {
+		return 'German';
+	}
+
+	if (frenchScore === maxScore) {
+		return 'French';
+	}
+
+	return 'Spanish';
+}
+
+async function resolveAutoresponseLanguage(
+	env: WorkerEnv,
+	input: {
+		campaignId: number | null;
+		rawMetadata: Record<string, unknown>;
+		subject: string;
+		bodyText: string;
+	}
+): Promise<string> {
+	const campaignLanguage = await resolveCampaignLanguage(env, input.campaignId);
+	if (campaignLanguage) {
+		return campaignLanguage;
+	}
+
+	const headerLanguage = resolveLanguageFromHeaders(input.rawMetadata);
+	if (headerLanguage) {
+		return headerLanguage;
+	}
+
+	return resolveLanguageFromMessageText({
+		subject: input.subject,
+		bodyText: input.bodyText
+	});
 }
 
 export async function processInboundGmailMessage(
@@ -388,6 +544,13 @@ export async function processInboundGmailMessage(
 		}
 	});
 
+	const responseLanguage = await resolveAutoresponseLanguage(env, {
+		campaignId: journeyResolution.campaign_id,
+		rawMetadata: normalized.raw_metadata,
+		subject: normalized.subject,
+		bodyText: normalized.body_text
+	});
+
 	const autoresponse = await runAutoresponsePipeline(env, {
 		lead_journey_id: journeyResolution.lead_journey_id,
 		inbound_lead_message_id: persistedMessage.id,
@@ -398,7 +561,7 @@ export async function processInboundGmailMessage(
 		inbound_subject: normalized.subject,
 		inbound_body: normalized.body_text,
 		raw_metadata: normalized.raw_metadata,
-		response_language: null,
+		response_language: responseLanguage,
 		decision: {
 			eligible_for_autoresponse: decision.eligible_for_autoresponse,
 			auto_response_decision: decision.auto_response_decision,

@@ -33,8 +33,10 @@
 
 	let intakeEmail = $state('');
 	let intakeName = $state('');
+	let intakePhone = $state('');
 	let intakeCompany = $state('');
 	let intakeScope = $state('');
+	let hideFailureMessage = $state(false);
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
 	const hasSlots = $derived(normalizedSlotGroups.length > 0);
@@ -99,6 +101,10 @@
 		!selectedStartsAt || !selectedEndsAt || Boolean(submitInlineLeadBooking.pending)
 	);
 	const submitResult = $derived(submitInlineLeadBooking.result);
+	const isSubmitSuccess = $derived(Boolean(submitResult?.success));
+	const showFailureMessage = $derived(
+		Boolean(submitResult?.message && !submitResult.success && !hideFailureMessage)
+	);
 	const resultTone = $derived(
 		submitResult?.success
 			? 'border-emerald-400/70 bg-emerald-50 text-emerald-700'
@@ -143,6 +149,21 @@
 		selectedStartsAt = '';
 		selectedEndsAt = '';
 	}
+
+	function resetBookingFormUi(): void {
+		resetToSlotStage();
+		dayPreference = null;
+		intakeEmail = '';
+		intakeName = '';
+		intakePhone = '';
+		intakeCompany = '';
+		intakeScope = '';
+		hideFailureMessage = true;
+	}
+
+	const meetingScopePlaceholder = `Wir planen einen Event:
+Datum und Uhrzeit:
+Veranstaltungsort:`;
 </script>
 
 <section class="space-y-6 bg-[var(--surface-card)] p-6 shadow-[var(--shadow-card)] lg:p-8">
@@ -150,12 +171,33 @@
 		Please select an available slot first, then share your details to confirm your briefing request.
 	</p>
 
-	{#if submitResult?.message}
+	{#if isSubmitSuccess && submitResult?.message}
 		<div class={`rounded-none border px-4 py-3 text-xs font-semibold  uppercase ${resultTone}`}>
 			{submitResult.message}
 		</div>
 	{:else}
-		<form {...submitInlineLeadBooking} class="space-y-8">
+		<form
+			{...submitInlineLeadBooking}
+			class="space-y-8"
+			onsubmit={() => {
+				hideFailureMessage = false;
+			}}
+		>
+			{#if showFailureMessage}
+				<div class={`rounded-none border px-4 py-3 text-xs font-semibold uppercase ${resultTone}`}>
+					<p>{submitResult?.message}</p>
+					<a
+						href="?retry=1"
+						class="mt-2 inline-flex text-xs tracking-[0.15em] text-rose-700 uppercase underline hover:text-rose-900"
+						onclick={(event) => {
+							event.preventDefault();
+							resetBookingFormUi();
+						}}
+					>
+						Retry booking request
+					</a>
+				</div>
+			{/if}
 			<input type="hidden" name="campaignId" value={campaignId ?? ''} />
 			<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
 			<input type="hidden" name="pageSlug" value={pageSlug ?? ''} />
@@ -167,7 +209,7 @@
 					<section class="space-y-5">
 						<div class="space-y-1">
 							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 1</p>
-							<h2 class="text-xl text-[var(--text-primary)]">Pick an available slot</h2>
+							<h2 class="text-xl text-(--text-primary)">Termin zum Kennenlernen vereinbaren</h2>
 						</div>
 
 						<div role="tablist" aria-label="Available briefing days" class="flex flex-wrap gap-2">
@@ -198,14 +240,14 @@
 								role="tabpanel"
 								id={`inline-booking-day-panel-${resolvedDayKey}`}
 								aria-labelledby={`inline-booking-day-tab-${resolvedDayKey}`}
-								class="space-y-4"
+								class="grid grid-cols-1 space-y-4 space-x-4 md:grid-cols-3"
 							>
 								{#each slotGroupsForSelectedDay as slotGroup (slotGroup.label)}
 									<div class="space-y-2">
 										<h3 class="text-xs tracking-[0.18em] text-slate-500 uppercase">
 											{slotGroup.label}
 										</h3>
-										<div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" role="radiogroup">
+										<div class="flex flex-col gap-2" role="radiogroup">
 											{#each slotGroup.slots as slot (slot.startsAtIso)}
 												<button
 													type="button"
@@ -234,14 +276,14 @@
 					<section class="space-y-5">
 						<div class="space-y-1">
 							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
-							<h2 class="text-xl text-[var(--text-primary)]">Share your briefing details</h2>
+							<h2 class="text-xl text-(--text-primary)">Share your briefing details</h2>
 						</div>
 
 						<div class="grid gap-5 md:grid-cols-2">
 							<Input
 								id="inline-booking-email"
 								name="email"
-								label="Email"
+								label="Email*"
 								type="email"
 								placeholder="you@example.com"
 								required
@@ -252,7 +294,7 @@
 							<Input
 								id="inline-booking-name"
 								name="name"
-								label="Name"
+								label="Name*"
 								type="text"
 								placeholder="Your name"
 								required
@@ -262,9 +304,19 @@
 						</div>
 
 						<Input
+							id="inline-booking-phone"
+							name="phone"
+							label="Phone (optional)"
+							type="tel"
+							placeholder="+491234567890"
+							autocomplete="tel"
+							bind:value={intakePhone}
+						/>
+
+						<Input
 							id="inline-booking-company"
 							name="company"
-							label="Company"
+							label="Company*"
 							type="text"
 							placeholder="Your organization"
 							required
@@ -275,8 +327,8 @@
 						<TextArea
 							id="inline-booking-scope"
 							name="scope"
-							label="Meeting scope"
-							placeholder="Describe goals, audience, or speaking context"
+							label="Meeting scope*"
+							placeholder={meetingScopePlaceholder}
 							rows={4}
 							required
 							bind:value={intakeScope}
@@ -322,7 +374,7 @@
 				>
 					<p>No slots are currently available from this page context.</p>
 					<a
-						href="mailto:hello@christoph.com"
+						href="mailto:speaker@christophholz.com"
 						class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
 					>
 						Contact us to request a custom time

@@ -84,7 +84,8 @@ describe('getBookingAvailability', () => {
 			searchStartsAt: new Date('2026-05-01T10:00:00.000Z'),
 			searchEndsAt: new Date('2026-05-01T11:00:00.000Z'),
 			calendarProvider: provider,
-			calendarId: 'speaker@calendar.test'
+			calendarId: 'speaker@calendar.test',
+			now: new Date('2026-05-01T00:00:00.000Z')
 		});
 
 		expect(fetchBusyIntervals).toHaveBeenCalledOnce();
@@ -136,7 +137,8 @@ describe('getBookingAvailability', () => {
 			searchStartsAt: new Date('2026-05-01T10:00:00.000Z'),
 			searchEndsAt: new Date('2026-05-01T11:00:00.000Z'),
 			calendarProvider: provider,
-			ignoredBusyIntervals: [blockedInterval]
+			ignoredBusyIntervals: [blockedInterval],
+			now: new Date('2026-05-01T00:00:00.000Z')
 		});
 
 		expect(result.state).toBe('available');
@@ -176,7 +178,8 @@ describe('getBookingAvailability', () => {
 			bookingType: 'lead',
 			searchStartsAt: new Date('2026-05-01T10:00:00.000Z'),
 			searchEndsAt: new Date('2026-05-01T11:00:00.000Z'),
-			calendarProvider: provider
+			calendarProvider: provider,
+			now: new Date('2026-05-01T00:00:00.000Z')
 		});
 
 		expect(result.state).toBe('available');

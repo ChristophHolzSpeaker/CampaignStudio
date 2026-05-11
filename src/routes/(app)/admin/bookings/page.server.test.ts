@@ -152,7 +152,7 @@ describe('/admin/bookings +page.server', () => {
 		formData.set('booking_type', 'lead');
 		formData.set('advance_notice_minutes', '-5');
 		formData.set('slot_duration_minutes', '0');
-		formData.set('slot_interval_minutes', '99');
+		formData.set('slot_interval_minutes', '0');
 
 		const response = (await actions.updateRules({
 			request: new Request('http://test.local/admin/bookings', { method: 'POST', body: formData })
@@ -163,5 +163,37 @@ describe('/admin/bookings +page.server', () => {
 		expect(response.data.rulesForm.errors?.slotDurationMinutes).toBeTruthy();
 		expect(response.data.rulesForm.errors?.slotIntervalMinutes).toBeTruthy();
 		expect(mockedSaveBookingTypeRules).not.toHaveBeenCalled();
+	});
+
+	it('allows slot interval larger than slot duration', async () => {
+		mockedSaveBookingTypeRules.mockResolvedValueOnce({
+			bookingType: 'general',
+			advanceNoticeMinutes: 30,
+			slotDurationMinutes: 20,
+			slotIntervalMinutes: 30,
+			isEnabled: true,
+			ruleRowId: 'rule-general',
+			updatedAt: new Date('2026-04-16T00:00:00.000Z')
+		});
+
+		const formData = new FormData();
+		formData.set('booking_type', 'general');
+		formData.set('advance_notice_minutes', '30');
+		formData.set('slot_duration_minutes', '20');
+		formData.set('slot_interval_minutes', '30');
+		formData.set('is_enabled', 'on');
+
+		const response = (await actions.updateRules({
+			request: new Request('http://test.local/admin/bookings', { method: 'POST', body: formData })
+		} as never)) as any;
+
+		expect(mockedSaveBookingTypeRules).toHaveBeenCalledWith({
+			bookingType: 'general',
+			advanceNoticeMinutes: 30,
+			slotDurationMinutes: 20,
+			slotIntervalMinutes: 30,
+			isEnabled: true
+		});
+		expect(response.rulesForm.success).toBe(true);
 	});
 });

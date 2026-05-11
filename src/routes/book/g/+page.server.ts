@@ -19,6 +19,7 @@ import {
 	type BookingIntakeFieldErrors,
 	type BookingIntakeSubmission
 } from '$lib/validation/booking-intake';
+import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
 
 type ClassificationView = {
 	interactionKind: 'first_time' | 'repeat';
@@ -99,6 +100,23 @@ export const actions: Actions = {
 			});
 		}
 
+		try {
+			await notifyBookingFormSubmission({
+				flow: 'book_g',
+				email: parseResult.data.email,
+				name: parseResult.data.name ?? null,
+				phone: parseResult.data.phone ?? null,
+				company: parseResult.data.company ?? null,
+				scope: parseResult.data.scope,
+				pagePath: '/book/g'
+			});
+		} catch (error) {
+			console.error('booking_form_submission_notification_failed', {
+				flow: 'book_g',
+				error: error instanceof Error ? error.message : 'unknown_error'
+			});
+		}
+
 		const bookingFlow = await resolvePublicBookingSlots({
 			bookingType: 'general',
 			requesterEmail: parseResult.data.email
@@ -154,6 +172,7 @@ export const actions: Actions = {
 				email: parseResult.data.email,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name,
+				phone: parseResult.data.phone,
 				company: parseResult.data.company
 			},
 			selectedStartsAt: new Date(parseResult.data.selectedStartsAtIso),

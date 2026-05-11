@@ -14,6 +14,7 @@ import {
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
 import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
+import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
 import {
 	bookingConfirmationSchema,
 	bookingIntakeSchema,
@@ -39,6 +40,7 @@ type IntakeSummaryView = {
 	email: string;
 	scope: string;
 	requestSummary: string;
+	phone: string | null;
 	company: string | null;
 };
 
@@ -230,7 +232,7 @@ export const load: PageServerLoad = async ({
 			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No briefing slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the upcoming days.'
 					: undefined
 		} satisfies LeadBookingPageData;
 	}
@@ -295,6 +297,26 @@ export const actions: Actions = {
 				});
 			}
 
+			try {
+				await notifyBookingFormSubmission({
+					flow: 'book_l_new',
+					email: parseResult.data.email,
+					name: parseResult.data.name ?? null,
+					phone: parseResult.data.phone ?? null,
+					company: parseResult.data.company ?? null,
+					scope: parseResult.data.scope,
+					campaignId,
+					campaignPageId,
+					pageSlug: utmPageSlug,
+					pagePath: '/book/l/new'
+				});
+			} catch (error) {
+				console.error('booking_form_submission_notification_failed', {
+					flow: 'book_l_new',
+					error: error instanceof Error ? error.message : 'unknown_error'
+				});
+			}
+
 			// Read visitor identifier
 			const visitorIdentifier = readVisitorIdentifier(cookies);
 
@@ -323,6 +345,7 @@ export const actions: Actions = {
 						email: parseResult.data.email,
 						scope: parseResult.data.scope,
 						name: parseResult.data.name ?? null,
+						phone: parseResult.data.phone ?? null,
 						company: parseResult.data.company ?? null
 					}
 				}
@@ -345,6 +368,7 @@ export const actions: Actions = {
 					form: {
 						email: parseResult.data.email,
 						full_name: parseResult.data.name ?? '',
+						phone: parseResult.data.phone ?? '',
 						organization: parseResult.data.company ?? '',
 						meeting_scope: parseResult.data.scope,
 						form_type: 'booking_modal_intake'
@@ -367,6 +391,7 @@ export const actions: Actions = {
 				email: parseResult.data.email,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name ?? '',
+				phone: parseResult.data.phone ?? '',
 				company: parseResult.data.company ?? ''
 			};
 
@@ -388,11 +413,12 @@ export const actions: Actions = {
 					email: normalizedValues.email,
 					scope: normalizedValues.scope,
 					requestSummary: normalizedValues.scope,
+					phone: normalizedValues.phone || null,
 					company: normalizedValues.company || null
 				},
 				message:
 					bookingFlow.availability.state === 'no_slots'
-						? 'No briefing slots are currently available in the next 3 days.'
+						? 'No briefing slots are currently available in the upcoming days.'
 						: undefined
 			};
 		}
@@ -423,6 +449,26 @@ export const actions: Actions = {
 			});
 		}
 
+		try {
+			await notifyBookingFormSubmission({
+				flow: 'book_l_existing',
+				email: parseResult.data.email,
+				name: parseResult.data.name ?? null,
+				phone: parseResult.data.phone ?? null,
+				company: parseResult.data.company ?? null,
+				scope: parseResult.data.scope,
+				campaignId: tokenResolution.context.campaignId,
+				campaignPageId: null,
+				pageSlug: null,
+				pagePath: '/book/l/[token]'
+			});
+		} catch (error) {
+			console.error('booking_form_submission_notification_failed', {
+				flow: 'book_l_existing',
+				error: error instanceof Error ? error.message : 'unknown_error'
+			});
+		}
+
 		const bookingFlow = await resolvePublicBookingSlots({
 			bookingType: 'lead',
 			requesterEmail: parseResult.data.email
@@ -432,6 +478,7 @@ export const actions: Actions = {
 			email: parseResult.data.email,
 			scope: parseResult.data.scope,
 			name: parseResult.data.name ?? '',
+			phone: parseResult.data.phone ?? '',
 			company: parseResult.data.company ?? ''
 		};
 
@@ -452,11 +499,12 @@ export const actions: Actions = {
 				email: normalizedValues.email,
 				scope: normalizedValues.scope,
 				requestSummary: normalizedValues.scope,
+				phone: normalizedValues.phone || null,
 				company: normalizedValues.company || null
 			},
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No briefing slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the upcoming days.'
 					: undefined
 		};
 	},
@@ -502,6 +550,7 @@ export const actions: Actions = {
 				email: parseResult.data.email,
 				scope: parseResult.data.scope,
 				name: parseResult.data.name,
+				phone: parseResult.data.phone,
 				company: parseResult.data.company
 			},
 			selectedStartsAt: new Date(parseResult.data.selectedStartsAtIso),

@@ -45,6 +45,7 @@ describe('classifyBookingRequesterByEmail', () => {
 			lead_journey_id: null,
 			email: 'repeat@example.com',
 			name: 'Repeat Lead',
+			phone: null,
 			company: 'Acme',
 			scope: 'Discovery call',
 			status: 'confirmed' as const,

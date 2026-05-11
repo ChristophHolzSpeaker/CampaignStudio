@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+const bookingPhonePattern = /^\+?\d{8,15}$/;
+
 export const bookingIntakeSchema = z.object({
 	email: z.string().trim().min(1, 'Email is required').email('Enter a valid email address'),
 	scope: z
@@ -8,6 +10,14 @@ export const bookingIntakeSchema = z.object({
 		.min(2, 'Meeting purpose is required')
 		.max(500, 'Meeting purpose is too long'),
 	name: z.string().trim().max(120, 'Name is too long').optional(),
+	phone: z
+		.string()
+		.trim()
+		.refine(
+			(value) => value === '' || bookingPhonePattern.test(value),
+			'Enter a valid phone number (8-15 digits, optional leading +)'
+		)
+		.optional(),
 	company: z.string().trim().max(120, 'Company is too long').optional()
 });
 
@@ -28,6 +38,7 @@ export type BookingIntakeSubmission = {
 	email: string;
 	scope: string;
 	name: string;
+	phone: string;
 	company: string;
 };
 
@@ -46,6 +57,7 @@ export function getBookingIntakeSubmission(formData: FormData): BookingIntakeSub
 		email: formData.get('email')?.toString().trim() ?? '',
 		scope: formData.get('scope')?.toString().trim() ?? '',
 		name: formData.get('name')?.toString().trim() ?? '',
+		phone: formData.get('phone')?.toString().trim() ?? '',
 		company: formData.get('company')?.toString().trim() ?? ''
 	};
 }
@@ -73,7 +85,13 @@ export function toBookingIntakeFieldErrors(input: z.ZodError): BookingIntakeFiel
 			continue;
 		}
 
-		if (field === 'email' || field === 'scope' || field === 'name' || field === 'company') {
+		if (
+			field === 'email' ||
+			field === 'scope' ||
+			field === 'name' ||
+			field === 'phone' ||
+			field === 'company'
+		) {
 			fieldErrors[field] = issue.message;
 		}
 	}
@@ -100,6 +118,7 @@ export function toBookingConfirmationFieldErrors(
 			field === 'email' ||
 			field === 'scope' ||
 			field === 'name' ||
+			field === 'phone' ||
 			field === 'company' ||
 			field === 'selectedStartsAtIso' ||
 			field === 'selectedEndsAtIso'

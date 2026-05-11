@@ -3,32 +3,22 @@ import { z } from 'zod';
 const bookingTypes = ['lead', 'general'] as const;
 type BookingType = (typeof bookingTypes)[number];
 
-export const bookingRulesAdminSchema = z
-	.object({
-		advanceNoticeMinutes: z.coerce
-			.number({ message: 'Advance notice is required' })
-			.int('Advance notice must be a whole number')
-			.min(0, 'Advance notice must be zero or greater'),
-		slotDurationMinutes: z.coerce
-			.number({ message: 'Slot duration is required' })
-			.int('Slot duration must be a whole number')
-			.min(1, 'Slot duration must be at least 1 minute'),
-		slotIntervalMinutes: z.coerce
-			.number({ message: 'Slot interval is required' })
-			.int('Slot interval must be a whole number')
-			.min(1, 'Slot interval must be at least 1 minute'),
-		isEnabled: z.boolean(),
-		bookingType: z.enum(bookingTypes)
-	})
-	.superRefine((value, ctx) => {
-		if (value.slotIntervalMinutes > value.slotDurationMinutes) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				path: ['slotIntervalMinutes'],
-				message: 'Slot interval must not exceed slot duration'
-			});
-		}
-	});
+export const bookingRulesAdminSchema = z.object({
+	advanceNoticeMinutes: z.coerce
+		.number({ message: 'Advance notice is required' })
+		.int('Advance notice must be a whole number')
+		.min(0, 'Advance notice must be zero or greater'),
+	slotDurationMinutes: z.coerce
+		.number({ message: 'Slot duration is required' })
+		.int('Slot duration must be a whole number')
+		.min(1, 'Slot duration must be at least 1 minute'),
+	slotIntervalMinutes: z.coerce
+		.number({ message: 'Slot interval is required' })
+		.int('Slot interval must be a whole number')
+		.min(1, 'Slot interval must be at least 1 minute'),
+	isEnabled: z.boolean(),
+	bookingType: z.enum(bookingTypes)
+});
 
 export const bookingPauseAdminSchema = z.object({
 	isPaused: z.boolean(),

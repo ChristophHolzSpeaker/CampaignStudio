@@ -28,6 +28,7 @@ export type TelegramUrls = {
 export type TelegramAttendee = {
 	attendee_name?: string | null;
 	attendee_email?: string | null;
+	attendee_phone?: string | null;
 	company?: string | null;
 };
 
