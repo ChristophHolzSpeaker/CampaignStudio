@@ -232,7 +232,7 @@ export const load: PageServerLoad = async ({
 			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No briefing slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the upcoming days.'
 					: undefined
 		} satisfies LeadBookingPageData;
 	}
@@ -418,7 +418,7 @@ export const actions: Actions = {
 				},
 				message:
 					bookingFlow.availability.state === 'no_slots'
-						? 'No briefing slots are currently available in the next 3 days.'
+						? 'No briefing slots are currently available in the upcoming days.'
 						: undefined
 			};
 		}
@@ -504,7 +504,7 @@ export const actions: Actions = {
 			},
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No briefing slots are currently available in the next 3 days.'
+					? 'No briefing slots are currently available in the upcoming days.'
 					: undefined
 		};
 	},

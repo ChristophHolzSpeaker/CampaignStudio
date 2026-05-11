@@ -172,7 +172,10 @@ export async function resolveRescheduleBookingFlow(input: {
 		};
 	}
 
-	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({ now });
+	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({
+		now,
+		bookingType: booking.booking_type
+	});
 	const availability = await getBookingAvailability({
 		bookingType: booking.booking_type,
 		searchStartsAt,
