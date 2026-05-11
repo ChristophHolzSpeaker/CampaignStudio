@@ -3,7 +3,7 @@ import { render } from 'svelte/server';
 import Page from './+page.svelte';
 
 describe('/book/l/[token] +page.svelte', () => {
-	it('renders summary panel and slot-selection stage for skipped intake state', () => {
+	it('renders shared slot-selection stage for skipped intake state', () => {
 		const { body } = render(Page, {
 			props: {
 				data: {
@@ -54,12 +54,14 @@ describe('/book/l/[token] +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('Briefing details');
 		expect(body).toContain('Select a briefing slot');
 		expect(body).toContain('lead@example.com');
-		expect(body).toContain('Discuss launch strategy');
-		expect(body).toContain('href="?edit=1"');
-		expect(body).toContain('action="?/confirm"');
+		expect(body).toContain('Confirm briefing slot');
+		expect(body).toContain('Christoph Holz');
+		expect(body).toContain('Compliance and Transparency footer section');
+		expect(body).toContain('id="booking"');
+		expect(body).toContain('id="contact"');
+		expect(body).not.toContain('Briefing details');
 	});
 
 	it('renders editable intake form with prefilled values when intake is not skipped', () => {
