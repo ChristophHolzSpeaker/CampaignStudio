@@ -4,8 +4,15 @@
 
 	let {
 		props,
-		mailtoHref = 'mailto:speaker@christophholz.com'
-	}: { props?: HybridContentSectionProps; mailtoHref?: string } = $props();
+		mailtoHref = 'mailto:speaker@christophholz.com',
+		campaignId = null,
+		campaignPageId = null
+	}: {
+		props?: HybridContentSectionProps;
+		mailtoHref?: string;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+	} = $props();
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
 
@@ -141,4 +148,8 @@
 	</div>
 </section>
 
-<DirectAccess props={{ mailtoHref, emailCtaTitle: props?.emailCtaTitle }}></DirectAccess>
+<DirectAccess
+	props={{ mailtoHref, emailCtaTitle: props?.emailCtaTitle }}
+	{campaignId}
+	{campaignPageId}
+></DirectAccess>
