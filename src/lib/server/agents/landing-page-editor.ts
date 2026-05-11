@@ -21,7 +21,7 @@ import { persistGeneratedLandingPage } from './landing-page-pipeline';
 const requiredSectionTypes = ['seo', 'compliance_transparency_footer'] as const;
 
 const sectionContractGuidance = `Valid section type names and required props (exact keys):
-- immediate_authority_hero: headline, subheadline, primaryCtaLabel, videoEmbedUrl, videoThumbnailUrl, videoThumbnailAlt
+- immediate_authority_hero: headline, subheadline, primaryCtaLabel, videoEmbedUrl, heroImageUrl, heroImageAlt, videoThumbnailUrl, videoThumbnailAlt
 - hero_large_email_cta: heading, labelText
 - booklet_download_cta: labelText, heading, paragraph, buttonCtaText
 
@@ -169,7 +169,12 @@ The output must be a valid landing page document object with this shape:
 function buildEditorUserPrompt(
 	currentPage: LandingPageDocument,
 	changePrompt: string,
-	approvedHeroMedia: Array<{ id: string; videoEmbedUrl: string; videoThumbnailUrl: string }>,
+	approvedHeroMedia: Array<{
+		id: string;
+		videoEmbedUrl: string;
+		videoThumbnailUrl: string;
+		heroImageUrl: string;
+	}>,
 	approvedHybridImages: Array<{ id: string; imageUrl: string }>
 ): string {
 	return `Apply this request to the landing page JSON.
@@ -196,7 +201,12 @@ function buildRepairPrompt(
 	changePrompt: string,
 	invalidResponse: unknown,
 	issues: ZodIssue[],
-	approvedHeroMedia: Array<{ id: string; videoEmbedUrl: string; videoThumbnailUrl: string }>,
+	approvedHeroMedia: Array<{
+		id: string;
+		videoEmbedUrl: string;
+		videoThumbnailUrl: string;
+		heroImageUrl: string;
+	}>,
 	approvedHybridImages: Array<{ id: string; imageUrl: string }>
 ): string {
 	const mustIncludeBooklet = promptWantsBookletSection(changePrompt)
@@ -236,7 +246,7 @@ Return corrected JSON only.`;
 function validateEditedPageGuardrails(
 	input: LandingPageDocument,
 	currentPage: LandingPageDocument,
-	heroMedia: Array<{ videoEmbedUrl: string; videoThumbnailUrl: string }>,
+	heroMedia: Array<{ videoEmbedUrl: string; videoThumbnailUrl: string; heroImageUrl: string }>,
 	hybridImages: Array<{ imageUrl: string }>
 ): LandingPageDocument {
 	const parsed = landingPageDocumentSchema.parse(input);
@@ -260,10 +270,14 @@ function validateEditedPageGuardrails(
 
 	const allowedHeroEmbedUrls = new Set(heroMedia.map((asset) => asset.videoEmbedUrl));
 	const allowedHeroThumbnailUrls = new Set(heroMedia.map((asset) => asset.videoThumbnailUrl));
+	const allowedHeroImageUrls = new Set(heroMedia.map((asset) => asset.heroImageUrl));
 	for (const section of currentPage.sections) {
 		if (section.type === 'immediate_authority_hero') {
 			allowedHeroEmbedUrls.add(section.props.videoEmbedUrl);
 			allowedHeroThumbnailUrls.add(section.props.videoThumbnailUrl);
+			if (section.props.heroImageUrl) {
+				allowedHeroImageUrls.add(section.props.heroImageUrl);
+			}
 		}
 	}
 
@@ -278,6 +292,10 @@ function validateEditedPageGuardrails(
 
 		if (!allowedHeroThumbnailUrls.has(section.props.videoThumbnailUrl)) {
 			throw new Error('Edited page hero videoThumbnailUrl is not in approved media assets.');
+		}
+
+		if (!section.props.heroImageUrl || !allowedHeroImageUrls.has(section.props.heroImageUrl)) {
+			throw new Error('Edited page hero heroImageUrl is not in approved media assets.');
 		}
 	}
 
@@ -326,8 +344,21 @@ async function generateEditedLandingPageDocument(
 	const approvedHeroMedia = assets.assetCatalog.heroVideos.map((asset) => ({
 		id: asset.id,
 		videoEmbedUrl: asset.videoEmbedUrl,
-		videoThumbnailUrl: asset.videoThumbnailUrl
+		videoThumbnailUrl: asset.videoThumbnailUrl,
+		heroImageUrl: asset.videoThumbnailUrl
 	}));
+	for (const asset of assets.assetCatalog.heroImages) {
+		if (approvedHeroMedia.some((item) => item.id === asset.id)) {
+			continue;
+		}
+
+		approvedHeroMedia.push({
+			id: asset.id,
+			videoEmbedUrl: assets.heroDefaults.videoEmbedUrl,
+			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? asset.imageUrl,
+			heroImageUrl: asset.imageUrl
+		});
+	}
 	const approvedHybridImages = assets.assetCatalog.hybridSupportingImages.map((asset) => ({
 		id: asset.id,
 		imageUrl: asset.imageUrl

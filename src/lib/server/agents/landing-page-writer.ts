@@ -203,6 +203,26 @@ function resolveHeroVideoSelection(
 	return selected;
 }
 
+function resolveHeroImageSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): LandingPageGenerationInput['assets']['assetCatalog']['heroImages'][number] | null {
+	const selectedId = plan.assetPlan?.hero?.imageAssetId;
+	if (!selectedId) {
+		return null;
+	}
+
+	const selected = input.assets.assetCatalog.heroImages.find((asset) => asset.id === selectedId);
+	if (!selected) {
+		console.warn(
+			`Landing page writer: hero image asset selection '${selectedId}' not found in approved catalog; using fallback defaults.`
+		);
+		return null;
+	}
+
+	return selected;
+}
+
 function resolveHybridSupportingVisualSelection(
 	input: LandingPageGenerationInput,
 	plan: LandingPagePlan
@@ -397,6 +417,7 @@ function hydrateSectionWithAssets(
 			const fallbackHeadline = `${plan.pageTitle}`;
 			const fallbackSubheadline = input.adGroup.intentSummary || input.adPackage.messagingAngle;
 			const selectedHeroVideo = resolveHeroVideoSelection(input, plan);
+			const selectedHeroImage = resolveHeroImageSelection(input, plan);
 			const primaryCtaLabel =
 				section.props.primaryCtaLabel?.trim() || assets.heroDefaults.primaryCtaLabelDefault;
 			const resolvedVideoThumbnailUrl =
@@ -407,10 +428,25 @@ function hydrateSectionWithAssets(
 				selectedHeroVideo?.videoThumbnailAlt ||
 				section.props.videoThumbnailAlt ||
 				assets.heroDefaults.videoThumbnailAlt;
+			const resolvedHeroImageUrl =
+				selectedHeroImage?.imageUrl ??
+				section.props.heroImageUrl ??
+				assets.heroDefaults.heroImageUrl ??
+				resolvedVideoThumbnailUrl;
+			const resolvedHeroImageAlt =
+				selectedHeroImage?.alt ||
+				section.props.heroImageAlt ||
+				assets.heroDefaults.heroImageAlt ||
+				resolvedVideoThumbnailAlt;
 
-			if (!resolvedVideoThumbnailUrl || !resolvedVideoThumbnailAlt) {
+			if (
+				!resolvedVideoThumbnailUrl ||
+				!resolvedVideoThumbnailAlt ||
+				!resolvedHeroImageUrl ||
+				!resolvedHeroImageAlt
+			) {
 				throw new Error(
-					'Landing page writer: missing hero thumbnail defaults. Provide thumbnail values in heroDefaults or media assets.'
+					'Landing page writer: missing hero media defaults. Provide hero image and thumbnail values in heroDefaults or media assets.'
 				);
 			}
 
@@ -430,6 +466,8 @@ function hydrateSectionWithAssets(
 						selectedHeroVideo?.videoEmbedUrl ??
 						section.props.videoEmbedUrl ??
 						assets.heroDefaults.videoEmbedUrl,
+					heroImageUrl: resolvedHeroImageUrl,
+					heroImageAlt: resolvedHeroImageAlt,
 					videoThumbnailUrl: resolvedVideoThumbnailUrl,
 					videoThumbnailAlt: resolvedVideoThumbnailAlt
 				}

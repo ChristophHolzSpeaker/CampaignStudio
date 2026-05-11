@@ -3,6 +3,9 @@ import { landingPageAssetsSchema, type LandingPageAssets } from '../schemas/land
 export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.parse({
 	heroDefaults: {
 		videoEmbedUrl: 'https://www.youtube.com/watch?v=mpbtCg2NSUs',
+		heroImageUrl:
+			'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6130408552ea140d707aab8e_christoph-contact-bg.jpg',
+		heroImageAlt: 'Keynote speaker presenting to a business audience',
 		videoThumbnailUrl:
 			'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6130408552ea140d707aab8e_christoph-contact-bg.jpg',
 		videoThumbnailAlt: 'Keynote speaker presenting to a business audience',
@@ -99,6 +102,7 @@ export const landingPageAssets: LandingPageAssets = landingPageAssetsSchema.pars
 	},
 	assetCatalog: {
 		heroVideos: [],
+		heroImages: [],
 		hybridSupportingImages: [],
 		speakerInActionVideos: [],
 		logoCatalog: [],

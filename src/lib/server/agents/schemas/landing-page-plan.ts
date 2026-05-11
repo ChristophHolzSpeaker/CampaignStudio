@@ -8,6 +8,7 @@ const landingPagePlanSectionSchema = z.object({
 
 const heroAssetSelectionSchema = z.object({
 	videoAssetId: z.string().trim().min(1),
+	imageAssetId: z.string().trim().min(1),
 	rationale: z.string().trim().min(1)
 });
 
@@ -57,12 +58,12 @@ export const landingPagePlanSchema = z
 				return true;
 			}
 
-			return Boolean(plan.assetPlan?.hero?.videoAssetId);
+			return Boolean(plan.assetPlan?.hero?.videoAssetId && plan.assetPlan?.hero?.imageAssetId);
 		},
 		{
 			message:
-				'assetPlan.hero.videoAssetId is required when immediate_authority_hero is included in sectionPlan.',
-			path: ['assetPlan', 'hero', 'videoAssetId']
+				'assetPlan.hero.videoAssetId and assetPlan.hero.imageAssetId are required when immediate_authority_hero is included in sectionPlan.',
+			path: ['assetPlan', 'hero']
 		}
 	)
 	.refine(

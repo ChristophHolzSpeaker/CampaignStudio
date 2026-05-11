@@ -114,7 +114,7 @@ Rules:
 * avoid selecting adjacent sections that do the same job or repeat the same narrative function
 * section purpose and contentDirection are internal planning artifacts, not final customer-facing copy
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
-	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID
+	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID and exactly one hero image from input.assets.assetCatalog.heroImages by ID
 	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
 	* when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
@@ -149,6 +149,7 @@ Return exactly one valid JSON object with this shape:
   "assetPlan": {
     "hero": {
       "videoAssetId": "string",
+      "imageAssetId": "string",
       "rationale": "string"
     },
 		"logosOfTrustRibbon": {
@@ -242,6 +243,7 @@ Asset usage requirements:
 	* for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
 	* for speaker_in_action media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
 	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
+	* for hero image, resolve the selected ID from plan.assetPlan.hero.imageAssetId against input.assets.assetCatalog.heroImages
 * for hybrid supporting visuals, resolve IDs from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages
 * for keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog
 * for compliance footer fields, use input.assets.complianceDefaults

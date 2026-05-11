@@ -5,6 +5,7 @@ import { landingPageAssets } from './landing-page-assets';
 import {
 	landingPageAssetsSchema,
 	type HeroVideoOption,
+	type HeroImageOption,
 	type HybridSupportingImageOption,
 	type SpeakerInActionVideoOption,
 	type LogoOption,
@@ -232,10 +233,11 @@ function sortMediaAssetsByRelevance(
 
 function fillHeroDefaultsFromCatalog(
 	assets: LandingPageAssets,
-	catalog: { heroVideos: HeroVideoOption[] }
+	catalog: { heroVideos: HeroVideoOption[]; heroImages: HeroImageOption[] }
 ): LandingPageAssets {
+	const fallbackHeroImage = catalog.heroImages[0];
 	const fallbackHero = catalog.heroVideos[0];
-	if (!fallbackHero) {
+	if (!fallbackHero && !fallbackHeroImage) {
 		return assets;
 	}
 
@@ -243,18 +245,28 @@ function fillHeroDefaultsFromCatalog(
 		...assets,
 		heroDefaults: {
 			...assets.heroDefaults,
-			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? fallbackHero.videoThumbnailUrl,
-			videoThumbnailAlt: assets.heroDefaults.videoThumbnailAlt ?? fallbackHero.videoThumbnailAlt
+			heroImageUrl:
+				assets.heroDefaults.heroImageUrl ??
+				fallbackHeroImage?.imageUrl ??
+				fallbackHero?.videoThumbnailUrl,
+			heroImageAlt:
+				assets.heroDefaults.heroImageAlt ??
+				fallbackHeroImage?.alt ??
+				fallbackHero?.videoThumbnailAlt,
+			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? fallbackHero?.videoThumbnailUrl,
+			videoThumbnailAlt: assets.heroDefaults.videoThumbnailAlt ?? fallbackHero?.videoThumbnailAlt
 		}
 	};
 }
 
 function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	heroVideos: HeroVideoOption[];
+	heroImages: HeroImageOption[];
 	hybridSupportingImages: HybridSupportingImageOption[];
 	speakerInActionVideos: SpeakerInActionVideoOption[];
 } {
 	const heroVideos: HeroVideoOption[] = [];
+	const heroImages: HeroImageOption[] = [];
 	const hybridSupportingImages: HybridSupportingImageOption[] = [];
 	const speakerInActionVideos: SpeakerInActionVideoOption[] = [];
 
@@ -273,6 +285,28 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 				videoEmbedUrl: asset.primaryUrl,
 				videoThumbnailUrl: asset.thumbnailUrl,
 				videoThumbnailAlt: asset.thumbnailAlt
+			});
+
+			heroImages.push({
+				id: asset.id,
+				title: asset.title,
+				description: asset.description,
+				usageNotes: asset.usageNotes,
+				avoidNotes: asset.avoidNotes ?? undefined,
+				imageUrl: asset.thumbnailUrl,
+				alt: asset.thumbnailAlt
+			});
+		}
+
+		if (asset.kind === 'image' && asset.sectionTypes.includes('immediate_authority_hero')) {
+			heroImages.push({
+				id: asset.id,
+				title: asset.title,
+				description: asset.description,
+				usageNotes: asset.usageNotes,
+				avoidNotes: asset.avoidNotes ?? undefined,
+				imageUrl: asset.primaryUrl,
+				alt: asset.thumbnailAlt ?? asset.title
 			});
 		}
 
@@ -306,7 +340,7 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 		}
 	}
 
-	return { heroVideos, hybridSupportingImages, speakerInActionVideos };
+	return { heroVideos, heroImages, hybridSupportingImages, speakerInActionVideos };
 }
 
 function buildLogoCatalog(rows: LogoRow[]): LogoOption[] {
@@ -344,6 +378,7 @@ export async function loadLandingPageAssets(
 					...landingPageAssets,
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
+						heroImages: catalog.heroImages,
 						hybridSupportingImages: catalog.hybridSupportingImages,
 						speakerInActionVideos: catalog.speakerInActionVideos,
 						logoCatalog: logosCatalog,
@@ -365,6 +400,7 @@ export async function loadLandingPageAssets(
 					...landingPageAssets,
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
+						heroImages: catalog.heroImages,
 						hybridSupportingImages: catalog.hybridSupportingImages,
 						speakerInActionVideos: catalog.speakerInActionVideos,
 						logoCatalog: logosCatalog,
@@ -380,6 +416,7 @@ export async function loadLandingPageAssets(
 				...parsedAssets.data,
 				assetCatalog: {
 					heroVideos: catalog.heroVideos,
+					heroImages: catalog.heroImages,
 					hybridSupportingImages: catalog.hybridSupportingImages,
 					speakerInActionVideos: catalog.speakerInActionVideos,
 					logoCatalog: logosCatalog,

@@ -31,7 +31,7 @@ Corrective rules:
 - include these required section types: ${requiredSectionTypes.join(', ')}
 - sectionPlan must not contain duplicate section types
 - place seo as the first section in sectionPlan
-- when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos
+- when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos and assetPlan.hero.imageAssetId from input.assets.assetCatalog.heroImages
 - when speaker_in_action is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 4 IDs from input.assets.assetCatalog.speakerInActionVideos
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.supportingImageAssetIds from input.assets.assetCatalog.hybridSupportingImages
 - when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog

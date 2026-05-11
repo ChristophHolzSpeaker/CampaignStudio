@@ -24,6 +24,8 @@ export interface ImmediateAuthorityHeroProps {
 	primaryCtaHref?: string;
 	primaryCtaAction?: string;
 	videoEmbedUrl: string;
+	heroImageUrl?: string;
+	heroImageAlt?: string;
 	videoThumbnailUrl: string;
 	videoThumbnailAlt: string;
 	eyebrow?: string;
