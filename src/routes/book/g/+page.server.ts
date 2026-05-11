@@ -4,6 +4,7 @@ import {
 	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
+	resolvePublicBookingSlotPreview,
 	resolvePublicBookingSlots,
 	type PublicBookingSlotDayGroup
 } from '$lib/server/bookings';
@@ -70,10 +71,30 @@ function toClassificationView(input: {
 export const load: PageServerLoad = async () => {
 	const policy = await getBookingPolicy('general');
 
+	if (policy.state !== 'active') {
+		return {
+			bookingType: 'general' as const,
+			policyState: policy.state,
+			unavailableMessage: getPublicBookingUnavailableMessage(policy)
+		};
+	}
+
+	const slotPreview = await resolvePublicBookingSlotPreview({
+		bookingType: 'general'
+	});
+
 	return {
 		bookingType: 'general' as const,
 		policyState: policy.state,
-		unavailableMessage: getPublicBookingUnavailableMessage(policy)
+		unavailableMessage: getPublicBookingUnavailableMessage(policy),
+		availabilityState: slotPreview.availability.state,
+		slotGroups: slotPreview.slotGroups,
+		searchStartsAtIso: slotPreview.searchStartsAt.toISOString(),
+		searchEndsAtIso: slotPreview.searchEndsAt.toISOString(),
+		message:
+			slotPreview.availability.state === 'no_slots'
+				? 'No briefing slots are currently available in the next 3 days.'
+				: undefined
 	};
 };
 

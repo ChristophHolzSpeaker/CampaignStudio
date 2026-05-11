@@ -14,17 +14,36 @@
 	};
 
 	type Props = {
+		submitAction?: {
+			pending?: unknown;
+			result?: {
+				success?: boolean;
+				message?: string;
+			};
+			[key: string]: unknown;
+		};
 		campaignId?: number | null;
 		campaignPageId?: number | null;
 		pageSlug?: string | null;
 		slotGroups?: SlotDayGroup[] | null;
+		showIntakeStep?: boolean;
+		initialValues?: {
+			email?: string | null;
+			name?: string | null;
+			phone?: string | null;
+			company?: string | null;
+			scope?: string | null;
+		};
 	};
 
 	let {
+		submitAction = submitInlineLeadBooking,
 		campaignId = null,
 		campaignPageId = null,
 		pageSlug = null,
-		slotGroups = []
+		slotGroups = [],
+		showIntakeStep = true,
+		initialValues = {}
 	}: Props = $props();
 
 	let selectedStartsAt = $state<string>('');
@@ -37,6 +56,14 @@
 	let intakeCompany = $state('');
 	let intakeScope = $state('');
 	let hideFailureMessage = $state(false);
+
+	const effectiveIntakeEmail = $derived(showIntakeStep ? intakeEmail : (initialValues.email ?? ''));
+	const effectiveIntakeName = $derived(showIntakeStep ? intakeName : (initialValues.name ?? ''));
+	const effectiveIntakePhone = $derived(showIntakeStep ? intakePhone : (initialValues.phone ?? ''));
+	const effectiveIntakeCompany = $derived(
+		showIntakeStep ? intakeCompany : (initialValues.company ?? '')
+	);
+	const effectiveIntakeScope = $derived(showIntakeStep ? intakeScope : (initialValues.scope ?? ''));
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
 	const hasSlots = $derived(normalizedSlotGroups.length > 0);
@@ -96,11 +123,11 @@
 		})()
 	);
 	const hasSelectedSlot = $derived(Boolean(selectedStartsAt && selectedEndsAt));
-	const showSlotStage = $derived(hasSlots && !hasSelectedSlot);
+	const showSlotStage = $derived(hasSlots && (!hasSelectedSlot || !showIntakeStep));
 	const isSubmitDisabled = $derived(
-		!selectedStartsAt || !selectedEndsAt || Boolean(submitInlineLeadBooking.pending)
+		!selectedStartsAt || !selectedEndsAt || Boolean(submitAction.pending)
 	);
-	const submitResult = $derived(submitInlineLeadBooking.result);
+	const submitResult = $derived(submitAction.result);
 	const isSubmitSuccess = $derived(Boolean(submitResult?.success));
 	const showFailureMessage = $derived(
 		Boolean(submitResult?.message && !submitResult.success && !hideFailureMessage)
@@ -168,7 +195,9 @@ Veranstaltungsort:`;
 
 <section class="space-y-6 bg-[var(--surface-card)] p-6 shadow-[var(--shadow-card)] lg:p-8">
 	<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-		Please select an available slot first, then share your details to confirm your briefing request.
+		{showIntakeStep
+			? 'Please select an available slot first, then share your details to confirm your briefing request.'
+			: 'Please select an available slot to confirm your briefing request.'}
 	</p>
 
 	{#if isSubmitSuccess && submitResult?.message}
@@ -177,7 +206,7 @@ Veranstaltungsort:`;
 		</div>
 	{:else}
 		<form
-			{...submitInlineLeadBooking}
+			{...submitAction}
 			class="space-y-8"
 			onsubmit={() => {
 				hideFailureMessage = false;
@@ -201,6 +230,11 @@ Veranstaltungsort:`;
 			<input type="hidden" name="campaignId" value={campaignId ?? ''} />
 			<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
 			<input type="hidden" name="pageSlug" value={pageSlug ?? ''} />
+			<input type="hidden" name="email" value={effectiveIntakeEmail} />
+			<input type="hidden" name="name" value={effectiveIntakeName} />
+			<input type="hidden" name="phone" value={effectiveIntakePhone} />
+			<input type="hidden" name="company" value={effectiveIntakeCompany} />
+			<input type="hidden" name="scope" value={effectiveIntakeScope} />
 			<input type="hidden" name="selected_starts_at" value={selectedStartsAt} />
 			<input type="hidden" name="selected_ends_at" value={selectedEndsAt} />
 
@@ -209,7 +243,7 @@ Veranstaltungsort:`;
 					<section class="space-y-5">
 						<div class="space-y-1">
 							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 1</p>
-							<h2 class="text-xl text-(--text-primary)">Termin zum Kennenlernen vereinbaren</h2>
+							<h2 class="text-xl text-(--text-primary)">Select a briefing slot</h2>
 						</div>
 
 						<div role="tablist" aria-label="Available briefing days" class="flex flex-wrap gap-2">
@@ -271,8 +305,36 @@ Veranstaltungsort:`;
 								{/each}
 							</div>
 						{/if}
+
+						{#if !showIntakeStep}
+							<div
+								class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
+							>
+								<p class="text-xs text-slate-600">
+									{#if hasSelectedSlot}
+										Selected slot:
+										<strong class="text-slate-900"
+											>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
+										>
+									{:else}
+										Please select a slot to continue.
+									{/if}
+								</p>
+								<button
+									type="submit"
+									class="btn-primary inline-flex items-center gap-2"
+									disabled={isSubmitDisabled}
+								>
+									{#if submitAction.pending}
+										Please wait...
+									{:else}
+										Confirm briefing slot
+									{/if}
+								</button>
+							</div>
+						{/if}
 					</section>
-				{:else}
+				{:else if showIntakeStep}
 					<section class="space-y-5">
 						<div class="space-y-1">
 							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
@@ -358,7 +420,7 @@ Veranstaltungsort:`;
 									class="btn-primary inline-flex items-center gap-2"
 									disabled={isSubmitDisabled}
 								>
-									{#if submitInlineLeadBooking.pending}
+									{#if submitAction.pending}
 										Please wait...
 									{:else}
 										Confirm briefing slot

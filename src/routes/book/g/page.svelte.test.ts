@@ -3,45 +3,13 @@ import { render } from 'svelte/server';
 import Page from './+page.svelte';
 
 describe('/book/g +page.svelte', () => {
-	it('renders intake stage by default', () => {
+	it('renders shared slot-first sequence by default', () => {
 		const { body } = render(Page, {
 			props: {
 				data: {
 					bookingType: 'general',
 					policyState: 'active',
-					unavailableMessage: null
-				} as any,
-				form: undefined as any
-			}
-		});
-
-		expect(body).toContain('General briefing request');
-		expect(body).toContain('action="?/check"');
-		expect(body).not.toContain('Select a briefing slot');
-	});
-
-	it('renders two-column slot-selection stage after availability resolves', () => {
-		const { body } = render(Page, {
-			props: {
-				data: {
-					bookingType: 'general',
-					policyState: 'active',
-					unavailableMessage: null
-				} as any,
-				form: {
-					values: {
-						email: 'person@example.com',
-						name: 'General User',
-						company: 'ACME',
-						scope: 'Discovery call'
-					},
-					availabilityState: 'available',
-					classification: {
-						interactionKind: 'first_time',
-						hasUpcomingBooking: false,
-						totalBookings: 0,
-						upcomingBookingStartsAt: null
-					},
+					unavailableMessage: null,
 					slotGroups: [
 						{
 							dateKey: '2026-05-01',
@@ -57,11 +25,30 @@ describe('/book/g +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('Briefing details');
+		expect(body).toContain('General briefing request');
 		expect(body).toContain('Select a briefing slot');
-		expect(body).toContain('action="?/confirm"');
-		expect(body).toContain('name="selected_starts_at"');
-		expect(body).toContain('name="selected_ends_at"');
-		expect(body).toContain('Confirm briefing slot');
+		expect(body).toContain('Please select an available slot first');
+		expect(body).toContain('inline-booking-day-tab-2026-05-01');
+		expect(body).toContain('Christoph Holz');
+		expect(body).toContain('Compliance and Transparency footer section');
+		expect(body).toContain('id="booking"');
+		expect(body).toContain('id="contact"');
+	});
+
+	it('renders no-slot notice when preview has no slots', () => {
+		const { body } = render(Page, {
+			props: {
+				data: {
+					bookingType: 'general',
+					policyState: 'active',
+					unavailableMessage: null,
+					message: 'No briefing slots are currently available in the next 3 days.',
+					slotGroups: []
+				} as any
+			}
+		});
+
+		expect(body).toContain('No briefing slots are currently available in the next 3 days.');
+		expect(body).toContain('Contact us to request a custom time');
 	});
 });
