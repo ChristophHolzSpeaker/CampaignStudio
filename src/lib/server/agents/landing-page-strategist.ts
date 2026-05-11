@@ -41,6 +41,7 @@ Corrective rules:
 - keynote_speeches is required when it appears in requiredSectionTypes
 - when both logos_of_trust_ribbon and keynote_speeches are selected, place keynote_speeches immediately after logos_of_trust_ribbon
 - when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
+- soft preference: when both frictionless_funnel_booking and proof_of_performance are selected, place frictionless_funnel_booking above proof_of_performance
 - never invent logo IDs
 - never invent media IDs or media URLs
 - do not output commentary or markdown
