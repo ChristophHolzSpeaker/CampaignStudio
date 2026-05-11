@@ -390,6 +390,7 @@ export type BookingConfirmedEmailContext = {
 	intent: 'booking_confirmed';
 	recipientEmail: string;
 	recipientName: string | null;
+	language: string;
 	leadJourneyId: string | null;
 	campaignId: number | null;
 	campaignPageId: number | null;

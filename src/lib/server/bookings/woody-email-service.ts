@@ -4,6 +4,7 @@ import {
 	getLeadJourneyById,
 	markLeadJourneyBookingLinkInviteEmailSent
 } from '$lib/server/attribution/lead-journeys';
+import { getCampaignById } from '$lib/server/campaigns/client';
 import { getBookingById, markBookingConfirmationEmailSent } from '$lib/server/bookings/repository';
 import {
 	sendBookingConfirmedWoodyEmail,
@@ -53,6 +54,57 @@ function formatDateTimeRange(input: { startsAt: Date; endsAt: Date }): string {
 	});
 
 	return `${formatter.format(input.startsAt)} to ${formatter.format(input.endsAt)} (UTC)`;
+}
+
+function normalizeLanguageTag(language: string | null | undefined): string {
+	if (!language) {
+		return 'en';
+	}
+
+	const normalized = language.trim().toLowerCase();
+	if (!normalized) {
+		return 'en';
+	}
+
+	if (normalized.startsWith('de') || normalized === 'german') {
+		return 'de';
+	}
+
+	if (normalized.startsWith('fr') || normalized === 'french') {
+		return 'fr';
+	}
+
+	if (normalized.startsWith('es') || normalized === 'spanish') {
+		return 'es';
+	}
+
+	return 'en';
+}
+
+function getLocalizedConfirmedSubject(languageTag: string): string {
+	switch (languageTag) {
+		case 'de':
+			return 'Ihr Video-Briefing mit Christoph ist bestaetigt';
+		case 'fr':
+			return 'Votre briefing video avec Christoph est confirme';
+		case 'es':
+			return 'Tu video briefing con Christoph esta confirmado';
+		default:
+			return 'Your video briefing with Christoph is confirmed';
+	}
+}
+
+function getLocalizedAlternativeVideoCallLine(languageTag: string): string {
+	switch (languageTag) {
+		case 'de':
+			return 'Wenn Sie ein anderes Video-Tool bevorzugen, planen Sie es bitte ein und antworten Sie mit dem Link fuer Christoph.';
+		case 'fr':
+			return 'Si vous preferez un autre outil de visioconference, planifiez-le et repondez avec le lien pour Christoph.';
+		case 'es':
+			return 'Si prefieres otra herramienta de videollamada, programala y responde con el enlace para Christoph.';
+		default:
+			return 'If you prefer another video calling tool please schedule it and reply with the link for Christoph.';
+	}
 }
 
 export async function buildBookingLinkInviteEmailContext(input: {
@@ -109,6 +161,8 @@ export async function buildBookingConfirmedEmailContext(input: {
 		? await getLeadJourneyById(booking.lead_journey_id)
 		: null;
 
+	const campaign = journey?.campaign_id ? await getCampaignById(journey.campaign_id) : null;
+
 	return {
 		intent: 'booking_confirmed',
 		recipientEmail: booking.email,
@@ -123,7 +177,8 @@ export async function buildBookingConfirmedEmailContext(input: {
 		organization: booking.company,
 		confirmedStartsAt: booking.starts_at,
 		confirmedEndsAt: booking.ends_at,
-		calendarEventUrl: input.calendarEventUrl
+		calendarEventUrl: input.calendarEventUrl,
+		language: normalizeLanguageTag(campaign?.language)
 	};
 }
 
@@ -157,6 +212,7 @@ export function composeBookingLinkInviteEmail(context: BookingLinkInviteEmailCon
 export function composeBookingConfirmedEmail(context: BookingConfirmedEmailContext): {
 	subject: string;
 	bodyText: string;
+	bodyHtml: string;
 } {
 	const greetingName = context.recipientName ?? 'there';
 	const timeRange = formatDateTimeRange({
@@ -164,9 +220,12 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 		endsAt: context.confirmedEndsAt
 	});
 	const bookingKindLabel = context.bookingType === 'lead' ? 'lead call' : 'briefing call';
+	const zoomLink = 'https://zoom.christophholz.com';
+	const languageTag = normalizeLanguageTag(context.language);
+	const alternativeVideoCallLine = getLocalizedAlternativeVideoCallLine(languageTag);
 
 	return {
-		subject: 'Your booking is confirmed',
+		subject: getLocalizedConfirmedSubject(languageTag),
 		bodyText: [
 			`Hi ${greetingName},`,
 			'',
@@ -174,13 +233,24 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 			`Time: ${timeRange}`,
 			`Focus: ${context.meetingScope}`,
 			'',
-			`Calendar event: ${context.calendarEventUrl}`,
+			`Video call link: ${zoomLink}`,
+			`Fallback if the link is not clickable: ${zoomLink}`,
+			alternativeVideoCallLine,
 			'',
 			'Looking forward to it.',
 			'',
 			'Best,',
 			'Woody'
-		].join('\n')
+		].join('\n'),
+		bodyHtml: [
+			`<p>Hi ${greetingName},</p>`,
+			`<p>I'm Woody, Christoph's assistant. Your ${bookingKindLabel} is now locked in.</p>`,
+			`<p>Time: ${timeRange}<br/>Focus: ${context.meetingScope}</p>`,
+			`<p>Video call link: <a href="${zoomLink}">${zoomLink}</a><br/>Fallback if the link is not clickable: ${zoomLink}</p>`,
+			`<p>${alternativeVideoCallLine}</p>`,
+			'<p>Looking forward to it.</p>',
+			'<p>Best,<br/>Woody</p>'
+		].join('')
 	};
 }
 
@@ -308,7 +378,8 @@ export async function sendBookingConfirmedEmail(input: {
 		},
 		email_content: {
 			subject: content.subject,
-			body_text: content.bodyText
+			body_text: content.bodyText,
+			body_html: content.bodyHtml
 		}
 	});
 
