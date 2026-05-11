@@ -87,6 +87,32 @@ describe('generateBookingSlots', () => {
 		]);
 	});
 
+	it('supports slot duration shorter than interval with intentional gaps', () => {
+		const result = generateBookingSlots({
+			bookingType: 'lead',
+			searchStartsAt: new Date('2026-05-01T07:00:00.000Z'),
+			searchEndsAt: new Date('2026-05-01T08:30:00.000Z'),
+			rules: makeRules({
+				slotDurationMinutes: 20,
+				slotIntervalMinutes: 30
+			}),
+			busyIntervals: [],
+			now: new Date('2026-05-01T00:00:00.000Z')
+		});
+
+		expect(result.state).toBe('slots_available');
+		expect(
+			result.slots.map((slot) => ({
+				startsAt: slot.startsAt.toISOString(),
+				endsAt: slot.endsAt.toISOString()
+			}))
+		).toEqual([
+			{ startsAt: '2026-05-01T07:00:00.000Z', endsAt: '2026-05-01T07:20:00.000Z' },
+			{ startsAt: '2026-05-01T07:30:00.000Z', endsAt: '2026-05-01T07:50:00.000Z' },
+			{ startsAt: '2026-05-01T08:00:00.000Z', endsAt: '2026-05-01T08:20:00.000Z' }
+		]);
+	});
+
 	it('filters slots outside the booking-day window in Europe/Berlin', () => {
 		const result = generateBookingSlots({
 			bookingType: 'lead',
