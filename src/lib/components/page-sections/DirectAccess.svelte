@@ -4,7 +4,15 @@
 		emailCtaTitle?: string;
 	};
 
-	let { props }: { props: DirectAccessProps } = $props();
+	let {
+		props,
+		campaignId = null,
+		campaignPageId = null
+	}: {
+		props: DirectAccessProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+	} = $props();
 
 	let copied = $state(false);
 
@@ -12,11 +20,50 @@
 		props?.mailtoHref?.replace(/^mailto:/, '').split('?')[0] ?? 'speaker@christophholz.com'
 	);
 
+	function trackCopyEmailCta(): void {
+		if (campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		const payload = JSON.stringify({
+			type: 'email',
+			campaign_id: campaignId,
+			campaign_page_id: campaignPageId,
+			cta_key: 'direct_access_copy_email',
+			cta_label: emailAddress,
+			cta_section: 'direct_access',
+			cta_variant: 'copy'
+		});
+
+		if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+			const sent = navigator.sendBeacon(
+				'/api/attribution/cta',
+				new Blob([payload], { type: 'application/json' })
+			);
+
+			if (sent) {
+				return;
+			}
+		}
+
+		void fetch('/api/attribution/cta', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: payload,
+			keepalive: true
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
+
 	async function copyEmail() {
 		if (!emailAddress) return;
 
 		try {
 			await navigator.clipboard.writeText(emailAddress);
+			trackCopyEmailCta();
 			copied = true;
 
 			setTimeout(() => {
