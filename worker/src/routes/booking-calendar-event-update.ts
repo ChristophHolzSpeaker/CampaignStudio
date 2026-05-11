@@ -11,6 +11,7 @@ const bookingCalendarEventUpdateSchema = z.object({
 	booking_id: z.string().uuid(),
 	event_id: z.string().trim().min(1),
 	booking_type: z.enum(bookingCalendarEventTypes),
+	language: z.string().trim().max(80).nullable().optional(),
 	attendee_email: z.string().trim().email(),
 	attendee_name: z.string().trim().max(120).nullable().optional(),
 	attendee_phone: z
@@ -54,6 +55,16 @@ function buildSummary(input: UpdateBookingCalendarEventRequest): string {
 }
 
 function buildDescription(input: UpdateBookingCalendarEventRequest): string {
+	const normalizedLanguage = input.language?.trim().toLowerCase() ?? '';
+	const urgentLine =
+		normalizedLanguage.startsWith('de') || normalizedLanguage === 'german'
+			? 'Falls etwas dringend ist, rufen Sie bitte direkt diese Nummer an: +4369917407401'
+			: normalizedLanguage.startsWith('fr') || normalizedLanguage === 'french'
+				? "En cas d'urgence, n'hesitez pas a appeler directement ce numero : +4369917407401"
+				: normalizedLanguage.startsWith('es') || normalizedLanguage === 'spanish'
+					? 'Si algo es urgente, no dudes en llamar directamente a este numero: +4369917407401'
+					: 'If anything is urgent please feel free to call this number directly: +4369917407401';
+
 	const contextLines = [
 		'Request summary:',
 		input.meeting_scope,
@@ -61,7 +72,9 @@ function buildDescription(input: UpdateBookingCalendarEventRequest): string {
 		'Video call link:',
 		'https://zoom.christophholz.com',
 		'',
-		`Reschedule link: ${input.reschedule_url}`
+		`Reschedule link: ${input.reschedule_url}`,
+		'',
+		urgentLine
 	];
 
 	return contextLines.join('\n');

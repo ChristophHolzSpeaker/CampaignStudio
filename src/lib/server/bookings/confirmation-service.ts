@@ -19,6 +19,7 @@ import { isSlotInsideBookingWindow } from './booking-window';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { sendBookingConfirmedEmail } from '$lib/server/bookings/woody-email-service';
 import { notifyBookingConfirmed } from '$lib/server/notifications/telegram';
+import { getCampaignById } from '$lib/server/campaigns/client';
 import type { CreateBookingCalendarEventRequest } from '../../../../shared/booking-calendar';
 import { randomBytes } from 'node:crypto';
 
@@ -99,11 +100,13 @@ function toCalendarPayload(input: {
 	endsAt: Date;
 	rescheduleUrl: string;
 	isRepeatInteraction: boolean;
+	language: string | null;
 	leadTokenContext?: BookingConfirmationLeadTokenContext;
 }): CreateBookingCalendarEventRequest {
 	return {
 		booking_id: input.bookingId,
 		booking_type: input.bookingType,
+		language: input.language,
 		attendee_email: input.email,
 		attendee_name: input.name,
 		attendee_phone: input.phone,
@@ -115,6 +118,17 @@ function toCalendarPayload(input: {
 		is_repeat_interaction: input.isRepeatInteraction,
 		lead_context: toLeadContext(input.leadTokenContext)
 	};
+}
+
+async function resolveCampaignLanguage(
+	campaignId: number | null | undefined
+): Promise<string | null> {
+	if (!campaignId) {
+		return null;
+	}
+
+	const campaign = await getCampaignById(campaignId);
+	return campaign?.language ?? null;
 }
 
 function toSyncErrorMessage(error: unknown): string {
@@ -209,6 +223,7 @@ export async function confirmBookingSelection(
 		requestOrigin: input.requestOrigin,
 		rescheduleToken
 	});
+	const campaignLanguage = await resolveCampaignLanguage(input.leadTokenContext?.campaignId);
 	const eventProvider = deps?.calendarEventProvider ?? new WorkerBookingCalendarEventProvider();
 
 	try {
@@ -225,6 +240,7 @@ export async function confirmBookingSelection(
 				endsAt: created.booking.ends_at,
 				rescheduleUrl,
 				isRepeatInteraction: created.booking.is_repeat_interaction,
+				language: campaignLanguage,
 				leadTokenContext: input.leadTokenContext
 			})
 		);

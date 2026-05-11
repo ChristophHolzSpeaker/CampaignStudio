@@ -16,6 +16,8 @@ import {
 import { updateBookingCalendarEventViaWorker } from './worker-calendar-client';
 import { isSlotInsideBookingWindow } from './booking-window';
 import { notifyBookingRescheduled } from '$lib/server/notifications/telegram';
+import { getLeadJourneyById } from '$lib/server/attribution/lead-journeys';
+import { getCampaignById } from '$lib/server/campaigns/client';
 
 const SLOT_UNAVAILABLE_MESSAGE =
 	'That replacement slot is no longer available. Please choose another available time.';
@@ -70,6 +72,20 @@ function toSyncErrorMessage(error: unknown): string {
 function buildRescheduleUrl(input: { requestOrigin: string; rescheduleToken: string }): string {
 	const base = new URL(input.requestOrigin);
 	return new URL(`/book/r/${input.rescheduleToken}`, base).toString();
+}
+
+async function resolveBookingLanguage(leadJourneyId: string | null): Promise<string | null> {
+	if (!leadJourneyId) {
+		return null;
+	}
+
+	const journey = await getLeadJourneyById(leadJourneyId);
+	if (!journey?.campaign_id) {
+		return null;
+	}
+
+	const campaign = await getCampaignById(journey.campaign_id);
+	return campaign?.language ?? null;
 }
 
 function isSlotValidForPolicy(input: {
@@ -326,12 +342,14 @@ export async function confirmBookingReschedule(
 		newEndsAt: input.selectedEndsAt,
 		changedBy: 'lead'
 	});
+	const bookingLanguage = await resolveBookingLanguage(rescheduled.booking.lead_journey_id);
 
 	try {
 		await updateBookingCalendarEventViaWorker({
 			booking_id: rescheduled.booking.id,
 			event_id: booking.google_calendar_event_id,
 			booking_type: rescheduled.booking.booking_type,
+			language: bookingLanguage,
 			attendee_email: rescheduled.booking.email,
 			attendee_name: rescheduled.booking.name,
 			attendee_phone: rescheduled.booking.phone,

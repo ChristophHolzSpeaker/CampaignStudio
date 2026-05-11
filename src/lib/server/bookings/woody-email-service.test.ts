@@ -194,6 +194,9 @@ describe('woody-email-service', () => {
 		expect(composed.bodyText).toContain(
 			'If you prefer another video calling tool please schedule it and reply with the link for Christoph.'
 		);
+		expect(composed.bodyText).toContain(
+			'If anything is urgent please feel free to call this number directly: +4369917407401'
+		);
 		expect(composed.bodyHtml).toContain('<a href="https://zoom.christophholz.com">');
 	});
 
@@ -293,7 +296,8 @@ describe('woody-email-service', () => {
 				calendar_event_url: 'https://calendar.google.com/event?eid=evt_1',
 				email_content: expect.objectContaining({
 					subject: 'Tu video briefing con Christoph esta confirmado',
-					body_html: expect.stringContaining('https://zoom.christophholz.com')
+					body_html: expect.stringContaining('https://zoom.christophholz.com'),
+					body_text: expect.stringContaining('+4369917407401')
 				})
 			})
 		);

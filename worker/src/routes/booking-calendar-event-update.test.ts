@@ -43,6 +43,7 @@ describe('handleBookingCalendarEventUpdate', () => {
 					booking_id: '3fdb8e65-2ed6-4f56-a6d7-d749ccdc4690',
 					event_id: 'evt_123',
 					booking_type: 'lead',
+					language: 'Spanish',
 					attendee_email: 'lead@example.com',
 					attendee_name: 'Lead User',
 					company: 'ACME',
@@ -79,6 +80,9 @@ describe('handleBookingCalendarEventUpdate', () => {
 		);
 		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).toContain(
 			'Reschedule link: https://book.example.com/book/r/resched123'
+		);
+		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).toContain(
+			'Si algo es urgente, no dudes en llamar directamente a este numero: +4369917407401'
 		);
 		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).not.toContain('Booking ID:');
 

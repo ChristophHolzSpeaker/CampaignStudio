@@ -10,6 +10,7 @@ export type BookingCalendarLeadContext = {
 export type CreateBookingCalendarEventRequest = {
 	booking_id: string;
 	booking_type: BookingCalendarEventType;
+	language?: string | null;
 	attendee_email: string;
 	attendee_name?: string | null;
 	attendee_phone?: string | null;
@@ -32,6 +33,7 @@ export type UpdateBookingCalendarEventRequest = {
 	booking_id: string;
 	event_id: string;
 	booking_type: BookingCalendarEventType;
+	language?: string | null;
 	attendee_email: string;
 	attendee_name?: string | null;
 	attendee_phone?: string | null;

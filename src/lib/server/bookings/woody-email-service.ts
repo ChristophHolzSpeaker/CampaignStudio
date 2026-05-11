@@ -107,6 +107,20 @@ function getLocalizedAlternativeVideoCallLine(languageTag: string): string {
 	}
 }
 
+function getLocalizedUrgentPhoneLine(languageTag: string): string {
+	const phone = '+4369917407401';
+	switch (languageTag) {
+		case 'de':
+			return `Falls etwas dringend ist, rufen Sie bitte direkt diese Nummer an: ${phone}`;
+		case 'fr':
+			return `En cas d'urgence, n'hesitez pas a appeler directement ce numero : ${phone}`;
+		case 'es':
+			return `Si algo es urgente, no dudes en llamar directamente a este numero: ${phone}`;
+		default:
+			return `If anything is urgent please feel free to call this number directly: ${phone}`;
+	}
+}
+
 export async function buildBookingLinkInviteEmailContext(input: {
 	leadJourneyId: string;
 	bookingLinkUrl: string;
@@ -223,6 +237,7 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 	const zoomLink = 'https://zoom.christophholz.com';
 	const languageTag = normalizeLanguageTag(context.language);
 	const alternativeVideoCallLine = getLocalizedAlternativeVideoCallLine(languageTag);
+	const urgentPhoneLine = getLocalizedUrgentPhoneLine(languageTag);
 
 	return {
 		subject: getLocalizedConfirmedSubject(languageTag),
@@ -236,6 +251,7 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 			`Video call link: ${zoomLink}`,
 			`Fallback if the link is not clickable: ${zoomLink}`,
 			alternativeVideoCallLine,
+			urgentPhoneLine,
 			'',
 			'Looking forward to it.',
 			'',
@@ -248,6 +264,7 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 			`<p>Time: ${timeRange}<br/>Focus: ${context.meetingScope}</p>`,
 			`<p>Video call link: <a href="${zoomLink}">${zoomLink}</a><br/>Fallback if the link is not clickable: ${zoomLink}</p>`,
 			`<p>${alternativeVideoCallLine}</p>`,
+			`<p>${urgentPhoneLine}</p>`,
 			'<p>Looking forward to it.</p>',
 			'<p>Best,<br/>Woody</p>'
 		].join('')
