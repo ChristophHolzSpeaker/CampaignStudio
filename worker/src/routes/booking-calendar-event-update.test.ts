@@ -68,14 +68,56 @@ describe('handleBookingCalendarEventUpdate', () => {
 			expect.objectContaining({
 				calendarId: 'speaker@christophholz.com',
 				eventId: 'evt_123',
-				summary: 'Lead call - Lead User',
+				summary: 'Video briefing with Christoph + Lead User from ACME',
+				description: expect.stringContaining('Request summary:\nDiscuss growth campaign'),
 				startsAtIso: '2026-06-02T10:00:00.000Z',
 				endsAtIso: '2026-06-02T10:30:00.000Z'
 			})
 		);
+		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).toContain(
+			'https://zoom.christophholz.com'
+		);
+		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).toContain(
+			'Reschedule link: https://book.example.com/book/r/resched123'
+		);
+		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).not.toContain('Booking ID:');
 
 		const payload = (await response.json()) as { ok: boolean; event_id: string };
 		expect(payload.ok).toBe(true);
 		expect(payload.event_id).toBe('evt_123');
+	});
+
+	it('omits from-company in summary when company is missing', async () => {
+		mockedUpdateCalendarEvent.mockResolvedValueOnce({
+			id: 'evt_124',
+			htmlLink: 'https://calendar.google.com/event?eid=124'
+		});
+
+		await handleBookingCalendarEventUpdate(
+			new Request('https://worker.test/booking/calendar-event/update', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					booking_id: '3fdb8e65-2ed6-4f56-a6d7-d749ccdc4690',
+					event_id: 'evt_124',
+					booking_type: 'lead',
+					attendee_email: 'lead@example.com',
+					attendee_name: 'Lead User',
+					company: null,
+					meeting_scope: 'Discuss growth campaign',
+					starts_at_iso: '2026-06-02T10:00:00.000Z',
+					ends_at_iso: '2026-06-02T10:30:00.000Z',
+					reschedule_url: 'https://book.example.com/book/r/resched123',
+					is_repeat_interaction: false,
+					lead_context: null
+				})
+			}),
+			makeTestEnv({ GOOGLE_IMPERSONATED_USER: 'speaker@christophholz.com' })
+		);
+
+		expect(mockedUpdateCalendarEvent).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ summary: 'Video briefing with Christoph + Lead User' })
+		);
 	});
 });

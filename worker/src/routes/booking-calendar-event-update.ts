@@ -44,36 +44,25 @@ function resolveCalendarId(env: WorkerEnv): string {
 }
 
 function buildSummary(input: UpdateBookingCalendarEventRequest): string {
-	const kind = input.booking_type === 'lead' ? 'Lead call' : 'General briefing';
-	const withName = input.attendee_name?.trim();
-	if (!withName) {
-		return `${kind} - ${input.attendee_email}`;
+	const attendee = input.attendee_name?.trim() || input.attendee_email;
+	const company = input.company?.trim();
+	if (!company) {
+		return `Video briefing with Christoph + ${attendee}`;
 	}
-	return `${kind} - ${withName}`;
+
+	return `Video briefing with Christoph + ${attendee} from ${company}`;
 }
 
 function buildDescription(input: UpdateBookingCalendarEventRequest): string {
 	const contextLines = [
-		`Booking ID: ${input.booking_id}`,
-		`Type: ${input.booking_type}`,
-		`Attendee email: ${input.attendee_email}`,
-		input.attendee_name ? `Attendee name: ${input.attendee_name}` : null,
-		input.attendee_phone ? `Attendee phone: ${input.attendee_phone}` : null,
-		input.company ? `Company: ${input.company}` : null,
-		`Repeat interaction: ${input.is_repeat_interaction ? 'yes' : 'no'}`,
-		input.lead_context?.lead_journey_id
-			? `Lead journey: ${input.lead_context.lead_journey_id}`
-			: null,
-		input.lead_context?.campaign_id ? `Campaign ID: ${input.lead_context.campaign_id}` : null,
-		input.lead_context?.booking_link_id
-			? `Booking link ID: ${input.lead_context.booking_link_id}`
-			: null,
-		'---',
-		'Meeting scope:',
+		'Request summary:',
 		input.meeting_scope,
-		'---',
+		'',
+		'Video call link:',
+		'https://zoom.christophholz.com',
+		'',
 		`Reschedule link: ${input.reschedule_url}`
-	].filter((line): line is string => Boolean(line));
+	];
 
 	return contextLines.join('\n');
 }
