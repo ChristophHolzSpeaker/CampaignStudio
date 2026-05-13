@@ -14,6 +14,7 @@ export type AppNavCategory = {
 type CampaignNavData = {
 	campaign?: {
 		id: number;
+		name?: string | null;
 	};
 	campaignPageId?: number | null;
 };
@@ -71,12 +72,13 @@ export function getAppNavCategories(
 
 	const campaignId = Number(detailMatch[1]);
 	const resolvedCampaignId = data.campaign?.id ?? campaignId;
+	const campaignLabel = data.campaign?.name?.trim() || 'Campaign Context';
 	const previewHref = data.campaignPageId
 		? `/campaigns/${resolvedCampaignId}/landing-page`
 		: undefined;
 
 	const campaignContext: AppNavCategory = {
-		label: 'Campaign Context',
+		label: campaignLabel,
 		items: [
 			{
 				label: 'Ads',

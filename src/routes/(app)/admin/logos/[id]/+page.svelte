@@ -53,7 +53,7 @@
 				<input
 					name="logoFile"
 					type="file"
-					accept="image/png,image/jpeg,image/webp"
+					accept="image/png,image/svg+xml"
 					class="rounded border border-neutral-300 px-3 py-2"
 				/>
 			</label>

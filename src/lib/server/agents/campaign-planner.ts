@@ -28,7 +28,7 @@ export async function runCampaignPlanner(
 		);
 
 		response = await callOpenRouter({
-			model: 'google/gemini-3.1-flash-lite-preview',
+			model: 'google/gemini-3.1-flash-lite',
 			systemPrompt: campaignPlannerSystemPrompt,
 			userPrompt,
 			responseFormat: 'json_object',

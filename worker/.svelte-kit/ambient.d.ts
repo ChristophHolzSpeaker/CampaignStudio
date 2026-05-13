@@ -47,7 +47,6 @@ declare module '$env/static/private' {
 	export const OPENCODE_PROCESS_ROLE: string;
 	export const HOME: string;
 	export const TERMINFO: string;
-	export const OLDPWD: string;
 	export const TERM_PROGRAM_VERSION: string;
 	export const DESKTOP_SESSION: string;
 	export const NVM_BIN: string;
@@ -225,7 +224,6 @@ declare module '$env/dynamic/private' {
 		OPENCODE_PROCESS_ROLE: string;
 		HOME: string;
 		TERMINFO: string;
-		OLDPWD: string;
 		TERM_PROGRAM_VERSION: string;
 		DESKTOP_SESSION: string;
 		NVM_BIN: string;

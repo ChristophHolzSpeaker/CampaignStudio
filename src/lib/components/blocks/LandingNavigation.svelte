@@ -155,16 +155,19 @@
 				>
 			</div>
 			<nav class="flex w-full justify-end gap-4">
-				<a
+				<button
+					type="button"
 					bind:this={trigger}
 					onclick={() => {
 						categoriesDropdown = !categoriesDropdown;
 						mobileMenuOpen = false;
 					}}
+					aria-expanded={categoriesDropdown}
+					aria-controls="categories-menu"
 					class="nav-normal h-full border-b-2 border-transparent p-2 leading-6 hover:border-black"
 				>
 					Categories
-				</a>
+				</button>
 				<a
 					href="https://cdn.prod.website-files.com/61263e0de406f497361dca55/6308862c3f689acc1eee77e7_Speaker.Christoph.Holz.Booklet_EN.2022.pdf"
 					target="_blank"
@@ -227,7 +230,12 @@
 </div>
 
 {#if categoriesDropdown}
-	<nav bind:this={dropdown} use:clickOutside class="fixed inset-x-0 top-20 z-50 hidden lg:block">
+	<nav
+		id="categories-menu"
+		bind:this={dropdown}
+		use:clickOutside
+		class="fixed inset-x-0 top-20 z-50 hidden lg:block"
+	>
 		<div class="mx-auto flex w-full max-w-7xl items-center gap-10 bg-white p-4">
 			<div class="category-block tablet-hide">
 				<h2 class="text-2xl">Categories</h2>

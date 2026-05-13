@@ -203,6 +203,26 @@ function resolveHeroVideoSelection(
 	return selected;
 }
 
+function resolveHeroImageSelection(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): LandingPageGenerationInput['assets']['assetCatalog']['heroImages'][number] | null {
+	const selectedId = plan.assetPlan?.hero?.imageAssetId;
+	if (!selectedId) {
+		return null;
+	}
+
+	const selected = input.assets.assetCatalog.heroImages.find((asset) => asset.id === selectedId);
+	if (!selected) {
+		console.warn(
+			`Landing page writer: hero image asset selection '${selectedId}' not found in approved catalog; using fallback defaults.`
+		);
+		return null;
+	}
+
+	return selected;
+}
+
 function resolveHybridSupportingVisualSelection(
 	input: LandingPageGenerationInput,
 	plan: LandingPagePlan
@@ -397,6 +417,7 @@ function hydrateSectionWithAssets(
 			const fallbackHeadline = `${plan.pageTitle}`;
 			const fallbackSubheadline = input.adGroup.intentSummary || input.adPackage.messagingAngle;
 			const selectedHeroVideo = resolveHeroVideoSelection(input, plan);
+			const selectedHeroImage = resolveHeroImageSelection(input, plan);
 			const primaryCtaLabel =
 				section.props.primaryCtaLabel?.trim() || assets.heroDefaults.primaryCtaLabelDefault;
 			const resolvedVideoThumbnailUrl =
@@ -407,10 +428,25 @@ function hydrateSectionWithAssets(
 				selectedHeroVideo?.videoThumbnailAlt ||
 				section.props.videoThumbnailAlt ||
 				assets.heroDefaults.videoThumbnailAlt;
+			const resolvedHeroImageUrl =
+				selectedHeroImage?.imageUrl ??
+				section.props.heroImageUrl ??
+				assets.heroDefaults.heroImageUrl ??
+				resolvedVideoThumbnailUrl;
+			const resolvedHeroImageAlt =
+				selectedHeroImage?.alt ||
+				section.props.heroImageAlt ||
+				assets.heroDefaults.heroImageAlt ||
+				resolvedVideoThumbnailAlt;
 
-			if (!resolvedVideoThumbnailUrl || !resolvedVideoThumbnailAlt) {
+			if (
+				!resolvedVideoThumbnailUrl ||
+				!resolvedVideoThumbnailAlt ||
+				!resolvedHeroImageUrl ||
+				!resolvedHeroImageAlt
+			) {
 				throw new Error(
-					'Landing page writer: missing hero thumbnail defaults. Provide thumbnail values in heroDefaults or media assets.'
+					'Landing page writer: missing hero media defaults. Provide hero image and thumbnail values in heroDefaults or media assets.'
 				);
 			}
 
@@ -430,6 +466,8 @@ function hydrateSectionWithAssets(
 						selectedHeroVideo?.videoEmbedUrl ??
 						section.props.videoEmbedUrl ??
 						assets.heroDefaults.videoEmbedUrl,
+					heroImageUrl: resolvedHeroImageUrl,
+					heroImageAlt: resolvedHeroImageAlt,
 					videoThumbnailUrl: resolvedVideoThumbnailUrl,
 					videoThumbnailAlt: resolvedVideoThumbnailAlt
 				}
@@ -857,9 +895,7 @@ Corrective rules:
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
-- Place seo as the first section.
-- If both speaker_in_action and proof_of_performance are present, place speaker_in_action above proof_of_performance.
-- If keynote_speeches is present and logos_of_trust_ribbon is present, place keynote_speeches immediately after logos_of_trust_ribbon.
+- Sections must appear in this exact order: seo, immediate_authority_hero, logos_of_trust_ribbon, keynote_speeches, hybrid_content_section, speaker_in_action, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -957,6 +993,19 @@ function validateLandingPageDocumentForMvp(
 	allowedSectionTypes: readonly PageSectionType[],
 	requiredSectionTypes: readonly PageSectionType[]
 ): void {
+	const requiredInitialSectionOrder: PageSectionType[] = [
+		'seo',
+		'immediate_authority_hero',
+		'logos_of_trust_ribbon',
+		'keynote_speeches',
+		'hybrid_content_section',
+		'speaker_in_action',
+		'frictionless_funnel_booking',
+		'proof_of_performance',
+		'booklet_download_cta',
+		'compliance_transparency_footer'
+	];
+
 	const minSections = requiredSectionTypes.length;
 
 	if (page.sections.length < minSections) {
@@ -977,8 +1026,18 @@ function validateLandingPageDocumentForMvp(
 		}
 	}
 
-	if (sectionTypes[0] !== 'seo') {
-		throw new Error('Landing page must place seo as the first section.');
+	if (sectionTypes.length !== requiredInitialSectionOrder.length) {
+		throw new Error(
+			`Landing page must include exactly ${requiredInitialSectionOrder.length} sections in the required initial order.`
+		);
+	}
+
+	for (let index = 0; index < requiredInitialSectionOrder.length; index += 1) {
+		if (sectionTypes[index] !== requiredInitialSectionOrder[index]) {
+			throw new Error(
+				`Landing page must follow the required section order: ${requiredInitialSectionOrder.join(', ')}.`
+			);
+		}
 	}
 }
 
@@ -1051,7 +1110,7 @@ export async function generateLandingPageDocument(
 			}
 		);
 		response = await callOpenRouter({
-			model: 'google/gemini-3.1-flash-lite-preview',
+			model: 'google/gemini-3.1-flash-lite',
 			systemPrompt,
 			userPrompt,
 			responseFormat: 'json_object',

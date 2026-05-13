@@ -39,6 +39,7 @@
 			visitMetrics?: CampaignVisitMetrics | null;
 			adGroups?: CampaignAdGroupWithDetails[];
 			adPackage?: CampaignAdPackageWithDetails | null;
+			campaignPageId?: number | null;
 			liveLandingUrl?: string | null;
 		};
 
@@ -79,6 +80,7 @@
 	};
 	const getUpdatedPackageId = () => getStrategyUpdateState()?.adPackageId ?? null;
 	const getUpdatedPageId = () => getStrategyUpdateState()?.campaignPageId ?? null;
+	const getActiveCampaignPageId = () => getUpdatedPageId() ?? getPageData().campaignPageId ?? null;
 	const getDuplicateName = () => {
 		const name = getCampaign()?.name?.trim();
 		return name?.length ? `${name} Copy` : 'Campaign Copy';
@@ -142,6 +144,7 @@
 					</p>
 					<form action="?/publish" use:enhance method="POST" class="mt-4 flex justify-end">
 						<input type="hidden" name="id" value={getCampaign()?.id} />
+						<input type="hidden" name="campaign_page_id" value={getActiveCampaignPageId() ?? ''} />
 						<input type="hidden" name="target_status" value={targetStatus(getCampaign()?.status)} />
 						<Button>
 							{publishLabel(getCampaign()?.status)}

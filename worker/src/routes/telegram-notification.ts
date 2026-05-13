@@ -31,6 +31,12 @@ const urlsSchema = z
 const attendeeSchema = z.object({
 	attendee_name: z.string().trim().max(120).nullable().optional(),
 	attendee_email: z.string().trim().email().nullable().optional(),
+	attendee_phone: z
+		.string()
+		.trim()
+		.regex(/^\+?\d{8,15}$/)
+		.nullable()
+		.optional(),
 	company: z.string().trim().max(120).nullable().optional()
 });
 

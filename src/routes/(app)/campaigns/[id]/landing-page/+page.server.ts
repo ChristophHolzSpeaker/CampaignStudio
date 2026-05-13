@@ -2,11 +2,26 @@ import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { christophSampleLandingPage, parseLandingPageDocument } from '$lib/page-builder/page';
 import { db } from '$lib/server/db';
-import { campaign_pages, keynotes, logos } from '$lib/server/db/schema';
+import {
+	campaign_ad_groups,
+	campaign_ad_packages,
+	campaign_pages,
+	keynotes,
+	logos
+} from '$lib/server/db/schema';
 import { asc, desc, eq } from 'drizzle-orm';
 import { runLandingPageEditFromPrompt } from '$lib/server/agents/landing-page-editor';
 import { getCampaignById } from '$lib/server/campaigns/client';
 import { persistGeneratedLandingPage } from '$lib/server/agents/landing-page-pipeline';
+
+function isMissingChangeNoteColumnError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toLowerCase();
+	return message.includes('change_note') && message.includes('does not exist');
+}
 
 type LandingPageEditFormState = {
 	values: {
@@ -21,7 +36,7 @@ export type LandingPagePreviewActionData = {
 	pageEdit?: LandingPageEditFormState;
 };
 
-export const load: PageServerLoad = async ({ params }) => {
+export const load: PageServerLoad = async ({ params, url }) => {
 	const campaignId = Number(params.id);
 
 	if (!Number.isFinite(campaignId) || campaignId <= 0) {
@@ -33,18 +48,60 @@ export const load: PageServerLoad = async ({ params }) => {
 		throw error(404, 'Campaign not found');
 	}
 
-	const [pageRecord] = await db
-		.select({
-			structuredContentJson: campaign_pages.structured_content_json,
-			campaignPageId: campaign_pages.id
-		})
-		.from(campaign_pages)
-		.where(eq(campaign_pages.campaign_id, campaignId))
-		.orderBy(desc(campaign_pages.version_number))
-		.limit(1);
+	let pageRecords: Array<{
+		structuredContentJson: unknown;
+		campaignPageId: number;
+		versionNumber: number;
+		changeNote: string | null;
+		slug: string;
+		createdAt: Date;
+	}> = [];
 
-	const page = pageRecord
-		? parseLandingPageDocument(pageRecord.structuredContentJson)
+	try {
+		pageRecords = await db
+			.select({
+				structuredContentJson: campaign_pages.structured_content_json,
+				campaignPageId: campaign_pages.id,
+				versionNumber: campaign_pages.version_number,
+				changeNote: campaign_pages.change_note,
+				slug: campaign_pages.slug,
+				createdAt: campaign_pages.created_at
+			})
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, campaignId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(30);
+	} catch (error) {
+		if (!isMissingChangeNoteColumnError(error)) {
+			throw error;
+		}
+
+		const legacyRecords = await db
+			.select({
+				structuredContentJson: campaign_pages.structured_content_json,
+				campaignPageId: campaign_pages.id,
+				versionNumber: campaign_pages.version_number,
+				slug: campaign_pages.slug,
+				createdAt: campaign_pages.created_at
+			})
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, campaignId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(30);
+
+		pageRecords = legacyRecords.map((record) => ({ ...record, changeNote: null }));
+	}
+
+	const [latestPageRecord] = pageRecords;
+	const requestedVersionPageId = Number(url.searchParams.get('version'));
+	const selectedPageRecord =
+		Number.isFinite(requestedVersionPageId) && requestedVersionPageId > 0
+			? (pageRecords.find((record) => record.campaignPageId === requestedVersionPageId) ??
+				latestPageRecord)
+			: latestPageRecord;
+
+	const page = selectedPageRecord
+		? parseLandingPageDocument(selectedPageRecord.structuredContentJson)
 		: parseLandingPageDocument(christophSampleLandingPage);
 
 	const availableLogos = await db
@@ -76,7 +133,15 @@ export const load: PageServerLoad = async ({ params }) => {
 		availableKeynotes,
 		campaign,
 		campaignId,
-		campaignPageId: pageRecord?.campaignPageId ?? null,
+		campaignPageId: selectedPageRecord?.campaignPageId ?? null,
+		latestCampaignPageId: latestPageRecord?.campaignPageId ?? null,
+		versionHistory: pageRecords.map((record) => ({
+			id: record.campaignPageId,
+			versionNumber: record.versionNumber,
+			changeNote: record.changeNote,
+			slug: record.slug,
+			createdAt: record.createdAt
+		})),
 		campaignStatus: campaign.status
 	};
 };
@@ -214,7 +279,12 @@ export const actions: Actions = {
 			)
 		};
 
-		const persisted = await persistGeneratedLandingPage(pageRecord.campaignId, updatedPage);
+		const persisted = await persistGeneratedLandingPage(
+			pageRecord.campaignId,
+			updatedPage,
+			undefined,
+			'Updated trust logos'
+		);
 
 		return {
 			pageEdit: {
@@ -335,7 +405,12 @@ export const actions: Actions = {
 			)
 		};
 
-		const persisted = await persistGeneratedLandingPage(pageRecord.campaignId, updatedPage);
+		const persisted = await persistGeneratedLandingPage(
+			pageRecord.campaignId,
+			updatedPage,
+			undefined,
+			'Updated keynotes'
+		);
 
 		return {
 			pageEdit: {
@@ -343,6 +418,106 @@ export const actions: Actions = {
 				success: true,
 				message: 'Keynotes updated.',
 				campaignPageId: persisted.campaignPageId
+			}
+		};
+	},
+	restoreVersion: async ({ request, params }) => {
+		const campaignId = Number(params.id);
+		const formData = await request.formData();
+		const selectedPageId = Number(formData.get('campaignPageId'));
+
+		if (!Number.isFinite(campaignId) || campaignId <= 0) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Invalid campaign id.',
+					success: false
+				}
+			});
+		}
+
+		const campaign = await getCampaignById(campaignId);
+		if (!campaign) {
+			return fail<LandingPagePreviewActionData>(404, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Campaign not found.',
+					success: false
+				}
+			});
+		}
+
+		if (campaign.status === 'published') {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Cannot restore landing page while campaign is published. Archive first.',
+					success: false
+				}
+			});
+		}
+
+		if (!Number.isFinite(selectedPageId) || selectedPageId <= 0) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Select a valid version to restore.',
+					success: false
+				}
+			});
+		}
+
+		const [sourcePage] = await db
+			.select({
+				campaignId: campaign_pages.campaign_id,
+				structuredContentJson: campaign_pages.structured_content_json,
+				versionNumber: campaign_pages.version_number
+			})
+			.from(campaign_pages)
+			.where(eq(campaign_pages.id, selectedPageId))
+			.limit(1);
+
+		if (!sourcePage || sourcePage.campaignId !== campaignId) {
+			return fail<LandingPagePreviewActionData>(404, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Selected version was not found for this campaign.',
+					success: false
+				}
+			});
+		}
+
+		const pageToRestore = parseLandingPageDocument(sourcePage.structuredContentJson);
+		const restored = await db.transaction(async (tx) => {
+			const persisted = await persistGeneratedLandingPage(
+				campaignId,
+				pageToRestore,
+				tx,
+				`Restored from v${sourcePage.versionNumber}`
+			);
+			const [latestAdPackage] = await tx
+				.select({ id: campaign_ad_packages.id })
+				.from(campaign_ad_packages)
+				.where(eq(campaign_ad_packages.campaign_id, campaignId))
+				.orderBy(desc(campaign_ad_packages.version_number))
+				.limit(1);
+
+			if (latestAdPackage) {
+				await tx
+					.update(campaign_ad_groups)
+					.set({ campaign_page_id: persisted.campaignPageId, updated_at: new Date() })
+					.where(eq(campaign_ad_groups.ad_package_id, latestAdPackage.id));
+			}
+
+			return persisted;
+		});
+
+		return {
+			pageEdit: {
+				values: { changePrompt: '' },
+				success: true,
+				message: `Restored version v${sourcePage.versionNumber} as the latest landing page.`,
+				campaignPageId: restored.campaignPageId
 			}
 		};
 	}

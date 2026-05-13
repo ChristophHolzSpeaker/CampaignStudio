@@ -4,6 +4,7 @@ vi.mock('$lib/server/bookings', () => ({
 	confirmBookingSelection: vi.fn(),
 	getBookingPolicy: vi.fn(),
 	getPublicBookingUnavailableMessage: vi.fn(),
+	resolvePublicBookingSlotPreview: vi.fn(),
 	resolvePublicBookingSlots: vi.fn()
 }));
 
@@ -11,12 +12,14 @@ import {
 	confirmBookingSelection,
 	getBookingPolicy,
 	getPublicBookingUnavailableMessage,
+	resolvePublicBookingSlotPreview,
 	resolvePublicBookingSlots
 } from '$lib/server/bookings';
 import { actions, load } from './+page.server';
 
 const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
 const mockedGetPublicBookingUnavailableMessage = vi.mocked(getPublicBookingUnavailableMessage);
+const mockedResolvePublicBookingSlotPreview = vi.mocked(resolvePublicBookingSlotPreview);
 const mockedResolvePublicBookingSlots = vi.mocked(resolvePublicBookingSlots);
 const mockedConfirmBookingSelection = vi.mocked(confirmBookingSelection);
 
@@ -25,6 +28,7 @@ describe('/book/g +page.server', () => {
 		mockedConfirmBookingSelection.mockReset();
 		mockedGetBookingPolicy.mockReset();
 		mockedGetPublicBookingUnavailableMessage.mockReset();
+		mockedResolvePublicBookingSlotPreview.mockReset();
 		mockedResolvePublicBookingSlots.mockReset();
 	});
 
@@ -54,6 +58,74 @@ describe('/book/g +page.server', () => {
 
 		expect(result.policyState).toBe('type_disabled');
 		expect(result.unavailableMessage).toBe('General booking is disabled.');
+	});
+
+	it('load returns slot preview when policy is active', async () => {
+		mockedGetBookingPolicy.mockResolvedValueOnce({
+			state: 'active',
+			bookingType: 'general',
+			pause: {
+				isPaused: false,
+				pauseMessage: null,
+				settingsRowId: null,
+				updatedAt: null
+			},
+			rules: {
+				bookingType: 'general',
+				advanceNoticeMinutes: 30,
+				slotDurationMinutes: 30,
+				slotIntervalMinutes: 30,
+				isEnabled: true,
+				ruleRowId: 'rule-general',
+				updatedAt: new Date('2026-04-17T00:00:00.000Z')
+			}
+		});
+		mockedResolvePublicBookingSlotPreview.mockResolvedValueOnce({
+			availability: {
+				state: 'available',
+				policy: {
+					state: 'active',
+					bookingType: 'general',
+					pause: {
+						isPaused: false,
+						pauseMessage: null,
+						settingsRowId: null,
+						updatedAt: null
+					},
+					rules: {
+						bookingType: 'general',
+						advanceNoticeMinutes: 30,
+						slotDurationMinutes: 30,
+						slotIntervalMinutes: 30,
+						isEnabled: true,
+						ruleRowId: 'rule-general',
+						updatedAt: new Date('2026-04-17T00:00:00.000Z')
+					}
+				},
+				slots: [],
+				searchStartsAt: new Date('2026-05-01T00:00:00.000Z'),
+				searchEndsAt: new Date('2026-05-04T00:00:00.000Z')
+			},
+			searchStartsAt: new Date('2026-05-01T00:00:00.000Z'),
+			searchEndsAt: new Date('2026-05-04T00:00:00.000Z'),
+			slotGroups: [
+				{
+					dateKey: '2026-05-01',
+					slots: [
+						{
+							startsAtIso: '2026-05-01T10:00:00.000Z',
+							endsAtIso: '2026-05-01T10:30:00.000Z'
+						}
+					]
+				}
+			]
+		});
+
+		const result = (await load({} as never)) as any;
+
+		expect(result.policyState).toBe('active');
+		expect(result.availabilityState).toBe('available');
+		expect(result.slotGroups).toHaveLength(1);
 	});
 
 	it('action returns validation errors for invalid intake', async () => {
@@ -273,7 +345,7 @@ describe('/book/g +page.server', () => {
 		} as never)) as any;
 
 		expect(response.availabilityState).toBe('no_slots');
-		expect(response.message).toContain('No slots');
+		expect(response.message).toContain('No briefing slots are currently available');
 	});
 
 	it('confirm action returns booking confirmed state', async () => {

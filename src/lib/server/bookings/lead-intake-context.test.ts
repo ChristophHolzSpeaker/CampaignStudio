@@ -60,7 +60,8 @@ describe('lead-intake-context', () => {
 			email: 'lead@example.com',
 			scope: 'Discuss campaign launch',
 			name: 'Lead User',
-			company: 'ACME'
+			company: 'ACME',
+			phone: ''
 		});
 		expect(result.summary).toEqual(
 			expect.objectContaining({

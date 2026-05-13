@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { LogosOfTrustRibbonProps } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let { props }: { props?: LogosOfTrustRibbonProps } = $props();
 
@@ -31,7 +32,11 @@
 	const logos = $derived(props?.logos?.length ? props.logos : fallbackLogos);
 </script>
 
-<section class="bg-[#435a9f] px-6 py-12 sm:px-8" aria-label="Logos of Trust Ribbon section">
+<section
+	class="relative bg-[#435a9f] px-6 py-12 sm:px-8"
+	aria-label="Logos of Trust Ribbon section"
+>
+	<SectionIdentifier props={{ id: 'logos_of_trust_ribbon' }}></SectionIdentifier>
 	<div class="mx-auto max-w-7xl">
 		<div
 			class="grid grid-cols-2 items-center justify-center justify-items-center gap-x-8 gap-y-8 lg:flex lg:gap-x-12"

@@ -10,8 +10,15 @@ import { createCalendarEvent } from '../lib/calendar/client';
 const bookingCalendarEventSchema = z.object({
 	booking_id: z.string().uuid(),
 	booking_type: z.enum(bookingCalendarEventTypes),
+	language: z.string().trim().max(80).nullable().optional(),
 	attendee_email: z.string().trim().email(),
 	attendee_name: z.string().trim().max(120).nullable().optional(),
+	attendee_phone: z
+		.string()
+		.trim()
+		.regex(/^\+?\d{8,15}$/)
+		.nullable()
+		.optional(),
 	meeting_scope: z.string().trim().min(2).max(1000),
 	starts_at_iso: z.string().datetime({ offset: true }),
 	ends_at_iso: z.string().datetime({ offset: true }),
@@ -37,35 +44,37 @@ function resolveCalendarId(env: WorkerEnv): string {
 }
 
 function buildSummary(input: CreateBookingCalendarEventRequest): string {
-	const kind = input.booking_type === 'lead' ? 'Lead call' : 'General briefing';
-	const withName = input.attendee_name?.trim();
-	if (!withName) {
-		return `${kind} - ${input.attendee_email}`;
+	const attendee = input.attendee_name?.trim() || input.attendee_email;
+	const company = input.company?.trim();
+	if (!company) {
+		return `Video briefing with Christoph + ${attendee}`;
 	}
-	return `${kind} - ${withName}`;
+
+	return `Video briefing with Christoph + ${attendee} from ${company}`;
 }
 
 function buildDescription(input: CreateBookingCalendarEventRequest): string {
+	const normalizedLanguage = input.language?.trim().toLowerCase() ?? '';
+	const urgentLine =
+		normalizedLanguage.startsWith('de') || normalizedLanguage === 'german'
+			? 'Falls etwas dringend ist, rufen Sie bitte direkt diese Nummer an: +4369917407401'
+			: normalizedLanguage.startsWith('fr') || normalizedLanguage === 'french'
+				? "En cas d'urgence, n'hesitez pas a appeler directement ce numero : +4369917407401"
+				: normalizedLanguage.startsWith('es') || normalizedLanguage === 'spanish'
+					? 'Si algo es urgente, no dudes en llamar directamente a este numero: +4369917407401'
+					: 'If anything is urgent please feel free to call this number directly: +4369917407401';
+
 	const contextLines = [
-		`Booking ID: ${input.booking_id}`,
-		`Type: ${input.booking_type}`,
-		`Attendee email: ${input.attendee_email}`,
-		input.attendee_name ? `Attendee name: ${input.attendee_name}` : null,
-		input.company ? `Company: ${input.company}` : null,
-		`Repeat interaction: ${input.is_repeat_interaction ? 'yes' : 'no'}`,
-		input.lead_context?.lead_journey_id
-			? `Lead journey: ${input.lead_context.lead_journey_id}`
-			: null,
-		input.lead_context?.campaign_id ? `Campaign ID: ${input.lead_context.campaign_id}` : null,
-		input.lead_context?.booking_link_id
-			? `Booking link ID: ${input.lead_context.booking_link_id}`
-			: null,
-		'---',
-		'Meeting scope:',
+		'Request summary:',
 		input.meeting_scope,
-		'---',
-		`Reschedule link: ${input.reschedule_url}`
-	].filter((line): line is string => Boolean(line));
+		'',
+		'Video call link:',
+		'https://zoom.christophholz.com',
+		'',
+		`Reschedule link: ${input.reschedule_url}`,
+		'',
+		urgentLine
+	];
 
 	return contextLines.join('\n');
 }

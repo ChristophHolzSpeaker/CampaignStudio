@@ -121,12 +121,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: '',
 				name: 'Lead User',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: true,
 				scope: false,
 				name: true,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: ['scope'],
@@ -196,12 +198,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: '',
 				name: 'Lead User',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: true,
 				scope: false,
 				name: true,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: ['scope'],
@@ -262,12 +266,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: '',
 				name: 'Lead User',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: true,
 				scope: false,
 				name: true,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: ['scope'],
@@ -329,12 +335,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: 'Discuss launch',
 				name: 'Lead User',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: true,
 				scope: true,
 				name: true,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: [],
@@ -344,6 +352,7 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: 'Discuss launch',
 				requestSummary: 'Discuss launch',
+				phone: null,
 				company: null
 			},
 			source: {
@@ -457,12 +466,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: 'Discuss launch',
 				name: 'Lead User',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: true,
 				scope: true,
 				name: true,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: [],
@@ -472,6 +483,7 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: 'Discuss launch',
 				requestSummary: 'Discuss launch',
+				phone: null,
 				company: null
 			},
 			source: {
@@ -531,12 +543,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: 'lead@example.com',
 				scope: '',
 				name: 'Lead User',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: true,
 				scope: false,
 				name: true,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: ['scope'],
@@ -600,12 +614,14 @@ describe('/book/l/[token] +page.server', () => {
 				email: '',
 				scope: '',
 				name: '',
+				phone: '',
 				company: ''
 			},
 			knownFields: {
 				email: false,
 				scope: false,
 				name: false,
+				phone: false,
 				company: false
 			},
 			missingRequiredFields: ['email', 'scope'],

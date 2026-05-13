@@ -5,6 +5,7 @@ import { landingPageAssets } from './landing-page-assets';
 import {
 	landingPageAssetsSchema,
 	type HeroVideoOption,
+	type HeroImageOption,
 	type HybridSupportingImageOption,
 	type SpeakerInActionVideoOption,
 	type LogoOption,
@@ -232,10 +233,11 @@ function sortMediaAssetsByRelevance(
 
 function fillHeroDefaultsFromCatalog(
 	assets: LandingPageAssets,
-	catalog: { heroVideos: HeroVideoOption[] }
+	catalog: { heroVideos: HeroVideoOption[]; heroImages: HeroImageOption[] }
 ): LandingPageAssets {
+	const fallbackHeroImage = catalog.heroImages[0];
 	const fallbackHero = catalog.heroVideos[0];
-	if (!fallbackHero) {
+	if (!fallbackHero && !fallbackHeroImage) {
 		return assets;
 	}
 
@@ -243,18 +245,28 @@ function fillHeroDefaultsFromCatalog(
 		...assets,
 		heroDefaults: {
 			...assets.heroDefaults,
-			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? fallbackHero.videoThumbnailUrl,
-			videoThumbnailAlt: assets.heroDefaults.videoThumbnailAlt ?? fallbackHero.videoThumbnailAlt
+			heroImageUrl:
+				assets.heroDefaults.heroImageUrl ??
+				fallbackHeroImage?.imageUrl ??
+				fallbackHero?.videoThumbnailUrl,
+			heroImageAlt:
+				assets.heroDefaults.heroImageAlt ??
+				fallbackHeroImage?.alt ??
+				fallbackHero?.videoThumbnailAlt,
+			videoThumbnailUrl: assets.heroDefaults.videoThumbnailUrl ?? fallbackHero?.videoThumbnailUrl,
+			videoThumbnailAlt: assets.heroDefaults.videoThumbnailAlt ?? fallbackHero?.videoThumbnailAlt
 		}
 	};
 }
 
 function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	heroVideos: HeroVideoOption[];
+	heroImages: HeroImageOption[];
 	hybridSupportingImages: HybridSupportingImageOption[];
 	speakerInActionVideos: SpeakerInActionVideoOption[];
 } {
 	const heroVideos: HeroVideoOption[] = [];
+	const heroImages: HeroImageOption[] = [];
 	const hybridSupportingImages: HybridSupportingImageOption[] = [];
 	const speakerInActionVideos: SpeakerInActionVideoOption[] = [];
 
@@ -273,6 +285,28 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 				videoEmbedUrl: asset.primaryUrl,
 				videoThumbnailUrl: asset.thumbnailUrl,
 				videoThumbnailAlt: asset.thumbnailAlt
+			});
+
+			heroImages.push({
+				id: asset.id,
+				title: asset.title,
+				description: asset.description,
+				usageNotes: asset.usageNotes,
+				avoidNotes: asset.avoidNotes ?? undefined,
+				imageUrl: asset.thumbnailUrl,
+				alt: asset.thumbnailAlt
+			});
+		}
+
+		if (asset.kind === 'image' && asset.sectionTypes.includes('immediate_authority_hero')) {
+			heroImages.push({
+				id: asset.id,
+				title: asset.title,
+				description: asset.description,
+				usageNotes: asset.usageNotes,
+				avoidNotes: asset.avoidNotes ?? undefined,
+				imageUrl: asset.primaryUrl,
+				alt: asset.thumbnailAlt ?? asset.title
 			});
 		}
 
@@ -306,7 +340,37 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 		}
 	}
 
-	return { heroVideos, hybridSupportingImages, speakerInActionVideos };
+	return { heroVideos, heroImages, hybridSupportingImages, speakerInActionVideos };
+}
+
+function ensureSpeakerInActionCatalog(
+	speakerInActionVideos: SpeakerInActionVideoOption[],
+	heroVideos: HeroVideoOption[]
+): SpeakerInActionVideoOption[] {
+	if (speakerInActionVideos.length >= 4 || heroVideos.length === 0) {
+		return speakerInActionVideos;
+	}
+
+	const fallbackVideos: SpeakerInActionVideoOption[] = [...speakerInActionVideos];
+	for (let index = speakerInActionVideos.length; index < 4; index += 1) {
+		const heroSource = heroVideos[index % heroVideos.length];
+		fallbackVideos.push({
+			id: `fallback-speaker-${index + 1}`,
+			title: `${heroSource.title} (Speaker fallback ${index + 1})`,
+			description: heroSource.description,
+			usageNotes: `${heroSource.usageNotes} This entry was auto-filled from hero videos because fewer than four speaker_in_action videos are configured.`,
+			avoidNotes: heroSource.avoidNotes,
+			videoEmbedUrl: heroSource.videoEmbedUrl,
+			videoThumbnailUrl: heroSource.videoThumbnailUrl,
+			videoThumbnailAlt: heroSource.videoThumbnailAlt
+		});
+	}
+
+	console.warn(
+		`Landing page assets: auto-filled speaker_in_action catalog from hero videos (speaker=${speakerInActionVideos.length}, hero=${heroVideos.length}).`
+	);
+
+	return fallbackVideos;
 }
 
 function buildLogoCatalog(rows: LogoRow[]): LogoOption[] {
@@ -335,6 +399,10 @@ export async function loadLandingPageAssets(
 		const activeSet = await loadActiveLandingPageAssetSet();
 		const mediaRows = sortMediaAssetsByRelevance(await loadActiveMediaAssets(), context);
 		const catalog = buildCatalogFromMediaAssets(mediaRows);
+		const speakerInActionVideos = ensureSpeakerInActionCatalog(
+			catalog.speakerInActionVideos,
+			catalog.heroVideos
+		);
 		const logosCatalog = buildLogoCatalog(await loadActiveLogos());
 		const keynoteCatalog = buildKeynoteCatalog(await loadActiveKeynotes());
 
@@ -344,8 +412,9 @@ export async function loadLandingPageAssets(
 					...landingPageAssets,
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
+						heroImages: catalog.heroImages,
 						hybridSupportingImages: catalog.hybridSupportingImages,
-						speakerInActionVideos: catalog.speakerInActionVideos,
+						speakerInActionVideos,
 						logoCatalog: logosCatalog,
 						keynoteCatalog
 					}
@@ -365,8 +434,9 @@ export async function loadLandingPageAssets(
 					...landingPageAssets,
 					assetCatalog: {
 						heroVideos: catalog.heroVideos,
+						heroImages: catalog.heroImages,
 						hybridSupportingImages: catalog.hybridSupportingImages,
-						speakerInActionVideos: catalog.speakerInActionVideos,
+						speakerInActionVideos,
 						logoCatalog: logosCatalog,
 						keynoteCatalog
 					}
@@ -380,8 +450,9 @@ export async function loadLandingPageAssets(
 				...parsedAssets.data,
 				assetCatalog: {
 					heroVideos: catalog.heroVideos,
+					heroImages: catalog.heroImages,
 					hybridSupportingImages: catalog.hybridSupportingImages,
-					speakerInActionVideos: catalog.speakerInActionVideos,
+					speakerInActionVideos,
 					logoCatalog: logosCatalog,
 					keynoteCatalog
 				}

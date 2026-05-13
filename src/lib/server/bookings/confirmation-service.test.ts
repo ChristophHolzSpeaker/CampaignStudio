@@ -104,6 +104,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: 'Person',
+				phone: null,
 				company: 'ACME',
 				scope: 'Discuss campaign strategy',
 				status: 'pending_calendar_sync',
@@ -126,6 +127,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: 'Person',
+				phone: null,
 				company: 'ACME',
 				scope: 'Discuss campaign strategy',
 				status: 'confirmed',
@@ -153,6 +155,7 @@ describe('confirmBookingSelection', () => {
 				intake: {
 					email: 'person@example.com',
 					name: 'Person',
+					phone: undefined,
 					company: 'ACME',
 					scope: 'Discuss campaign strategy'
 				},
@@ -211,6 +214,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: 'journey-1',
 				email: 'lead@example.com',
 				name: null,
+				phone: null,
 				company: null,
 				scope: 'Lead call',
 				status: 'pending_calendar_sync',
@@ -233,6 +237,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: 'journey-1',
 				email: 'lead@example.com',
 				name: null,
+				phone: null,
 				company: null,
 				scope: 'Lead call',
 				status: 'confirmed',
@@ -350,6 +355,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: null,
+				phone: null,
 				company: null,
 				scope: 'Intro',
 				status: 'pending_calendar_sync',
@@ -372,6 +378,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: null,
+				phone: null,
 				company: null,
 				scope: 'Intro',
 				status: 'calendar_sync_failed',
@@ -435,6 +442,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: 'Person',
+				phone: null,
 				company: null,
 				scope: 'Intro',
 				status: 'pending_calendar_sync',
@@ -457,6 +465,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: 'Person',
+				phone: null,
 				company: null,
 				scope: 'Intro',
 				status: 'confirmed',
@@ -480,7 +489,8 @@ describe('confirmBookingSelection', () => {
 				intake: {
 					email: 'person@example.com',
 					scope: 'Intro',
-					name: 'Person'
+					name: 'Person',
+					phone: undefined
 				},
 				selectedStartsAt: new Date('2026-06-01T10:00:00.000Z'),
 				selectedEndsAt: new Date('2026-06-01T10:30:00.000Z'),
@@ -517,6 +527,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: 'Person',
+				phone: null,
 				company: null,
 				scope: 'Intro',
 				status: 'pending_calendar_sync',
@@ -539,6 +550,7 @@ describe('confirmBookingSelection', () => {
 				lead_journey_id: null,
 				email: 'person@example.com',
 				name: 'Person',
+				phone: null,
 				company: null,
 				scope: 'Intro',
 				status: 'confirmed',
@@ -562,7 +574,8 @@ describe('confirmBookingSelection', () => {
 				intake: {
 					email: 'person@example.com',
 					scope: 'Intro',
-					name: 'Person'
+					name: 'Person',
+					phone: undefined
 				},
 				selectedStartsAt: new Date('2026-06-01T10:00:00.000Z'),
 				selectedEndsAt: new Date('2026-06-01T10:30:00.000Z'),

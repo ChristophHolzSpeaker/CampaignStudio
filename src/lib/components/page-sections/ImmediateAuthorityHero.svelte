@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
@@ -25,11 +26,14 @@
 			'Deeply researched, actionable insights bridging the gap between technological possibility and operational reality.'
 	);
 	const videoEmbedUrl = $derived(props?.videoEmbedUrl ?? 'https://player.vimeo.com/video/76979871');
-	const thumbnailUrl = $derived(
-		props?.videoThumbnailUrl ??
+	const heroImageUrl = $derived(
+		props?.heroImageUrl ??
+			props?.videoThumbnailUrl ??
 			'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6130408552ea140d707aab8e_christoph-contact-bg.jpg?auto=format&fit=crop&w=1400&q=80'
 	);
-	const thumbnailAlt = $derived(props?.videoThumbnailAlt ?? 'Christoph Holz on stage');
+	const heroImageAlt = $derived(
+		props?.heroImageAlt ?? props?.videoThumbnailAlt ?? 'Christoph Holz on stage'
+	);
 	const supportingBullets = $derived(props?.supportingBullets ?? []);
 
 	function extractYouTubeVideoId(input: string): string | null {
@@ -100,8 +104,9 @@
 	class="relative isolate overflow-hidden bg-surface px-6 py-16 sm:px-8 lg:px-12 lg:py-24"
 	aria-label="Immediate Authority Hero section"
 >
+	<SectionIdentifier props={{ id: 'immediate_authority_hero' }}></SectionIdentifier>
 	<div class="absolute inset-0 -z-20">
-		<img class="h-full w-full object-cover grayscale" src={thumbnailUrl} alt={thumbnailAlt} />
+		<img class="h-full w-full object-cover grayscale" src={heroImageUrl} alt={heroImageAlt} />
 	</div>
 	<div
 		class="absolute inset-0 -z-10 bg-linear-to-r from-surface via-surface/94 to-surface/82"
@@ -165,8 +170,8 @@
 		<div class="relative lg:col-span-5">
 			<div class="aspect-4/5 overflow-hidden bg-surface-container-lowest">
 				<img
-					src={thumbnailUrl}
-					alt={thumbnailAlt}
+					src={heroImageUrl}
+					alt={heroImageAlt}
 					class="h-full w-full object-cover transition-all duration-500"
 				/>
 			</div>

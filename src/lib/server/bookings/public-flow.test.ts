@@ -14,6 +14,7 @@ import {
 	getPublicBookingUnavailableMessage,
 	getPublicBookingSearchWindow,
 	resolvePublicBookingSlots,
+	PUBLIC_BOOKING_LEAD_WORKING_DAYS,
 	PUBLIC_BOOKING_SLOT_WINDOW_DAYS
 } from './public-flow';
 
@@ -26,13 +27,30 @@ describe('public booking flow service', () => {
 		mockedClassifyBookingRequesterByEmail.mockReset();
 	});
 
-	it('creates a default 3-day search window', () => {
+	it('creates a default 3-day search window for general bookings', () => {
 		const now = new Date('2026-05-01T10:00:00.000Z');
-		const result = getPublicBookingSearchWindow({ now });
+		const result = getPublicBookingSearchWindow({ now, bookingType: 'general' });
 
 		expect(result.searchStartsAt.toISOString()).toBe('2026-05-01T10:00:00.000Z');
 		expect(result.searchEndsAt.toISOString()).toBe('2026-05-04T10:00:00.000Z');
 		expect(PUBLIC_BOOKING_SLOT_WINDOW_DAYS).toBe(3);
+	});
+
+	it('creates a lead window including today plus 3 working days when starting on Monday', () => {
+		const now = new Date('2026-05-04T10:00:00.000Z');
+		const result = getPublicBookingSearchWindow({ now, bookingType: 'lead' });
+
+		expect(result.searchStartsAt.toISOString()).toBe('2026-05-04T10:00:00.000Z');
+		expect(result.searchEndsAt.toISOString()).toBe('2026-05-07T10:00:00.000Z');
+		expect(PUBLIC_BOOKING_LEAD_WORKING_DAYS).toBe(3);
+	});
+
+	it('creates a lead window that bridges weekend when starting on Friday', () => {
+		const now = new Date('2026-05-01T10:00:00.000Z');
+		const result = getPublicBookingSearchWindow({ now, bookingType: 'lead' });
+
+		expect(result.searchStartsAt.toISOString()).toBe('2026-05-01T10:00:00.000Z');
+		expect(result.searchEndsAt.toISOString()).toBe('2026-05-06T10:00:00.000Z');
 	});
 
 	it('resolves classification and groups slot presentation by day', async () => {

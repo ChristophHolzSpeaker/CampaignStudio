@@ -1,11 +1,19 @@
 <script lang="ts">
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 	import DirectAccess from './DirectAccess.svelte';
 
 	let {
 		props,
-		mailtoHref = 'mailto:speaker@christophholz.com'
-	}: { props?: HybridContentSectionProps; mailtoHref?: string } = $props();
+		mailtoHref = 'mailto:speaker@christophholz.com',
+		campaignId = null,
+		campaignPageId = null
+	}: {
+		props?: HybridContentSectionProps;
+		mailtoHref?: string;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+	} = $props();
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
 
@@ -44,9 +52,10 @@
 
 <svelte:window bind:scrollY />
 <section
-	class="bg-surface px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
+	class="bg-surface-container relative px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
 >
+	<SectionIdentifier props={{ id: 'hybrid_content_section' }}></SectionIdentifier>
 	<div class="mx-auto max-w-7xl">
 		<div class="mb-14 grid items-end gap-8 lg:mb-20 lg:grid-cols-12 lg:gap-12">
 			<div class="space-y-6 lg:col-span-8">
@@ -141,4 +150,8 @@
 	</div>
 </section>
 
-<DirectAccess props={{ mailtoHref }}></DirectAccess>
+<DirectAccess
+	props={{ mailtoHref, emailCtaTitle: props?.emailCtaTitle }}
+	{campaignId}
+	{campaignPageId}
+></DirectAccess>

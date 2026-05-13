@@ -7,9 +7,11 @@ import type {
 	BookingType
 } from './contracts';
 import { classifyBookingRequesterByEmail } from './requester-classification';
+import { getBookingWindowConfig } from './booking-window';
 import { PUBLIC_BOOKING_CALENDAR_ID } from '$env/static/public';
 
 export const PUBLIC_BOOKING_SLOT_WINDOW_DAYS = 3;
+export const PUBLIC_BOOKING_LEAD_WORKING_DAYS = 3;
 export const PUBLIC_BOOKING_SLOT_LIMIT = 40;
 
 export type PublicBookingSlotPresentation = {
@@ -37,12 +39,54 @@ export type PublicBookingSlotPreview = {
 	slotGroups: PublicBookingSlotDayGroup[];
 };
 
-export function getPublicBookingSearchWindow(input?: { now?: Date; windowDays?: number }): {
+function isWeekdayInTimeZone(date: Date, timeZone: string): boolean {
+	const weekday = new Intl.DateTimeFormat('en-US', {
+		timeZone,
+		weekday: 'short'
+	}).format(date);
+
+	return weekday !== 'Sat' && weekday !== 'Sun';
+}
+
+function getLeadCalendarWindowDays(input: {
+	now: Date;
+	timeZone: string;
+	targetWorkingDays: number;
+}): number {
+	let countedWorkingDays = 0;
+	let daysOffset = 0;
+
+	while (countedWorkingDays < input.targetWorkingDays) {
+		const candidate = new Date(input.now.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+		if (isWeekdayInTimeZone(candidate, input.timeZone)) {
+			countedWorkingDays += 1;
+		}
+
+		daysOffset += 1;
+	}
+
+	return daysOffset;
+}
+
+export function getPublicBookingSearchWindow(input?: {
+	now?: Date;
+	windowDays?: number;
+	bookingType?: BookingType;
+}): {
 	searchStartsAt: Date;
 	searchEndsAt: Date;
 } {
 	const now = input?.now ?? new Date();
-	const windowDays = input?.windowDays ?? PUBLIC_BOOKING_SLOT_WINDOW_DAYS;
+	const bookingType = input?.bookingType ?? 'general';
+	const windowDays =
+		input?.windowDays ??
+		(bookingType === 'lead'
+			? getLeadCalendarWindowDays({
+					now,
+					timeZone: getBookingWindowConfig().timeZone,
+					targetWorkingDays: PUBLIC_BOOKING_LEAD_WORKING_DAYS
+				})
+			: PUBLIC_BOOKING_SLOT_WINDOW_DAYS);
 	const searchStartsAt = new Date(now.getTime());
 	const searchEndsAt = new Date(now.getTime() + windowDays * 24 * 60 * 60 * 1000);
 
@@ -99,7 +143,10 @@ export async function resolvePublicBookingSlots(input: {
 	now?: Date;
 }): Promise<PublicBookingResolution> {
 	const now = input.now ?? new Date();
-	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({ now });
+	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({
+		now,
+		bookingType: input.bookingType
+	});
 
 	const [classification, availability] = await Promise.all([
 		classifyBookingRequesterByEmail(input.requesterEmail, { now }),
@@ -127,7 +174,10 @@ export async function resolvePublicBookingSlotPreview(input: {
 	now?: Date;
 }): Promise<PublicBookingSlotPreview> {
 	const now = input.now ?? new Date();
-	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({ now });
+	const { searchStartsAt, searchEndsAt } = getPublicBookingSearchWindow({
+		now,
+		bookingType: input.bookingType
+	});
 
 	const availability = await getBookingAvailability({
 		bookingType: input.bookingType,

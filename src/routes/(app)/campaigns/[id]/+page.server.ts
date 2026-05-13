@@ -14,8 +14,8 @@ import {
 import { setCampaignStatus } from '$lib/server/campaigns/client';
 import type { Actions } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
-import { campaign_pages } from '$lib/server/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { campaign_ad_groups, campaign_ad_packages, campaign_pages } from '$lib/server/db/schema';
+import { and, desc, eq } from 'drizzle-orm';
 import { runCampaignRegenerationFromStrategyPrompt } from '$lib/server/agents/google-ads-pipeline';
 
 type StrategyUpdateFormState = {
@@ -105,9 +105,53 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 		const targetStatus = formData.get('target_status')?.toString() ?? 'draft';
+		const candidatePageId = Number(formData.get('campaign_page_id'));
 
 		if (!id) {
 			return { success: false };
+		}
+
+		if (targetStatus === 'published') {
+			let selectedCampaignPageId: number | null = null;
+
+			if (Number.isFinite(candidatePageId) && candidatePageId > 0) {
+				const [selectedPage] = await db
+					.select({ id: campaign_pages.id })
+					.from(campaign_pages)
+					.where(and(eq(campaign_pages.id, candidatePageId), eq(campaign_pages.campaign_id, id)))
+					.limit(1);
+
+				if (selectedPage) {
+					selectedCampaignPageId = selectedPage.id;
+				}
+			}
+
+			if (!selectedCampaignPageId) {
+				const [latestCampaignPage] = await db
+					.select({ id: campaign_pages.id })
+					.from(campaign_pages)
+					.where(eq(campaign_pages.campaign_id, id))
+					.orderBy(desc(campaign_pages.version_number))
+					.limit(1);
+
+				selectedCampaignPageId = latestCampaignPage?.id ?? null;
+			}
+
+			if (selectedCampaignPageId) {
+				const [latestAdPackage] = await db
+					.select({ id: campaign_ad_packages.id })
+					.from(campaign_ad_packages)
+					.where(eq(campaign_ad_packages.campaign_id, id))
+					.orderBy(desc(campaign_ad_packages.version_number))
+					.limit(1);
+
+				if (latestAdPackage) {
+					await db
+						.update(campaign_ad_groups)
+						.set({ campaign_page_id: selectedCampaignPageId, updated_at: new Date() })
+						.where(eq(campaign_ad_groups.ad_package_id, latestAdPackage.id));
+				}
+			}
 		}
 
 		await setCampaignStatus(id, targetStatus);
