@@ -497,9 +497,18 @@ export async function runLandingPageEditFromPrompt(
 		changePrompt,
 		traceContext
 	);
+	const normalizedPrompt = changePrompt.replace(/\s+/g, ' ').trim();
+	const changeNote = `AI edit: ${normalizedPrompt.slice(0, 140)}${
+		normalizedPrompt.length > 140 ? '...' : ''
+	}`;
 
 	const createdPage = await db.transaction(async (tx) => {
-		const persisted = await persistGeneratedLandingPage(pageRecord.campaignId, editedPage, tx);
+		const persisted = await persistGeneratedLandingPage(
+			pageRecord.campaignId,
+			editedPage,
+			tx,
+			changeNote
+		);
 		const [latestAdPackage] = await tx
 			.select({ id: campaign_ad_packages.id })
 			.from(campaign_ad_packages)

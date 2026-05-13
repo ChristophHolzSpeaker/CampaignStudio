@@ -10,6 +10,15 @@ import { createRunId, traceLlm } from '$lib/server/telemetry/llm-trace';
 
 type DrizzleClient = typeof db | PostgresJsTransaction<any, any>;
 
+function isMissingChangeNoteColumnError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toLowerCase();
+	return message.includes('change_note') && message.includes('does not exist');
+}
+
 function slugify(value: string): string {
 	const slug = value
 		.toLowerCase()
@@ -24,7 +33,8 @@ function slugify(value: string): string {
 export async function persistGeneratedLandingPage(
 	campaignId: number,
 	page: LandingPageDocument,
-	dbClient: DrizzleClient = db
+	dbClient: DrizzleClient = db,
+	changeNote?: string
 ): Promise<{ campaignPageId: number }> {
 	const [latestVersion] = await dbClient
 		.select({ versionNumber: campaign_pages.version_number })
@@ -37,17 +47,42 @@ export async function persistGeneratedLandingPage(
 	const baseSlug = slugify(page.slug ?? page.title);
 	const slug = `${baseSlug}-c${campaignId}-v${nextVersionNumber}`;
 
-	const [createdPage] = await dbClient
-		.insert(campaign_pages)
-		.values({
-			campaign_id: campaignId,
-			version_number: nextVersionNumber,
-			structured_content_json: page,
-			slug,
-			is_published: false,
-			published_at: null
-		})
-		.returning({ id: campaign_pages.id });
+	let createdPage:
+		| {
+				id: number;
+		  }
+		| undefined;
+
+	try {
+		[createdPage] = await dbClient
+			.insert(campaign_pages)
+			.values({
+				campaign_id: campaignId,
+				version_number: nextVersionNumber,
+				structured_content_json: page,
+				change_note: changeNote?.trim() || null,
+				slug,
+				is_published: false,
+				published_at: null
+			})
+			.returning({ id: campaign_pages.id });
+	} catch (error) {
+		if (!isMissingChangeNoteColumnError(error)) {
+			throw error;
+		}
+
+		[createdPage] = await dbClient
+			.insert(campaign_pages)
+			.values({
+				campaign_id: campaignId,
+				version_number: nextVersionNumber,
+				structured_content_json: page,
+				slug,
+				is_published: false,
+				published_at: null
+			})
+			.returning({ id: campaign_pages.id });
+	}
 
 	if (!createdPage) {
 		throw new Error(`Failed to persist generated landing page for campaign ${campaignId}`);
@@ -92,7 +127,12 @@ export async function runLandingPageGenerationForCampaign(
 	console.log('Landing page pipeline: landing page document generated');
 
 	const result = await db.transaction(async (tx) => {
-		const persistedPage = await persistGeneratedLandingPage(campaignId, pageDocument, tx);
+		const persistedPage = await persistGeneratedLandingPage(
+			campaignId,
+			pageDocument,
+			tx,
+			'Initial generation'
+		);
 		await attachLandingPageToAdGroup(input.adGroup.id, persistedPage.campaignPageId, tx);
 
 		return persistedPage;

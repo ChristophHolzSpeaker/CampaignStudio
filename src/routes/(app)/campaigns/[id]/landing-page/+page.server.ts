@@ -14,6 +14,15 @@ import { runLandingPageEditFromPrompt } from '$lib/server/agents/landing-page-ed
 import { getCampaignById } from '$lib/server/campaigns/client';
 import { persistGeneratedLandingPage } from '$lib/server/agents/landing-page-pipeline';
 
+function isMissingChangeNoteColumnError(error: unknown): boolean {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toLowerCase();
+	return message.includes('change_note') && message.includes('does not exist');
+}
+
 type LandingPageEditFormState = {
 	values: {
 		changePrompt: string;
@@ -39,18 +48,49 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		throw error(404, 'Campaign not found');
 	}
 
-	const pageRecords = await db
-		.select({
-			structuredContentJson: campaign_pages.structured_content_json,
-			campaignPageId: campaign_pages.id,
-			versionNumber: campaign_pages.version_number,
-			slug: campaign_pages.slug,
-			createdAt: campaign_pages.created_at
-		})
-		.from(campaign_pages)
-		.where(eq(campaign_pages.campaign_id, campaignId))
-		.orderBy(desc(campaign_pages.version_number))
-		.limit(30);
+	let pageRecords: Array<{
+		structuredContentJson: unknown;
+		campaignPageId: number;
+		versionNumber: number;
+		changeNote: string | null;
+		slug: string;
+		createdAt: Date;
+	}> = [];
+
+	try {
+		pageRecords = await db
+			.select({
+				structuredContentJson: campaign_pages.structured_content_json,
+				campaignPageId: campaign_pages.id,
+				versionNumber: campaign_pages.version_number,
+				changeNote: campaign_pages.change_note,
+				slug: campaign_pages.slug,
+				createdAt: campaign_pages.created_at
+			})
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, campaignId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(30);
+	} catch (error) {
+		if (!isMissingChangeNoteColumnError(error)) {
+			throw error;
+		}
+
+		const legacyRecords = await db
+			.select({
+				structuredContentJson: campaign_pages.structured_content_json,
+				campaignPageId: campaign_pages.id,
+				versionNumber: campaign_pages.version_number,
+				slug: campaign_pages.slug,
+				createdAt: campaign_pages.created_at
+			})
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, campaignId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(30);
+
+		pageRecords = legacyRecords.map((record) => ({ ...record, changeNote: null }));
+	}
 
 	const [latestPageRecord] = pageRecords;
 	const requestedVersionPageId = Number(url.searchParams.get('version'));
@@ -98,6 +138,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		versionHistory: pageRecords.map((record) => ({
 			id: record.campaignPageId,
 			versionNumber: record.versionNumber,
+			changeNote: record.changeNote,
 			slug: record.slug,
 			createdAt: record.createdAt
 		})),
@@ -238,7 +279,12 @@ export const actions: Actions = {
 			)
 		};
 
-		const persisted = await persistGeneratedLandingPage(pageRecord.campaignId, updatedPage);
+		const persisted = await persistGeneratedLandingPage(
+			pageRecord.campaignId,
+			updatedPage,
+			undefined,
+			'Updated trust logos'
+		);
 
 		return {
 			pageEdit: {
@@ -359,7 +405,12 @@ export const actions: Actions = {
 			)
 		};
 
-		const persisted = await persistGeneratedLandingPage(pageRecord.campaignId, updatedPage);
+		const persisted = await persistGeneratedLandingPage(
+			pageRecord.campaignId,
+			updatedPage,
+			undefined,
+			'Updated keynotes'
+		);
 
 		return {
 			pageEdit: {
@@ -438,7 +489,12 @@ export const actions: Actions = {
 
 		const pageToRestore = parseLandingPageDocument(sourcePage.structuredContentJson);
 		const restored = await db.transaction(async (tx) => {
-			const persisted = await persistGeneratedLandingPage(campaignId, pageToRestore, tx);
+			const persisted = await persistGeneratedLandingPage(
+				campaignId,
+				pageToRestore,
+				tx,
+				`Restored from v${sourcePage.versionNumber}`
+			);
 			const [latestAdPackage] = await tx
 				.select({ id: campaign_ad_packages.id })
 				.from(campaign_ad_packages)

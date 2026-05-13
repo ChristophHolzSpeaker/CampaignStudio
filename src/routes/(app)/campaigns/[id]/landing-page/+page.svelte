@@ -37,6 +37,7 @@
 			versionHistory: Array<{
 				id: number;
 				versionNumber: number;
+				changeNote: string | null;
 				slug: string;
 				createdAt: Date;
 			}>;
@@ -125,12 +126,15 @@
 			{#each getViewData().versionHistory as version (version.id)}
 				<a
 					href={`?version=${version.id}`}
-					class="version-history-item"
+					class="version-history-item font-sans"
 					class:active={version.id === getViewData().campaignPageId}
 				>
 					<div>
 						<p class="version-label">v{version.versionNumber}</p>
 						<p class="version-meta">{formatVersionDate(version.createdAt)}</p>
+						{#if version.changeNote}
+							<p class="version-note">{version.changeNote}</p>
+						{/if}
 					</div>
 					{#if version.id === getViewData().latestCampaignPageId}
 						<span class="version-pill">latest</span>
@@ -304,6 +308,13 @@
 		margin: 0.1rem 0 0;
 		font-size: 0.74rem;
 		color: #64748b;
+	}
+
+	.version-note {
+		margin: 0.2rem 0 0;
+		font-size: 0.74rem;
+		line-height: 1.35;
+		color: #334155;
 	}
 
 	.version-pill {
