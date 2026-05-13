@@ -381,7 +381,7 @@ async function generateEditedLandingPageDocument(
 			}
 		);
 		response = await callOpenRouter({
-			model: 'google/gemini-3.1-flash-lite-preview',
+			model: 'google/gemini-3.1-flash-lite',
 			systemPrompt: buildEditorSystemPrompt(),
 			userPrompt,
 			responseFormat: 'json_object',
