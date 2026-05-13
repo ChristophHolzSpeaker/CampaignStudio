@@ -895,10 +895,7 @@ Corrective rules:
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
-- Place seo as the first section.
-- If both speaker_in_action and proof_of_performance are present, place speaker_in_action above proof_of_performance.
-- Soft preference: if both frictionless_funnel_booking and proof_of_performance are present, place frictionless_funnel_booking above proof_of_performance.
-- If keynote_speeches is present and logos_of_trust_ribbon is present, place keynote_speeches immediately after logos_of_trust_ribbon.
+- Sections must appear in this exact order: seo, immediate_authority_hero, logos_of_trust_ribbon, keynote_speeches, hybrid_content_section, speaker_in_action, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -996,6 +993,19 @@ function validateLandingPageDocumentForMvp(
 	allowedSectionTypes: readonly PageSectionType[],
 	requiredSectionTypes: readonly PageSectionType[]
 ): void {
+	const requiredInitialSectionOrder: PageSectionType[] = [
+		'seo',
+		'immediate_authority_hero',
+		'logos_of_trust_ribbon',
+		'keynote_speeches',
+		'hybrid_content_section',
+		'speaker_in_action',
+		'frictionless_funnel_booking',
+		'proof_of_performance',
+		'booklet_download_cta',
+		'compliance_transparency_footer'
+	];
+
 	const minSections = requiredSectionTypes.length;
 
 	if (page.sections.length < minSections) {
@@ -1016,8 +1026,18 @@ function validateLandingPageDocumentForMvp(
 		}
 	}
 
-	if (sectionTypes[0] !== 'seo') {
-		throw new Error('Landing page must place seo as the first section.');
+	if (sectionTypes.length !== requiredInitialSectionOrder.length) {
+		throw new Error(
+			`Landing page must include exactly ${requiredInitialSectionOrder.length} sections in the required initial order.`
+		);
+	}
+
+	for (let index = 0; index < requiredInitialSectionOrder.length; index += 1) {
+		if (sectionTypes[index] !== requiredInitialSectionOrder[index]) {
+			throw new Error(
+				`Landing page must follow the required section order: ${requiredInitialSectionOrder.join(', ')}.`
+			);
+		}
 	}
 }
 

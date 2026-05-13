@@ -108,14 +108,24 @@ Rules:
 
 * use only section types from allowedSectionTypes
 * include every type in requiredSectionTypes
-* place seo as the first section in sectionPlan
-* include at least requiredSectionTypes.length sections
+* sectionPlan must include exactly these section types in this exact order:
+	1) seo
+	2) immediate_authority_hero
+	3) logos_of_trust_ribbon
+	4) keynote_speeches
+	5) hybrid_content_section
+	6) speaker_in_action
+	7) frictionless_funnel_booking
+	8) proof_of_performance
+	9) booklet_download_cta
+	10) compliance_transparency_footer
+* include exactly requiredSectionTypes.length sections
 * section selection must actively follow section catalog guidance (description, whenToUse, whenNotToUse, contentGuidance)
 * avoid selecting adjacent sections that do the same job or repeat the same narrative function
 * section purpose and contentDirection are internal planning artifacts, not final customer-facing copy
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
 	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID and exactly one hero image from input.assets.assetCatalog.heroImages by ID
-	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID
+	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
 	* when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
 	* when keynote_speeches is selected, keynote selection is automatic from the first three entries in input.assets.assetCatalog.keynoteCatalog
@@ -159,6 +169,10 @@ Return exactly one valid JSON object with this shape:
     "hybridContentSection": {
       "supportingImageAssetIds": ["string"],
       "rationale": "string"
+		},
+		"speakerInAction": {
+		  "videoAssetIds": ["string"],
+		  "rationale": "string"
 		},
 		"keynoteSpeeches": {
 		  "rationale": "string"
@@ -221,8 +235,17 @@ General requirements:
 
 * use only section types in allowedSectionTypes
 * include every section type in requiredSectionTypes
-* place seo as the first section
-* soft preference: when both frictionless_funnel_booking and proof_of_performance are present, place frictionless_funnel_booking above proof_of_performance
+* sections must appear in this exact order:
+	1) seo
+	2) immediate_authority_hero
+	3) logos_of_trust_ribbon
+	4) keynote_speeches
+	5) hybrid_content_section
+	6) speaker_in_action
+	7) frictionless_funnel_booking
+	8) proof_of_performance
+	9) booklet_download_cta
+	10) compliance_transparency_footer
 * use section props exactly as required by each section contract
 * ensure seo.props.description includes campaign geography naturally
 * include campaign geography in seo.props.title when it fits naturally and remains readable

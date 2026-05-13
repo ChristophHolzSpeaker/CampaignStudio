@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ProofOfPerformanceProps, TestimonialItem } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let { props }: { props?: ProofOfPerformanceProps } = $props();
 
@@ -42,9 +43,10 @@
 </script>
 
 <section
-	class="bg-surface-container-low px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
+	class="relative bg-surface-container-low px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Proof of Performance section"
 >
+	<SectionIdentifier props={{ id: 'proof_of_performance' }}></SectionIdentifier>
 	<div class="mx-auto max-w-7xl">
 		<h2 class="mb-20 text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">
 			{title}

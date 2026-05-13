@@ -7,6 +7,7 @@
 	import type { FrictionlessFunnelBookingProps } from '$lib/page-builder/sections/types';
 	import { submitBookingRequest } from './FrictionlessFunnelSection.remote';
 	import type { CTAType } from '../../../../shared/event-types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
@@ -107,9 +108,10 @@
 
 <section
 	id="booking"
-	class="bg-surface-container px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
+	class="bg-surface-container relative px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Frictionless Funnel Booking section"
 >
+	<SectionIdentifier props={{ id: 'frictionless_funnel' }}></SectionIdentifier>
 	<div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16">
 		<div class="space-y-8">
 			<h2 class="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">

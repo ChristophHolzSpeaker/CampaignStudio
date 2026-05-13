@@ -33,11 +33,11 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Logo file (PNG, SVG, WEBP, max 1MB)</span>
+			<span>Logo file (PNG, SVG, max 100kb)</span>
 			<input
 				name="logoFile"
 				type="file"
-				accept="image/png ,image/webp, image/svg+xml"
+				accept="image/png, image/svg+xml"
 				required
 				class="rounded border border-neutral-300 px-3 py-2"
 			/>

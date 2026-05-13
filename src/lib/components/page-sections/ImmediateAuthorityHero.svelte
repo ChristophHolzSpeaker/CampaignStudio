@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
@@ -103,6 +104,7 @@
 	class="relative isolate overflow-hidden bg-surface px-6 py-16 sm:px-8 lg:px-12 lg:py-24"
 	aria-label="Immediate Authority Hero section"
 >
+	<SectionIdentifier props={{ id: 'immediate_authority_hero' }}></SectionIdentifier>
 	<div class="absolute inset-0 -z-20">
 		<img class="h-full w-full object-cover grayscale" src={heroImageUrl} alt={heroImageAlt} />
 	</div>

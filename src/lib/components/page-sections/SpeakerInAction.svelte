@@ -2,6 +2,7 @@
 	import { page } from '$app/state';
 	import { pushState } from '$app/navigation';
 	import type { SpeakerInActionProps } from '$lib/page-builder/sections';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
@@ -92,6 +93,7 @@
 </script>
 
 <section class="relative isolate overflow-hidden bg-surface px-6 py-16 sm:px-8 lg:px-12 lg:py-24">
+	<SectionIdentifier props={{ id: 'speaker_in_action' }}></SectionIdentifier>
 	<div class="mb-stack-lg mx-auto max-w-7xl px-8 pb-8">
 		<h1 class=" text-center text-5xl leading-[0.95] font-bold tracking-tight lg:text-7xl">
 			{sectionTitle}

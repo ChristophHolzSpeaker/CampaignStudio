@@ -1,11 +1,15 @@
 <script lang="ts">
 	import type { BookletDownloadCtaProps } from '$lib/page-builder/sections/types';
 	import Button from '../elements/Button.svelte';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let { props }: { props?: BookletDownloadCtaProps } = $props();
 </script>
 
-<section class="overflow-hidden bg-on-surface px-6 py-20 text-surface sm:px-8 lg:px-12 lg:py-28">
+<section
+	class="relative overflow-hidden bg-on-surface px-6 py-20 text-surface sm:px-8 lg:px-12 lg:py-28"
+>
+	<SectionIdentifier props={{ id: 'booklet_download_cta' }}></SectionIdentifier>
 	<div class="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2 lg:gap-16">
 		<div class="relative">
 			<div
