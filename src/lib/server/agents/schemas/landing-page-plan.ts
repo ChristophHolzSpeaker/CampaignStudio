@@ -1,5 +1,18 @@
 import { z } from 'zod';
 
+const REQUIRED_INITIAL_SECTION_ORDER = [
+	'seo',
+	'immediate_authority_hero',
+	'logos_of_trust_ribbon',
+	'keynote_speeches',
+	'hybrid_content_section',
+	'speaker_in_action',
+	'frictionless_funnel_booking',
+	'proof_of_performance',
+	'booklet_download_cta',
+	'compliance_transparency_footer'
+] as const;
+
 const landingPagePlanSectionSchema = z.object({
 	type: z.string().trim().min(1),
 	purpose: z.string().trim().min(1),
@@ -117,8 +130,18 @@ export function validateLandingPagePlanSections(
 		}
 	}
 
-	if (sectionTypes[0] !== 'seo') {
-		throw new Error('Strategist plan must place seo as the first section.');
+	if (sectionTypes.length !== REQUIRED_INITIAL_SECTION_ORDER.length) {
+		throw new Error(
+			`Strategist plan must include exactly ${REQUIRED_INITIAL_SECTION_ORDER.length} sections in the required initial order.`
+		);
+	}
+
+	for (let index = 0; index < REQUIRED_INITIAL_SECTION_ORDER.length; index += 1) {
+		if (sectionTypes[index] !== REQUIRED_INITIAL_SECTION_ORDER[index]) {
+			throw new Error(
+				`Strategist plan must follow the required section order: ${REQUIRED_INITIAL_SECTION_ORDER.join(', ')}.`
+			);
+		}
 	}
 }
 

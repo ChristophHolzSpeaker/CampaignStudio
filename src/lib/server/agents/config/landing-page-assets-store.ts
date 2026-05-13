@@ -343,6 +343,36 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 	return { heroVideos, heroImages, hybridSupportingImages, speakerInActionVideos };
 }
 
+function ensureSpeakerInActionCatalog(
+	speakerInActionVideos: SpeakerInActionVideoOption[],
+	heroVideos: HeroVideoOption[]
+): SpeakerInActionVideoOption[] {
+	if (speakerInActionVideos.length >= 4 || heroVideos.length === 0) {
+		return speakerInActionVideos;
+	}
+
+	const fallbackVideos: SpeakerInActionVideoOption[] = [...speakerInActionVideos];
+	for (let index = speakerInActionVideos.length; index < 4; index += 1) {
+		const heroSource = heroVideos[index % heroVideos.length];
+		fallbackVideos.push({
+			id: `fallback-speaker-${index + 1}`,
+			title: `${heroSource.title} (Speaker fallback ${index + 1})`,
+			description: heroSource.description,
+			usageNotes: `${heroSource.usageNotes} This entry was auto-filled from hero videos because fewer than four speaker_in_action videos are configured.`,
+			avoidNotes: heroSource.avoidNotes,
+			videoEmbedUrl: heroSource.videoEmbedUrl,
+			videoThumbnailUrl: heroSource.videoThumbnailUrl,
+			videoThumbnailAlt: heroSource.videoThumbnailAlt
+		});
+	}
+
+	console.warn(
+		`Landing page assets: auto-filled speaker_in_action catalog from hero videos (speaker=${speakerInActionVideos.length}, hero=${heroVideos.length}).`
+	);
+
+	return fallbackVideos;
+}
+
 function buildLogoCatalog(rows: LogoRow[]): LogoOption[] {
 	return rows.map((logo) => ({
 		id: logo.id,
@@ -369,6 +399,10 @@ export async function loadLandingPageAssets(
 		const activeSet = await loadActiveLandingPageAssetSet();
 		const mediaRows = sortMediaAssetsByRelevance(await loadActiveMediaAssets(), context);
 		const catalog = buildCatalogFromMediaAssets(mediaRows);
+		const speakerInActionVideos = ensureSpeakerInActionCatalog(
+			catalog.speakerInActionVideos,
+			catalog.heroVideos
+		);
 		const logosCatalog = buildLogoCatalog(await loadActiveLogos());
 		const keynoteCatalog = buildKeynoteCatalog(await loadActiveKeynotes());
 
@@ -380,7 +414,7 @@ export async function loadLandingPageAssets(
 						heroVideos: catalog.heroVideos,
 						heroImages: catalog.heroImages,
 						hybridSupportingImages: catalog.hybridSupportingImages,
-						speakerInActionVideos: catalog.speakerInActionVideos,
+						speakerInActionVideos,
 						logoCatalog: logosCatalog,
 						keynoteCatalog
 					}
@@ -402,7 +436,7 @@ export async function loadLandingPageAssets(
 						heroVideos: catalog.heroVideos,
 						heroImages: catalog.heroImages,
 						hybridSupportingImages: catalog.hybridSupportingImages,
-						speakerInActionVideos: catalog.speakerInActionVideos,
+						speakerInActionVideos,
 						logoCatalog: logosCatalog,
 						keynoteCatalog
 					}
@@ -418,7 +452,7 @@ export async function loadLandingPageAssets(
 					heroVideos: catalog.heroVideos,
 					heroImages: catalog.heroImages,
 					hybridSupportingImages: catalog.hybridSupportingImages,
-					speakerInActionVideos: catalog.speakerInActionVideos,
+					speakerInActionVideos,
 					logoCatalog: logosCatalog,
 					keynoteCatalog
 				}

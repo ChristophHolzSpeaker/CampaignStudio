@@ -9,7 +9,14 @@ export type SectionEligibility = {
 
 const requiredSectionTypes: PageSectionType[] = [
 	'seo',
+	'immediate_authority_hero',
+	'logos_of_trust_ribbon',
 	'keynote_speeches',
+	'hybrid_content_section',
+	'speaker_in_action',
+	'frictionless_funnel_booking',
+	'proof_of_performance',
+	'booklet_download_cta',
 	'compliance_transparency_footer'
 ];
 
@@ -20,6 +27,7 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 	for (const sectionType of pageSectionTypes) {
 		switch (sectionType) {
 			case 'seo':
+			case 'booklet_download_cta':
 			case 'hybrid_content_section':
 			case 'frictionless_funnel_booking':
 			case 'compliance_transparency_footer':

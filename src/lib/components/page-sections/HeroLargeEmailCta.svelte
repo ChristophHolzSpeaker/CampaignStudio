@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HeroLargeEmailCtaProps } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
@@ -19,6 +20,7 @@
 </script>
 
 <section class="relative flex min-h-screen items-center justify-center overflow-hidden bg-black">
+	<SectionIdentifier props={{ id: 'hero_large_email_cta' }}></SectionIdentifier>
 	<!-- Background Image with Tonal Layering -->
 	<div class="absolute inset-0 z-0">
 		<img

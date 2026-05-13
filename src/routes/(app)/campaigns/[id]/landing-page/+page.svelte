@@ -33,8 +33,25 @@
 			}>;
 			campaignId: number;
 			campaignPageId: number | null;
+			latestCampaignPageId: number | null;
+			versionHistory: Array<{
+				id: number;
+				versionNumber: number;
+				changeNote: string | null;
+				slug: string;
+				createdAt: Date;
+			}>;
 			campaignStatus: string | null;
 		};
+
+	const isViewingLatestVersion = () =>
+		getViewData().campaignPageId === getViewData().latestCampaignPageId;
+
+	const formatVersionDate = (date: Date) =>
+		new Intl.DateTimeFormat('en-GB', {
+			dateStyle: 'medium',
+			timeStyle: 'short'
+		}).format(new Date(date));
 
 	const getCurrentLogoIds = () => {
 		const section = getViewData().page.sections.find(
@@ -100,6 +117,44 @@
 </script>
 
 <div class="preview-page">
+	<section class="version-history" aria-label="Landing page version history">
+		<div class="version-history-header">
+			<p class="version-history-title">Version history</p>
+			<p class="version-history-subtitle">Preview and restore any previous generated version.</p>
+		</div>
+		<div class="version-history-list">
+			{#each getViewData().versionHistory as version (version.id)}
+				<a
+					href={`?version=${version.id}`}
+					class="version-history-item font-sans"
+					class:active={version.id === getViewData().campaignPageId}
+				>
+					<div>
+						<p class="version-label">v{version.versionNumber}</p>
+						<p class="version-meta">{formatVersionDate(version.createdAt)}</p>
+						{#if version.changeNote}
+							<p class="version-note">{version.changeNote}</p>
+						{/if}
+					</div>
+					{#if version.id === getViewData().latestCampaignPageId}
+						<span class="version-pill">latest</span>
+					{/if}
+				</a>
+			{/each}
+		</div>
+		<form
+			method="POST"
+			use:enhance={handleEditSubmit}
+			action="?/restoreVersion"
+			class="restore-form"
+		>
+			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+			<button type="submit" disabled={!canEditPage() || isViewingLatestVersion() || busy}>
+				{busy ? 'Restoring...' : 'Restore viewed version as latest'}
+			</button>
+		</form>
+	</section>
+
 	<PageRenderer page={getViewData().page} />
 </div>
 
@@ -187,6 +242,111 @@
 <style>
 	.preview-page {
 		padding-bottom: 12rem;
+	}
+
+	.version-history {
+		position: static;
+		top: 1rem;
+		z-index: 20;
+		margin: 1rem 1rem 1.5rem;
+		border: 1px solid #d9dbcf;
+		background: #ffffff;
+		box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+	}
+
+	.version-history-header {
+		padding: 0.875rem;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.version-history-title {
+		margin: 0;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: #1f2937;
+	}
+
+	.version-history-subtitle {
+		margin: 0.25rem 0 0;
+		font-size: 0.78rem;
+		color: #4b5563;
+	}
+
+	.version-history-list {
+		display: grid;
+		max-height: 240px;
+		overflow: auto;
+	}
+
+	.version-history-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.5rem;
+		padding: 0.6rem 0.875rem;
+		border-bottom: 1px solid #f1f5f9;
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.version-history-item.active {
+		background: #f8fafc;
+		border-left: 3px solid #0f172a;
+		padding-left: calc(0.875rem - 3px);
+	}
+
+	.version-label {
+		margin: 0;
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: #0f172a;
+	}
+
+	.version-meta {
+		margin: 0.1rem 0 0;
+		font-size: 0.74rem;
+		color: #64748b;
+	}
+
+	.version-note {
+		margin: 0.2rem 0 0;
+		font-size: 0.74rem;
+		line-height: 1.35;
+		color: #334155;
+	}
+
+	.version-pill {
+		padding: 0.15rem 0.4rem;
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		background: #e2e8f0;
+		color: #1e293b;
+	}
+
+	.restore-form {
+		padding: 0.75rem 0.875rem 0.875rem;
+	}
+
+	.restore-form button {
+		width: 100%;
+		border: 1px solid #0f172a;
+		background: #0f172a;
+		padding: 0.6rem 0.9rem;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		text-transform: uppercase;
+		color: #ffffff;
+		cursor: pointer;
+	}
+
+	.restore-form button:disabled {
+		opacity: 0.55;
+		cursor: not-allowed;
 	}
 
 	.edit-composer {

@@ -264,7 +264,8 @@ export async function duplicateCampaign(input: {
 			const duplicatedLandingPage = await persistGeneratedLandingPage(
 				createdCampaign.id,
 				parsedLandingPage,
-				tx
+				tx,
+				`Duplicated from campaign ${input.sourceCampaignId}`
 			);
 			duplicatedCampaignPageId = duplicatedLandingPage.campaignPageId;
 		}

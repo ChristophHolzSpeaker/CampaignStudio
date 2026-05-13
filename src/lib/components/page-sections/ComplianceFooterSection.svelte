@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ComplianceTransparencyFooterProps } from '$lib/page-builder/sections/types';
+	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
@@ -58,9 +59,10 @@
 </script>
 
 <footer
-	class="border-outline/20 bg-surface-container-highest border-t px-6 py-16 sm:px-8 lg:px-12"
+	class="border-outline/20 bg-surface-container-highest relative border-t px-6 py-16 sm:px-8 lg:px-12"
 	aria-label="Compliance and Transparency footer section"
 >
+	<SectionIdentifier props={{ id: 'compliance_footer' }}></SectionIdentifier>
 	<div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12 lg:gap-12">
 		<div class="space-y-4 lg:col-span-5">
 			<h2 class="text-2xl text-on-surface uppercase lg:text-3xl">
