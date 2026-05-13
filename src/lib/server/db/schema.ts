@@ -53,20 +53,28 @@ export const profiles = pgTable('profiles', {
 	updated_at: timestamp('updated_at').notNull().defaultNow()
 });
 
-export const campaign_pages = pgTable('campaign_pages', {
-	id: serial('id').primaryKey(),
-	campaign_id: integer('campaign_id')
-		.notNull()
-		.references(() => campaigns.id),
-	version_number: integer('version_number').notNull().default(1),
-	structured_content_json: jsonb('structured_content_json').notNull(),
-	change_note: text('change_note'),
-	slug: text('slug').notNull(),
-	is_published: boolean('is_published').notNull().default(false),
-	published_at: timestamp('published_at'),
-	created_at: timestamp('created_at').notNull().defaultNow(),
-	updated_at: timestamp('updated_at').notNull().defaultNow()
-});
+export const campaign_pages = pgTable(
+	'campaign_pages',
+	{
+		id: serial('id').primaryKey(),
+		campaign_id: integer('campaign_id')
+			.notNull()
+			.references(() => campaigns.id),
+		version_number: integer('version_number').notNull().default(1),
+		structured_content_json: jsonb('structured_content_json').notNull(),
+		change_note: text('change_note'),
+		slug: text('slug').notNull(),
+		is_published: boolean('is_published').notNull().default(false),
+		published_at: timestamp('published_at'),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		publishedSlugUniqueIdx: uniqueIndex('campaign_pages_published_slug_unique_idx')
+			.on(table.slug)
+			.where(sql`${table.is_published} = true`)
+	})
+);
 
 export const campaign_visits = pgTable('campaign_visits', {
 	id: serial('id').primaryKey(),

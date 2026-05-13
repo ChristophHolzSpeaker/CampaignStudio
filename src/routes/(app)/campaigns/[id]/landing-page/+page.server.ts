@@ -12,7 +12,10 @@ import {
 import { asc, desc, eq } from 'drizzle-orm';
 import { runLandingPageEditFromPrompt } from '$lib/server/agents/landing-page-editor';
 import { getCampaignById } from '$lib/server/campaigns/client';
-import { persistGeneratedLandingPage } from '$lib/server/agents/landing-page-pipeline';
+import {
+	persistGeneratedLandingPage,
+	runLandingPageGenerationForCampaign
+} from '$lib/server/agents/landing-page-pipeline';
 
 function isMissingChangeNoteColumnError(error: unknown): boolean {
 	if (!(error instanceof Error)) {
@@ -147,6 +150,60 @@ export const load: PageServerLoad = async ({ params, url }) => {
 };
 
 export const actions: Actions = {
+	retryGeneration: async ({ params }) => {
+		const campaignId = Number(params.id);
+		if (!Number.isFinite(campaignId) || campaignId <= 0) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Invalid campaign id.',
+					success: false
+				}
+			});
+		}
+
+		const campaign = await getCampaignById(campaignId);
+		if (!campaign) {
+			return fail<LandingPagePreviewActionData>(404, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Campaign not found.',
+					success: false
+				}
+			});
+		}
+
+		if (campaign.status === 'published') {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: 'Cannot retry generation while campaign is published. Archive first.',
+					success: false
+				}
+			});
+		}
+
+		try {
+			const result = await runLandingPageGenerationForCampaign(campaignId);
+			return {
+				pageEdit: {
+					values: { changePrompt: '' },
+					success: true,
+					message: 'Landing page regenerated.',
+					campaignPageId: result.campaignPageId
+				}
+			};
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error);
+			return fail<LandingPagePreviewActionData>(500, {
+				pageEdit: {
+					values: { changePrompt: '' },
+					message: `Landing page regeneration failed: ${detail}`,
+					success: false
+				}
+			});
+		}
+	},
 	editPage: async ({ request }) => {
 		const formData = await request.formData();
 		const candidatePageId = Number(formData.get('campaignPageId'));

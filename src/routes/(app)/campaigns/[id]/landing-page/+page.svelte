@@ -159,6 +159,23 @@
 </div>
 
 <aside class="edit-composer" aria-label="Landing page editor">
+	<form
+		method="POST"
+		use:enhance={handleEditSubmit}
+		action="?/retryGeneration"
+		class="composer-form"
+	>
+		<div class="composer-top-row">
+			<p class="composer-title">Manual generation retry</p>
+			<p class="composer-hint">Use this when automatic retries were exhausted.</p>
+		</div>
+		<div class="composer-controls">
+			<button type="submit" disabled={!canEditPage() || busy}>
+				{busy ? 'Retrying...' : 'Retry landing page generation'}
+			</button>
+		</div>
+	</form>
+
 	<form method="POST" use:enhance={handleEditSubmit} action="?/editPage" class="composer-form">
 		<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
 		<div class="composer-top-row">
