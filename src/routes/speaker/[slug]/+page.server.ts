@@ -29,7 +29,13 @@ export const load: PageServerLoad = async ({ params, cookies, url, request }) =>
 		})
 		.from(campaign_pages)
 		.innerJoin(campaigns, eq(campaigns.id, campaign_pages.campaign_id))
-		.where(and(eq(campaign_pages.slug, slug), eq(campaigns.status, 'published')))
+		.where(
+			and(
+				eq(campaign_pages.slug, slug),
+				eq(campaign_pages.is_published, true),
+				eq(campaigns.status, 'published')
+			)
+		)
 		.limit(1);
 
 	if (!pageRecord) {
