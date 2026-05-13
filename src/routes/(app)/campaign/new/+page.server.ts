@@ -32,6 +32,7 @@ export type CampaignFormActionData = {
 	message?: string;
 	pipelineMessage?: string;
 	pipelineRunId?: string;
+	createdCampaignId?: number;
 	planner?: PlannerState;
 	mode?: 'manual' | 'planner';
 };
@@ -320,6 +321,7 @@ export const actions: Actions = {
 			return fail<CampaignFormActionData>(500, {
 				message: 'Campaign saved, but landing page generation failed. Please retry.',
 				pipelineMessage: error instanceof Error ? error.message : String(error),
+				createdCampaignId: createdCampaign.id,
 				values,
 				pipelineRunId,
 				planner,

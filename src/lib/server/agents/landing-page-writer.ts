@@ -49,6 +49,92 @@ type HybridBenefitItem = HybridTextItem & {
 const inputFallbackBenefitBody =
 	'Your audience leaves with practical outcomes they can apply immediately in their role.';
 
+const requiredMvpSectionOrder: PageSectionType[] = [
+	'seo',
+	'immediate_authority_hero',
+	'logos_of_trust_ribbon',
+	'keynote_speeches',
+	'hybrid_content_section',
+	'speaker_in_action',
+	'frictionless_funnel_booking',
+	'proof_of_performance',
+	'booklet_download_cta',
+	'compliance_transparency_footer'
+];
+
+const finalFallbackHeroVideoEmbedUrl = 'https://www.youtube.com/watch?v=mpbtCg2NSUs';
+const finalFallbackHeroImageUrl =
+	'https://cdn.prod.website-files.com/61263e0de406f497361dca55/6130408552ea140d707aab8e_christoph-contact-bg.jpg';
+const finalFallbackHeroImageAlt = 'Keynote speaker presenting to a business audience';
+
+const finalFallbackHybridImageUrls = [
+	'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1200&q=80',
+	'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80',
+	'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80'
+];
+
+function buildFallbackSpeakerMediaAssets(input: LandingPageGenerationInput): {
+	assetId: string;
+	title: string;
+	videoEmbedUrl: string;
+	thumbnailUrl: string;
+	thumbnailAlt: string;
+}[] {
+	const fallbackVideoEmbedUrl =
+		input.assets.heroDefaults.videoEmbedUrl || finalFallbackHeroVideoEmbedUrl;
+	const fallbackThumbnailUrl =
+		input.assets.heroDefaults.videoThumbnailUrl ??
+		input.assets.heroDefaults.heroImageUrl ??
+		finalFallbackHeroImageUrl;
+	const fallbackThumbnailAlt =
+		input.assets.heroDefaults.videoThumbnailAlt ??
+		input.assets.heroDefaults.heroImageAlt ??
+		finalFallbackHeroImageAlt;
+
+	return Array.from({ length: 4 }, (_, index) => ({
+		assetId: `fallback-speaker-${index + 1}`,
+		title: `Speaker highlight ${index + 1}`,
+		videoEmbedUrl: fallbackVideoEmbedUrl,
+		thumbnailUrl: fallbackThumbnailUrl,
+		thumbnailAlt: fallbackThumbnailAlt
+	}));
+}
+
+function buildFallbackKeynotes(input: LandingPageGenerationInput): {
+	id: string;
+	title: string;
+	imageUrl: string;
+	summary: string;
+}[] {
+	const baseTopic = input.campaign.topic;
+	const audience = input.campaign.audience;
+	const fallbackImage =
+		input.assets.heroDefaults.heroImageUrl ??
+		input.assets.heroDefaults.videoThumbnailUrl ??
+		finalFallbackHeroImageUrl;
+
+	return [
+		{
+			id: 'fallback-keynote-1',
+			title: `${baseTopic}: what leaders must decide now`,
+			imageUrl: fallbackImage,
+			summary: `A practical keynote for ${audience} focused on the most urgent decisions and immediate actions.`
+		},
+		{
+			id: 'fallback-keynote-2',
+			title: `${baseTopic}: from strategy to execution`,
+			imageUrl: fallbackImage,
+			summary: `A decision-oriented session that translates strategy into concrete execution steps for ${audience}.`
+		},
+		{
+			id: 'fallback-keynote-3',
+			title: `${baseTopic}: future trends, present impact`,
+			imageUrl: fallbackImage,
+			summary: `An outcome-focused view of emerging trends and how ${audience} can act on them now.`
+		}
+	];
+}
+
 function pickImageUrl(imageUrls: string[], index: number): string {
 	const selected = imageUrls[index % imageUrls.length];
 	if (!selected) {
@@ -89,9 +175,7 @@ function buildBenefitImagePool(
 		return existingUrls;
 	}
 
-	throw new Error(
-		'Landing page writer: no approved hybrid image URLs available. Add active hybrid_content_section media assets.'
-	);
+	return finalFallbackHybridImageUrls;
 }
 
 function buildHybridBenefitFallbacks(input: LandingPageGenerationInput): HybridTextItem[] {
@@ -318,9 +402,14 @@ function resolveSpeakerInActionSelection(
 	}
 
 	if (resolved.length < 4) {
-		throw new Error(
-			'Landing page writer: speaker_in_action requires at least 4 approved video assets in input.assets.assetCatalog.speakerInActionVideos.'
-		);
+		const fallbackMedia = buildFallbackSpeakerMediaAssets(input);
+		for (const fallback of fallbackMedia) {
+			if (resolved.length >= 4) {
+				break;
+			}
+
+			resolved.push(fallback);
+		}
 	}
 
 	return resolved.slice(0, 4);
@@ -345,7 +434,18 @@ function resolveLogosOfTrustSelection(
 		return fallbackFromCatalog;
 	}
 
-	return input.assets.fixedLogosRibbon.logos.slice(0, 4);
+	const fixedFallback = input.assets.fixedLogosRibbon.logos.slice(0, 4);
+	if (fixedFallback.length >= 1) {
+		return fixedFallback;
+	}
+
+	return [
+		{
+			name: 'Trusted organization',
+			imageUrl: '/CeBIT-Logo.png',
+			alt: 'Trusted organization logo'
+		}
+	];
 }
 
 function resolveKeynoteSelection(
@@ -397,9 +497,18 @@ function resolveKeynoteSelection(
 	}
 
 	if (resolved.length < 3) {
-		throw new Error(
-			'Landing page writer: keynote_speeches requires at least 3 approved keynotes in input.assets.assetCatalog.keynoteCatalog.'
-		);
+		const fallbackKeynotes = buildFallbackKeynotes(input);
+		for (const fallbackKeynote of fallbackKeynotes) {
+			if (resolved.length >= 3) {
+				break;
+			}
+
+			if (resolved.some((item) => item.id === fallbackKeynote.id)) {
+				continue;
+			}
+
+			resolved.push(fallbackKeynote);
+		}
 	}
 
 	return resolved.slice(0, 3);
@@ -423,11 +532,15 @@ function hydrateSectionWithAssets(
 			const resolvedVideoThumbnailUrl =
 				selectedHeroVideo?.videoThumbnailUrl ??
 				section.props.videoThumbnailUrl ??
-				assets.heroDefaults.videoThumbnailUrl;
+				assets.heroDefaults.videoThumbnailUrl ??
+				assets.heroDefaults.heroImageUrl ??
+				finalFallbackHeroImageUrl;
 			const resolvedVideoThumbnailAlt =
 				selectedHeroVideo?.videoThumbnailAlt ||
 				section.props.videoThumbnailAlt ||
-				assets.heroDefaults.videoThumbnailAlt;
+				assets.heroDefaults.videoThumbnailAlt ||
+				assets.heroDefaults.heroImageAlt ||
+				finalFallbackHeroImageAlt;
 			const resolvedHeroImageUrl =
 				selectedHeroImage?.imageUrl ??
 				section.props.heroImageUrl ??
@@ -438,17 +551,6 @@ function hydrateSectionWithAssets(
 				section.props.heroImageAlt ||
 				assets.heroDefaults.heroImageAlt ||
 				resolvedVideoThumbnailAlt;
-
-			if (
-				!resolvedVideoThumbnailUrl ||
-				!resolvedVideoThumbnailAlt ||
-				!resolvedHeroImageUrl ||
-				!resolvedHeroImageAlt
-			) {
-				throw new Error(
-					'Landing page writer: missing hero media defaults. Provide hero image and thumbnail values in heroDefaults or media assets.'
-				);
-			}
 
 			const ctaHref = section.props.primaryCtaHref ?? assets.heroDefaults.primaryCtaHref;
 			const ctaAction = section.props.primaryCtaAction ?? assets.heroDefaults.primaryCtaAction;
@@ -465,7 +567,8 @@ function hydrateSectionWithAssets(
 					videoEmbedUrl:
 						selectedHeroVideo?.videoEmbedUrl ??
 						section.props.videoEmbedUrl ??
-						assets.heroDefaults.videoEmbedUrl,
+						assets.heroDefaults.videoEmbedUrl ??
+						finalFallbackHeroVideoEmbedUrl,
 					heroImageUrl: resolvedHeroImageUrl,
 					heroImageAlt: resolvedHeroImageAlt,
 					videoThumbnailUrl: resolvedVideoThumbnailUrl,
@@ -657,6 +760,21 @@ function hydrateSectionWithAssets(
 			};
 		}
 
+		case 'booklet_download_cta': {
+			return {
+				...section,
+				props: {
+					...section.props,
+					labelText: section.props.labelText?.trim() || 'Free resource',
+					heading: section.props.heading?.trim() || 'Meet Christoph through the booklet',
+					paragraph:
+						section.props.paragraph?.trim() ||
+						"Get a concise introduction to Christoph's keynote themes, style, and real-world relevance. No form and no email required.",
+					buttonCtaText: section.props.buttonCtaText?.trim() || 'Download the booklet'
+				}
+			};
+		}
+
 		case 'compliance_transparency_footer': {
 			return {
 				...section,
@@ -794,6 +912,170 @@ function enforceKeynoteSectionOrder(sections: PageSection[]): PageSection[] {
 	return ordered;
 }
 
+function buildRequiredSectionFallback(
+	sectionType: PageSectionType,
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): PageSection {
+	const fallbackHeadline = plan.pageTitle || input.campaign.name;
+	const fallbackSubheadline = input.adGroup.intentSummary || input.adPackage.messagingAngle;
+
+	switch (sectionType) {
+		case 'seo':
+			return {
+				type: 'seo',
+				props: {
+					title: includeGeographyInSeoText(fallbackHeadline, input.campaign.geography),
+					description: includeGeographyInSeoText(fallbackSubheadline, input.campaign.geography)
+				}
+			};
+		case 'immediate_authority_hero':
+			return {
+				type: 'immediate_authority_hero',
+				props: {
+					headline: fallbackHeadline,
+					subheadline: fallbackSubheadline,
+					primaryCtaLabel:
+						input.assets.heroDefaults.primaryCtaLabelDefault || 'Request speaking availability',
+					videoEmbedUrl: input.assets.heroDefaults.videoEmbedUrl || finalFallbackHeroVideoEmbedUrl,
+					heroImageUrl:
+						input.assets.heroDefaults.heroImageUrl ??
+						input.assets.heroDefaults.videoThumbnailUrl ??
+						finalFallbackHeroImageUrl,
+					heroImageAlt:
+						input.assets.heroDefaults.heroImageAlt ??
+						input.assets.heroDefaults.videoThumbnailAlt ??
+						finalFallbackHeroImageAlt,
+					videoThumbnailUrl:
+						input.assets.heroDefaults.videoThumbnailUrl ??
+						input.assets.heroDefaults.heroImageUrl ??
+						finalFallbackHeroImageUrl,
+					videoThumbnailAlt:
+						input.assets.heroDefaults.videoThumbnailAlt ??
+						input.assets.heroDefaults.heroImageAlt ??
+						finalFallbackHeroImageAlt
+				}
+			};
+		case 'logos_of_trust_ribbon':
+			return {
+				type: 'logos_of_trust_ribbon',
+				props: {
+					title: input.assets.fixedLogosRibbon.title,
+					label: input.assets.fixedLogosRibbon.label,
+					logos: resolveLogosOfTrustSelection(input, plan)
+				}
+			};
+		case 'keynote_speeches': {
+			const keynotes = resolveKeynoteSelection(input, plan, []);
+			return {
+				type: 'keynote_speeches',
+				props: {
+					title: 'Keynote topics that resonate with this audience',
+					intro: `Choose from proven keynote topics tailored for ${input.campaign.audience}.`,
+					keynoteIds: keynotes.map((keynote) => keynote.id),
+					keynotes
+				}
+			};
+		}
+		case 'hybrid_content_section': {
+			const benefitImageUrls = buildBenefitImagePool(input, [], {});
+			const fallbackBenefits = normalizeBenefitsToThree(
+				[],
+				buildHybridBenefitFallbacks(input),
+				benefitImageUrls
+			);
+			const deepDiveItems = buildWhyChristophFallbacks(input, fallbackBenefits);
+			return {
+				type: 'hybrid_content_section',
+				props: {
+					title: 'What your audience will leave with from this session',
+					intro: `This section clarifies what ${input.campaign.audience} will leave with on ${input.campaign.topic}.`,
+					benefits: fallbackBenefits,
+					deepDiveTitle: 'Why Christoph',
+					deepDiveItems
+				}
+			};
+		}
+		case 'speaker_in_action':
+			return {
+				type: 'speaker_in_action',
+				props: {
+					title: 'Speaker in action',
+					mediaAssets: resolveSpeakerInActionSelection(input, plan)
+				}
+			};
+		case 'frictionless_funnel_booking':
+			return {
+				type: 'frictionless_funnel_booking',
+				props: {
+					title: input.assets.bookingDefaults.defaultSectionTitle,
+					description: input.assets.bookingDefaults.defaultSectionDescription,
+					primaryCtaLabel: input.assets.bookingDefaults.primaryCtaLabelDefault,
+					calendlyUrl: input.assets.bookingDefaults.calendlyUrl,
+					trustNote: input.assets.bookingDefaults.trustNote,
+					formDisclaimer: input.assets.bookingDefaults.formDisclaimer
+				}
+			};
+		case 'proof_of_performance':
+			return {
+				type: 'proof_of_performance',
+				props: {
+					title: input.assets.fixedProofOfPerformance.title,
+					testimonials: input.assets.fixedProofOfPerformance.testimonials
+				}
+			};
+		case 'booklet_download_cta':
+			return {
+				type: 'booklet_download_cta',
+				props: {
+					labelText: 'Free resource',
+					heading: 'Meet Christoph through the booklet',
+					paragraph:
+						"Get a concise introduction to Christoph's keynote themes, style, and real-world relevance. No form and no email required.",
+					buttonCtaText: 'Download the booklet'
+				}
+			};
+		case 'compliance_transparency_footer':
+			return {
+				type: 'compliance_transparency_footer',
+				props: {
+					privacyPolicyUrl: input.assets.complianceDefaults.privacyPolicyUrl,
+					contactEmail: input.assets.complianceDefaults.contactEmail,
+					businessAddress: input.assets.complianceDefaults.businessAddress,
+					phone: input.assets.complianceDefaults.phone,
+					copyrightText: input.assets.complianceDefaults.copyrightText,
+					additionalLinks: input.assets.complianceDefaults.additionalLinks
+				}
+			};
+		default:
+			return {
+				type: 'seo',
+				props: {
+					title: includeGeographyInSeoText(fallbackHeadline, input.campaign.geography),
+					description: includeGeographyInSeoText(fallbackSubheadline, input.campaign.geography)
+				}
+			};
+	}
+}
+
+function ensureRequiredMvpSections(
+	sections: PageSection[],
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan
+): PageSection[] {
+	const existingByType = new Map<PageSectionType, PageSection>();
+	for (const section of sections) {
+		if (requiredMvpSectionOrder.includes(section.type)) {
+			existingByType.set(section.type, section);
+		}
+	}
+
+	return requiredMvpSectionOrder.map(
+		(sectionType) =>
+			existingByType.get(sectionType) ?? buildRequiredSectionFallback(sectionType, input, plan)
+	);
+}
+
 function normalizeRootResponse(response: unknown): unknown {
 	if (Array.isArray(response)) {
 		const sectionCandidates = response
@@ -877,6 +1159,7 @@ function buildWriterRepairPrompt(
 	plan: LandingPagePlan,
 	invalidResponse: unknown,
 	issues: ZodIssue[],
+	mvpIssues: string[],
 	allowedSectionTypes: readonly PageSectionType[],
 	requiredSectionTypes: readonly PageSectionType[]
 ): string {
@@ -917,7 +1200,10 @@ Previous invalid JSON:
 ${JSON.stringify(invalidResponse, null, 2)}
 
 Validation errors:
-${JSON.stringify(issues, null, 2)}`;
+${JSON.stringify(issues, null, 2)}
+
+MVP validation errors:
+${JSON.stringify(mvpIssues, null, 2)}`;
 }
 
 function hydrateLandingPageWithAssets(
@@ -945,10 +1231,13 @@ function hydrateLandingPageWithAssets(
 		input.campaign.topic;
 
 	if (!Array.isArray(hydrated.sections)) {
+		const fallbackSections = ensureRequiredMvpSections([], input, plan).map((section) =>
+			hydrateSectionWithAssets(section, input, plan)
+		);
 		return {
 			...hydrated,
 			sections: ensureSeoSection(
-				[],
+				fallbackSections,
 				fallbackPageTitle,
 				fallbackSeoDescription,
 				input.campaign.geography
@@ -974,7 +1263,11 @@ function hydrateLandingPageWithAssets(
 		})
 		.map((section) => hydrateSectionWithAssets(section, input, plan));
 
-	const orderedSections = enforceKeynoteSectionOrder(enforceSpeakerSectionOrder(sections));
+	const mvpSections = ensureRequiredMvpSections(sections, input, plan).map((section) =>
+		hydrateSectionWithAssets(section, input, plan)
+	);
+
+	const orderedSections = enforceKeynoteSectionOrder(enforceSpeakerSectionOrder(mvpSections));
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
@@ -993,52 +1286,58 @@ function validateLandingPageDocumentForMvp(
 	allowedSectionTypes: readonly PageSectionType[],
 	requiredSectionTypes: readonly PageSectionType[]
 ): void {
-	const requiredInitialSectionOrder: PageSectionType[] = [
-		'seo',
-		'immediate_authority_hero',
-		'logos_of_trust_ribbon',
-		'keynote_speeches',
-		'hybrid_content_section',
-		'speaker_in_action',
-		'frictionless_funnel_booking',
-		'proof_of_performance',
-		'booklet_download_cta',
-		'compliance_transparency_footer'
-	];
+	const issues = collectLandingPageDocumentMvpIssues(
+		page,
+		allowedSectionTypes,
+		requiredSectionTypes
+	);
+	if (issues.length > 0) {
+		throw new Error(issues.join(' | '));
+	}
+}
 
+function collectLandingPageDocumentMvpIssues(
+	page: LandingPageDocument,
+	allowedSectionTypes: readonly PageSectionType[],
+	requiredSectionTypes: readonly PageSectionType[]
+): string[] {
 	const minSections = requiredSectionTypes.length;
+	const issues: string[] = [];
 
 	if (page.sections.length < minSections) {
-		throw new Error(`Landing page must include at least ${minSections} sections for this MVP.`);
+		issues.push(`Landing page must include at least ${minSections} sections for this MVP.`);
 	}
 
 	const allowedTypes = new Set<string>(allowedSectionTypes);
 	const sectionTypes = page.sections.map((section) => section.type);
 	for (const sectionType of sectionTypes) {
 		if (!allowedTypes.has(sectionType)) {
-			throw new Error(`Unsupported section type for MVP landing page: ${sectionType}`);
+			issues.push(`Unsupported section type for MVP landing page: ${sectionType}`);
 		}
 	}
 
 	for (const requiredSectionType of requiredSectionTypes) {
 		if (!sectionTypes.includes(requiredSectionType)) {
-			throw new Error(`Landing page must include ${requiredSectionType} section.`);
+			issues.push(`Landing page must include ${requiredSectionType} section.`);
 		}
 	}
 
-	if (sectionTypes.length !== requiredInitialSectionOrder.length) {
-		throw new Error(
-			`Landing page must include exactly ${requiredInitialSectionOrder.length} sections in the required initial order.`
+	if (sectionTypes.length !== requiredMvpSectionOrder.length) {
+		issues.push(
+			`Landing page must include exactly ${requiredMvpSectionOrder.length} sections in the required initial order.`
 		);
 	}
 
-	for (let index = 0; index < requiredInitialSectionOrder.length; index += 1) {
-		if (sectionTypes[index] !== requiredInitialSectionOrder[index]) {
-			throw new Error(
-				`Landing page must follow the required section order: ${requiredInitialSectionOrder.join(', ')}.`
+	for (let index = 0; index < requiredMvpSectionOrder.length; index += 1) {
+		if (sectionTypes[index] !== requiredMvpSectionOrder[index]) {
+			issues.push(
+				`Landing page must follow the required section order: ${requiredMvpSectionOrder.join(', ')}.`
 			);
+			break;
 		}
 	}
+
+	return issues;
 }
 
 export async function generateLandingPageDocument(
@@ -1132,25 +1431,58 @@ export async function generateLandingPageDocument(
 	}
 
 	const firstValidation = validateWithHydration(response, input, plan);
+	let repairUserPrompt: string;
 	if (firstValidation.success) {
-		validateLandingPageDocumentForMvp(
+		const firstMvpIssues = collectLandingPageDocumentMvpIssues(
 			firstValidation.data,
 			eligibility.allowedSectionTypes,
 			eligibility.requiredSectionTypes
 		);
-		console.log('Landing page writer: document validated');
-		return firstValidation.data;
-	}
-
-	console.error('Landing page writer: validation failed', firstValidation.issues);
-	traceLlm(
-		'agent_stage_validation_error',
-		{ ...traceContext, stage: 'landing_page_writer' },
-		{
-			issues: firstValidation.issues,
-			phase: 'initial_validation'
+		if (firstMvpIssues.length === 0) {
+			console.log('Landing page writer: document validated');
+			return firstValidation.data;
 		}
-	);
+
+		console.error('Landing page writer: MVP validation failed', firstMvpIssues);
+		traceLlm(
+			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: firstMvpIssues,
+				phase: 'initial_mvp_validation'
+			}
+		);
+
+		repairUserPrompt = buildWriterRepairPrompt(
+			input,
+			plan,
+			firstValidation.data,
+			[],
+			firstMvpIssues,
+			eligibility.allowedSectionTypes,
+			eligibility.requiredSectionTypes
+		);
+	} else {
+		console.error('Landing page writer: validation failed', firstValidation.issues);
+		traceLlm(
+			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: firstValidation.issues,
+				phase: 'initial_validation'
+			}
+		);
+
+		repairUserPrompt = buildWriterRepairPrompt(
+			input,
+			plan,
+			firstValidation.hydratedResponse,
+			firstValidation.issues,
+			[],
+			eligibility.allowedSectionTypes,
+			eligibility.requiredSectionTypes
+		);
+	}
 
 	let repairedResponse;
 	try {
@@ -1158,14 +1490,7 @@ export async function generateLandingPageDocument(
 		repairedResponse = await callOpenRouter({
 			model: 'google/gemini-3.1-flash-lite-preview',
 			systemPrompt,
-			userPrompt: buildWriterRepairPrompt(
-				input,
-				plan,
-				firstValidation.hydratedResponse,
-				firstValidation.issues,
-				eligibility.allowedSectionTypes,
-				eligibility.requiredSectionTypes
-			),
+			userPrompt: repairUserPrompt,
 			responseFormat: 'json_object',
 			traceContext: { ...traceContext, stage: 'landing_page_writer_repair' }
 		});
@@ -1200,6 +1525,26 @@ export async function generateLandingPageDocument(
 		);
 		throw new Error(
 			`Invalid landing page document: ${JSON.stringify(secondValidation.issues, null, 2)}`
+		);
+	}
+
+	const secondMvpIssues = collectLandingPageDocumentMvpIssues(
+		secondValidation.data,
+		eligibility.allowedSectionTypes,
+		eligibility.requiredSectionTypes
+	);
+	if (secondMvpIssues.length > 0) {
+		console.error('Landing page writer: repair MVP validation failed', secondMvpIssues);
+		traceLlm(
+			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: secondMvpIssues,
+				phase: 'repair_mvp_validation'
+			}
+		);
+		throw new Error(
+			`Invalid landing page document (MVP validation): ${secondMvpIssues.join(' | ')}`
 		);
 	}
 
