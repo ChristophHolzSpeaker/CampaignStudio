@@ -70,6 +70,7 @@
 	const getValues = () => form?.values ?? defaultValues;
 	const getErrors = () => form?.errors ?? {};
 	const getStatusMessage = () => form?.message;
+	const getCreatedCampaignId = () => form?.createdCampaignId;
 	const getPlanner = () => form?.planner ?? defaultPlanner;
 
 	let selectedMode = $state<'manual' | 'planner'>('planner');
@@ -329,6 +330,18 @@
 			>
 				{getStatusMessage()}
 			</div>
+			{#if getCreatedCampaignId()}
+				<div
+					class="horizontal-xs vertical-xs bg-[#fff4ed] text-xs font-semibold text-[#9a3412] uppercase"
+				>
+					<a
+						href={`/campaigns/${getCreatedCampaignId()}/landing-page`}
+						class="underline decoration-current underline-offset-2"
+					>
+						Open landing page and retry generation
+					</a>
+				</div>
+			{/if}
 		{/if}
 
 		{#if mode === 'planner'}
