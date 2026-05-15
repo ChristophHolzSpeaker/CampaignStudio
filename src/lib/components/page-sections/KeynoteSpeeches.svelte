@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	type Keynote = {
 		title: string;
@@ -13,36 +14,43 @@
 		keynotes: Keynote[];
 	};
 
-	let { props }: { props: KeynoteSpeechesSectionProps } = $props();
+	let {
+		props,
+		disableScrollReveal = false
+	}: { props: KeynoteSpeechesSectionProps; disableScrollReveal?: boolean } = $props();
 
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
-
-	let itemRefs = $state<HTMLElement[]>([]);
-	let visibleItems = $state<Set<number>>(new Set());
+	let sectionEl = $state<HTMLElement | null>(null);
+	let visibleItems = new SvelteSet<number>();
 	const revealOffset = 600;
-	function checkInView() {
-		for (const [index, el] of itemRefs.entries()) {
-			if (!el || visibleItems.has(index)) continue;
+
+	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
+		scrollY;
+		innerHeight;
+
+		const revealItems = sectionEl?.querySelectorAll<HTMLElement>('[data-reveal-index]') ?? [];
+		for (const el of revealItems) {
+			const index = Number(el.dataset.revealIndex);
+			if (Number.isNaN(index) || visibleItems.has(index)) continue;
 
 			const rect = el.getBoundingClientRect();
 			const isInView = rect.top < innerHeight + revealOffset && rect.bottom > 0;
 
 			if (isInView) {
-				visibleItems = new Set(visibleItems).add(index);
+				visibleItems.add(index);
 			}
 		}
-	}
-
-	$effect(() => {
-		scrollY;
-		innerHeight;
-		checkInView();
 	});
 </script>
 
 <svelte:window bind:scrollY />
 <section
+	bind:this={sectionEl}
 	class="relative bg-surface px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
 >
@@ -66,12 +74,14 @@
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each props.keynotes as keynote, index (`keynote-${keynote.title}`)}
 					<article
+						data-reveal-index={index}
 						class={[
 							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
-							visibleItems.has(index) ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+							disableScrollReveal || visibleItems.has(index)
+								? 'translate-y-0 opacity-100'
+								: 'translate-y-8 opacity-0'
 						]}
 						style={`transition-delay: ${index * 120}ms`}
-						bind:this={itemRefs[index]}
 					>
 						<span>0{index + 1}</span>
 

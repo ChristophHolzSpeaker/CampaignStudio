@@ -9,7 +9,8 @@
 		campaignId,
 		campaignPageId,
 		mailtoHref,
-		bookingSlotGroups
+		bookingSlotGroups,
+		disableScrollReveal = false
 	}: {
 		page?: LandingPageDocument;
 		sections?: PageSection[];
@@ -17,6 +18,7 @@
 		campaignPageId?: number | null;
 		mailtoHref?: string;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
+		disableScrollReveal?: boolean;
 	} = $props();
 
 	let renderedSections = $derived(page?.sections ?? sections ?? []);
@@ -28,13 +30,24 @@
 		{@const SectionComponent = entry?.component}
 
 		{#if SectionComponent}
-			<SectionComponent
-				props={section.props}
-				{campaignId}
-				{campaignPageId}
-				{mailtoHref}
-				{bookingSlotGroups}
-			/>
+			{#if section.type === 'hybrid_content_section' || section.type === 'keynote_speeches'}
+				<SectionComponent
+					props={section.props}
+					{campaignId}
+					{campaignPageId}
+					{mailtoHref}
+					{bookingSlotGroups}
+					{disableScrollReveal}
+				/>
+			{:else}
+				<SectionComponent
+					props={section.props}
+					{campaignId}
+					{campaignPageId}
+					{mailtoHref}
+					{bookingSlotGroups}
+				/>
+			{/if}
 		{:else}
 			<section aria-label="Unsupported section">
 				<p>Unsupported section: {section.type}</p>
