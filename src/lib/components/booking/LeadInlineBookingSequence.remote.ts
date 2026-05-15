@@ -4,6 +4,7 @@ import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-con
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
+import { persistJourneyAttributionSnapshot } from '$lib/server/attribution/journey-attribution';
 import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
 import {
 	classifyLeadBookingIntent,
@@ -30,6 +31,34 @@ function readSingleString(input: unknown): string | undefined {
 	return undefined;
 }
 
+function resolveInlineLeadAttributionSurface(bookingSurface: string | null): {
+	eventSource: string;
+	notificationFlow: 'inline_lead_sequence' | 'inline_lead_sequence_hero';
+	formType: 'inline_booking_sequence' | 'hero_inline_booking_sequence';
+} {
+	if (bookingSurface === 'hero') {
+		return {
+			eventSource: 'sveltekit.hero_inline_lead_booking_sequence',
+			notificationFlow: 'inline_lead_sequence_hero',
+			formType: 'hero_inline_booking_sequence'
+		};
+	}
+
+	if (bookingSurface === 'frictionless_funnel') {
+		return {
+			eventSource: 'sveltekit.frictionless_funnel_inline_lead_booking_sequence',
+			notificationFlow: 'inline_lead_sequence',
+			formType: 'inline_booking_sequence'
+		};
+	}
+
+	return {
+		eventSource: 'sveltekit.inline_lead_booking_sequence',
+		notificationFlow: 'inline_lead_sequence',
+		formType: 'inline_booking_sequence'
+	};
+}
+
 export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	const requestEvent = getRequestEvent();
 	const formData = new FormData();
@@ -42,6 +71,11 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	const campaignId = Number(readSingleString(rawData.campaignId));
 	const campaignPageId = Number(readSingleString(rawData.campaignPageId));
 	const pageSlug = readSingleString(rawData.pageSlug) ?? null;
+	const bookingSurface = readSingleString(rawData.bookingSurface) ?? null;
+	const ctaKey = readSingleString(rawData.ctaKey) ?? null;
+	const ctaSection = readSingleString(rawData.ctaSection) ?? null;
+	const ctaVariant = readSingleString(rawData.ctaVariant) ?? null;
+	const attributionSurface = resolveInlineLeadAttributionSurface(bookingSurface);
 	const intake = getBookingConfirmationSubmission(formData);
 
 	const parseResult = bookingConfirmationSchema.safeParse(intake);
@@ -72,7 +106,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 
 	try {
 		await notifyBookingFormSubmission({
-			flow: 'inline_lead_sequence',
+			flow: attributionSurface.notificationFlow,
 			email: parseResult.data.email,
 			name: parseResult.data.name ?? null,
 			phone: parseResult.data.phone ?? null,
@@ -85,7 +119,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		});
 	} catch (error) {
 		console.error('booking_form_submission_notification_failed', {
-			flow: 'inline_lead_sequence',
+			flow: attributionSurface.notificationFlow,
 			error: error instanceof Error ? error.message : 'unknown_error'
 		});
 	}
@@ -161,7 +195,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	const bookingLink = await createBookingLinkForJourney({
 		leadJourneyId: journey.id,
 		campaignId: campaignContext.campaignId,
-		eventSource: 'sveltekit.inline_lead_booking_sequence',
+		eventSource: attributionSurface.eventSource,
 		metadata: {
 			intake: {
 				email: normalizedEmail,
@@ -170,7 +204,13 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 				phone: parseResult.data.phone ?? null,
 				company: parseResult.data.company ?? null
 			},
-			intent: intentDecision
+			intent: intentDecision,
+			attribution: {
+				booking_surface: bookingSurface,
+				cta_key: ctaKey,
+				cta_section: ctaSection,
+				cta_variant: ctaVariant
+			}
 		}
 	});
 
@@ -200,7 +240,12 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		campaignId: campaignContext.campaignId,
 		campaignPageId: campaignContext.campaignPageId,
 		eventType: 'form_submitted',
-		eventSource: 'sveltekit.inline_lead_booking_sequence',
+		eventSource: attributionSurface.eventSource,
+		cta: {
+			key: ctaKey,
+			section: ctaSection,
+			variant: ctaVariant
+		},
 		eventPayload: {
 			attribution: {
 				page_path: requestEvent.url.pathname,
@@ -213,14 +258,23 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 				phone: parseResult.data.phone ?? '',
 				organization: parseResult.data.company ?? '',
 				meeting_scope: parseResult.data.scope,
-				form_type: 'inline_booking_sequence'
+				form_type: attributionSurface.formType
 			},
 			journey: {
 				created
 			},
 			qualification: intentDecision,
+			booking_surface: bookingSurface,
 			booking_confirmation_state: confirmation.state
 		}
+	});
+
+	await persistJourneyAttributionSnapshot({
+		journeyId: journey.id,
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		visitorIdentifier,
+		observedAt: now
 	});
 
 	if (confirmation.state !== 'confirmed') {

@@ -3,16 +3,19 @@
 	import { page } from '$app/state';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
+	import LeadInlineHeroBookingSequence from '../booking/LeadInlineHeroBookingSequence.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
 		campaignId = null,
-		campaignPageId = null
+		campaignPageId = null,
+		bookingSlotGroups = []
 	}: {
 		props?: ImmediateAuthorityHeroProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
 	} = $props();
 
 	const ctaHref = $derived('#booking');
@@ -98,6 +101,8 @@
 			}
 		});
 	}
+
+	const pageSlug = $derived(page.url.pathname);
 </script>
 
 <section
@@ -142,6 +147,7 @@
 				class="flex flex-col gap-3 sm:flex-row sm:items-center"
 				data-cta-action={props?.primaryCtaAction}
 			>
+				<!--
 				<NavButton href={ctaHref} onclick={() => trackCta('primary')}>{ctaLabel}</NavButton>
 				{#if isYouTubeUrl}
 					<button
@@ -164,6 +170,17 @@
 						View Showreel
 					</a>
 				{/if}
+				-->
+				<LeadInlineHeroBookingSequence
+					{campaignId}
+					{campaignPageId}
+					pageSlug={pageSlug ?? null}
+					slotGroups={bookingSlotGroups}
+					formActionKey={`hero-inline-booking:${campaignPageId ?? 'none'}`}
+					bookingSurface="hero"
+					ctaKey="hero_inline_booking"
+					ctaSection="hero"
+				></LeadInlineHeroBookingSequence>
 			</div>
 		</div>
 
