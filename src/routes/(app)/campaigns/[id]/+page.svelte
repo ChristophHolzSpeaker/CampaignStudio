@@ -116,71 +116,12 @@
 		status === 'published' ? 'Archive' : 'Publish campaign';
 </script>
 
-<section class="bookings-content space-y-8 p-6 lg:p-10">
+<section class="space-y-8 p-6 lg:p-10">
 	<div class="mx-auto grid grid-cols-12 gap-10">
 		<!-- Left Column: Campaign Summary -->
-		<section class="col-span-12 space-y-8 lg:col-span-4">
+		<section class="col-span-12 space-y-8">
 			<div class="sticky top-24">
 				<header class="mb-10">
-					<div class="mb-4 flex items-center gap-2">
-						<span
-							class="rounded px-3 py-1 font-['Space_Grotesk'] text-[10px] font-bold text-white uppercase"
-							class:bg-sky-400={getCampaign()?.status === 'draft'}
-							class:bg-green-400={getCampaign()?.status === 'published'}
-							class:bg-slate-400={getCampaign()?.status === 'archived'}
-						>
-							{(getCampaign()?.status ?? 'draft').toUpperCase()}
-						</span>
-						<span class="font-['Space_Grotesk'] text-[10px] font-medium text-slate-400 uppercase">
-							Created {formatFriendlyDate(getCampaign()?.created_at)}
-						</span>
-					</div>
-					<h1 class="mb-2 text-5xl leading-tight font-extrabold tracking-tighter text-on-surface">
-						{getCampaign()?.name ?? 'Campaign overview'}
-					</h1>
-					<p class="font-medium text-slate-500">
-						{getCampaign()?.topic ?? 'Campaign topic pending.'}
-						{getCampaign()?.audience ? ` · ${getCampaign()?.audience}` : ''}
-					</p>
-					<form action="?/publish" use:enhance method="POST" class="mt-4 flex justify-end">
-						<input type="hidden" name="id" value={getCampaign()?.id} />
-						<input type="hidden" name="campaign_page_id" value={getActiveCampaignPageId() ?? ''} />
-						<input type="hidden" name="target_status" value={targetStatus(getCampaign()?.status)} />
-						<Button>
-							{publishLabel(getCampaign()?.status)}
-						</Button>
-					</form>
-					{#if getCampaign()?.status === 'published'}
-						<div>
-							<span
-								class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
-							>
-								Live Landing Page
-							</span>
-							{#if getLiveLandingUrl()}
-								<div class="space-y-3 rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
-									<p class="font-['Space_Grotesk'] text-[11px] break-all text-slate-700">
-										{getLiveLandingUrl()}
-									</p>
-									<Button
-										onclick={copyLiveLandingUrl}
-										isSubmitting={busy}
-										type="button"
-										variant="dark">{copyStatus === 'copied' ? 'Copied' : 'Copy link'}</Button
-									>
-									{#if copyStatus === 'error'}
-										<p class="text-[11px] text-red-500">
-											Couldn't copy automatically. Copy it manually.
-										</p>
-									{/if}
-								</div>
-							{:else}
-								<p class="text-xs text-slate-500 italic">
-									Live URL will appear once the landing page slug is available.
-								</p>
-							{/if}
-						</div>
-					{/if}
 					<form method="POST" action="?/duplicate" class="duplicate-campaign-form">
 						<label
 							for="duplicate-name"
@@ -341,21 +282,6 @@
 						</div>
 					</div>
 				</div>
-			</div>
-		</section>
-		<!-- Right Column: Ad Groups List -->
-		<section class="col-span-12 lg:col-span-8">
-			<div class="mb-8 flex items-center justify-between">
-				<h2 class="text-2xl font-bold tracking-tight">Ad Groups</h2>
-			</div>
-			<div class="space-y-12">
-				{#if getAdGroups().length === 0}
-					<p class="text-sm text-slate-500 italic">No ad groups available for this campaign yet.</p>
-				{:else}
-					{#each getAdGroups() as adGroup (adGroup.id)}
-						<AdGroupCard {...adGroup} />
-					{/each}
-				{/if}
 			</div>
 		</section>
 	</div>
