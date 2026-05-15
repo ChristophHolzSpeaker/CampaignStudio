@@ -74,10 +74,15 @@
 		const viewData = getViewData();
 		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
 	};
+	const canUseAiEditor = () => canEditPage() && isViewingLatestVersion();
 	const getComposerHint = () => {
 		const viewData = getViewData();
 		if (!viewData.campaignPageId) {
 			return 'Open a campaign page version to use AI edits.';
+		}
+
+		if (!isViewingLatestVersion()) {
+			return 'You are previewing an older version. Switch to the latest version to use AI edits.';
 		}
 
 		if (viewData.campaignStatus === 'published') {
@@ -279,60 +284,70 @@
 							Use this when automatic retries were exhausted.
 						</p>
 					</div>
-					<div class="block gap-3">
-						<button
-							type="submit"
-							disabled={!canEditPage() || busy}
-							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
-						>
-							{busy ? 'Retrying...' : 'Retry landing page generation'}
-						</button>
-					</div>
+
+					<button
+						type="submit"
+						disabled={!canEditPage() || busy}
+						class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
+					>
+						{busy ? 'Retrying...' : 'Retry landing page generation'}
+					</button>
 				</form>
 
-				<form
-					method="POST"
-					use:enhance={handleEditSubmit}
-					action="?/editPage"
-					class="flex flex-col gap-3 p-3.5"
-				>
-					<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
-					<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
+				{#if isViewingLatestVersion()}
+					<form
+						method="POST"
+						use:enhance={handleEditSubmit}
+						action="?/editPage"
+						class="flex flex-col gap-3 p-3.5"
+					>
+						<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+						<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
+							<p
+								class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
+							>
+								Edit landing page with AI
+							</p>
+							<p class="m-0 text-[0.78rem] text-[#4b5563]">{getComposerHint()}</p>
+						</div>
+
+						<textarea
+							value={form?.pageEdit?.values?.changePrompt ?? ''}
+							name="change_prompt"
+							rows="6"
+							placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
+							disabled={!canUseAiEditor()}
+							class="w-full resize-y border border-[#cbd5e1] bg-white px-3 py-2.5 text-[0.85rem] leading-[1.45] text-[#0f172a] disabled:bg-[#f1f5f9] disabled:text-[#64748b]"
+						></textarea>
+						<button
+							type="submit"
+							disabled={!canUseAiEditor() || busy}
+							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
+						>
+							{busy ? 'Applying...' : 'Apply changes'}
+						</button>
+
+						{#if form?.pageEdit}
+							<p
+								class={[
+									'm-0 text-[0.8rem] text-[#b91c1c]',
+									(form?.pageEdit?.success ?? false) && 'text-[#166534]'
+								]}
+							>
+								{form?.pageEdit?.message ?? ''}
+							</p>
+						{/if}
+					</form>
+				{:else}
+					<div class="flex flex-col gap-3 border-t border-[#e5e7eb] p-3.5">
 						<p
 							class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
 						>
 							Edit landing page with AI
 						</p>
-						<p class="m-0 text-[0.78rem] text-[#4b5563]">{getComposerHint()}</p>
+						<p class="m-0 text-[0.78rem] leading-[1.45] text-[#4b5563]">{getComposerHint()}</p>
 					</div>
-					<div class="block gap-3">
-						<textarea
-							value={form?.pageEdit?.values?.changePrompt ?? ''}
-							name="change_prompt"
-							rows="3"
-							placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
-							disabled={!canEditPage()}
-							class="w-full resize-y border border-[#cbd5e1] bg-white px-3 py-2.5 text-[0.85rem] leading-[1.45] text-[#0f172a] disabled:bg-[#f1f5f9] disabled:text-[#64748b]"
-						></textarea>
-						<button
-							type="submit"
-							disabled={!canEditPage() || busy}
-							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
-						>
-							{busy ? 'Applying...' : 'Apply changes'}
-						</button>
-					</div>
-					{#if form?.pageEdit}
-						<p
-							class={[
-								'm-0 text-[0.8rem] text-[#b91c1c]',
-								(form?.pageEdit?.success ?? false) && 'text-[#166534]'
-							]}
-						>
-							{form?.pageEdit?.message ?? ''}
-						</p>
-					{/if}
-				</form>
+				{/if}
 			</aside>
 		</div>
 		<!--/Page settings-->
