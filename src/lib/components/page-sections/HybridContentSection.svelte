@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
+	import { SvelteSet } from 'svelte/reactivity';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 	import DirectAccess from './DirectAccess.svelte';
 
@@ -7,36 +8,41 @@
 		props,
 		mailtoHref = 'mailto:speaker@christophholz.com',
 		campaignId = null,
-		campaignPageId = null
+		campaignPageId = null,
+		disableScrollReveal = false
 	}: {
 		props?: HybridContentSectionProps;
 		mailtoHref?: string;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		disableScrollReveal?: boolean;
 	} = $props();
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
-
-	let itemRefs = $state<HTMLElement[]>([]);
-	let visibleItems = $state<Set<number>>(new Set());
+	let sectionEl = $state<HTMLElement | null>(null);
+	let visibleItems = new SvelteSet<number>();
 	const revealOffset = 600;
-	function checkInView() {
-		for (const [index, el] of itemRefs.entries()) {
-			if (!el || visibleItems.has(index)) continue;
+
+	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
+		scrollY;
+		innerHeight;
+
+		const revealItems = sectionEl?.querySelectorAll<HTMLElement>('[data-reveal-index]') ?? [];
+		for (const el of revealItems) {
+			const index = Number(el.dataset.revealIndex);
+			if (Number.isNaN(index) || visibleItems.has(index)) continue;
 
 			const rect = el.getBoundingClientRect();
 			const isInView = rect.top < innerHeight + revealOffset && rect.bottom > 0;
 
 			if (isInView) {
-				visibleItems = new Set(visibleItems).add(index);
+				visibleItems.add(index);
 			}
 		}
-	}
-
-	$effect(() => {
-		scrollY;
-		innerHeight;
-		checkInView();
 	});
 
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
@@ -52,6 +58,7 @@
 
 <svelte:window bind:scrollY />
 <section
+	bind:this={sectionEl}
 	class="bg-surface-container relative px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
 >
@@ -73,12 +80,14 @@
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each benefits as benefit, index (`hybrid-benefit-${benefit.title}`)}
 					<article
+						data-reveal-index={index}
 						class={[
 							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
-							visibleItems.has(index) ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+							disableScrollReveal || visibleItems.has(index)
+								? 'translate-y-0 opacity-100'
+								: 'translate-y-8 opacity-0'
 						]}
 						style={`transition-delay: ${index * 120}ms`}
-						bind:this={itemRefs[index]}
 					>
 						<span>0{index + 1}</span>
 
@@ -108,14 +117,14 @@
 				<div class="space-y-10">
 					{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
 						<div
+							data-reveal-index={index + benefits.length}
 							class={[
 								'flex gap-4 transition-all duration-500 ease-out sm:gap-6',
-								visibleItems.has(index + benefits.length)
+								disableScrollReveal || visibleItems.has(index + benefits.length)
 									? 'translate-y-0 opacity-100'
 									: 'translate-y-8 opacity-0'
 							]}
 							style={`transition-delay: ${index * 120}ms`}
-							bind:this={itemRefs[index + benefits.length]}
 						>
 							<span class="text-lg text-primary">{`0${index + 1}`}</span>
 							<div>

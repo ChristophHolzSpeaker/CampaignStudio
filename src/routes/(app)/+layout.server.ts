@@ -1,6 +1,7 @@
 // src/routes/+layout.server.ts
 import { db } from '$lib/server/db';
 import { profiles } from '$lib/server/db/schema';
+import { listCampaigns } from '$lib/server/campaigns/client';
 import { eq } from 'drizzle-orm';
 import type { LayoutServerLoad } from './$types';
 
@@ -27,6 +28,7 @@ const getMetadataDisplayName = (metadata: unknown): string | null => {
 
 export const load: LayoutServerLoad = async ({ cookies, locals }) => {
 	let currentUser: CurrentUser | null = null;
+	const campaignList = await listCampaigns();
 
 	const {
 		data: { user }
@@ -61,6 +63,7 @@ export const load: LayoutServerLoad = async ({ cookies, locals }) => {
 
 	return {
 		cookies: cookies.getAll(),
-		currentUser
+		currentUser,
+		campaignList
 	};
 };

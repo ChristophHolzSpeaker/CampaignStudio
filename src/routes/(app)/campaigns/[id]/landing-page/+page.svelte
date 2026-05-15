@@ -116,138 +116,233 @@
 	};
 </script>
 
-<div class="preview-page">
-	<section class="version-history" aria-label="Landing page version history">
-		<div class="version-history-header">
-			<p class="version-history-title">Version history</p>
-			<p class="version-history-subtitle">Preview and restore any previous generated version.</p>
-		</div>
-		<div class="version-history-list">
-			{#each getViewData().versionHistory as version (version.id)}
-				<a
-					href={`?version=${version.id}`}
-					class="version-history-item font-sans"
-					class:active={version.id === getViewData().campaignPageId}
+<div class="">
+	<!--Independently scrolling cols-->
+	<div class="grid grid-cols-12 lg:sticky lg:top-0 lg:h-dvh lg:overflow-hidden">
+		<!--Page settings-->
+
+		<div class="col-span-2 pt-20 lg:h-full lg:overflow-y-auto">
+			<section class=" border border-[#d9dbcf] bg-white" aria-label="Landing page version history">
+				<div class="border-b border-[#e5e7eb] p-3.5">
+					<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
+						Version history
+					</p>
+					<p class="mt-1 mr-0 mb-0 ml-0 text-[0.78rem] text-[#4b5563]">
+						Preview and restore any previous generated version.
+					</p>
+				</div>
+				<div class="grid max-h-[240px] overflow-auto">
+					{#each getViewData().versionHistory as version (version.id)}
+						<a
+							href={`?version=${version.id}`}
+							class={[
+								'flex items-center justify-between gap-2 border-b border-[#f1f5f9] px-3.5 py-[0.6rem] font-sans text-inherit no-underline',
+								version.id === getViewData().campaignPageId &&
+									'border-l-[3px] border-l-[#0f172a] bg-[#f8fafc] pl-[calc(0.875rem-3px)]'
+							]}
+						>
+							<div>
+								<p class="m-0 text-[0.82rem] font-semibold text-[#0f172a]">
+									v{version.versionNumber}
+								</p>
+								<p class="mt-[0.1rem] mr-0 mb-0 ml-0 text-[0.74rem] text-[#64748b]">
+									{formatVersionDate(version.createdAt)}
+								</p>
+								{#if version.changeNote}
+									<p
+										class="mt-[0.2rem] mr-0 mb-0 ml-0 text-[0.74rem] leading-[1.35] text-[#334155]"
+									>
+										{version.changeNote}
+									</p>
+								{/if}
+							</div>
+							{#if version.id === getViewData().latestCampaignPageId}
+								<span
+									class="bg-[#e2e8f0] px-[0.4rem] py-[0.15rem] text-[0.62rem] font-bold tracking-[0.06em] text-[#1e293b] uppercase"
+									>latest</span
+								>
+							{/if}
+						</a>
+					{/each}
+				</div>
+				<form
+					method="POST"
+					use:enhance={handleEditSubmit}
+					action="?/restoreVersion"
+					class="pt-3 pr-3.5 pb-3.5 pl-3.5"
 				>
-					<div>
-						<p class="version-label">v{version.versionNumber}</p>
-						<p class="version-meta">{formatVersionDate(version.createdAt)}</p>
-						{#if version.changeNote}
-							<p class="version-note">{version.changeNote}</p>
-						{/if}
+					<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+					<button
+						type="submit"
+						disabled={!canEditPage() || isViewingLatestVersion() || busy}
+						class="w-full cursor-pointer border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.72rem] font-bold tracking-[0.05em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+					>
+						{busy ? 'Restoring...' : 'Restore viewed version as latest'}
+					</button>
+				</form>
+			</section>
+			<div class="grid">
+				<aside class=" border border-stone-200 bg-white" aria-label="Landing page logo picker">
+					<form
+						method="POST"
+						use:enhance={handleEditSubmit}
+						action="?/setLogos"
+						class="flex flex-col gap-3 p-3.5"
+					>
+						<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+						<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
+							Logos for trust ribbon
+						</p>
+						<div class="grid max-h-[200px] gap-2 overflow-auto">
+							{#each getViewData().availableLogos as logo (logo.id)}
+								<label class="flex items-center gap-2 text-[0.8rem]">
+									<input
+										type="checkbox"
+										name="logoIds"
+										value={logo.id}
+										checked={getCurrentLogoIds().includes(logo.id)}
+										disabled={!canEditPage()}
+									/>
+									<img
+										src={logo.logoUrl}
+										alt={logo.logoAlt}
+										class="h-[20px] max-w-[70px] object-contain"
+									/>
+									<span>{logo.name}</span>
+								</label>
+							{/each}
+						</div>
+						<button
+							type="submit"
+							disabled={!canEditPage()}
+							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+						>
+							Save logos
+						</button>
+					</form>
+				</aside>
+
+				<aside class="border border-stone-200 bg-white" aria-label="Landing page keynote picker">
+					<form
+						method="POST"
+						use:enhance={handleEditSubmit}
+						action="?/setKeynotes"
+						class="flex flex-col gap-3 p-3.5"
+					>
+						<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+						<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
+							Keynotes
+						</p>
+						<div class="grid max-h-[260px] gap-2 overflow-auto">
+							{#each getViewData().availableKeynotes as keynote (keynote.id)}
+								<label class="flex items-start gap-2 text-[0.8rem]">
+									<input
+										type="checkbox"
+										name="keynoteIds"
+										value={keynote.id}
+										checked={getCurrentKeynoteIds().includes(keynote.id)}
+										disabled={!canEditPage()}
+									/>
+									<img
+										src={keynote.imageUrl}
+										alt={keynote.imageAlt}
+										class="h-[42px] w-[56px] border border-[#d1d5db] object-cover"
+									/>
+									<span>{keynote.title}</span>
+								</label>
+							{/each}
+						</div>
+						<button
+							type="submit"
+							disabled={!canEditPage()}
+							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+						>
+							Save keynotes
+						</button>
+					</form>
+				</aside>
+			</div>
+			<aside class="border border-stone-200 bg-white" aria-label="Landing page editor">
+				<form
+					method="POST"
+					use:enhance={handleEditSubmit}
+					action="?/retryGeneration"
+					class="flex flex-col gap-3 p-3.5"
+				>
+					<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
+						<p
+							class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
+						>
+							Manual generation retry
+						</p>
+						<p class="m-0 text-[0.78rem] text-[#4b5563]">
+							Use this when automatic retries were exhausted.
+						</p>
 					</div>
-					{#if version.id === getViewData().latestCampaignPageId}
-						<span class="version-pill">latest</span>
+					<div class="block gap-3">
+						<button
+							type="submit"
+							disabled={!canEditPage() || busy}
+							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
+						>
+							{busy ? 'Retrying...' : 'Retry landing page generation'}
+						</button>
+					</div>
+				</form>
+
+				<form
+					method="POST"
+					use:enhance={handleEditSubmit}
+					action="?/editPage"
+					class="flex flex-col gap-3 p-3.5"
+				>
+					<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+					<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
+						<p
+							class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
+						>
+							Edit landing page with AI
+						</p>
+						<p class="m-0 text-[0.78rem] text-[#4b5563]">{getComposerHint()}</p>
+					</div>
+					<div class="block gap-3">
+						<textarea
+							value={form?.pageEdit?.values?.changePrompt ?? ''}
+							name="change_prompt"
+							rows="3"
+							placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
+							disabled={!canEditPage()}
+							class="w-full resize-y border border-[#cbd5e1] bg-white px-3 py-2.5 text-[0.85rem] leading-[1.45] text-[#0f172a] disabled:bg-[#f1f5f9] disabled:text-[#64748b]"
+						></textarea>
+						<button
+							type="submit"
+							disabled={!canEditPage() || busy}
+							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
+						>
+							{busy ? 'Applying...' : 'Apply changes'}
+						</button>
+					</div>
+					{#if form?.pageEdit}
+						<p
+							class={[
+								'm-0 text-[0.8rem] text-[#b91c1c]',
+								(form?.pageEdit?.success ?? false) && 'text-[#166534]'
+							]}
+						>
+							{form?.pageEdit?.message ?? ''}
+						</p>
 					{/if}
-				</a>
-			{/each}
+				</form>
+			</aside>
 		</div>
-		<form
-			method="POST"
-			use:enhance={handleEditSubmit}
-			action="?/restoreVersion"
-			class="restore-form"
-		>
-			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
-			<button type="submit" disabled={!canEditPage() || isViewingLatestVersion() || busy}>
-				{busy ? 'Restoring...' : 'Restore viewed version as latest'}
-			</button>
-		</form>
-	</section>
-
-	<PageRenderer page={getViewData().page} />
-</div>
-
-<aside class="edit-composer" aria-label="Landing page editor">
-	<form
-		method="POST"
-		use:enhance={handleEditSubmit}
-		action="?/retryGeneration"
-		class="composer-form"
-	>
-		<div class="composer-top-row">
-			<p class="composer-title">Manual generation retry</p>
-			<p class="composer-hint">Use this when automatic retries were exhausted.</p>
+		<!--/Page settings-->
+		<!--Landing page preview-->
+		<div class="col-span-10 lg:h-full lg:overflow-y-auto">
+			<PageRenderer page={getViewData().page} disableScrollReveal={true} />
 		</div>
-		<div class="composer-controls">
-			<button type="submit" disabled={!canEditPage() || busy}>
-				{busy ? 'Retrying...' : 'Retry landing page generation'}
-			</button>
-		</div>
-	</form>
-
-	<form method="POST" use:enhance={handleEditSubmit} action="?/editPage" class="composer-form">
-		<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
-		<div class="composer-top-row">
-			<p class="composer-title">Edit landing page with AI</p>
-			<p class="composer-hint">{getComposerHint()}</p>
-		</div>
-		<div class="composer-controls">
-			<textarea
-				value={form?.pageEdit?.values?.changePrompt ?? ''}
-				name="change_prompt"
-				rows="3"
-				placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
-				disabled={!canEditPage()}
-			></textarea>
-			<button type="submit" disabled={!canEditPage() || busy}>
-				{busy ? 'Applying...' : 'Apply changes'}
-			</button>
-		</div>
-		{#if form?.pageEdit}
-			<p class="composer-message" class:success={form?.pageEdit?.success ?? false}>
-				{form?.pageEdit?.message ?? ''}
-			</p>
-		{/if}
-	</form>
-</aside>
-
-<div class="picker-stack">
-	<aside class="logo-picker" aria-label="Landing page logo picker">
-		<form method="POST" use:enhance={handleEditSubmit} action="?/setLogos" class="picker-form">
-			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
-			<p class="picker-title">Logos for trust ribbon</p>
-			<div class="picker-grid">
-				{#each getViewData().availableLogos as logo (logo.id)}
-					<label class="picker-item">
-						<input
-							type="checkbox"
-							name="logoIds"
-							value={logo.id}
-							checked={getCurrentLogoIds().includes(logo.id)}
-							disabled={!canEditPage()}
-						/>
-						<img src={logo.logoUrl} alt={logo.logoAlt} class="picker-logo" />
-						<span>{logo.name}</span>
-					</label>
-				{/each}
-			</div>
-			<button type="submit" disabled={!canEditPage()}>Save logos</button>
-		</form>
-	</aside>
-
-	<aside class="keynote-picker" aria-label="Landing page keynote picker">
-		<form method="POST" use:enhance={handleEditSubmit} action="?/setKeynotes" class="picker-form">
-			<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
-			<p class="picker-title">Keynotes</p>
-			<div class="picker-grid keynote-picker-grid">
-				{#each getViewData().availableKeynotes as keynote (keynote.id)}
-					<label class="picker-item keynote-item">
-						<input
-							type="checkbox"
-							name="keynoteIds"
-							value={keynote.id}
-							checked={getCurrentKeynoteIds().includes(keynote.id)}
-							disabled={!canEditPage()}
-						/>
-						<img src={keynote.imageUrl} alt={keynote.imageAlt} class="picker-keynote-image" />
-						<span>{keynote.title}</span>
-					</label>
-				{/each}
-			</div>
-			<button type="submit" disabled={!canEditPage()}>Save keynotes</button>
-		</form>
-	</aside>
+		<!--/Landing page preview-->
+	</div>
+	<!--/Independently scrolling cols-->
 </div>
 
 {#if page.state.modal?.kind === 'youtube'}
@@ -255,294 +350,3 @@
 		<YouTubeEmbed url={page.state.modal.url} />
 	</ShallowRouteModal>
 {/if}
-
-<style>
-	.preview-page {
-		padding-bottom: 12rem;
-	}
-
-	.version-history {
-		position: static;
-		top: 1rem;
-		z-index: 20;
-		margin: 1rem 1rem 1.5rem;
-		border: 1px solid #d9dbcf;
-		background: #ffffff;
-		box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-	}
-
-	.version-history-header {
-		padding: 0.875rem;
-		border-bottom: 1px solid #e5e7eb;
-	}
-
-	.version-history-title {
-		margin: 0;
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #1f2937;
-	}
-
-	.version-history-subtitle {
-		margin: 0.25rem 0 0;
-		font-size: 0.78rem;
-		color: #4b5563;
-	}
-
-	.version-history-list {
-		display: grid;
-		max-height: 240px;
-		overflow: auto;
-	}
-
-	.version-history-item {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 0.5rem;
-		padding: 0.6rem 0.875rem;
-		border-bottom: 1px solid #f1f5f9;
-		text-decoration: none;
-		color: inherit;
-	}
-
-	.version-history-item.active {
-		background: #f8fafc;
-		border-left: 3px solid #0f172a;
-		padding-left: calc(0.875rem - 3px);
-	}
-
-	.version-label {
-		margin: 0;
-		font-size: 0.82rem;
-		font-weight: 600;
-		color: #0f172a;
-	}
-
-	.version-meta {
-		margin: 0.1rem 0 0;
-		font-size: 0.74rem;
-		color: #64748b;
-	}
-
-	.version-note {
-		margin: 0.2rem 0 0;
-		font-size: 0.74rem;
-		line-height: 1.35;
-		color: #334155;
-	}
-
-	.version-pill {
-		padding: 0.15rem 0.4rem;
-		font-size: 0.62rem;
-		font-weight: 700;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-		background: #e2e8f0;
-		color: #1e293b;
-	}
-
-	.restore-form {
-		padding: 0.75rem 0.875rem 0.875rem;
-	}
-
-	.restore-form button {
-		width: 100%;
-		border: 1px solid #0f172a;
-		background: #0f172a;
-		padding: 0.6rem 0.9rem;
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.05em;
-		text-transform: uppercase;
-		color: #ffffff;
-		cursor: pointer;
-	}
-
-	.restore-form button:disabled {
-		opacity: 0.55;
-		cursor: not-allowed;
-	}
-
-	.edit-composer {
-		position: fixed;
-		right: auto;
-		bottom: 1rem;
-		left: 1rem;
-		z-index: 40;
-		width: calc(280px - 1rem);
-		border: 1px solid #d9dbcf;
-		background: #faf8f1;
-		box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
-	}
-
-	.composer-form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 0.875rem;
-	}
-
-	.composer-top-row {
-		display: flex;
-		flex-direction: column;
-		align-items: baseline;
-		justify-content: space-between;
-		gap: 0.75rem;
-	}
-
-	.composer-title {
-		margin: 0;
-		font-family: 'Space Grotesk', sans-serif;
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #1f2937;
-	}
-
-	.composer-hint {
-		margin: 0;
-		font-size: 0.78rem;
-		color: #4b5563;
-	}
-
-	.composer-controls {
-		display: block;
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 0.75rem;
-	}
-
-	.composer-controls textarea {
-		width: 100%;
-		resize: vertical;
-		border: 1px solid #cbd5e1;
-		background: #ffffff;
-		padding: 0.625rem 0.75rem;
-		font-size: 0.85rem;
-		line-height: 1.45;
-		color: #0f172a;
-	}
-
-	.composer-controls textarea:disabled {
-		background: #f1f5f9;
-		color: #64748b;
-	}
-
-	.composer-controls button {
-		align-self: end;
-		border: 1px solid #0f172a;
-		background: #0f172a;
-		padding: 0.6rem 0.9rem;
-		font-size: 0.78rem;
-		font-weight: 700;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-		color: #ffffff;
-		cursor: pointer;
-	}
-
-	.composer-controls button:disabled {
-		cursor: not-allowed;
-		opacity: 0.55;
-	}
-
-	.composer-message {
-		margin: 0;
-		font-size: 0.8rem;
-		color: #b91c1c;
-	}
-
-	.composer-message.success {
-		color: #166534;
-	}
-
-	@media (max-width: 900px) {
-		.preview-page {
-			padding-bottom: 14rem;
-		}
-
-		.composer-top-row {
-			flex-direction: column;
-			align-items: flex-start;
-		}
-
-		.composer-controls {
-			grid-template-columns: 1fr;
-		}
-
-		.composer-controls button {
-			justify-self: stretch;
-		}
-	}
-
-	.picker-stack {
-		position: fixed;
-		right: 1rem;
-		bottom: 1rem;
-		z-index: 40;
-		display: grid;
-		gap: 0.75rem;
-	}
-
-	.logo-picker,
-	.keynote-picker {
-		width: 320px;
-		border: 1px solid #d9dbcf;
-		background: #ffffff;
-		box-shadow: 0 12px 40px rgba(15, 23, 42, 0.18);
-	}
-
-	.picker-form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 0.875rem;
-	}
-
-	.picker-title {
-		margin: 0;
-		font-size: 0.72rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #1f2937;
-	}
-
-	.picker-grid {
-		display: grid;
-		max-height: 200px;
-		overflow: auto;
-		gap: 0.5rem;
-	}
-
-	.picker-item {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.8rem;
-	}
-
-	.picker-logo {
-		height: 20px;
-		max-width: 70px;
-		object-fit: contain;
-	}
-
-	.keynote-picker-grid {
-		max-height: 260px;
-	}
-
-	.keynote-item {
-		align-items: flex-start;
-	}
-
-	.picker-keynote-image {
-		width: 56px;
-		height: 42px;
-		object-fit: cover;
-		border: 1px solid #d1d5db;
-	}
-</style>
