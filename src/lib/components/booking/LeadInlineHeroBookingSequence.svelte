@@ -48,10 +48,10 @@
 		pageSlug = null,
 		slotGroups = [],
 		showIntakeStep = true,
-		formActionKey = 'inline-lead-booking',
-		bookingSurface = 'inline_booking',
-		ctaKey = 'inline_booking_sequence',
-		ctaSection = 'booking',
+		formActionKey = 'hero-inline-lead-booking',
+		bookingSurface = 'hero',
+		ctaKey = 'hero_inline_booking',
+		ctaSection = 'hero',
 		ctaVariant = null,
 		initialValues = {}
 	}: Props = $props();
@@ -91,19 +91,10 @@
 				return dayPreference;
 			}
 
-			if (selectedStartsAt) {
-				const dayWithSelectedSlot = normalizedSlotGroups.find((day) =>
-					day.slots.some((slot) => slot.startsAtIso === selectedStartsAt)
-				);
-
-				if (dayWithSelectedSlot) {
-					return dayWithSelectedSlot.dateKey;
-				}
-			}
-
-			return normalizedSlotGroups[0]?.dateKey ?? null;
+			return null;
 		})()
 	);
+	const hasSelectedDay = $derived(Boolean(dayPreference && resolvedDayKey));
 	const selectedDaySlots = $derived(
 		normalizedSlotGroups.find((day) => day.dateKey === resolvedDayKey)?.slots ?? []
 	);
@@ -184,6 +175,8 @@
 
 	function selectDay(dateKey: string): void {
 		dayPreference = dateKey;
+		selectedStartsAt = '';
+		selectedEndsAt = '';
 	}
 
 	function resetToSlotStage(): void {
@@ -207,13 +200,7 @@ Datum und Uhrzeit:
 Veranstaltungsort:`;
 </script>
 
-<section class="space-y-6 bg-[var(--surface-card)] p-6 shadow-[var(--shadow-card)] lg:p-8">
-	<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-		{showIntakeStep
-			? 'Please select an available slot first, then share your details to confirm your briefing request.'
-			: 'Please select an available slot to confirm your briefing request.'}
-	</p>
-
+<section class="w-full space-y-6">
 	{#if isSubmitSuccess && submitResult?.message}
 		<div class={`rounded-none border px-4 py-3 text-xs font-semibold  uppercase ${resultTone}`}>
 			{submitResult.message}
@@ -260,8 +247,7 @@ Veranstaltungsort:`;
 				{#if showSlotStage}
 					<section class="space-y-5">
 						<div class="space-y-1">
-							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 1</p>
-							<h2 class="text-xl text-(--text-primary)">Select a briefing slot</h2>
+							<h2 class="text-xl text-(--text-primary)">Let's talk</h2>
 						</div>
 
 						<div role="tablist" aria-label="Available briefing days" class="flex flex-wrap gap-2">
@@ -274,7 +260,7 @@ Veranstaltungsort:`;
 									aria-selected={resolvedDayKey === day.dateKey}
 									class={[
 										'border px-3 py-2  text-xl font-bold uppercase transition',
-										resolvedDayKey === day.dateKey
+										!hasSelectedDay || resolvedDayKey === day.dateKey
 											? 'border-(--accent-strong) bg-(--accent-strong) text-white'
 											: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
 									]}
@@ -287,7 +273,7 @@ Veranstaltungsort:`;
 							{/each}
 						</div>
 
-						{#if resolvedDayKey}
+						{#if dayPreference && resolvedDayKey}
 							<div
 								role="tabpanel"
 								id={`inline-booking-day-panel-${resolvedDayKey}`}
@@ -353,7 +339,7 @@ Veranstaltungsort:`;
 						{/if}
 					</section>
 				{:else if showIntakeStep}
-					<section class="space-y-5">
+					<section class=" space-y-5">
 						<div class="space-y-1">
 							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
 							<h2 class="text-xl text-(--text-primary)">Share your briefing details</h2>
