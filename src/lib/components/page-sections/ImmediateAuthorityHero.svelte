@@ -4,18 +4,21 @@
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
 	import LeadInlineHeroBookingSequence from '../booking/LeadInlineHeroBookingSequence.svelte';
+	import Button from '../elements/Button.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
 		props,
 		campaignId = null,
 		campaignPageId = null,
-		bookingSlotGroups = []
+		bookingSlotGroups = [],
+		mailtoHref = 'mailto:speaker@christophholz.com'
 	}: {
 		props?: ImmediateAuthorityHeroProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
+		mailtoHref?: string;
 	} = $props();
 
 	const ctaHref = $derived('#booking');
@@ -144,43 +147,30 @@
 			{/if}
 
 			<div
-				class="flex flex-col gap-3 sm:flex-row sm:items-center"
+				class="flex flex-col items-start gap-3 sm:gap-6"
 				data-cta-action={props?.primaryCtaAction}
 			>
-				<!--
-				<NavButton href={ctaHref} onclick={() => trackCta('primary')}>{ctaLabel}</NavButton>
-				{#if isYouTubeUrl}
-					<button
-						type="button"
-						class="outline-link relative inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:opacity-80"
-						onclick={openYouTubeModal}
-					>
-						<span class="material-symbols--play-circle"></span>
-						View Showreel
-					</button>
-				{:else}
-					<a
-						class="outline-link relative inline-flex cursor-pointer items-center justify-center gap-2 px-6 py-2 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:opacity-80"
-						href={videoEmbedUrl}
-						target="_blank"
-						rel="noreferrer"
-						onclick={() => trackCta('showreel_external')}
-					>
-						<span class="material-symbols--play-circle"></span>
-						View Showreel
-					</a>
-				{/if}
-				-->
-				<LeadInlineHeroBookingSequence
-					{campaignId}
-					{campaignPageId}
-					pageSlug={pageSlug ?? null}
-					slotGroups={bookingSlotGroups}
-					formActionKey={`hero-inline-booking:${campaignPageId ?? 'none'}`}
-					bookingSurface="hero"
-					ctaKey="hero_inline_booking"
-					ctaSection="hero"
-				></LeadInlineHeroBookingSequence>
+				<div class="w-full">
+					<LeadInlineHeroBookingSequence
+						{campaignId}
+						{campaignPageId}
+						pageSlug={pageSlug ?? null}
+						slotGroups={bookingSlotGroups}
+						formActionKey={`hero-inline-booking:${campaignPageId ?? 'none'}`}
+						bookingSurface="hero"
+						ctaKey="hero_inline_booking"
+						ctaSection="hero"
+					></LeadInlineHeroBookingSequence>
+				</div>
+				<a
+					href={mailtoHref}
+					type="button"
+					class={[
+						'inline-block border border-slate-300  bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50'
+					]}
+				>
+					Schreib mit eine email: speaker@christophholz.com
+				</a>
 			</div>
 		</div>
 
@@ -196,19 +186,3 @@
 		</div>
 	</div>
 </section>
-
-<style>
-	.material-symbols--play-circle {
-		display: inline-block;
-		width: 24px;
-		height: 24px;
-		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='m9.5 16.5l7-4.5l-7-4.5zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22'/%3E%3C/svg%3E");
-		background-color: currentColor;
-		-webkit-mask-image: var(--svg);
-		mask-image: var(--svg);
-		-webkit-mask-repeat: no-repeat;
-		mask-repeat: no-repeat;
-		-webkit-mask-size: 100% 100%;
-		mask-size: 100% 100%;
-	}
-</style>
