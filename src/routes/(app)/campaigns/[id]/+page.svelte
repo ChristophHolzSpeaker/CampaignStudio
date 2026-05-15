@@ -125,7 +125,7 @@
 					<form method="POST" action="?/duplicate" class="duplicate-campaign-form">
 						<label
 							for="duplicate-name"
-							class="block font-['Space_Grotesk'] text-[10px] font-bold text-slate-500 uppercase"
+							class="block font-sans text-[10px] font-bold text-slate-500 uppercase"
 						>
 							Duplicate campaign
 						</label>
@@ -143,9 +143,7 @@
 				</header>
 				<div class="space-y-8 rounded-xl bg-stone-100 p-8">
 					<div>
-						<span
-							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
-						>
+						<span class="mb-2 block font-sans text-xs font-bold text-primary uppercase">
 							Campaign Strategy
 						</span>
 						{#if getStrategyEntries().length === 0}
@@ -155,11 +153,9 @@
 						{:else}
 							<div class="space-y-2 text-sm text-slate-600">
 								{#each getStrategyEntries() as entry (entry.key)}
-									<p class="grid grid-cols-3 gap-4 text-xs">
-										<span class="font-semibold text-slate-500">{entry.key}</span>
-										<span class="col-span-2 font-['Space_Grotesk'] text-[11px] text-slate-900"
-											>{entry.value}</span
-										>
+									<p class="flex gap-4">
+										<span class="font-semibold text-slate-500">{entry.key.toUpperCase()}:</span>
+										<span class="col-span-2 font-sans text-slate-900">{entry.value}</span>
 									</p>
 								{/each}
 							</div>
@@ -179,7 +175,7 @@
 							<input type="hidden" name="id" value={getCampaign()?.id ?? ''} />
 							<label
 								for="strategy-prompt"
-								class="block font-['Space_Grotesk'] text-[10px] font-bold text-slate-500 uppercase"
+								class="block font-sans text-[10px] font-bold text-slate-500 uppercase"
 							>
 								Strategy edit prompt
 							</label>
@@ -203,7 +199,7 @@
 								</p>
 							{/if}
 							{#if isStrategyUpdateSuccess() && (getUpdatedPackageId() || getUpdatedPageId())}
-								<p class="font-['Space_Grotesk'] text-[10px] text-slate-500 uppercase">
+								<p class="font-sans text-[10px] text-slate-500 uppercase">
 									{#if getUpdatedPackageId()}New package: {getUpdatedPackageId()}{/if}
 									{#if getUpdatedPackageId() && getUpdatedPageId()}
 										·
@@ -214,9 +210,7 @@
 						</form>
 					</div>
 					<div>
-						<span
-							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
-						>
+						<span class="mb-2 block font-sans text-[10px] font-bold text-primary uppercase">
 							Campaign Metadata
 						</span>
 						<div class="grid grid-cols-2 gap-4">
@@ -224,14 +218,14 @@
 								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
 									>Package ID</span
 								>
-								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+								<span class="font-sans text-sm font-bold text-on-surface">
 									{getPackageId()}
 								</span>
 							</div>
 							<div class="rounded bg-white p-4 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
 								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase">Version</span
 								>
-								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+								<span class="font-sans text-sm font-bold text-on-surface">
 									{getPackageVersionLabel()}
 								</span>
 							</div>
@@ -239,7 +233,7 @@
 								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
 									>Visit count</span
 								>
-								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+								<span class="font-sans text-sm font-bold text-on-surface">
 									{getVisitCount()}
 								</span>
 							</div>
@@ -247,7 +241,7 @@
 								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
 									>Unique visitors</span
 								>
-								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+								<span class="font-sans text-sm font-bold text-on-surface">
 									{getUniqueVisitors()}
 								</span>
 							</div>
@@ -255,7 +249,7 @@
 								<span class="mb-1 block text-[9px] font-bold text-slate-400 uppercase"
 									>Last visit</span
 								>
-								<span class="font-['Space_Grotesk'] text-sm font-bold text-on-surface">
+								<span class="font-sans text-sm font-bold text-on-surface">
 									{getLastVisit() ? formatFriendlyDate(getLastVisit() ?? undefined) : 'Pending'}
 								</span>
 							</div>
@@ -263,8 +257,7 @@
 					</div>
 
 					<div>
-						<span
-							class="mb-2 block font-['Space_Grotesk'] text-[10px] font-bold text-primary uppercase"
+						<span class="mb-2 block font-sans text-[10px] font-bold text-primary uppercase"
 							>Primary Channel</span
 						>
 						<div
@@ -275,7 +268,7 @@
 								<span class="block leading-tight font-bold text-on-surface">
 									{getAdPackage()?.channel ?? 'Google Ads Search'}
 								</span>
-								<span class="font-['Space_Grotesk'] text-[10px] text-slate-400 uppercase"
+								<span class="font-sans text-[10px] text-slate-400 uppercase"
 									>{getCampaign()?.format ?? 'Text & Dynamic Search'}</span
 								>
 							</div>

@@ -121,7 +121,7 @@
 	<div class="grid grid-cols-12 lg:sticky lg:top-0 lg:h-dvh lg:overflow-hidden">
 		<!--Page settings-->
 
-		<div class="col-span-2 pt-20 lg:h-full lg:overflow-y-auto">
+		<div class="col-span-2 lg:h-full lg:overflow-y-auto">
 			<section class=" border border-[#d9dbcf] bg-white" aria-label="Landing page version history">
 				<div class="border-b border-[#e5e7eb] p-3.5">
 					<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
