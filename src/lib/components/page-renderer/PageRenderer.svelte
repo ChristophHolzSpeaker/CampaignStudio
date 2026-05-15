@@ -2,7 +2,7 @@
 	import { sectionRegistry } from '$lib/page-builder/sections';
 	import type { PageSection } from '$lib/page-builder/sections';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
-
+	import { page as appPage } from '$app/state';
 	let {
 		page,
 		sections,
@@ -24,7 +24,7 @@
 	let renderedSections = $derived(page?.sections ?? sections ?? []);
 </script>
 
-<main class="col-span-2 pt-10 lg:pt-20">
+<main class={['col-span-2', appPage.route?.id?.startsWith('/(app)') ? '' : 'pt-10 lg:pt-20']}>
 	{#each renderedSections as section, index (`${section.type}-${index}`)}
 		{@const entry = sectionRegistry[section.type]}
 		{@const SectionComponent = entry?.component}
