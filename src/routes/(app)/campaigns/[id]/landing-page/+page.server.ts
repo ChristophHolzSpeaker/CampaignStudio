@@ -204,10 +204,21 @@ export const actions: Actions = {
 			});
 		}
 	},
-	editPage: async ({ request }) => {
+	editPage: async ({ request, params }) => {
 		const formData = await request.formData();
 		const candidatePageId = Number(formData.get('campaignPageId'));
 		const changePrompt = formData.get('change_prompt')?.toString().trim() ?? '';
+		const campaignId = Number(params.id);
+
+		if (!Number.isFinite(campaignId) || campaignId <= 0) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt },
+					message: 'Invalid campaign id.',
+					success: false
+				}
+			});
+		}
 
 		if (!Number.isFinite(candidatePageId) || candidatePageId <= 0) {
 			return fail<LandingPagePreviewActionData>(400, {
@@ -224,6 +235,25 @@ export const actions: Actions = {
 				pageEdit: {
 					values: { changePrompt },
 					message: 'Describe the landing page change you want to apply.',
+					success: false
+				}
+			});
+		}
+
+		const [latestPageRecord] = await db
+			.select({
+				id: campaign_pages.id
+			})
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, campaignId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(1);
+
+		if (!latestPageRecord || latestPageRecord.id !== candidatePageId) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt },
+					message: 'AI edits are only available on the latest landing page version.',
 					success: false
 				}
 			});
