@@ -186,6 +186,10 @@
 			{campaignPageId}
 			pageSlug={pageSlug ?? null}
 			slotGroups={bookingSlotGroups}
+			formActionKey={`frictionless-inline-booking:${campaignPageId ?? 'none'}`}
+			bookingSurface="frictionless_funnel"
+			ctaKey="frictionless_funnel_inline_booking"
+			ctaSection="frictionless_funnel"
 		/>
 	</div>
 </section>

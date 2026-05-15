@@ -1,7 +1,12 @@
 import { sendFormSubmissionNotificationViaWorker } from '$lib/server/notifications/form-submission-worker-client';
 
 type BookingFormSubmissionInput = {
-	flow: 'inline_lead_sequence' | 'book_l_new' | 'book_l_existing' | 'book_g';
+	flow:
+		| 'inline_lead_sequence'
+		| 'inline_lead_sequence_hero'
+		| 'book_l_new'
+		| 'book_l_existing'
+		| 'book_g';
 	email: string;
 	name?: string | null;
 	phone?: string | null;
