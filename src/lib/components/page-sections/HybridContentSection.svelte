@@ -29,22 +29,13 @@
 	} = $props();
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
-	let sectionEl = $state<HTMLElement | null>(null);
+	let itemRefs = $state<HTMLElement[]>([]);
 	let visibleItems = new SvelteSet<number>();
-	const revealOffset = 600;
+	const revealOffset = 0;
 
-	$effect(() => {
-		if (disableScrollReveal) {
-			return;
-		}
-
-		scrollY;
-		innerHeight;
-
-		const revealItems = sectionEl?.querySelectorAll<HTMLElement>('[data-reveal-index]') ?? [];
-		for (const el of revealItems) {
-			const index = Number(el.dataset.revealIndex);
-			if (Number.isNaN(index) || visibleItems.has(index)) continue;
+	function checkInView() {
+		for (const [index, el] of itemRefs.entries()) {
+			if (!el || visibleItems.has(index)) continue;
 
 			const rect = el.getBoundingClientRect();
 			const isInView = rect.top < innerHeight + revealOffset && rect.bottom > 0;
@@ -53,6 +44,16 @@
 				visibleItems.add(index);
 			}
 		}
+	}
+
+	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
+		scrollY;
+		innerHeight;
+		checkInView();
 	});
 
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
@@ -113,9 +114,8 @@
 	}
 </script>
 
-<svelte:window bind:scrollY />
+<svelte:window bind:scrollY bind:innerHeight />
 <section
-	bind:this={sectionEl}
 	class="bg-surface-container relative px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
 >
@@ -156,6 +156,7 @@
 								: 'translate-y-8 opacity-0'
 						]}
 						style={`transition-delay: ${index * 120}ms`}
+						bind:this={itemRefs[index]}
 					>
 						<span>0{index + 1}</span>
 
@@ -208,6 +209,7 @@
 									: 'translate-y-8 opacity-0'
 							]}
 							style={`transition-delay: ${index * 120}ms`}
+							bind:this={itemRefs[index + benefits.length]}
 						>
 							<span class="text-lg text-primary">{`0${index + 1}`}</span>
 							<div>
