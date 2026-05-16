@@ -1,8 +1,26 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { ProofOfPerformanceProps, TestimonialItem } from '$lib/page-builder/sections/types';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import { saveProofOfPerformanceField } from './ProofOfPerformanceInlineEdit.remote';
 
-	let { props }: { props?: ProofOfPerformanceProps } = $props();
+	let {
+		props,
+		campaignId = null,
+		campaignPageId = null,
+		editable = false,
+		sectionIndex = -1,
+		onInlineEditSaved
+	}: {
+		props?: ProofOfPerformanceProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+		editable?: boolean;
+		sectionIndex?: number;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
+	} = $props();
 
 	const fallbackTestimonials: TestimonialItem[] = [
 		{
@@ -29,6 +47,9 @@
 	];
 
 	const title = $derived(props?.title ?? 'What organizers say after the keynote');
+	const canInlineEdit = $derived(
+		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
+	);
 	const testimonials = $derived(
 		props?.testimonials?.length ? props.testimonials : fallbackTestimonials
 	);
@@ -40,6 +61,37 @@
 	);
 
 	const stars = (rating?: number) => (rating ? '★'.repeat(rating) : '');
+
+	async function savePerformanceTitle(
+		nextValue: string
+	): Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return { saved: false };
+		}
+
+		const result = await saveProofOfPerformanceField({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'proof_of_performance',
+			field: 'title',
+			value: nextValue
+		});
+
+		if (result.saved && result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else if (result.saved) {
+			await onInlineEditSaved?.();
+		}
+
+		return {
+			saved: result.saved,
+			nextValue: result.value,
+			nextCampaignPageId: result.campaignPageId
+		};
+	}
 </script>
 
 <section
@@ -48,9 +100,13 @@
 >
 	<SectionIdentifier props={{ id: 'proof_of_performance' }}></SectionIdentifier>
 	<div class="mx-auto max-w-7xl">
-		<h2 class="mb-20 text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">
-			{title}
-		</h2>
+		<ContentEditableText
+			as="h2"
+			value={title}
+			editable={canInlineEdit}
+			className="mb-20 text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl"
+			onSave={savePerformanceTitle}
+		/>
 
 		{#if leadTestimonial}
 			<article class=" relative mb-8 bg-surface p-8 lg:mb-10 lg:p-12">

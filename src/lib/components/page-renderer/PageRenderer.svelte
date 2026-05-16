@@ -8,6 +8,8 @@
 		sections,
 		campaignId,
 		campaignPageId,
+		editable = false,
+		onInlineEditSaved,
 		mailtoHref,
 		bookingSlotGroups,
 		disableScrollReveal = false
@@ -16,6 +18,8 @@
 		sections?: PageSection[];
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		editable?: boolean;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
 		mailtoHref?: string;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
 		disableScrollReveal?: boolean;
@@ -35,6 +39,9 @@
 					props={section.props}
 					{campaignId}
 					{campaignPageId}
+					{editable}
+					{onInlineEditSaved}
+					sectionIndex={index}
 					{mailtoHref}
 					{bookingSlotGroups}
 					{disableScrollReveal}
@@ -44,6 +51,9 @@
 					props={section.props}
 					{campaignId}
 					{campaignPageId}
+					{editable}
+					{onInlineEditSaved}
+					sectionIndex={index}
 					{mailtoHref}
 					{bookingSlotGroups}
 				/>

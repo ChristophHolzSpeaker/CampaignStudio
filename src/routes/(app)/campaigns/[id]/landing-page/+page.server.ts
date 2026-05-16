@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { christophSampleLandingPage, parseLandingPageDocument } from '$lib/page-builder/page';
+import { parseLandingPageDocument } from '$lib/page-builder/page';
 import { db } from '$lib/server/db';
 import {
 	campaign_ad_groups,
@@ -16,15 +16,6 @@ import {
 	persistGeneratedLandingPage,
 	runLandingPageGenerationForCampaign
 } from '$lib/server/agents/landing-page-pipeline';
-
-function isMissingChangeNoteColumnError(error: unknown): boolean {
-	if (!(error instanceof Error)) {
-		return false;
-	}
-
-	const message = error.message.toLowerCase();
-	return message.includes('change_note') && message.includes('does not exist');
-}
 
 type LandingPageEditFormState = {
 	values: {
@@ -51,102 +42,14 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		throw error(404, 'Campaign not found');
 	}
 
-	let pageRecords: Array<{
-		structuredContentJson: unknown;
-		campaignPageId: number;
-		versionNumber: number;
-		changeNote: string | null;
-		slug: string;
-		createdAt: Date;
-	}> = [];
-
-	try {
-		pageRecords = await db
-			.select({
-				structuredContentJson: campaign_pages.structured_content_json,
-				campaignPageId: campaign_pages.id,
-				versionNumber: campaign_pages.version_number,
-				changeNote: campaign_pages.change_note,
-				slug: campaign_pages.slug,
-				createdAt: campaign_pages.created_at
-			})
-			.from(campaign_pages)
-			.where(eq(campaign_pages.campaign_id, campaignId))
-			.orderBy(desc(campaign_pages.version_number))
-			.limit(30);
-	} catch (error) {
-		if (!isMissingChangeNoteColumnError(error)) {
-			throw error;
+	if (url.searchParams.get('version') != null) {
+		const requestedVersion = Number(url.searchParams.get('version'));
+		if (!Number.isFinite(requestedVersion) || requestedVersion <= 0) {
+			throw error(400, 'Invalid version id');
 		}
-
-		const legacyRecords = await db
-			.select({
-				structuredContentJson: campaign_pages.structured_content_json,
-				campaignPageId: campaign_pages.id,
-				versionNumber: campaign_pages.version_number,
-				slug: campaign_pages.slug,
-				createdAt: campaign_pages.created_at
-			})
-			.from(campaign_pages)
-			.where(eq(campaign_pages.campaign_id, campaignId))
-			.orderBy(desc(campaign_pages.version_number))
-			.limit(30);
-
-		pageRecords = legacyRecords.map((record) => ({ ...record, changeNote: null }));
 	}
 
-	const [latestPageRecord] = pageRecords;
-	const requestedVersionPageId = Number(url.searchParams.get('version'));
-	const selectedPageRecord =
-		Number.isFinite(requestedVersionPageId) && requestedVersionPageId > 0
-			? (pageRecords.find((record) => record.campaignPageId === requestedVersionPageId) ??
-				latestPageRecord)
-			: latestPageRecord;
-
-	const page = selectedPageRecord
-		? parseLandingPageDocument(selectedPageRecord.structuredContentJson)
-		: parseLandingPageDocument(christophSampleLandingPage);
-
-	const availableLogos = await db
-		.select({
-			id: logos.id,
-			name: logos.name,
-			logoUrl: logos.logo_url,
-			logoAlt: logos.logo_alt
-		})
-		.from(logos)
-		.where(eq(logos.is_active, true))
-		.orderBy(asc(logos.priority), asc(logos.name), asc(logos.id));
-
-	const availableKeynotes = await db
-		.select({
-			id: keynotes.id,
-			title: keynotes.keynote_title,
-			summary: keynotes.keynote_summary,
-			imageUrl: keynotes.image_url,
-			imageAlt: keynotes.image_alt
-		})
-		.from(keynotes)
-		.where(eq(keynotes.is_active, true))
-		.orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
-
-	return {
-		page,
-		availableLogos,
-		availableKeynotes,
-		campaign,
-		campaignId,
-		campaignPageId: selectedPageRecord?.campaignPageId ?? null,
-		latestCampaignPageId: latestPageRecord?.campaignPageId ?? null,
-		versionHistory: pageRecords.map((record) => ({
-			id: record.campaignPageId,
-			versionNumber: record.versionNumber,
-			changeNote: record.changeNote,
-			slug: record.slug,
-			createdAt: record.createdAt
-		})),
-		campaignStatus: campaign.status
-	};
+	return {};
 };
 
 export const actions: Actions = {

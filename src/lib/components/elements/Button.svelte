@@ -26,7 +26,7 @@
 
 <button
 	{type}
-	class="{variants[variant]} inline-flex items-center gap-2"
+	class="{variants[variant]} btn inline-flex items-center gap-2"
 	disabled={isSubmitting}
 	{onclick}
 	{...props}
