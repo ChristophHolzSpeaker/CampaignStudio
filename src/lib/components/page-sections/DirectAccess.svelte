@@ -1,4 +1,6 @@
 <script lang="ts">
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
+
 	type DirectAccessProps = {
 		mailtoHref: string;
 		emailCtaTitle?: string;
@@ -7,11 +9,17 @@
 	let {
 		props,
 		campaignId = null,
-		campaignPageId = null
+		campaignPageId = null,
+		editable = false,
+		onSaveEmailCtaTitle
 	}: {
 		props: DirectAccessProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		editable?: boolean;
+		onSaveEmailCtaTitle?: (
+			nextValue: string
+		) => Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }>;
 	} = $props();
 
 	let copied = $state(false);
@@ -78,9 +86,19 @@
 <section class="overflow-hidden bg-on-surface px-2 py-6 text-surface sm:px-8 lg:px-12 lg:py-28">
 	<div class="mx-auto max-w-7xl">
 		<div class="group w-full">
-			<p class="font-label-bold text-label-bold mb-4 text-base text-white/60 sm:tracking-[0.2em]">
-				{props?.emailCtaTitle ?? 'Send an email right now'}
-			</p>
+			{#if editable && onSaveEmailCtaTitle}
+				<ContentEditableText
+					as="p"
+					value={props?.emailCtaTitle ?? 'Send an email right now'}
+					{editable}
+					className="font-label-bold text-label-bold mb-4 text-base text-white/60 sm:tracking-[0.2em]"
+					onSave={onSaveEmailCtaTitle}
+				/>
+			{:else}
+				<p class="font-label-bold text-label-bold mb-4 text-base text-white/60 sm:tracking-[0.2em]">
+					{props?.emailCtaTitle ?? 'Send an email right now'}
+				</p>
+			{/if}
 
 			<div
 				class="block w-full cursor-pointer border-l-8 border-primary bg-white p-4 text-left transition-colors duration-300 group-hover:border-white md:border-l-16 md:p-12"
