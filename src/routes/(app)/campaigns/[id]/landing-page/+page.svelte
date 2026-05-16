@@ -142,6 +142,18 @@
 	<div class="">
 		<!--Independently scrolling cols-->
 		<div class="grid grid-cols-12 lg:sticky lg:top-0 lg:h-dvh lg:overflow-hidden">
+			<!--Landing page preview-->
+			<div class="col-span-10 lg:h-full lg:overflow-y-auto">
+				<PageRenderer
+					page={viewData.page}
+					campaignId={viewData.campaignId}
+					campaignPageId={viewData.campaignPageId}
+					editable={canEditPage()}
+					onInlineEditSaved={refreshInlinePreview}
+					disableScrollReveal={true}
+				/>
+			</div>
+			<!--/Landing page preview-->
 			<!--Page settings-->
 
 			<div class="col-span-2 lg:h-full lg:overflow-y-auto">
@@ -374,18 +386,6 @@
 				</aside>
 			</div>
 			<!--/Page settings-->
-			<!--Landing page preview-->
-			<div class="col-span-10 lg:h-full lg:overflow-y-auto">
-				<PageRenderer
-					page={viewData.page}
-					campaignId={viewData.campaignId}
-					campaignPageId={viewData.campaignPageId}
-					editable={canEditPage()}
-					onInlineEditSaved={refreshInlinePreview}
-					disableScrollReveal={true}
-				/>
-			</div>
-			<!--/Landing page preview-->
 		</div>
 		<!--/Independently scrolling cols-->
 	</div>
