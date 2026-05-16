@@ -14,6 +14,6 @@
 	};
 </script>
 
-<a {href} {onclick} class="text-center {variants[variant]}" {...restProps}>
+<a {href} {onclick} class="btn text-center {variants[variant]}" {...restProps}>
 	{@render children?.()}
 </a>

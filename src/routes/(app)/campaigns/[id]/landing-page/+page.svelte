@@ -1,13 +1,12 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { page } from '$app/state';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
-	import type { LandingPageDocument } from '$lib/page-builder/page';
 	import type { SubmitFunction } from '@sveltejs/kit';
 	import type { PageProps } from './$types';
+	import { getLandingPagePreview } from './landing-page.remote';
 
 	type LandingPageEditState = {
 		values: {
@@ -18,34 +17,31 @@
 		campaignPageId?: number;
 	};
 
-	let { data, form }: PageProps = $props();
+	let { form }: { form: PageProps['form'] } = $props();
 
-	const getViewData = () =>
-		data as {
-			page: LandingPageDocument;
-			availableLogos: Array<{ id: string; name: string; logoUrl: string; logoAlt: string }>;
-			availableKeynotes: Array<{
-				id: string;
-				title: string;
-				summary: string;
-				imageUrl: string;
-				imageAlt: string;
-			}>;
-			campaignId: number;
-			campaignPageId: number | null;
-			latestCampaignPageId: number | null;
-			versionHistory: Array<{
-				id: number;
-				versionNumber: number;
-				changeNote: string | null;
-				slug: string;
-				createdAt: Date;
-			}>;
-			campaignStatus: string | null;
-		};
+	const campaignId = $derived(Number(page.params.id));
+	const selectedVersion = $derived.by(() => {
+		const parsed = Number(page.url.searchParams.get('version'));
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+	});
 
-	const isViewingLatestVersion = () =>
-		getViewData().campaignPageId === getViewData().latestCampaignPageId;
+	const previewQuery = $derived(
+		getLandingPagePreview({
+			campaignId,
+			version: selectedVersion
+		})
+	);
+
+	const getViewData = () => previewQuery.current;
+
+	const isViewingLatestVersion = () => {
+		const viewData = getViewData();
+		if (!viewData) {
+			return false;
+		}
+
+		return viewData.campaignPageId === viewData.latestCampaignPageId;
+	};
 
 	const formatVersionDate = (date: Date) =>
 		new Intl.DateTimeFormat('en-GB', {
@@ -54,16 +50,19 @@
 		}).format(new Date(date));
 
 	const getCurrentLogoIds = () => {
-		const section = getViewData().page.sections.find(
+		const viewData = getViewData();
+		if (!viewData) {
+			return [] as string[];
+		}
+
+		const section = viewData.page.sections.find(
 			(item) => item.type === 'logos_of_trust_ribbon'
 		);
 		if (!section || !('logos' in section.props) || !Array.isArray(section.props.logos)) {
 			return [] as string[];
 		}
 
-		const byName = new Map(
-			getViewData().availableLogos.map((logo) => [logo.name.trim().toLowerCase(), logo.id])
-		);
+		const byName = new Map(viewData.availableLogos.map((logo) => [logo.name.trim().toLowerCase(), logo.id]));
 
 		return section.props.logos
 			.map((logo) => byName.get(logo.name.trim().toLowerCase()))
@@ -72,11 +71,19 @@
 
 	const canEditPage = () => {
 		const viewData = getViewData();
+		if (!viewData) {
+			return false;
+		}
+
 		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
 	};
 	const canUseAiEditor = () => canEditPage() && isViewingLatestVersion();
 	const getComposerHint = () => {
 		const viewData = getViewData();
+		if (!viewData) {
+			return 'Loading landing page preview...';
+		}
+
 		if (!viewData.campaignPageId) {
 			return 'Open a campaign page version to use AI edits.';
 		}
@@ -93,7 +100,12 @@
 	};
 
 	const getCurrentKeynoteIds = () => {
-		const section = getViewData().page.sections.find((item) => item.type === 'keynote_speeches');
+		const viewData = getViewData();
+		if (!viewData) {
+			return [] as string[];
+		}
+
+		const section = viewData.page.sections.find((item) => item.type === 'keynote_speeches');
 		if (!section || !('keynoteIds' in section.props) || !Array.isArray(section.props.keynoteIds)) {
 			return [] as string[];
 		}
@@ -119,9 +131,15 @@
 			}
 		};
 	};
+
+	async function refreshInlinePreview(): Promise<void> {
+		await previewQuery.refresh();
+	}
 </script>
 
-<div class="">
+{#if getViewData()}
+	{@const viewData = getViewData()!}
+	<div class="">
 	<!--Independently scrolling cols-->
 	<div class="grid grid-cols-12 lg:sticky lg:top-0 lg:h-dvh lg:overflow-hidden">
 		<!--Page settings-->
@@ -137,12 +155,12 @@
 					</p>
 				</div>
 				<div class="grid max-h-[240px] overflow-auto">
-					{#each getViewData().versionHistory as version (version.id)}
+					{#each viewData.versionHistory as version (version.id)}
 						<a
 							href={`?version=${version.id}`}
 							class={[
 								'flex items-center justify-between gap-2 border-b border-[#f1f5f9] px-3.5 py-[0.6rem] font-sans text-inherit no-underline',
-								version.id === getViewData().campaignPageId &&
+								version.id === viewData.campaignPageId &&
 									'border-l-[3px] border-l-[#0f172a] bg-[#f8fafc] pl-[calc(0.875rem-3px)]'
 							]}
 						>
@@ -161,7 +179,7 @@
 									</p>
 								{/if}
 							</div>
-							{#if version.id === getViewData().latestCampaignPageId}
+							{#if version.id === viewData.latestCampaignPageId}
 								<span
 									class="bg-[#e2e8f0] px-[0.4rem] py-[0.15rem] text-[0.62rem] font-bold tracking-[0.06em] text-[#1e293b] uppercase"
 									>latest</span
@@ -176,7 +194,7 @@
 					action="?/restoreVersion"
 					class="pt-3 pr-3.5 pb-3.5 pl-3.5"
 				>
-					<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+					<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
 					<button
 						type="submit"
 						disabled={!canEditPage() || isViewingLatestVersion() || busy}
@@ -194,12 +212,12 @@
 						action="?/setLogos"
 						class="flex flex-col gap-3 p-3.5"
 					>
-						<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+						<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
 						<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
 							Logos for trust ribbon
 						</p>
 						<div class="grid max-h-[200px] gap-2 overflow-auto">
-							{#each getViewData().availableLogos as logo (logo.id)}
+							{#each viewData.availableLogos as logo (logo.id)}
 								<label class="flex items-center gap-2 text-[0.8rem]">
 									<input
 										type="checkbox"
@@ -234,12 +252,12 @@
 						action="?/setKeynotes"
 						class="flex flex-col gap-3 p-3.5"
 					>
-						<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+						<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
 						<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
 							Keynotes
 						</p>
 						<div class="grid max-h-[260px] gap-2 overflow-auto">
-							{#each getViewData().availableKeynotes as keynote (keynote.id)}
+							{#each viewData.availableKeynotes as keynote (keynote.id)}
 								<label class="flex items-start gap-2 text-[0.8rem]">
 									<input
 										type="checkbox"
@@ -301,7 +319,7 @@
 						action="?/editPage"
 						class="flex flex-col gap-3 p-3.5"
 					>
-						<input type="hidden" name="campaignPageId" value={getViewData().campaignPageId ?? ''} />
+						<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
 						<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
 							<p
 								class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
@@ -353,12 +371,22 @@
 		<!--/Page settings-->
 		<!--Landing page preview-->
 		<div class="col-span-10 lg:h-full lg:overflow-y-auto">
-			<PageRenderer page={getViewData().page} disableScrollReveal={true} />
+			<PageRenderer
+				page={viewData.page}
+				campaignId={viewData.campaignId}
+				campaignPageId={viewData.campaignPageId}
+				editable={canEditPage()}
+				onInlineEditSaved={refreshInlinePreview}
+				disableScrollReveal={true}
+			/>
 		</div>
 		<!--/Landing page preview-->
 	</div>
 	<!--/Independently scrolling cols-->
-</div>
+	</div>
+{:else}
+	<div class="p-6 text-sm text-slate-600">Loading landing page preview...</div>
+{/if}
 
 {#if page.state.modal?.kind === 'youtube'}
 	<ShallowRouteModal title="Showreel" onclose={() => history.back()}>
