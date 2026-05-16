@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
@@ -136,6 +137,25 @@
 		};
 	};
 
+	const handleRestoreSubmit: SubmitFunction = () => {
+		busy = true;
+
+		return async ({ result, update }) => {
+			try {
+				await update({ reset: true, invalidateAll: true });
+				if (result.type === 'success') {
+					await goto(page.url.pathname, {
+						invalidateAll: true,
+						keepFocus: true,
+						replaceState: true
+					});
+				}
+			} finally {
+				busy = false;
+			}
+		};
+	};
+
 	async function refreshInlinePreview(): Promise<void> {
 		await previewQuery.refresh();
 	}
@@ -224,7 +244,7 @@
 					</div>
 					<form
 						method="POST"
-						use:enhance={handleEditSubmit}
+						use:enhance={handleRestoreSubmit}
 						action="?/restoreVersion"
 						class="pt-3 pr-3.5 pb-3.5 pl-3.5"
 					>
