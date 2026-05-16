@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
@@ -33,6 +34,10 @@
 	);
 
 	const getViewData = () => previewQuery.current;
+	const canRenderSelectedPage = () => {
+		const viewData = getViewData();
+		return Boolean(viewData?.canRenderPage);
+	};
 
 	const isViewingLatestVersion = () => {
 		const viewData = getViewData();
@@ -51,7 +56,7 @@
 
 	const getCurrentLogoIds = () => {
 		const viewData = getViewData();
-		if (!viewData) {
+		if (!viewData || !viewData.canRenderPage) {
 			return [] as string[];
 		}
 
@@ -77,7 +82,7 @@
 
 		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
 	};
-	const canUseAiEditor = () => canEditPage() && isViewingLatestVersion();
+	const canUseAiEditor = () => canEditPage() && canRenderSelectedPage() && isViewingLatestVersion();
 	const getComposerHint = () => {
 		const viewData = getViewData();
 		if (!viewData) {
@@ -101,7 +106,7 @@
 
 	const getCurrentKeynoteIds = () => {
 		const viewData = getViewData();
-		if (!viewData) {
+		if (!viewData || !viewData.canRenderPage) {
 			return [] as string[];
 		}
 
@@ -132,6 +137,25 @@
 		};
 	};
 
+	const handleRestoreSubmit: SubmitFunction = () => {
+		busy = true;
+
+		return async ({ result, update }) => {
+			try {
+				await update({ reset: true, invalidateAll: true });
+				if (result.type === 'success') {
+					await goto(page.url.pathname, {
+						invalidateAll: true,
+						keepFocus: true,
+						replaceState: true
+					});
+				}
+			} finally {
+				busy = false;
+			}
+		};
+	};
+
 	async function refreshInlinePreview(): Promise<void> {
 		await previewQuery.refresh();
 	}
@@ -144,14 +168,29 @@
 		<div class="grid grid-cols-12 lg:sticky lg:top-0 lg:h-dvh lg:overflow-hidden">
 			<!--Landing page preview-->
 			<div class="col-span-10 lg:h-full lg:overflow-y-auto">
-				<PageRenderer
-					page={viewData.page}
-					campaignId={viewData.campaignId}
-					campaignPageId={viewData.campaignPageId}
-					editable={canEditPage()}
-					onInlineEditSaved={refreshInlinePreview}
-					disableScrollReveal={true}
-				/>
+				{#if canRenderSelectedPage()}
+					<PageRenderer
+						page={viewData.page}
+						campaignId={viewData.campaignId}
+						campaignPageId={viewData.campaignPageId}
+						editable={canEditPage()}
+						onInlineEditSaved={refreshInlinePreview}
+						disableScrollReveal={true}
+					/>
+				{:else}
+					<div class="p-6">
+						<div class="border border-[#fecaca] bg-[#fef2f2] p-4 text-[#7f1d1d]">
+							<p class="m-0 text-[0.95rem] font-semibold">
+								{viewData.renderErrorMessage ??
+									'This page version has incomplete content and is unable to render.'}
+							</p>
+							<p class="mt-2 mb-0 text-[0.82rem]">
+								Select another version from history or retry generation to recover this campaign
+								landing page.
+							</p>
+						</div>
+					</div>
+				{/if}
 			</div>
 			<!--/Landing page preview-->
 			<!--Page settings-->
@@ -205,7 +244,7 @@
 					</div>
 					<form
 						method="POST"
-						use:enhance={handleEditSubmit}
+						use:enhance={handleRestoreSubmit}
 						action="?/restoreVersion"
 						class="pt-3 pr-3.5 pb-3.5 pl-3.5"
 					>
@@ -220,85 +259,90 @@
 					</form>
 				</section>
 				<div class="grid">
-					<aside class=" border border-stone-200 bg-white" aria-label="Landing page logo picker">
-						<form
-							method="POST"
-							use:enhance={handleEditSubmit}
-							action="?/setLogos"
-							class="flex flex-col gap-3 p-3.5"
-						>
-							<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
-							<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
-								Logos for trust ribbon
-							</p>
-							<div class="grid max-h-[200px] gap-2 overflow-auto">
-								{#each viewData.availableLogos as logo (logo.id)}
-									<label class="flex items-center gap-2 text-[0.8rem]">
-										<input
-											type="checkbox"
-											name="logoIds"
-											value={logo.id}
-											checked={getCurrentLogoIds().includes(logo.id)}
-											disabled={!canEditPage()}
-										/>
-										<img
-											src={logo.logoUrl}
-											alt={logo.logoAlt}
-											class="h-[20px] max-w-[70px] object-contain"
-										/>
-										<span>{logo.name}</span>
-									</label>
-								{/each}
-							</div>
-							<button
-								type="submit"
-								disabled={!canEditPage()}
-								class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+					{#if canRenderSelectedPage()}
+						<aside class=" border border-stone-200 bg-white" aria-label="Landing page logo picker">
+							<form
+								method="POST"
+								use:enhance={handleEditSubmit}
+								action="?/setLogos"
+								class="flex flex-col gap-3 p-3.5"
 							>
-								Save logos
-							</button>
-						</form>
-					</aside>
+								<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
+								<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
+									Logos for trust ribbon
+								</p>
+								<div class="grid max-h-[200px] gap-2 overflow-auto">
+									{#each viewData.availableLogos as logo (logo.id)}
+										<label class="flex items-center gap-2 text-[0.8rem]">
+											<input
+												type="checkbox"
+												name="logoIds"
+												value={logo.id}
+												checked={getCurrentLogoIds().includes(logo.id)}
+												disabled={!canEditPage()}
+											/>
+											<img
+												src={logo.logoUrl}
+												alt={logo.logoAlt}
+												class="h-[20px] max-w-[70px] object-contain"
+											/>
+											<span>{logo.name}</span>
+										</label>
+									{/each}
+								</div>
+								<button
+									type="submit"
+									disabled={!canEditPage()}
+									class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+								>
+									Save logos
+								</button>
+							</form>
+						</aside>
 
-					<aside class="border border-stone-200 bg-white" aria-label="Landing page keynote picker">
-						<form
-							method="POST"
-							use:enhance={handleEditSubmit}
-							action="?/setKeynotes"
-							class="flex flex-col gap-3 p-3.5"
+						<aside
+							class="border border-stone-200 bg-white"
+							aria-label="Landing page keynote picker"
 						>
-							<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
-							<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
-								Keynotes
-							</p>
-							<div class="grid max-h-[260px] gap-2 overflow-auto">
-								{#each viewData.availableKeynotes as keynote (keynote.id)}
-									<label class="flex items-start gap-2 text-[0.8rem]">
-										<input
-											type="checkbox"
-											name="keynoteIds"
-											value={keynote.id}
-											checked={getCurrentKeynoteIds().includes(keynote.id)}
-											disabled={!canEditPage()}
-										/>
-										<img
-											src={keynote.imageUrl}
-											alt={keynote.imageAlt}
-											class="h-[42px] w-[56px] border border-[#d1d5db] object-cover"
-										/>
-										<span>{keynote.title}</span>
-									</label>
-								{/each}
-							</div>
-							<button
-								type="submit"
-								disabled={!canEditPage()}
-								class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+							<form
+								method="POST"
+								use:enhance={handleEditSubmit}
+								action="?/setKeynotes"
+								class="flex flex-col gap-3 p-3.5"
 							>
-								Save keynotes
-							</button>
-						</form>
-					</aside>
+								<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
+								<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
+									Keynotes
+								</p>
+								<div class="grid max-h-[260px] gap-2 overflow-auto">
+									{#each viewData.availableKeynotes as keynote (keynote.id)}
+										<label class="flex items-start gap-2 text-[0.8rem]">
+											<input
+												type="checkbox"
+												name="keynoteIds"
+												value={keynote.id}
+												checked={getCurrentKeynoteIds().includes(keynote.id)}
+												disabled={!canEditPage()}
+											/>
+											<img
+												src={keynote.imageUrl}
+												alt={keynote.imageAlt}
+												class="h-[42px] w-[56px] border border-[#d1d5db] object-cover"
+											/>
+											<span>{keynote.title}</span>
+										</label>
+									{/each}
+								</div>
+								<button
+									type="submit"
+									disabled={!canEditPage()}
+									class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+								>
+									Save keynotes
+								</button>
+							</form>
+						</aside>
+					{/if}
 				</div>
 				<aside class="border border-stone-200 bg-white" aria-label="Landing page editor">
 					<form
@@ -327,7 +371,7 @@
 						</button>
 					</form>
 
-					{#if isViewingLatestVersion()}
+					{#if canRenderSelectedPage() && isViewingLatestVersion()}
 						<form
 							method="POST"
 							use:enhance={handleEditSubmit}
@@ -380,7 +424,11 @@
 							>
 								Edit landing page with AI
 							</p>
-							<p class="m-0 text-[0.78rem] leading-[1.45] text-[#4b5563]">{getComposerHint()}</p>
+							<p class="m-0 text-[0.78rem] leading-[1.45] text-[#4b5563]">
+								{canRenderSelectedPage()
+									? getComposerHint()
+									: 'This version cannot be edited because its content is incomplete.'}
+							</p>
 						</div>
 					{/if}
 				</aside>

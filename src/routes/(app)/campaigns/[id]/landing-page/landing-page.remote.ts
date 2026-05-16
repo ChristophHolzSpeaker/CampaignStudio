@@ -2,7 +2,11 @@ import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { db } from '$lib/server/db';
 import { campaign_pages, keynotes, logos } from '$lib/server/db/schema';
-import { christophSampleLandingPage, parseLandingPageDocument } from '$lib/page-builder/page';
+import {
+	christophSampleLandingPage,
+	parseLandingPageDocument,
+	safeParseLandingPageDocument
+} from '$lib/page-builder/page';
 import { getCampaignById } from '$lib/server/campaigns/client';
 import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -77,9 +81,21 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 			? (pageRecords.find((record) => record.campaignPageId === version) ?? latestPageRecord)
 			: latestPageRecord;
 
-	const page = selectedPageRecord
-		? parseLandingPageDocument(selectedPageRecord.structuredContentJson)
-		: parseLandingPageDocument(christophSampleLandingPage);
+	let page = parseLandingPageDocument(christophSampleLandingPage);
+	let canRenderPage = true;
+	let renderErrorMessage: string | null = null;
+
+	if (selectedPageRecord) {
+		const parsedSelectedPage = safeParseLandingPageDocument(
+			selectedPageRecord.structuredContentJson
+		);
+		if (parsedSelectedPage.success) {
+			page = parsedSelectedPage.data;
+		} else {
+			canRenderPage = false;
+			renderErrorMessage = 'This page version has incomplete content and is unable to render.';
+		}
+	}
 
 	const availableLogos = await db
 		.select({
@@ -106,6 +122,8 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 
 	return {
 		page,
+		canRenderPage,
+		renderErrorMessage,
 		availableLogos,
 		availableKeynotes,
 		campaignId,
