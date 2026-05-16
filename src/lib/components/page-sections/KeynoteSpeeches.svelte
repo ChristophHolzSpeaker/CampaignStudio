@@ -1,5 +1,9 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import { saveKeynoteSpeechesField } from './KeynoteSpeechesInlineEdit.remote';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	type Keynote = {
@@ -16,14 +20,62 @@
 
 	let {
 		props,
+		campaignId = null,
+		campaignPageId = null,
+		editable = false,
+		sectionIndex = -1,
+		onInlineEditSaved,
 		disableScrollReveal = false
-	}: { props: KeynoteSpeechesSectionProps; disableScrollReveal?: boolean } = $props();
+	}: {
+		props: KeynoteSpeechesSectionProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+		editable?: boolean;
+		sectionIndex?: number;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
+		disableScrollReveal?: boolean;
+	} = $props();
 
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
 	let sectionEl = $state<HTMLElement | null>(null);
 	let visibleItems = new SvelteSet<number>();
 	const revealOffset = 600;
+	const canInlineEdit = $derived(
+		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
+	);
+
+	async function saveKeynoteField(
+		field: 'title' | 'intro',
+		nextValue: string
+	): Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return { saved: false };
+		}
+
+		const result = await saveKeynoteSpeechesField({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'keynote_speeches',
+			field,
+			value: nextValue
+		});
+
+		if (result.saved && result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else if (result.saved) {
+			await onInlineEditSaved?.();
+		}
+
+		return {
+			saved: result.saved,
+			nextValue: result.value,
+			nextCampaignPageId: result.campaignPageId
+		};
+	}
 
 	$effect(() => {
 		if (disableScrollReveal) {
@@ -58,12 +110,21 @@
 	<div class="mx-auto max-w-7xl">
 		<div class="mb-14 grid items-end gap-8 lg:mb-20 lg:grid-cols-12 lg:gap-12">
 			<div class="space-y-6 lg:col-span-8">
-				<h2 class="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">
-					{props.title}
-				</h2>
-				<p class="max-w-3xl text-lg leading-relaxed text-on-surface/80 lg:text-2xl">
-					{props.intro}
-				</p>
+				<ContentEditableText
+					as="h2"
+					value={props.title}
+					editable={canInlineEdit}
+					className="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl"
+					onSave={(value) => saveKeynoteField('title', value)}
+				/>
+				<ContentEditableText
+					as="p"
+					value={props.intro}
+					editable={canInlineEdit}
+					multiline={true}
+					className="max-w-3xl text-lg leading-relaxed text-on-surface/80 lg:text-2xl"
+					onSave={(value) => saveKeynoteField('intro', value)}
+				/>
 			</div>
 			<div class="lg:col-span-4 lg:flex lg:justify-end">
 				<span class="block h-0.5 w-16 bg-primary"></span>

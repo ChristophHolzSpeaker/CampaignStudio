@@ -24,14 +24,13 @@
 	let elementRef = $state<HTMLElement | null>(null);
 	let isEditing = $state(false);
 	let isSaving = $state(false);
-	let displayValue = $state(value);
+	let displayValue = $state('');
 	let originalValue = $state('');
 
 	$effect(() => {
-		if (!isEditing && value !== displayValue) {
-			displayValue = value;
-			if (elementRef && elementRef.textContent !== value) {
-				elementRef.textContent = value;
+		if (!isEditing) {
+			if (value !== displayValue) {
+				displayValue = value;
 			}
 		}
 	});
@@ -59,7 +58,6 @@
 		}
 
 		displayValue = originalValue;
-		elementRef.textContent = originalValue;
 		isEditing = false;
 		elementRef.blur();
 	}
@@ -72,7 +70,6 @@
 		const nextValue = readElementValue();
 		if (nextValue === normalizeValue(originalValue)) {
 			displayValue = originalValue;
-			elementRef.textContent = originalValue;
 			isEditing = false;
 			return;
 		}
@@ -82,9 +79,6 @@
 			const result = await onSave(nextValue);
 			const savedValue = normalizeValue(result.nextValue ?? nextValue);
 			displayValue = savedValue;
-			if (elementRef.textContent !== savedValue) {
-				elementRef.textContent = savedValue;
-			}
 			originalValue = savedValue;
 			isEditing = false;
 		} finally {
