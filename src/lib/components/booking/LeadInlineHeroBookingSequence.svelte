@@ -259,7 +259,7 @@ Veranstaltungsort:`;
 									aria-controls={`inline-booking-day-panel-${day.dateKey}`}
 									aria-selected={resolvedDayKey === day.dateKey}
 									class={[
-										'border px-3 py-2  text-xl font-bold uppercase transition',
+										'btn border px-3 py-2  text-xl font-bold uppercase transition',
 										!hasSelectedDay || resolvedDayKey === day.dateKey
 											? 'border-(--accent-strong) bg-(--accent-strong) text-white'
 											: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'

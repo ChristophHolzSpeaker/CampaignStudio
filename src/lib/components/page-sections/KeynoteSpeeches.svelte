@@ -1,5 +1,10 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import { saveKeynoteSpeechesField } from './KeynoteSpeechesInlineEdit.remote';
+	import { SvelteSet } from 'svelte/reactivity';
 
 	type Keynote = {
 		title: string;
@@ -13,36 +18,91 @@
 		keynotes: Keynote[];
 	};
 
-	let { props }: { props: KeynoteSpeechesSectionProps } = $props();
+	let {
+		props,
+		campaignId = null,
+		campaignPageId = null,
+		editable = false,
+		sectionIndex = -1,
+		onInlineEditSaved,
+		disableScrollReveal = false
+	}: {
+		props: KeynoteSpeechesSectionProps;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
+		editable?: boolean;
+		sectionIndex?: number;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
+		disableScrollReveal?: boolean;
+	} = $props();
 
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
-
-	let itemRefs = $state<HTMLElement[]>([]);
-	let visibleItems = $state<Set<number>>(new Set());
+	let sectionEl = $state<HTMLElement | null>(null);
+	let visibleItems = new SvelteSet<number>();
 	const revealOffset = 600;
-	function checkInView() {
-		for (const [index, el] of itemRefs.entries()) {
-			if (!el || visibleItems.has(index)) continue;
+	const canInlineEdit = $derived(
+		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
+	);
+
+	async function saveKeynoteField(
+		field: 'title' | 'intro',
+		nextValue: string
+	): Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return { saved: false };
+		}
+
+		const result = await saveKeynoteSpeechesField({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'keynote_speeches',
+			field,
+			value: nextValue
+		});
+
+		if (result.saved && result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else if (result.saved) {
+			await onInlineEditSaved?.();
+		}
+
+		return {
+			saved: result.saved,
+			nextValue: result.value,
+			nextCampaignPageId: result.campaignPageId
+		};
+	}
+
+	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
+		scrollY;
+		innerHeight;
+
+		const revealItems = sectionEl?.querySelectorAll<HTMLElement>('[data-reveal-index]') ?? [];
+		for (const el of revealItems) {
+			const index = Number(el.dataset.revealIndex);
+			if (Number.isNaN(index) || visibleItems.has(index)) continue;
 
 			const rect = el.getBoundingClientRect();
 			const isInView = rect.top < innerHeight + revealOffset && rect.bottom > 0;
 
 			if (isInView) {
-				visibleItems = new Set(visibleItems).add(index);
+				visibleItems.add(index);
 			}
 		}
-	}
-
-	$effect(() => {
-		scrollY;
-		innerHeight;
-		checkInView();
 	});
 </script>
 
 <svelte:window bind:scrollY />
 <section
+	bind:this={sectionEl}
 	class="relative bg-surface px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
 >
@@ -50,12 +110,21 @@
 	<div class="mx-auto max-w-7xl">
 		<div class="mb-14 grid items-end gap-8 lg:mb-20 lg:grid-cols-12 lg:gap-12">
 			<div class="space-y-6 lg:col-span-8">
-				<h2 class="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">
-					{props.title}
-				</h2>
-				<p class="max-w-3xl text-lg leading-relaxed text-on-surface/80 lg:text-2xl">
-					{props.intro}
-				</p>
+				<ContentEditableText
+					as="h2"
+					value={props.title}
+					editable={canInlineEdit}
+					className="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl"
+					onSave={(value) => saveKeynoteField('title', value)}
+				/>
+				<ContentEditableText
+					as="p"
+					value={props.intro}
+					editable={canInlineEdit}
+					multiline={true}
+					className="max-w-3xl text-lg leading-relaxed text-on-surface/80 lg:text-2xl"
+					onSave={(value) => saveKeynoteField('intro', value)}
+				/>
 			</div>
 			<div class="lg:col-span-4 lg:flex lg:justify-end">
 				<span class="block h-0.5 w-16 bg-primary"></span>
@@ -66,12 +135,14 @@
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each props.keynotes as keynote, index (`keynote-${keynote.title}`)}
 					<article
+						data-reveal-index={index}
 						class={[
 							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
-							visibleItems.has(index) ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+							disableScrollReveal || visibleItems.has(index)
+								? 'translate-y-0 opacity-100'
+								: 'translate-y-8 opacity-0'
 						]}
 						style={`transition-delay: ${index * 120}ms`}
-						bind:this={itemRefs[index]}
 					>
 						<span>0{index + 1}</span>
 

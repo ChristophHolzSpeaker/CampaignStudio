@@ -1,11 +1,14 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import Button from '$lib/components/elements/Button.svelte';
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import LeadInlineBookingSequence from '$lib/components/booking/LeadInlineBookingSequence.svelte';
 	import { page } from '$app/state';
 	import type { FrictionlessFunnelBookingProps } from '$lib/page-builder/sections/types';
 	import { submitBookingRequest } from './FrictionlessFunnelSection.remote';
+	import { saveFrictionlessFunnelField } from './FrictionlessFunnelInlineEdit.remote';
 	import type { CTAType } from '../../../../shared/event-types';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
@@ -13,11 +16,17 @@
 		props,
 		campaignId = null,
 		campaignPageId = null,
+		editable = false,
+		sectionIndex = -1,
+		onInlineEditSaved,
 		bookingSlotGroups = []
 	}: {
 		props?: FrictionlessFunnelBookingProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		editable?: boolean;
+		sectionIndex?: number;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
 	} = $props();
 
@@ -95,6 +104,41 @@
 	const trustNote = $derived(props?.trustNote);
 	const formDisclaimer = $derived(props?.formDisclaimer);
 	const pageSlug = $derived(page.url.pathname);
+	const canInlineEdit = $derived(
+		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
+	);
+
+	async function saveFunnelField(
+		field: 'title' | 'description',
+		nextValue: string
+	): Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return { saved: false };
+		}
+
+		const result = await saveFrictionlessFunnelField({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'frictionless_funnel_booking',
+			field,
+			value: nextValue
+		});
+
+		if (result.saved && result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else if (result.saved) {
+			await onInlineEditSaved?.();
+		}
+
+		return {
+			saved: result.saved,
+			nextValue: result.value,
+			nextCampaignPageId: result.campaignPageId
+		};
+	}
 
 	const fullNameError = $derived(submitBookingRequest.fields?.fullName?.issues()?.[0]?.message);
 	const organizationError = $derived(
@@ -114,10 +158,21 @@
 	<SectionIdentifier props={{ id: 'frictionless_funnel' }}></SectionIdentifier>
 	<div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2 lg:gap-16">
 		<div class="space-y-8">
-			<h2 class="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">
-				{title}
-			</h2>
-			<p class="max-w-xl text-lg leading-relaxed text-on-surface/75">{description}</p>
+			<ContentEditableText
+				as="h2"
+				value={title}
+				editable={canInlineEdit}
+				className="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl"
+				onSave={(value) => saveFunnelField('title', value)}
+			/>
+			<ContentEditableText
+				as="p"
+				value={description}
+				editable={canInlineEdit}
+				multiline={true}
+				className="max-w-xl text-lg leading-relaxed text-on-surface/75"
+				onSave={(value) => saveFunnelField('description', value)}
+			/>
 		</div>
 
 		<!--

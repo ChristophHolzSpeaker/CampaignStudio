@@ -1,25 +1,38 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
+	import { SvelteSet } from 'svelte/reactivity';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 	import DirectAccess from './DirectAccess.svelte';
+	import { saveHybridContentSectionField } from './HybridContentSectionInlineEdit.remote';
 
 	let {
 		props,
 		mailtoHref = 'mailto:speaker@christophholz.com',
 		campaignId = null,
-		campaignPageId = null
+		campaignPageId = null,
+		editable = false,
+		sectionIndex = -1,
+		onInlineEditSaved,
+		disableScrollReveal = false
 	}: {
 		props?: HybridContentSectionProps;
 		mailtoHref?: string;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		editable?: boolean;
+		sectionIndex?: number;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
+		disableScrollReveal?: boolean;
 	} = $props();
 	let scrollY = $state(0);
 	let innerHeight = $state(0);
-
 	let itemRefs = $state<HTMLElement[]>([]);
-	let visibleItems = $state<Set<number>>(new Set());
-	const revealOffset = 600;
+	let visibleItems = new SvelteSet<number>();
+	const revealOffset = 0;
+
 	function checkInView() {
 		for (const [index, el] of itemRefs.entries()) {
 			if (!el || visibleItems.has(index)) continue;
@@ -28,12 +41,16 @@
 			const isInView = rect.top < innerHeight + revealOffset && rect.bottom > 0;
 
 			if (isInView) {
-				visibleItems = new Set(visibleItems).add(index);
+				visibleItems.add(index);
 			}
 		}
 	}
 
 	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
 		scrollY;
 		innerHeight;
 		checkInView();
@@ -48,9 +65,56 @@
 	const benefits = $derived(props?.benefits ?? []);
 	const deepDiveItems = $derived(props?.deepDiveItems ?? []);
 	const primaryVisual = $derived(props?.supportingVisualItems?.[0]);
+	const emailCtaTitle = $derived(props?.emailCtaTitle ?? 'Send an email right now');
+
+	type HybridFieldTarget =
+		| { kind: 'title' }
+		| { kind: 'intro' }
+		| { kind: 'deepDiveTitle' }
+		| { kind: 'emailCtaTitle' }
+		| { kind: 'benefitTitle'; index: number }
+		| { kind: 'benefitBody'; index: number }
+		| { kind: 'deepDiveItemTitle'; index: number }
+		| { kind: 'deepDiveItemBody'; index: number };
+
+	const canInlineEdit = $derived(
+		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
+	);
+
+	async function saveHybridField(
+		target: HybridFieldTarget,
+		nextValue: string
+	): Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return { saved: false };
+		}
+
+		const result = await saveHybridContentSectionField({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'hybrid_content_section',
+			target,
+			value: nextValue
+		});
+
+		if (result.saved && result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else if (result.saved) {
+			await onInlineEditSaved?.();
+		}
+
+		return {
+			saved: result.saved,
+			nextValue: result.value,
+			nextCampaignPageId: result.campaignPageId
+		};
+	}
 </script>
 
-<svelte:window bind:scrollY />
+<svelte:window bind:scrollY bind:innerHeight />
 <section
 	class="bg-surface-container relative px-6 py-20 sm:px-8 lg:px-12 lg:py-28"
 	aria-label="Hybrid Content section"
@@ -59,10 +123,21 @@
 	<div class="mx-auto max-w-7xl">
 		<div class="mb-14 grid items-end gap-8 lg:mb-20 lg:grid-cols-12 lg:gap-12">
 			<div class="space-y-6 lg:col-span-8">
-				<h2 class="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl">
-					{title}
-				</h2>
-				<p class="max-w-3xl text-lg leading-relaxed text-on-surface/80 lg:text-2xl">{intro}</p>
+				<ContentEditableText
+					as="h2"
+					value={title}
+					editable={canInlineEdit}
+					className="text-4xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-6xl"
+					onSave={(value) => saveHybridField({ kind: 'title' }, value)}
+				/>
+				<ContentEditableText
+					as="p"
+					value={intro}
+					editable={canInlineEdit}
+					multiline={true}
+					className="max-w-3xl text-lg leading-relaxed text-on-surface/80 lg:text-2xl"
+					onSave={(value) => saveHybridField({ kind: 'intro' }, value)}
+				/>
 			</div>
 			<div class="lg:col-span-4 lg:flex lg:justify-end">
 				<span class="block h-0.5 w-16 bg-primary"></span>
@@ -73,9 +148,12 @@
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each benefits as benefit, index (`hybrid-benefit-${benefit.title}`)}
 					<article
+						data-reveal-index={index}
 						class={[
 							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
-							visibleItems.has(index) ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-0'
+							disableScrollReveal || visibleItems.has(index)
+								? 'translate-y-0 opacity-100'
+								: 'translate-y-8 opacity-0'
 						]}
 						style={`transition-delay: ${index * 120}ms`}
 						bind:this={itemRefs[index]}
@@ -87,10 +165,21 @@
 							alt={benefit.title}
 							class="aspect-4/2 object-cover"
 						/>-->
-						<h3 class="text-3xl leading-tight font-bold tracking-tight text-on-surface">
-							{benefit.title}
-						</h3>
-						<p class="text-base leading-relaxed text-on-surface/75">{benefit.body}</p>
+						<ContentEditableText
+							as="h3"
+							value={benefit.title}
+							editable={canInlineEdit}
+							className="text-3xl leading-tight font-bold tracking-tight text-on-surface"
+							onSave={(value) => saveHybridField({ kind: 'benefitTitle', index }, value)}
+						/>
+						<ContentEditableText
+							as="p"
+							value={benefit.body}
+							editable={canInlineEdit}
+							multiline={true}
+							className="text-base leading-relaxed text-on-surface/75"
+							onSave={(value) => saveHybridField({ kind: 'benefitBody', index }, value)}
+						/>
 					</article>
 				{/each}
 			</div>
@@ -101,16 +190,21 @@
 <section class="overflow-hidden bg-on-surface px-6 pt-20 text-surface sm:px-8 lg:px-12 lg:pt-28">
 	<div class="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2 lg:gap-16">
 		<div>
-			<h2 class="mb-10 text-4xl leading-[0.95] font-bold tracking-tight lg:text-6xl">
-				{deepDiveTitle}
-			</h2>
+			<ContentEditableText
+				as="h2"
+				value={deepDiveTitle}
+				editable={canInlineEdit}
+				className="mb-10 text-4xl leading-[0.95] font-bold tracking-tight lg:text-6xl"
+				onSave={(value) => saveHybridField({ kind: 'deepDiveTitle' }, value)}
+			/>
 			{#if deepDiveItems.length > 0}
 				<div class="space-y-10">
 					{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
 						<div
+							data-reveal-index={index + benefits.length}
 							class={[
 								'flex gap-4 transition-all duration-500 ease-out sm:gap-6',
-								visibleItems.has(index + benefits.length)
+								disableScrollReveal || visibleItems.has(index + benefits.length)
 									? 'translate-y-0 opacity-100'
 									: 'translate-y-8 opacity-0'
 							]}
@@ -119,8 +213,21 @@
 						>
 							<span class="text-lg text-primary">{`0${index + 1}`}</span>
 							<div>
-								<h4 class="mb-2 text-2xl leading-tight font-bold tracking-tight">{item.title}</h4>
-								<p class="text-base leading-relaxed text-surface/75 lg:text-lg">{item.body}</p>
+								<ContentEditableText
+									as="h4"
+									value={item.title}
+									editable={canInlineEdit}
+									className="mb-2 text-2xl leading-tight font-bold tracking-tight"
+									onSave={(value) => saveHybridField({ kind: 'deepDiveItemTitle', index }, value)}
+								/>
+								<ContentEditableText
+									as="p"
+									value={item.body}
+									editable={canInlineEdit}
+									multiline={true}
+									className="text-base leading-relaxed text-surface/75 lg:text-lg"
+									onSave={(value) => saveHybridField({ kind: 'deepDiveItemBody', index }, value)}
+								/>
 							</div>
 						</div>
 					{/each}
@@ -151,7 +258,9 @@
 </section>
 
 <DirectAccess
-	props={{ mailtoHref, emailCtaTitle: props?.emailCtaTitle }}
+	props={{ mailtoHref, emailCtaTitle }}
 	{campaignId}
 	{campaignPageId}
+	editable={canInlineEdit}
+	onSaveEmailCtaTitle={(value) => saveHybridField({ kind: 'emailCtaTitle' }, value)}
 ></DirectAccess>

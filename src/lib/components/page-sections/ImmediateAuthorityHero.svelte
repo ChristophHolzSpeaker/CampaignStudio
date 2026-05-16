@@ -1,8 +1,11 @@
 <script lang="ts">
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
+	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
+	import { saveImmediateAuthorityHeroField } from './ImmediateAuthorityHeroInlineEdit.remote';
 	import LeadInlineHeroBookingSequence from '../booking/LeadInlineHeroBookingSequence.svelte';
 	import Button from '../elements/Button.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
@@ -11,12 +14,18 @@
 		props,
 		campaignId = null,
 		campaignPageId = null,
+		editable = false,
+		sectionIndex = -1,
+		onInlineEditSaved,
 		bookingSlotGroups = [],
 		mailtoHref = 'mailto:speaker@christophholz.com'
 	}: {
 		props?: ImmediateAuthorityHeroProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		editable?: boolean;
+		sectionIndex?: number;
+		onInlineEditSaved?: (() => Promise<void>) | undefined;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
 		mailtoHref?: string;
 	} = $props();
@@ -106,6 +115,42 @@
 	}
 
 	const pageSlug = $derived(page.url.pathname);
+
+	const canInlineEdit = $derived(
+		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
+	);
+
+	async function saveHeroField(
+		field: 'headline' | 'subheadline' | 'eyebrow',
+		nextValue: string
+	): Promise<{ saved: boolean; nextValue?: string; nextCampaignPageId?: number }> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return { saved: false };
+		}
+
+		const result = await saveImmediateAuthorityHeroField({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'immediate_authority_hero',
+			field,
+			value: nextValue
+		});
+
+		if (result.saved && result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else if (result.saved) {
+			await onInlineEditSaved?.();
+		}
+
+		return {
+			saved: result.saved,
+			nextValue: result.value,
+			nextCampaignPageId: result.campaignPageId
+		};
+	}
 </script>
 
 <section
@@ -123,17 +168,30 @@
 
 	<div class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-12 lg:gap-12">
 		<div class="space-y-7 lg:col-span-7">
-			<span class="inline-block bg-primary px-3 py-1 text-[10px] tracking-[0.2em] text-white">
-				{eyebrow}
-			</span>
-			<h1
-				class="max-w-4xl text-5xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-7xl"
-			>
-				{headline}
-			</h1>
-			<p class="max-w-2xl text-base leading-relaxed text-on-surface/80 sm:text-lg lg:text-xl">
-				{subheadline}
-			</p>
+			<ContentEditableText
+				as="span"
+				value={eyebrow}
+				editable={canInlineEdit}
+				className="inline-block bg-primary px-3 py-1 text-[10px] tracking-[0.2em] text-white"
+				onSave={(value) => saveHeroField('eyebrow', value)}
+			/>
+
+			<ContentEditableText
+				as="h1"
+				value={headline}
+				editable={canInlineEdit}
+				className="max-w-4xl text-5xl leading-[0.95] font-bold tracking-tight text-on-surface lg:text-7xl"
+				onSave={(value) => saveHeroField('headline', value)}
+			/>
+
+			<ContentEditableText
+				as="p"
+				value={subheadline}
+				editable={canInlineEdit}
+				multiline={true}
+				className="max-w-2xl text-base leading-relaxed text-on-surface/80 sm:text-lg lg:text-xl"
+				onSave={(value) => saveHeroField('subheadline', value)}
+			/>
 
 			{#if supportingBullets.length > 0}
 				<ul class="grid gap-2 text-sm text-on-surface/85 sm:grid-cols-2">

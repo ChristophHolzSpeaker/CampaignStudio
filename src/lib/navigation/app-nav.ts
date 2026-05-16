@@ -1,12 +1,13 @@
 export type AppNavItem = {
 	label: string;
 	href?: string;
-	icon?: string;
 	disabled?: boolean;
 	match?: 'exact' | 'prefix';
+	level?: 0 | 1 | 2;
 };
 
 export type AppNavCategory = {
+	id: string;
 	label: string;
 	items: readonly AppNavItem[];
 };
@@ -17,47 +18,36 @@ type CampaignNavData = {
 		name?: string | null;
 	};
 	campaignPageId?: number | null;
+	campaignList?: Array<{
+		id: number;
+		name: string;
+	}>;
 };
 
 const baseCategories: readonly AppNavCategory[] = [
 	{
-		label: 'Campaigns',
-		items: [
-			{ label: 'Campaigns', href: '/campaigns', match: 'exact', icon: 'material-symbols--book' },
-			{
-				label: 'Campaign Analytics',
-				href: '/campaigns/analytics',
-				match: 'exact',
-				icon: 'mdi--chart-areaspline'
-			}
-		]
-	},
-	{
+		id: 'admin',
 		label: 'Admin',
 		items: [
 			{
 				label: 'Prompts',
 				href: '/admin/prompts',
-				match: 'prefix',
-				icon: 'material-symbols--edit-note'
+				match: 'prefix'
 			},
 			{
 				label: 'Bookings settings',
 				href: '/admin/bookings',
-				match: 'prefix',
-				icon: 'mdi--calendar-clock-outline'
+				match: 'prefix'
 			},
 			{
 				label: 'Logos',
 				href: '/admin/logos',
-				match: 'prefix',
-				icon: 'mdi--account-box-multiple'
+				match: 'prefix'
 			},
 			{
 				label: 'Keynotes',
 				href: '/admin/keynotes',
-				match: 'prefix',
-				icon: 'mdi--microphone-variant'
+				match: 'prefix'
 			}
 		]
 	}
@@ -68,39 +58,54 @@ export function getAppNavCategories(
 	data: CampaignNavData = {}
 ): readonly AppNavCategory[] {
 	const detailMatch = pathname.match(/^\/campaigns\/(\d+)(?:\/.*)?$/);
-	if (!detailMatch) return baseCategories;
+	const resolvedCampaignId = detailMatch ? (data.campaign?.id ?? Number(detailMatch[1])) : null;
+	const previewHref =
+		resolvedCampaignId && data.campaignPageId
+			? `/campaigns/${resolvedCampaignId}/landing-page`
+			: undefined;
 
-	const campaignId = Number(detailMatch[1]);
-	const resolvedCampaignId = data.campaign?.id ?? campaignId;
-	const campaignLabel = data.campaign?.name?.trim() || 'Campaign Context';
-	const previewHref = data.campaignPageId
-		? `/campaigns/${resolvedCampaignId}/landing-page`
-		: undefined;
+	const campaignItems: AppNavItem[] = [
+		{ label: 'Campaigns', href: '/campaigns', match: 'exact', level: 0 }
+	];
 
-	const campaignContext: AppNavCategory = {
-		label: campaignLabel,
-		items: [
-			{
-				label: 'Ads',
-				href: `/campaigns/${resolvedCampaignId}`,
-				match: 'exact',
-				icon: 'mdi--google-ads'
-			},
-			{
-				label: 'Landing Page Preview',
-				href: previewHref,
-				match: 'prefix',
-				disabled: !previewHref,
-				icon: 'mdi--page-layout-header'
-			},
-			{
-				label: 'Analytics',
-				href: `/campaigns/${resolvedCampaignId}/analytics`,
-				match: 'prefix',
-				icon: 'mdi--chart-areaspline'
-			}
-		]
+	for (const campaign of data.campaignList ?? []) {
+		campaignItems.push({
+			label: campaign.name,
+			href: `/campaigns/${campaign.id}`,
+			match: 'prefix',
+			level: 1
+		});
+
+		if (resolvedCampaignId === campaign.id) {
+			campaignItems.push(
+				{
+					label: 'Ads',
+					href: `/campaigns/${campaign.id}/ads`,
+					match: 'prefix',
+					level: 2
+				},
+				{
+					label: 'Landing Page Preview',
+					href: previewHref,
+					match: 'prefix',
+					disabled: !previewHref,
+					level: 2
+				},
+				{
+					label: 'Analytics',
+					href: `/campaigns/${campaign.id}/analytics`,
+					match: 'prefix',
+					level: 2
+				}
+			);
+		}
+	}
+
+	const campaignsCategory: AppNavCategory = {
+		id: 'campaigns',
+		label: 'Campaigns',
+		items: campaignItems
 	};
 
-	return [campaignContext, ...baseCategories];
+	return [campaignsCategory, ...baseCategories];
 }

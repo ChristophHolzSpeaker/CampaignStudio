@@ -6,7 +6,7 @@
 		onclick?: (event: MouseEvent) => void;
 	};
 
-	let { href, variant = 'default', children, onclick }: Props = $props();
+	let { href, variant = 'default', children, onclick, ...restProps }: Props = $props();
 
 	const variants = {
 		default: 'btn-primary',
@@ -14,6 +14,6 @@
 	};
 </script>
 
-<a {href} {onclick} class="text-center {variants[variant]}">
+<a {href} {onclick} class="btn text-center {variants[variant]}" {...restProps}>
 	{@render children?.()}
 </a>
