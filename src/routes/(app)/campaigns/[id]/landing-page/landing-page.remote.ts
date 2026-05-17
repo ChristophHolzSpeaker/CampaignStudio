@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { query } from '$app/server';
 import { db } from '$lib/server/db';
-import { campaign_pages, keynotes, logos } from '$lib/server/db/schema';
+import { campaign_pages, keynotes, logos, media_assets } from '$lib/server/db/schema';
 import {
 	christophSampleLandingPage,
 	parseLandingPageDocument,
@@ -120,12 +120,35 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 		.where(eq(keynotes.is_active, true))
 		.orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
 
+	const availableHeroImages = await db
+		.select({
+			id: media_assets.id,
+			kind: media_assets.kind,
+			title: media_assets.title,
+			primaryUrl: media_assets.primary_url,
+			thumbnailUrl: media_assets.thumbnail_url,
+			thumbnailAlt: media_assets.thumbnail_alt,
+			sectionTypes: media_assets.section_types,
+			priority: media_assets.priority
+		})
+		.from(media_assets)
+		.where(eq(media_assets.is_active, true))
+		.orderBy(asc(media_assets.priority), asc(media_assets.id));
+
+	const filteredHeroImages = availableHeroImages.filter(
+		(asset) =>
+			asset.kind === 'image' &&
+			asset.sectionTypes.includes('immediate_authority_hero') &&
+			asset.primaryUrl.trim().length > 0
+	);
+
 	return {
 		page,
 		canRenderPage,
 		renderErrorMessage,
 		availableLogos,
 		availableKeynotes,
+		availableHeroImages: filteredHeroImages,
 		campaignId,
 		campaignPageId: selectedPageRecord?.campaignPageId ?? null,
 		latestCampaignPageId: latestPageRecord?.campaignPageId ?? null,
