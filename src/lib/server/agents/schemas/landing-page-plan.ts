@@ -13,7 +13,7 @@ const heroAssetSelectionSchema = z.object({
 });
 
 const hybridAssetSelectionSchema = z.object({
-	supportingImageAssetIds: z.array(z.string().trim().min(1)).max(3),
+	primaryImageAssetId: z.string().trim().min(1),
 	rationale: z.string().trim().min(1)
 });
 

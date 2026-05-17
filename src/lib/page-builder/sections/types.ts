@@ -90,7 +90,7 @@ export interface HybridDeepDiveItem {
 	body: string;
 }
 
-export interface HybridSupportingVisualItem {
+export interface HybridPrimaryVisual {
 	imageUrl: string;
 	alt: string;
 	caption?: string;
@@ -115,7 +115,7 @@ export interface HybridContentSectionProps {
 	benefits: HybridBenefitItem[];
 	deepDiveTitle: string;
 	deepDiveItems: HybridDeepDiveItem[];
-	supportingVisualItems?: HybridSupportingVisualItem[];
+	primaryVisual?: HybridPrimaryVisual;
 	emailCtaTitle?: string;
 }
 

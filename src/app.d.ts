@@ -10,6 +10,18 @@ declare global {
 		interface PageState {
 			modal?:
 				| { kind: 'youtube'; url: string }
+				| {
+						kind: 'hero-image-picker';
+						campaignId: number;
+						campaignPageId: number;
+						sectionIndex: number;
+				  }
+				| {
+						kind: 'hybrid-image-picker';
+						campaignId: number;
+						campaignPageId: number;
+						sectionIndex: number;
+				  }
 				| { kind: 'booking'; data: Record<string, unknown> }
 				| null;
 		}

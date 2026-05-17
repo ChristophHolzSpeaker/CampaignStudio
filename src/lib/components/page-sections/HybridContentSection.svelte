@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
@@ -33,7 +33,14 @@
 	let visibleItems = new SvelteSet<number>();
 	const revealOffset = 0;
 
-	function checkInView() {
+	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
+		scrollY;
+		innerHeight;
+
 		for (const [index, el] of itemRefs.entries()) {
 			if (!el || visibleItems.has(index)) continue;
 
@@ -44,16 +51,6 @@
 				visibleItems.add(index);
 			}
 		}
-	}
-
-	$effect(() => {
-		if (disableScrollReveal) {
-			return;
-		}
-
-		scrollY;
-		innerHeight;
-		checkInView();
 	});
 
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
@@ -64,7 +61,11 @@
 	const deepDiveTitle = $derived(props?.deepDiveTitle ?? 'Why Christoph');
 	const benefits = $derived(props?.benefits ?? []);
 	const deepDiveItems = $derived(props?.deepDiveItems ?? []);
-	const primaryVisual = $derived(props?.supportingVisualItems?.[0]);
+	const primaryVisual = $derived(
+		props?.primaryVisual ??
+			(props as { supportingVisualItems?: { imageUrl: string; alt: string }[] })
+				?.supportingVisualItems?.[0]
+	);
 	const emailCtaTitle = $derived(props?.emailCtaTitle ?? 'Send an email right now');
 
 	type HybridFieldTarget =
@@ -111,6 +112,22 @@
 			nextValue: result.value,
 			nextCampaignPageId: result.campaignPageId
 		};
+	}
+
+	function openHybridImagePicker(): void {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return;
+		}
+
+		pushState('', {
+			...page.state,
+			modal: {
+				kind: 'hybrid-image-picker',
+				campaignId,
+				campaignPageId,
+				sectionIndex
+			}
+		});
 	}
 </script>
 
@@ -235,14 +252,14 @@
 			{/if}
 		</div>
 
-		<div class="relative">
+		<div class="group relative">
 			<div
 				class="flex aspect-square items-center justify-center border border-surface/20 bg-surface/5 p-6"
 			>
 				<div class="absolute h-3/4 w-3/4 bg-primary/20 blur-3xl"></div>
 				{#if primaryVisual}
 					<img
-						src="https://tiuljkhdhhmvscujnslz.supabase.co/storage/v1/object/public/campaign-assets/christoph-holz-portrait-smiling-red-bowtie.webp"
+						src={primaryVisual.imageUrl}
 						alt={primaryVisual.alt}
 						class="relative z-10 h-full w-full object-cover"
 					/>
@@ -253,6 +270,26 @@
 					</div>
 				{/if}
 			</div>
+			{#if canInlineEdit}
+				<button
+					type="button"
+					onclick={openHybridImagePicker}
+					class="absolute top-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface/92 text-on-surface opacity-0 shadow-lg transition group-hover:opacity-100 focus:opacity-100"
+					aria-label="Change hybrid primary visual"
+				>
+					<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+						<path
+							d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4z"
+							stroke="currentColor"
+							stroke-width="1.8"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						></path>
+						<path d="M13 7l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+						></path>
+					</svg>
+				</button>
+			{/if}
 		</div>
 	</div>
 </section>

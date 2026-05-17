@@ -104,7 +104,7 @@ export const hybridDeepDiveItemSchema = z.object({
 	body: z.string().trim().min(1)
 });
 
-export const hybridSupportingVisualItemSchema = z.object({
+export const hybridPrimaryVisualSchema = z.object({
 	imageUrl: z.string().trim(),
 	alt: z.string().trim().min(1),
 	caption: z.string().trim().min(1).optional()
@@ -116,7 +116,7 @@ export const hybridContentSectionPropsSchema = z.object({
 	benefits: z.array(hybridBenefitItemSchema).min(1),
 	deepDiveTitle: z.string().trim().min(1),
 	deepDiveItems: z.array(hybridDeepDiveItemSchema).min(1),
-	supportingVisualItems: z.array(hybridSupportingVisualItemSchema).optional(),
+	primaryVisual: hybridPrimaryVisualSchema.optional(),
 	emailCtaTitle: z.string().optional()
 });
 
