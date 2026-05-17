@@ -1326,11 +1326,7 @@ function collectLandingPageDocumentMvpIssues(
 
 	const logosIndex = sectionTypes.indexOf('logos_of_trust_ribbon');
 	const youtubeGridIndex = sectionTypes.indexOf('youtube_grid');
-	if (
-		logosIndex >= 0 &&
-		youtubeGridIndex >= 0 &&
-		youtubeGridIndex !== logosIndex + 1
-	) {
+	if (logosIndex >= 0 && youtubeGridIndex >= 0 && youtubeGridIndex !== logosIndex + 1) {
 		issues.push(
 			'Landing page must place youtube_grid immediately after logos_of_trust_ribbon when both are present.'
 		);

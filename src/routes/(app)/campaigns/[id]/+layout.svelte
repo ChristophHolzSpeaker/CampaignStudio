@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import Button from '$lib/components/elements/Button.svelte';
 	import NavButton from '$lib/components/elements/NavButton.svelte';
+	import { publishCampaign } from './campaign-status.remote';
 	import type {
 		CampaignAdGroupWithDetails,
 		CampaignAdPackageWithDetails,
@@ -68,6 +68,7 @@
 	const targetStatus = (status?: string) => (status === 'published' ? 'archived' : 'published');
 	const publishLabel = (status?: string) =>
 		status === 'published' ? 'Archive' : 'Publish campaign';
+	const publishAction = $derived(publishCampaign.for(String(getCampaign()?.id ?? 'none')));
 </script>
 
 <section class="p-6 lg:p-10">
@@ -88,7 +89,7 @@
 							Created {formatFriendlyDate(getCampaign()?.created_at)}
 						</span>
 					</div>
-					<form action="?/publish" use:enhance method="POST" class="flex justify-end">
+					<form {...publishAction} class="flex justify-end">
 						<input type="hidden" name="id" value={getCampaign()?.id} />
 
 						<input type="hidden" name="target_status" value={targetStatus(getCampaign()?.status)} />
@@ -120,7 +121,7 @@
 							<button
 								class="mdi--content-copy inline-block h-4 w-4 cursor-pointer hover:text-primary"
 								onclick={copyLiveLandingUrl}
-								aria-label={`Copy link to clipboard`}
+								aria-label="Copy link to clipboard"
 							></button>
 
 							{#if copyStatus === 'error'}
