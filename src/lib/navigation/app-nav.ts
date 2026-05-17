@@ -59,10 +59,9 @@ export function getAppNavCategories(
 ): readonly AppNavCategory[] {
 	const detailMatch = pathname.match(/^\/campaigns\/(\d+)(?:\/.*)?$/);
 	const resolvedCampaignId = detailMatch ? (data.campaign?.id ?? Number(detailMatch[1])) : null;
-	const previewHref =
-		resolvedCampaignId && data.campaignPageId
-			? `/campaigns/${resolvedCampaignId}/landing-page`
-			: undefined;
+	const previewHref = resolvedCampaignId
+		? `/campaigns/${resolvedCampaignId}/landing-page`
+		: undefined;
 
 	const campaignItems: AppNavItem[] = [
 		{ label: 'Campaigns', href: '/campaigns', match: 'exact', level: 0 }

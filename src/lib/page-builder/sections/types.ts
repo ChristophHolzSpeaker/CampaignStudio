@@ -7,6 +7,7 @@ export const pageSectionTypes = [
 	'hero_large_email_cta',
 	'booklet_download_cta',
 	'logos_of_trust_ribbon',
+	'youtube_grid',
 	'keynote_speeches',
 	'speaker_in_action',
 	'hybrid_content_section',
@@ -42,6 +43,14 @@ export interface LogosOfTrustRibbonProps {
 	title?: string;
 	label?: string;
 	logos: TrustLogoItem[];
+}
+
+export interface YoutubeGridVideoItem {
+	url: string;
+}
+
+export interface YoutubeGridProps {
+	videos: YoutubeGridVideoItem[];
 }
 
 export interface HeroLargeEmailCtaProps {
@@ -182,6 +191,7 @@ export interface SectionPropsByType {
 	hero_large_email_cta: HeroLargeEmailCtaProps;
 	booklet_download_cta: BookletDownloadCtaProps;
 	logos_of_trust_ribbon: LogosOfTrustRibbonProps;
+	youtube_grid: YoutubeGridProps;
 	keynote_speeches: KeynoteSpeechesProps;
 	speaker_in_action: SpeakerInActionProps;
 	hybrid_content_section: HybridContentSectionProps;
