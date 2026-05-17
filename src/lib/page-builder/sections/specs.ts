@@ -7,6 +7,7 @@ import {
 	immediateAuthorityHeroPropsSchema,
 	keynoteSpeechesPropsSchema,
 	logosOfTrustRibbonPropsSchema,
+	youtubeGridPropsSchema,
 	speakerInActionPropsSchema,
 	proofOfPerformancePropsSchema,
 	seoPropsSchema
@@ -145,6 +146,28 @@ export const sectionSpecs: PageSectionSpecMap = {
 			'Use accurate alt text for accessibility and clarity.'
 		],
 		propsSchema: logosOfTrustRibbonPropsSchema
+	},
+	youtube_grid: {
+		type: 'youtube_grid',
+		label: 'YouTube Grid',
+		description:
+			'Video grid section that showcases curated YouTube clips immediately after trust logos.',
+		whenToUse: [
+			'Use directly below logos_of_trust_ribbon in landing pages.',
+			'Use when at least one approved YouTube URL is available in campaign assets.',
+			'Use when visitors need fast visual proof before scrolling into deeper narrative sections.'
+		],
+		whenNotToUse: [
+			'Do not use non-YouTube links or unapproved URLs.',
+			'Do not place this section above logos_of_trust_ribbon in the MVP flow.',
+			'Do not overload with duplicate clips that add no new proof value.'
+		],
+		contentGuidance: [
+			'Include only valid YouTube URLs in props.videos.',
+			'Prefer clips that demonstrate stage presence and audience relevance.',
+			'Keep the video selection concise, credible, and aligned to campaign intent.'
+		],
+		propsSchema: youtubeGridPropsSchema
 	},
 	keynote_speeches: {
 		type: 'keynote_speeches',

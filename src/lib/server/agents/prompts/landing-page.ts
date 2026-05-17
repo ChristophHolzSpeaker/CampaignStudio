@@ -108,13 +108,13 @@ Rules:
 
 * use only section types from allowedSectionTypes
 * include every type in requiredSectionTypes
-* sectionPlan must include exactly these section types in this exact order:
+	* preferred section order for narrative flow:
 	1) seo
 	2) immediate_authority_hero
 	3) logos_of_trust_ribbon
-	4) keynote_speeches
-	5) hybrid_content_section
-	6) speaker_in_action
+	4) youtube_grid
+	5) keynote_speeches
+	6) hybrid_content_section
 	7) frictionless_funnel_booking
 	8) proof_of_performance
 	9) booklet_download_cta
@@ -125,14 +125,13 @@ Rules:
 * section purpose and contentDirection are internal planning artifacts, not final customer-facing copy
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
 	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID and exactly one hero image from input.assets.assetCatalog.heroImages by ID
-	* when speaker_in_action is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale
+	* when youtube_grid is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
 	* when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
 	* when keynote_speeches is selected, keynote selection is automatic from the first three entries in input.assets.assetCatalog.keynoteCatalog
-	* soft preference: include speaker_in_action when eligible and strategically useful
+	* youtube_grid is required when it appears in requiredSectionTypes
 	* keynote_speeches is required when it is in requiredSectionTypes
-	* when both logos_of_trust_ribbon and keynote_speeches are selected, place keynote_speeches immediately after logos_of_trust_ribbon
-	* when both speaker_in_action and proof_of_performance are selected, place speaker_in_action above proof_of_performance
+	* when both logos_of_trust_ribbon and youtube_grid are selected, place youtube_grid immediately after logos_of_trust_ribbon
 	* soft preference: when both frictionless_funnel_booking and proof_of_performance are selected, place frictionless_funnel_booking above proof_of_performance
 	* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 	* use only IDs that exist in input.assets.assetCatalog
@@ -235,13 +234,13 @@ General requirements:
 
 * use only section types in allowedSectionTypes
 * include every section type in requiredSectionTypes
-* sections must appear in this exact order:
+	* preferred section order for narrative flow:
 	1) seo
 	2) immediate_authority_hero
 	3) logos_of_trust_ribbon
-	4) keynote_speeches
-	5) hybrid_content_section
-	6) speaker_in_action
+	4) youtube_grid
+	5) keynote_speeches
+	6) hybrid_content_section
 	7) frictionless_funnel_booking
 	8) proof_of_performance
 	9) booklet_download_cta
@@ -266,7 +265,7 @@ Asset usage requirements:
 	* landing page generation input includes input.assets with pre-approved media, proof, and compliance records
 	* for logos_of_trust_ribbon, use the first four entries from input.assets.assetCatalog.logoCatalog
 	* for proof_of_performance, use input.assets.fixedProofOfPerformance.testimonials
-	* for speaker_in_action media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
+	* for youtube_grid media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
 	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
 	* for hero image, resolve the selected ID from plan.assetPlan.hero.imageAssetId against input.assets.assetCatalog.heroImages
 * for hybrid supporting visuals, resolve IDs from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages

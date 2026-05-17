@@ -2,6 +2,7 @@
 	import BookletDownloadCta from '$lib/components/page-sections/BookletDownloadCta.svelte';
 	import HeroLargeEmailCta from '$lib/components/page-sections/HeroLargeEmailCta.svelte';
 	import SpeakerInAction from '$lib/components/page-sections/SpeakerInAction.svelte';
+	import YoutubeGrid from '$lib/components/page-sections/YoutubeGrid.svelte';
 </script>
 
 <HeroLargeEmailCta
@@ -10,6 +11,15 @@
 		labelText: 'Ready for transformation?'
 	}}
 ></HeroLargeEmailCta>
+<YoutubeGrid
+	props={{
+		videos: [
+			{ url: 'https://youtu.be/2tyK-fIgqOc?si=JAl0i4CFBPeRRTch' },
+			{ url: 'https://youtu.be/2tyK-fIgqOc?si=JAl0i4CFBPeRRTch' },
+			{ url: 'https://youtu.be/2tyK-fIgqOc?si=JAl0i4CFBPeRRTch' }
+		]
+	}}
+></YoutubeGrid>
 <BookletDownloadCta
 	props={{
 		labelText: 'Free resource',

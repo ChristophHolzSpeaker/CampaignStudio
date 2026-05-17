@@ -46,6 +46,14 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 	logos: z.array(trustLogoItemSchema).min(1)
 });
 
+export const youtubeGridVideoItemSchema = z.object({
+	url: z.string().trim().url()
+});
+
+export const youtubeGridPropsSchema = z.object({
+	videos: z.array(youtubeGridVideoItemSchema).min(1)
+});
+
 export const keynoteSpeechItemSchema = z.object({
 	id: z.string().trim().min(1),
 	title: z.string().trim().min(1),
@@ -172,6 +180,11 @@ export const logosOfTrustRibbonSectionSchema = z.object({
 	props: logosOfTrustRibbonPropsSchema
 });
 
+export const youtubeGridSectionSchema = z.object({
+	type: z.literal('youtube_grid'),
+	props: youtubeGridPropsSchema
+});
+
 export const speakerInActionSectionSchema = z.object({
 	type: z.literal('speaker_in_action'),
 	props: speakerInActionPropsSchema
@@ -223,6 +236,7 @@ export const pageSectionSchema = z.discriminatedUnion('type', [
 	heroLargeEmailCtaSectionSchema,
 	bookletDownloadCtaSectionSchema,
 	logosOfTrustRibbonSectionSchema,
+	youtubeGridSectionSchema,
 	keynoteSpeechesSectionSchema,
 	speakerInActionSectionSchema,
 	hybridContentSectionSchema,
@@ -237,6 +251,7 @@ export type ImmediateAuthorityHeroSection = z.infer<typeof immediateAuthorityHer
 export type HeroLargeEmailCtaSection = z.infer<typeof heroLargeEmailCtaSectionSchema>;
 export type BookletDownloadCtaSection = z.infer<typeof bookletDownloadCtaSectionSchema>;
 export type LogosOfTrustRibbonSection = z.infer<typeof logosOfTrustRibbonSectionSchema>;
+export type YoutubeGridSection = z.infer<typeof youtubeGridSectionSchema>;
 export type KeynoteSpeechesSection = z.infer<typeof keynoteSpeechesSectionSchema>;
 export type SpeakerInActionSection = z.infer<typeof speakerInActionSectionSchema>;
 export type HybridContentSection = z.infer<typeof hybridContentSectionSchema>;
