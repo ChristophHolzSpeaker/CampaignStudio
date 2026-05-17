@@ -166,7 +166,7 @@ Return exactly one valid JSON object with this shape:
 		  "rationale": "string"
 		},
     "hybridContentSection": {
-      "supportingImageAssetIds": ["string"],
+      "primaryImageAssetId": "string",
       "rationale": "string"
 		},
 		"speakerInAction": {
@@ -268,7 +268,7 @@ Asset usage requirements:
 	* for youtube_grid media, resolve IDs from plan.assetPlan.speakerInAction.videoAssetIds against input.assets.assetCatalog.speakerInActionVideos
 	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
 	* for hero image, resolve the selected ID from plan.assetPlan.hero.imageAssetId against input.assets.assetCatalog.heroImages
-* for hybrid supporting visuals, resolve IDs from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages
+* for hybrid primary visual, resolve ID from plan.assetPlan.hybridContentSection.primaryImageAssetId against input.assets.assetCatalog.hybridSupportingImages
 * for keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog
 * for compliance footer fields, use input.assets.complianceDefaults
 * use only approved assets listed in input.assets
@@ -281,7 +281,8 @@ Hybrid section contract requirements:
 * if hybrid_content_section is included, props.benefits must be [{ "title": "string", "body": "string", "imageUrl": "string" }]
 * if hybrid_content_section is included, aim for exactly 3 benefits
 * if hybrid_content_section is included, every benefit must state what the audience will leave with and explicitly connect audience + topic + format
-* if hybrid_content_section is included, each benefit imageUrl must come from plan.assetPlan.hybridContentSection.supportingImageAssetIds resolved against input.assets.assetCatalog.hybridSupportingImages (re-use is allowed if fewer than 3 images are selected)
+* if hybrid_content_section is included, each benefit imageUrl must come from approved hybrid images in input.assets.assetCatalog.hybridSupportingImages
+* if hybrid_content_section is included, props.primaryVisual must be { "imageUrl": "string", "alt": "string" } resolved from plan.assetPlan.hybridContentSection.primaryImageAssetId
 * if hybrid_content_section is included, props.deepDiveTitle is required
 * if hybrid_content_section is included, strongly bias props.deepDiveTitle to "Why Christoph"
 * if hybrid_content_section is included, props.deepDiveItems must be [{ "title": "string", "body": "string" }]

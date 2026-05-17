@@ -1,5 +1,5 @@
 import { landingPageDocumentSchema, type LandingPageDocument } from '$lib/page-builder/page';
-import type { HybridSupportingVisualItem, PageSectionType } from '$lib/page-builder/sections';
+import type { HybridPrimaryVisual, PageSectionType } from '$lib/page-builder/sections';
 import { callOpenRouter } from '$lib/server/openrouter/client';
 import type { PageSection } from '$lib/page-builder/sections';
 import { traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace';
@@ -148,12 +148,12 @@ function pickImageUrl(imageUrls: string[], index: number): string {
 
 function buildBenefitImagePool(
 	input: LandingPageGenerationInput,
-	selectedSupportingVisualItems: HybridSupportingVisualItem[],
+	selectedPrimaryVisual: HybridPrimaryVisual | null,
 	props: Record<string, unknown>
 ): string[] {
-	const selectedUrls = selectedSupportingVisualItems
-		.map((item) => getString(item.imageUrl))
-		.filter((value): value is string => Boolean(value));
+	const selectedUrls = [getString(selectedPrimaryVisual?.imageUrl)].filter(
+		(value): value is string => Boolean(value)
+	);
 	if (selectedUrls.length > 0) {
 		return selectedUrls;
 	}
@@ -176,6 +176,43 @@ function buildBenefitImagePool(
 	}
 
 	return finalFallbackHybridImageUrls;
+}
+
+function resolveLegacyPrimaryVisualFromProps(
+	props: Record<string, unknown>
+): HybridPrimaryVisual | null {
+	const rawPrimaryVisual = isRecord(props.primaryVisual) ? props.primaryVisual : null;
+	if (rawPrimaryVisual) {
+		const imageUrl = getString(rawPrimaryVisual.imageUrl);
+		const alt = getString(rawPrimaryVisual.alt);
+		if (imageUrl && alt) {
+			return {
+				imageUrl,
+				alt,
+				caption: getString(rawPrimaryVisual.caption)
+			};
+		}
+	}
+
+	const rawSupportingVisualItems = Array.isArray(props.supportingVisualItems)
+		? props.supportingVisualItems
+		: [];
+	const firstLegacyItem = rawSupportingVisualItems[0];
+	if (!isRecord(firstLegacyItem)) {
+		return null;
+	}
+
+	const imageUrl = getString(firstLegacyItem.imageUrl);
+	const alt = getString(firstLegacyItem.alt);
+	if (!imageUrl || !alt) {
+		return null;
+	}
+
+	return {
+		imageUrl,
+		alt,
+		caption: getString(firstLegacyItem.caption)
+	};
 }
 
 function buildHybridBenefitFallbacks(input: LandingPageGenerationInput): HybridTextItem[] {
@@ -307,37 +344,31 @@ function resolveHeroImageSelection(
 	return selected;
 }
 
-function resolveHybridSupportingVisualSelection(
+function resolveHybridPrimaryVisualSelection(
 	input: LandingPageGenerationInput,
 	plan: LandingPagePlan
-): HybridSupportingVisualItem[] {
-	const selectedIds = plan.assetPlan?.hybridContentSection?.supportingImageAssetIds;
-	if (!selectedIds || selectedIds.length === 0) {
-		return [];
+): HybridPrimaryVisual | null {
+	const selectedId = plan.assetPlan?.hybridContentSection?.primaryImageAssetId;
+	if (!selectedId) {
+		return null;
 	}
 
 	const catalogById = new Map(
 		input.assets.assetCatalog.hybridSupportingImages.map((asset) => [asset.id, asset])
 	);
-	const selectedItems: HybridSupportingVisualItem[] = [];
-
-	for (const id of selectedIds) {
-		const selected = catalogById.get(id);
-		if (!selected) {
-			console.warn(
-				`Landing page writer: hybrid supporting image '${id}' not found in approved catalog; skipping this asset.`
-			);
-			continue;
-		}
-
-		selectedItems.push({
-			imageUrl: selected.imageUrl,
-			alt: selected.alt,
-			caption: selected.caption
-		});
+	const selected = catalogById.get(selectedId);
+	if (!selected) {
+		console.warn(
+			`Landing page writer: hybrid primary image '${selectedId}' not found in approved catalog; using fallback values.`
+		);
+		return null;
 	}
 
-	return selectedItems;
+	return {
+		imageUrl: selected.imageUrl,
+		alt: selected.alt,
+		caption: selected.caption
+	};
 }
 
 function resolveSpeakerInActionSelection(
@@ -637,8 +668,9 @@ function hydrateSectionWithAssets(
 
 		case 'hybrid_content_section': {
 			const props: Record<string, unknown> = isRecord(section.props) ? section.props : {};
-			const selectedSupportingVisualItems = resolveHybridSupportingVisualSelection(input, plan);
-			const benefitImageUrls = buildBenefitImagePool(input, selectedSupportingVisualItems, props);
+			const selectedPrimaryVisual = resolveHybridPrimaryVisualSelection(input, plan);
+			const fallbackPrimaryVisual = resolveLegacyPrimaryVisualFromProps(props);
+			const benefitImageUrls = buildBenefitImagePool(input, selectedPrimaryVisual, props);
 			const hybridBenefitFallbacks = buildHybridBenefitFallbacks(input);
 
 			const rawBenefits: unknown[] = Array.isArray(props.benefits) ? props.benefits : [];
@@ -735,10 +767,7 @@ function hydrateSectionWithAssets(
 					benefits,
 					deepDiveTitle,
 					deepDiveItems,
-					supportingVisualItems:
-						selectedSupportingVisualItems.length > 0
-							? selectedSupportingVisualItems
-							: section.props.supportingVisualItems
+					primaryVisual: selectedPrimaryVisual ?? fallbackPrimaryVisual ?? undefined
 				}
 			};
 		}
@@ -978,7 +1007,7 @@ function buildRequiredSectionFallback(
 			};
 		}
 		case 'hybrid_content_section': {
-			const benefitImageUrls = buildBenefitImagePool(input, [], {});
+			const benefitImageUrls = buildBenefitImagePool(input, null, {});
 			const fallbackBenefits = normalizeBenefitsToThree(
 				[],
 				buildHybridBenefitFallbacks(input),
@@ -1173,7 +1202,7 @@ Corrective rules:
 - Use assets from input.assets for proof, media, and compliance values.
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
 - For youtube_grid media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
-- For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
+- For hybrid primary visual, use plan.assetPlan.hybridContentSection.primaryImageAssetId with input.assets.assetCatalog.hybridSupportingImages.
 - For keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
@@ -1186,7 +1215,8 @@ Corrective rules:
 - For hybrid_content_section, intro is required.
 - For hybrid_content_section, benefits must be an array of objects with title, body, and imageUrl fields.
 - For hybrid_content_section, benefits should contain exactly 3 items aligned to what the audience will leave with.
-- For hybrid_content_section, each benefit imageUrl must resolve from plan.assetPlan.hybridContentSection.supportingImageAssetIds against input.assets.assetCatalog.hybridSupportingImages.
+- For hybrid_content_section, each benefit imageUrl must resolve from approved hybrid images in input.assets.assetCatalog.hybridSupportingImages.
+- For hybrid_content_section, props.primaryVisual should resolve from plan.assetPlan.hybridContentSection.primaryImageAssetId.
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 - For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
 - For keynote_speeches, title and intro are required.

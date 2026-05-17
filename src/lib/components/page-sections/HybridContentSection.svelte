@@ -33,7 +33,14 @@
 	let visibleItems = new SvelteSet<number>();
 	const revealOffset = 0;
 
-	function checkInView() {
+	$effect(() => {
+		if (disableScrollReveal) {
+			return;
+		}
+
+		scrollY;
+		innerHeight;
+
 		for (const [index, el] of itemRefs.entries()) {
 			if (!el || visibleItems.has(index)) continue;
 
@@ -44,16 +51,6 @@
 				visibleItems.add(index);
 			}
 		}
-	}
-
-	$effect(() => {
-		if (disableScrollReveal) {
-			return;
-		}
-
-		scrollY;
-		innerHeight;
-		checkInView();
 	});
 
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
@@ -64,7 +61,11 @@
 	const deepDiveTitle = $derived(props?.deepDiveTitle ?? 'Why Christoph');
 	const benefits = $derived(props?.benefits ?? []);
 	const deepDiveItems = $derived(props?.deepDiveItems ?? []);
-	const primaryVisual = $derived(props?.supportingVisualItems?.[0]);
+	const primaryVisual = $derived(
+		props?.primaryVisual ??
+			(props as { supportingVisualItems?: { imageUrl: string; alt: string }[] })
+				?.supportingVisualItems?.[0]
+	);
 	const emailCtaTitle = $derived(props?.emailCtaTitle ?? 'Send an email right now');
 
 	type HybridFieldTarget =
@@ -242,7 +243,7 @@
 				<div class="absolute h-3/4 w-3/4 bg-primary/20 blur-3xl"></div>
 				{#if primaryVisual}
 					<img
-						src="https://tiuljkhdhhmvscujnslz.supabase.co/storage/v1/object/public/campaign-assets/christoph-holz-portrait-smiling-red-bowtie.webp"
+						src={primaryVisual.imageUrl}
 						alt={primaryVisual.alt}
 						class="relative z-10 h-full w-full object-cover"
 					/>
