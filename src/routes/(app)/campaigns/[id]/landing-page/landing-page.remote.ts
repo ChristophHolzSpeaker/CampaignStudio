@@ -136,10 +136,7 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 		.orderBy(asc(media_assets.priority), asc(media_assets.id));
 
 	const filteredHeroImages = availableHeroImages.filter(
-		(asset) =>
-			asset.kind === 'image' &&
-			asset.sectionTypes.includes('immediate_authority_hero') &&
-			asset.primaryUrl.trim().length > 0
+		(asset) => asset.kind === 'image' && asset.primaryUrl.trim().length > 0
 	);
 
 	return {

@@ -16,6 +16,12 @@ declare global {
 						campaignPageId: number;
 						sectionIndex: number;
 				  }
+				| {
+						kind: 'hybrid-image-picker';
+						campaignId: number;
+						campaignPageId: number;
+						sectionIndex: number;
+				  }
 				| { kind: 'booking'; data: Record<string, unknown> }
 				| null;
 		}

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { HybridContentSectionProps } from '$lib/page-builder/sections/types';
@@ -112,6 +112,22 @@
 			nextValue: result.value,
 			nextCampaignPageId: result.campaignPageId
 		};
+	}
+
+	function openHybridImagePicker(): void {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return;
+		}
+
+		pushState('', {
+			...page.state,
+			modal: {
+				kind: 'hybrid-image-picker',
+				campaignId,
+				campaignPageId,
+				sectionIndex
+			}
+		});
 	}
 </script>
 
@@ -236,7 +252,7 @@
 			{/if}
 		</div>
 
-		<div class="relative">
+		<div class="group relative">
 			<div
 				class="flex aspect-square items-center justify-center border border-surface/20 bg-surface/5 p-6"
 			>
@@ -254,6 +270,26 @@
 					</div>
 				{/if}
 			</div>
+			{#if canInlineEdit}
+				<button
+					type="button"
+					onclick={openHybridImagePicker}
+					class="absolute top-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface/92 text-on-surface opacity-0 shadow-lg transition group-hover:opacity-100 focus:opacity-100"
+					aria-label="Change hybrid primary visual"
+				>
+					<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+						<path
+							d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4z"
+							stroke="currentColor"
+							stroke-width="1.8"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						></path>
+						<path d="M13 7l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+						></path>
+					</svg>
+				</button>
+			{/if}
 		</div>
 	</div>
 </section>
