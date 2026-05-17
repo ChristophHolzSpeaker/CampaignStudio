@@ -62,7 +62,7 @@ export {
 	type SpeakerInActionProps,
 	type HybridBenefitItem,
 	type HybridDeepDiveItem,
-	type HybridSupportingVisualItem,
+	type HybridPrimaryVisual,
 	type HybridContentSectionProps,
 	type TestimonialItem,
 	type ProofOfPerformanceProps,

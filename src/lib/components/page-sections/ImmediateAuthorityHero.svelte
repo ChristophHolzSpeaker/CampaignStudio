@@ -114,6 +114,22 @@
 		});
 	}
 
+	function openHeroImagePicker(): void {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return;
+		}
+
+		pushState('', {
+			...page.state,
+			modal: {
+				kind: 'hero-image-picker',
+				campaignId,
+				campaignPageId,
+				sectionIndex
+			}
+		});
+	}
+
 	const pageSlug = $derived(page.url.pathname);
 
 	const canInlineEdit = $derived(
@@ -232,7 +248,7 @@
 			</div>
 		</div>
 
-		<div class="relative lg:col-span-5">
+		<div class="group relative lg:col-span-5">
 			<div class="aspect-4/5 overflow-hidden bg-surface-container-lowest">
 				<img
 					src={heroImageUrl}
@@ -240,6 +256,26 @@
 					class="h-full w-full object-cover transition-all duration-500"
 				/>
 			</div>
+			{#if canInlineEdit}
+				<button
+					type="button"
+					onclick={openHeroImagePicker}
+					class="absolute top-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface/92 text-on-surface opacity-0 shadow-lg transition group-hover:opacity-100 focus:opacity-100"
+					aria-label="Change hero image"
+				>
+					<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+						<path
+							d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4z"
+							stroke="currentColor"
+							stroke-width="1.8"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						></path>
+						<path d="M13 7l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+						></path>
+					</svg>
+				</button>
+			{/if}
 			<div class="absolute -right-6 -bottom-6 -z-10 h-28 w-28 bg-primary/20 blur-3xl"></div>
 		</div>
 	</div>

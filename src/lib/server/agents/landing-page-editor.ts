@@ -304,8 +304,15 @@ function validateEditedPageGuardrails(
 		if (section.type !== 'hybrid_content_section') {
 			continue;
 		}
+		const legacySupportingVisualItems = (
+			section.props as { supportingVisualItems?: { imageUrl: string }[] }
+		).supportingVisualItems;
 
-		for (const item of section.props.supportingVisualItems ?? []) {
+		if (section.props.primaryVisual?.imageUrl) {
+			allowedHybridImageUrls.add(section.props.primaryVisual.imageUrl);
+		}
+
+		for (const item of legacySupportingVisualItems ?? []) {
 			allowedHybridImageUrls.add(item.imageUrl);
 		}
 
@@ -318,8 +325,18 @@ function validateEditedPageGuardrails(
 		if (section.type !== 'hybrid_content_section') {
 			continue;
 		}
+		const legacySupportingVisualItems = (
+			section.props as { supportingVisualItems?: { imageUrl: string }[] }
+		).supportingVisualItems;
 
-		for (const item of section.props.supportingVisualItems ?? []) {
+		if (
+			section.props.primaryVisual?.imageUrl &&
+			!allowedHybridImageUrls.has(section.props.primaryVisual.imageUrl)
+		) {
+			throw new Error('Edited page hybrid primary image is not in approved media assets.');
+		}
+
+		for (const item of legacySupportingVisualItems ?? []) {
 			if (!allowedHybridImageUrls.has(item.imageUrl)) {
 				throw new Error('Edited page hybrid supporting image is not in approved media assets.');
 			}
