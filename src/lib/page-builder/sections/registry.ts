@@ -10,6 +10,7 @@ import LogosOfTrustRibbon from '$lib/components/page-sections/LogosOfTrustRibbon
 import ProofOfPerformanceSection from '$lib/components/page-sections/ProofOfPerformanceSection.svelte';
 import SEO from '$lib/components/page-sections/SEO.svelte';
 import SpeakerInAction from '$lib/components/page-sections/SpeakerInAction.svelte';
+import YoutubeGrid from '$lib/components/page-sections/YoutubeGrid.svelte';
 import { sectionSpecs } from './specs';
 import type { PageSectionSpec, PageSectionType } from './types';
 
@@ -31,6 +32,7 @@ export const sectionComponentRegistry: SectionComponentRegistry = {
 	hero_large_email_cta: HeroLargeEmailCta,
 	booklet_download_cta: BookletDownloadCta,
 	logos_of_trust_ribbon: LogosOfTrustRibbon,
+	youtube_grid: YoutubeGrid,
 	keynote_speeches: KeynoteSpeeches,
 	speaker_in_action: SpeakerInAction,
 	hybrid_content_section: HybridContentSection,
@@ -59,6 +61,10 @@ export const sectionRegistry: SectionRegistry = {
 	logos_of_trust_ribbon: {
 		...sectionSpecs.logos_of_trust_ribbon,
 		component: sectionComponentRegistry.logos_of_trust_ribbon
+	},
+	youtube_grid: {
+		...sectionSpecs.youtube_grid,
+		component: sectionComponentRegistry.youtube_grid
 	},
 	keynote_speeches: {
 		...sectionSpecs.keynote_speeches,

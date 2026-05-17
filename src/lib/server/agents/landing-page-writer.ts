@@ -53,9 +53,9 @@ const requiredMvpSectionOrder: PageSectionType[] = [
 	'seo',
 	'immediate_authority_hero',
 	'logos_of_trust_ribbon',
+	'youtube_grid',
 	'keynote_speeches',
 	'hybrid_content_section',
-	'speaker_in_action',
 	'frictionless_funnel_booking',
 	'proof_of_performance',
 	'booklet_download_cta',
@@ -365,7 +365,7 @@ function resolveSpeakerInActionSelection(
 		const selected = catalogById.get(id);
 		if (!selected) {
 			console.warn(
-				`Landing page writer: speaker_in_action video '${id}' not found in approved catalog; skipping this asset.`
+				`Landing page writer: youtube_grid video '${id}' not found in approved catalog; skipping this asset.`
 			);
 			continue;
 		}
@@ -623,14 +623,14 @@ function hydrateSectionWithAssets(
 			};
 		}
 
-		case 'speaker_in_action': {
+		case 'youtube_grid': {
 			const mediaAssets = resolveSpeakerInActionSelection(input, plan);
 			return {
 				...section,
 				props: {
-					...section.props,
-					title: section.props.title?.trim() || 'Speaker in action',
-					mediaAssets
+					videos: mediaAssets.map((asset) => ({
+						url: asset.videoEmbedUrl
+					}))
 				}
 			};
 		}
@@ -884,17 +884,17 @@ function ensureSeoSection(
 	return [seoSection, ...withoutSeo];
 }
 
-function enforceSpeakerSectionOrder(sections: PageSection[]): PageSection[] {
-	const speakerIndex = sections.findIndex((section) => section.type === 'speaker_in_action');
-	const proofIndex = sections.findIndex((section) => section.type === 'proof_of_performance');
+function enforceYoutubeGridSectionOrder(sections: PageSection[]): PageSection[] {
+	const logosIndex = sections.findIndex((section) => section.type === 'logos_of_trust_ribbon');
+	const youtubeIndex = sections.findIndex((section) => section.type === 'youtube_grid');
 
-	if (speakerIndex < 0 || proofIndex < 0 || speakerIndex < proofIndex) {
+	if (logosIndex < 0 || youtubeIndex < 0 || youtubeIndex === logosIndex + 1) {
 		return sections;
 	}
 
 	const ordered = [...sections];
-	const [speakerSection] = ordered.splice(speakerIndex, 1);
-	ordered.splice(proofIndex, 0, speakerSection);
+	const [youtubeSection] = ordered.splice(youtubeIndex, 1);
+	ordered.splice(logosIndex + 1, 0, youtubeSection);
 	return ordered;
 }
 
@@ -996,12 +996,13 @@ function buildRequiredSectionFallback(
 				}
 			};
 		}
-		case 'speaker_in_action':
+		case 'youtube_grid':
 			return {
-				type: 'speaker_in_action',
+				type: 'youtube_grid',
 				props: {
-					title: 'Speaker in action',
-					mediaAssets: resolveSpeakerInActionSelection(input, plan)
+					videos: resolveSpeakerInActionSelection(input, plan).map((asset) => ({
+						url: asset.videoEmbedUrl
+					}))
 				}
 			};
 		case 'frictionless_funnel_booking':
@@ -1171,14 +1172,15 @@ Corrective rules:
 - Do not output markdown.
 - Use assets from input.assets for proof, media, and compliance values.
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
-- For speaker_in_action media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
+- For youtube_grid media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid supporting visuals, use plan.assetPlan.hybridContentSection.supportingImageAssetIds with input.assets.assetCatalog.hybridSupportingImages.
 - For keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
-- Sections must appear in this exact order: seo, immediate_authority_hero, logos_of_trust_ribbon, keynote_speeches, hybrid_content_section, speaker_in_action, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
+- Preferred section order for narrative flow: seo, immediate_authority_hero, logos_of_trust_ribbon, youtube_grid, keynote_speeches, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
+- When both logos_of_trust_ribbon and youtube_grid are present, place youtube_grid immediately after logos_of_trust_ribbon.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -1267,7 +1269,7 @@ function hydrateLandingPageWithAssets(
 		hydrateSectionWithAssets(section, input, plan)
 	);
 
-	const orderedSections = enforceKeynoteSectionOrder(enforceSpeakerSectionOrder(mvpSections));
+	const orderedSections = enforceYoutubeGridSectionOrder(enforceKeynoteSectionOrder(mvpSections));
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
@@ -1322,19 +1324,16 @@ function collectLandingPageDocumentMvpIssues(
 		}
 	}
 
-	if (sectionTypes.length !== requiredMvpSectionOrder.length) {
+	const logosIndex = sectionTypes.indexOf('logos_of_trust_ribbon');
+	const youtubeGridIndex = sectionTypes.indexOf('youtube_grid');
+	if (
+		logosIndex >= 0 &&
+		youtubeGridIndex >= 0 &&
+		youtubeGridIndex !== logosIndex + 1
+	) {
 		issues.push(
-			`Landing page must include exactly ${requiredMvpSectionOrder.length} sections in the required initial order.`
+			'Landing page must place youtube_grid immediately after logos_of_trust_ribbon when both are present.'
 		);
-	}
-
-	for (let index = 0; index < requiredMvpSectionOrder.length; index += 1) {
-		if (sectionTypes[index] !== requiredMvpSectionOrder[index]) {
-			issues.push(
-				`Landing page must follow the required section order: ${requiredMvpSectionOrder.join(', ')}.`
-			);
-			break;
-		}
 	}
 
 	return issues;

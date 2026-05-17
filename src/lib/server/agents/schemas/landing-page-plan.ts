@@ -1,18 +1,5 @@
 import { z } from 'zod';
 
-const REQUIRED_INITIAL_SECTION_ORDER = [
-	'seo',
-	'immediate_authority_hero',
-	'logos_of_trust_ribbon',
-	'keynote_speeches',
-	'hybrid_content_section',
-	'speaker_in_action',
-	'frictionless_funnel_booking',
-	'proof_of_performance',
-	'booklet_download_cta',
-	'compliance_transparency_footer'
-] as const;
-
 const landingPagePlanSectionSchema = z.object({
 	type: z.string().trim().min(1),
 	purpose: z.string().trim().min(1),
@@ -97,7 +84,7 @@ export const landingPagePlanSchema = z
 	.refine(
 		(plan) => {
 			const sectionTypes = new Set(plan.sectionPlan.map((section) => section.type));
-			if (!sectionTypes.has('speaker_in_action')) {
+			if (!sectionTypes.has('youtube_grid')) {
 				return true;
 			}
 
@@ -105,7 +92,7 @@ export const landingPagePlanSchema = z
 		},
 		{
 			message:
-				'assetPlan.speakerInAction is required when speaker_in_action is included in sectionPlan.',
+				'assetPlan.speakerInAction is required when youtube_grid is included in sectionPlan.',
 			path: ['assetPlan', 'speakerInAction']
 		}
 	);
@@ -130,18 +117,16 @@ export function validateLandingPagePlanSections(
 		}
 	}
 
-	if (sectionTypes.length !== REQUIRED_INITIAL_SECTION_ORDER.length) {
+	const logosIndex = sectionTypes.indexOf('logos_of_trust_ribbon');
+	const youtubeGridIndex = sectionTypes.indexOf('youtube_grid');
+	if (
+		logosIndex >= 0 &&
+		youtubeGridIndex >= 0 &&
+		youtubeGridIndex !== logosIndex + 1
+	) {
 		throw new Error(
-			`Strategist plan must include exactly ${REQUIRED_INITIAL_SECTION_ORDER.length} sections in the required initial order.`
+			'Strategist plan must place youtube_grid immediately after logos_of_trust_ribbon when both are present.'
 		);
-	}
-
-	for (let index = 0; index < REQUIRED_INITIAL_SECTION_ORDER.length; index += 1) {
-		if (sectionTypes[index] !== REQUIRED_INITIAL_SECTION_ORDER[index]) {
-			throw new Error(
-				`Strategist plan must follow the required section order: ${REQUIRED_INITIAL_SECTION_ORDER.join(', ')}.`
-			);
-		}
 	}
 }
 

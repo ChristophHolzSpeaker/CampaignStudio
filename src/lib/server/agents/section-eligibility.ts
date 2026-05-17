@@ -11,9 +11,9 @@ const requiredSectionTypes: PageSectionType[] = [
 	'seo',
 	'immediate_authority_hero',
 	'logos_of_trust_ribbon',
+	'youtube_grid',
 	'keynote_speeches',
 	'hybrid_content_section',
-	'speaker_in_action',
 	'frictionless_funnel_booking',
 	'proof_of_performance',
 	'booklet_download_cta',
@@ -62,12 +62,11 @@ export function getSectionEligibility(input: LandingPageGenerationInput): Sectio
 						'At least 3 active keynotes are required in keynote catalog.';
 				}
 				break;
-			case 'speaker_in_action':
+			case 'youtube_grid':
 				if (input.assets.assetCatalog.speakerInActionVideos.length >= 4) {
 					allowedSectionTypes.push(sectionType);
 				} else {
-					disallowedReasonByType[sectionType] =
-						'At least 4 speaker_in_action video assets are required.';
+					disallowedReasonByType[sectionType] = 'At least 4 YouTube video assets are required.';
 				}
 				break;
 			case 'proof_of_performance':
