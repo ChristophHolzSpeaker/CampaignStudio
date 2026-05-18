@@ -244,11 +244,13 @@ Veranstaltungsort:`;
 			<input type="hidden" name="campaignId" value={campaignId ?? ''} />
 			<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
 			<input type="hidden" name="pageSlug" value={pageSlug ?? ''} />
-			<input type="hidden" name="email" value={effectiveIntakeEmail} />
-			<input type="hidden" name="name" value={effectiveIntakeName} />
-			<input type="hidden" name="phone" value={effectiveIntakePhone} />
-			<input type="hidden" name="company" value={effectiveIntakeCompany} />
-			<input type="hidden" name="scope" value={effectiveIntakeScope} />
+			{#if !showIntakeStep}
+				<input type="hidden" name="email" value={effectiveIntakeEmail} />
+				<input type="hidden" name="name" value={effectiveIntakeName} />
+				<input type="hidden" name="phone" value={effectiveIntakePhone} />
+				<input type="hidden" name="company" value={effectiveIntakeCompany} />
+				<input type="hidden" name="scope" value={effectiveIntakeScope} />
+			{/if}
 			<input type="hidden" name="bookingSurface" value={bookingSurface ?? ''} />
 			<input type="hidden" name="ctaKey" value={ctaKey ?? ''} />
 			<input type="hidden" name="ctaSection" value={ctaSection ?? ''} />
@@ -340,7 +342,7 @@ Veranstaltungsort:`;
 								</p>
 								<button
 									type="submit"
-									class="btn-primary inline-flex items-center gap-2"
+									class="btn btn-primary inline-flex items-center gap-2"
 									disabled={isSubmitDisabled}
 								>
 									{#if resolvedSubmitAction.pending}
