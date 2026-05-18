@@ -6,10 +6,10 @@ import {
 import { z } from 'zod';
 
 const heroDefaultsSchema = z.object({
-	videoEmbedUrl: z.string().trim().url(),
-	heroImageUrl: z.string().trim().url().optional(),
+	videoEmbedUrl: z.string().trim(),
+	heroImageUrl: z.string().trim().optional(),
 	heroImageAlt: z.string().trim().min(1).optional(),
-	videoThumbnailUrl: z.string().trim().url().optional(),
+	videoThumbnailUrl: z.string().trim().optional(),
 	videoThumbnailAlt: z.string().trim().min(1).optional(),
 	primaryCtaLabelDefault: z.string().trim().min(1),
 	primaryCtaHref: z
@@ -26,7 +26,7 @@ const bookingDefaultsSchema = z.object({
 	defaultSectionTitle: z.string().trim().min(1),
 	defaultSectionDescription: z.string().trim().min(1),
 	primaryCtaLabelDefault: z.string().trim().min(1),
-	calendlyUrl: z.string().trim().url().optional(),
+	calendlyUrl: z.string().trim().optional(),
 	trustNote: z.string().trim().min(1).optional(),
 	formDisclaimer: z.string().trim().min(1).optional()
 });
@@ -37,8 +37,8 @@ export const heroVideoOptionSchema = z.object({
 	description: z.string().trim().min(1),
 	usageNotes: z.string().trim().min(1),
 	avoidNotes: z.string().trim().min(1).optional(),
-	videoEmbedUrl: z.string().trim().url(),
-	videoThumbnailUrl: z.string().trim().url(),
+	videoEmbedUrl: z.string().trim(),
+	videoThumbnailUrl: z.string().trim(),
 	videoThumbnailAlt: z.string().trim().min(1)
 });
 
@@ -48,7 +48,7 @@ export const heroImageOptionSchema = z.object({
 	description: z.string().trim().min(1),
 	usageNotes: z.string().trim().min(1),
 	avoidNotes: z.string().trim().min(1).optional(),
-	imageUrl: z.string().trim().url(),
+	imageUrl: z.string().trim(),
 	alt: z.string().trim().min(1),
 	caption: z.string().trim().min(1).optional()
 });
@@ -59,7 +59,7 @@ export const hybridSupportingImageOptionSchema = z.object({
 	description: z.string().trim().min(1),
 	usageNotes: z.string().trim().min(1),
 	avoidNotes: z.string().trim().min(1).optional(),
-	imageUrl: z.string().trim().url(),
+	imageUrl: z.string().trim(),
 	alt: z.string().trim().min(1),
 	caption: z.string().trim().min(1).optional()
 });
@@ -70,8 +70,8 @@ export const speakerInActionVideoOptionSchema = z.object({
 	description: z.string().trim().min(1),
 	usageNotes: z.string().trim().min(1),
 	avoidNotes: z.string().trim().min(1).optional(),
-	videoEmbedUrl: z.string().trim().url(),
-	videoThumbnailUrl: z.string().trim().url(),
+	videoEmbedUrl: z.string().trim(),
+	videoThumbnailUrl: z.string().trim(),
 	videoThumbnailAlt: z.string().trim().min(1)
 });
 
@@ -88,7 +88,7 @@ export const keynoteOptionSchema = z.object({
 	summary: z.string().trim().min(1),
 	audience: z.string().trim(),
 	keynoteShort: z.string().trim(),
-	imageUrl: z.string().trim().url(),
+	imageUrl: z.string().trim(),
 	imageAlt: z.string().trim().min(1)
 });
 

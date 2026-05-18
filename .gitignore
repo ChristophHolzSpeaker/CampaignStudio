@@ -29,3 +29,8 @@ worker/.dev.vars.*
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Supabase
+
+supabase/snippets/*
+supabase/snippets
