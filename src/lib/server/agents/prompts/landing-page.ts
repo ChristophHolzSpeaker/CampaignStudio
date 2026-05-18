@@ -111,9 +111,9 @@ Rules:
 	* preferred section order for narrative flow:
 	1) seo
 	2) immediate_authority_hero
-	3) logos_of_trust_ribbon
-	4) youtube_grid
-	5) keynote_speeches
+	3) youtube_grid
+	4) keynote_speeches
+	5) logos_of_trust_ribbon
 	6) hybrid_content_section
 	7) frictionless_funnel_booking
 	8) proof_of_performance
@@ -132,7 +132,7 @@ Rules:
 	* keynote selection must prioritize strategy fit by matching campaign and ad intent against keynote audience and keynoteShort fields
 	* youtube_grid is required when it appears in requiredSectionTypes
 	* keynote_speeches is required when it is in requiredSectionTypes
-	* when both logos_of_trust_ribbon and youtube_grid are selected, place youtube_grid immediately after logos_of_trust_ribbon
+	* soft preference: when immediate_authority_hero, youtube_grid, keynote_speeches, and logos_of_trust_ribbon are all selected, place them in this narrative order: immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon
 	* soft preference: when both frictionless_funnel_booking and proof_of_performance are selected, place frictionless_funnel_booking above proof_of_performance
 	* when hybrid_content_section is selected, prefer selecting 3 supporting images that map clearly to intended audience outcomes
 	* use only IDs that exist in input.assets.assetCatalog
@@ -239,9 +239,9 @@ General requirements:
 	* preferred section order for narrative flow:
 	1) seo
 	2) immediate_authority_hero
-	3) logos_of_trust_ribbon
-	4) youtube_grid
-	5) keynote_speeches
+	3) youtube_grid
+	4) keynote_speeches
+	5) logos_of_trust_ribbon
 	6) hybrid_content_section
 	7) frictionless_funnel_booking
 	8) proof_of_performance
