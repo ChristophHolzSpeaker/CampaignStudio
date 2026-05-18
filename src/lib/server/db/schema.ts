@@ -714,6 +714,8 @@ export const media_assets = pgTable(
 		primary_url: text('primary_url').notNull(),
 		thumbnail_url: text('thumbnail_url'),
 		thumbnail_alt: text('thumbnail_alt'),
+		subject_position: jsonb('subject_position'),
+		subject_facing: text('subject_facing'),
 		section_types: text('section_types')
 			.array()
 			.notNull()
