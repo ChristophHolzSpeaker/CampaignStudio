@@ -19,32 +19,111 @@
 
 		return () => data.subscription.unsubscribe();
 	});
-	let collapsed = $state(false);
-	function handleCollapse() {
-		collapsed = !collapsed;
-	}
+	const APP_SIDEBAR_WIDTH_KEY = 'app-sidebar-width';
+	const APP_SIDEBAR_DEFAULT_WIDTH = 280;
+	const APP_SIDEBAR_MIN_WIDTH = 40;
+	let sidebarWidth = $state(APP_SIDEBAR_DEFAULT_WIDTH);
+	let isResizing = $state(false);
+
+	const clampSidebarWidth = (value: number) => {
+		if (typeof window === 'undefined') {
+			return value;
+		}
+
+		const maxWidth = Math.floor(window.innerWidth * 0.35);
+		return Math.max(APP_SIDEBAR_MIN_WIDTH, Math.min(maxWidth, Math.round(value)));
+	};
+
+	const setSidebarWidthFromPointer = (clientX: number) => {
+		if (typeof window === 'undefined') {
+			return;
+		}
+
+		sidebarWidth = clampSidebarWidth(clientX);
+	};
+
+	const stopResize = () => {
+		if (typeof window === 'undefined') {
+			return;
+		}
+
+		isResizing = false;
+		document.body.style.userSelect = '';
+		window.localStorage.setItem(APP_SIDEBAR_WIDTH_KEY, String(sidebarWidth));
+	};
+
+	const onResizeHandlePointerDown = (event: PointerEvent) => {
+		if (typeof window === 'undefined' || window.innerWidth <= 1200) {
+			return;
+		}
+
+		event.preventDefault();
+		isResizing = true;
+		document.body.style.userSelect = 'none';
+		setSidebarWidthFromPointer(event.clientX);
+	};
+
+	const onWindowPointerMove = (event: PointerEvent) => {
+		if (!isResizing) {
+			return;
+		}
+
+		setSidebarWidthFromPointer(event.clientX);
+	};
+
+	const onWindowPointerUp = () => {
+		if (!isResizing) {
+			return;
+		}
+
+		stopResize();
+	};
+
+	const onWindowResize = () => {
+		sidebarWidth = clampSidebarWidth(sidebarWidth);
+	};
+
+	onMount(() => {
+		const stored = Number(window.localStorage.getItem(APP_SIDEBAR_WIDTH_KEY));
+		if (Number.isFinite(stored) && stored > 0) {
+			sidebarWidth = clampSidebarWidth(stored);
+		} else {
+			sidebarWidth = clampSidebarWidth(APP_SIDEBAR_DEFAULT_WIDTH);
+		}
+
+		return () => {
+			document.body.style.userSelect = '';
+		};
+	});
 </script>
+
+<svelte:window
+	onpointermove={onWindowPointerMove}
+	onpointerup={onWindowPointerUp}
+	onpointercancel={onWindowPointerUp}
+	onresize={onWindowResize}
+/>
 
 <svelte:head>
 	<title>User Management</title>
 </svelte:head>
 <div class="page-shell">
-	<div class="layout-grid" class:collapsed>
+	<div class="layout-grid" style={`--app-sidebar-width: ${sidebarWidth}px;`}>
 		<aside class="sidebar-column hidden overflow-x-hidden transition-all lg:block">
-			<button
-				title="collapse"
-				type="button"
-				onclick={handleCollapse}
-				class="mt-2 ml-2 h-6 w-6"
-				class:mdi--arrow-collapse-right={collapsed}
-				class:mdi--arrow-collapse-left={!collapsed}
-			></button>
 			<AdminSidebar
 				{categories}
 				title="Christoph Campaign Studio"
 				subtitle={currentUser?.displayName ?? 'Navigation'}
 			/>
 		</aside>
+		<button
+			type="button"
+			class="resize-handle"
+			class:is-resizing={isResizing}
+			onpointerdown={onResizeHandlePointerDown}
+			aria-label="Resize sidebar"
+			title="Drag to resize"
+		></button>
 		<div class="layout-body">
 			{@render children()}
 		</div>
@@ -59,13 +138,9 @@
 
 	.layout-grid {
 		display: grid;
-		grid-template-columns: 280px minmax(0, 1fr);
+		grid-template-columns: var(--app-sidebar-width, 280px) 10px minmax(0, 1fr);
 		min-height: 100vh;
 		transition: grid-template-columns 200ms ease;
-	}
-
-	.layout-grid.collapsed {
-		grid-template-columns: 40px minmax(0, 1fr);
 	}
 
 	.sidebar-column {
@@ -80,35 +155,41 @@
 		padding: 0;
 	}
 
+	.resize-handle {
+		cursor: col-resize;
+		border: 0;
+		padding: 0;
+		background: linear-gradient(
+			to right,
+			transparent 0,
+			transparent 4px,
+			#d9dbcf 4px,
+			#d9dbcf 6px,
+			transparent 6px,
+			transparent 100%
+		);
+	}
+
+	.resize-handle:hover,
+	.resize-handle.is-resizing {
+		background: linear-gradient(
+			to right,
+			transparent 0,
+			transparent 3px,
+			#94a3b8 3px,
+			#94a3b8 7px,
+			transparent 7px,
+			transparent 100%
+		);
+	}
+
 	@media (max-width: 1200px) {
-		.layout-grid,
-		.layout-grid.collapsed {
+		.layout-grid {
 			grid-template-columns: 1fr;
 		}
-	}
 
-	.mdi--arrow-collapse-left {
-		display: inline-block;
-
-		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M11.92 19.92L4 12l7.92-7.92l1.41 1.42l-5.5 5.5H22v2H7.83l5.51 5.5zM4 12V2H2v20h2z'/%3E%3C/svg%3E");
-		background-color: currentColor;
-		-webkit-mask-image: var(--svg);
-		mask-image: var(--svg);
-		-webkit-mask-repeat: no-repeat;
-		mask-repeat: no-repeat;
-		-webkit-mask-size: 100% 100%;
-		mask-size: 100% 100%;
-	}
-
-	.mdi--arrow-collapse-right {
-		display: inline-block;
-		--svg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M12.08 4.08L20 12l-7.92 7.92l-1.41-1.42l5.5-5.5H2v-2h14.17l-5.5-5.5zM20 12v10h2V2h-2z'/%3E%3C/svg%3E");
-		background-color: currentColor;
-		-webkit-mask-image: var(--svg);
-		mask-image: var(--svg);
-		-webkit-mask-repeat: no-repeat;
-		mask-repeat: no-repeat;
-		-webkit-mask-size: 100% 100%;
-		mask-size: 100% 100%;
+		.resize-handle {
+			display: none;
+		}
 	}
 </style>

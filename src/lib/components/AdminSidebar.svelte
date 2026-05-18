@@ -56,7 +56,7 @@
 		{:else}
 			<a
 				href={toHref(item.href)}
-				class={`px block font-sans text-sm capitalize no-underline transition ${
+				class={`px block pb-1 font-sans text-sm capitalize no-underline transition ${
 					item.level === 1
 						? 'ml-1 border-l border-l-stone-400 pl-2'
 						: item.level === 2
