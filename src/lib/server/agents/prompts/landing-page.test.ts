@@ -35,7 +35,7 @@ const TEST_CONTEXT = {
 };
 
 const REQUIRED_ORDER_RULE =
-	'Preferred section order for narrative flow: seo, immediate_authority_hero, logos_of_trust_ribbon, youtube_grid, keynote_speeches, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer';
+	'Preferred section order for narrative flow: seo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer';
 const YOUTUBE_GRID_RATIONALE_RULE =
 	'when youtube_grid is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale';
 const KEYNOTE_SELECTION_RULE =

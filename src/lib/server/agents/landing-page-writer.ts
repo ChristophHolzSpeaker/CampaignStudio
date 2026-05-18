@@ -965,31 +965,38 @@ function ensureSeoSection(
 	return [seoSection, ...withoutSeo];
 }
 
-function enforceYoutubeGridSectionOrder(sections: PageSection[]): PageSection[] {
-	const logosIndex = sections.findIndex((section) => section.type === 'logos_of_trust_ribbon');
-	const youtubeIndex = sections.findIndex((section) => section.type === 'youtube_grid');
+function enforceNarrativeSoftOrder(sections: PageSection[]): PageSection[] {
+	const preferredSequence: PageSectionType[] = [
+		'immediate_authority_hero',
+		'youtube_grid',
+		'keynote_speeches',
+		'logos_of_trust_ribbon'
+	];
 
-	if (logosIndex < 0 || youtubeIndex < 0 || youtubeIndex === logosIndex + 1) {
+	const presentSequence = preferredSequence.filter((type) =>
+		sections.some((section) => section.type === type)
+	);
+
+	if (presentSequence.length < 2) {
 		return sections;
 	}
 
 	const ordered = [...sections];
-	const [youtubeSection] = ordered.splice(youtubeIndex, 1);
-	ordered.splice(logosIndex + 1, 0, youtubeSection);
-	return ordered;
-}
+	for (let index = 1; index < presentSequence.length; index += 1) {
+		const previousType = presentSequence[index - 1];
+		const currentType = presentSequence[index];
+		const previousIndex = ordered.findIndex((section) => section.type === previousType);
+		const currentIndex = ordered.findIndex((section) => section.type === currentType);
 
-function enforceKeynoteSectionOrder(sections: PageSection[]): PageSection[] {
-	const logosIndex = sections.findIndex((section) => section.type === 'logos_of_trust_ribbon');
-	const keynoteIndex = sections.findIndex((section) => section.type === 'keynote_speeches');
+		if (previousIndex < 0 || currentIndex < 0 || currentIndex > previousIndex) {
+			continue;
+		}
 
-	if (logosIndex < 0 || keynoteIndex < 0 || keynoteIndex === logosIndex + 1) {
-		return sections;
+		const [sectionToMove] = ordered.splice(currentIndex, 1);
+		const insertAfterIndex = ordered.findIndex((section) => section.type === previousType);
+		ordered.splice(insertAfterIndex + 1, 0, sectionToMove);
 	}
 
-	const ordered = [...sections];
-	const [keynoteSection] = ordered.splice(keynoteIndex, 1);
-	ordered.splice(logosIndex + 1, 0, keynoteSection);
 	return ordered;
 }
 
@@ -1260,8 +1267,8 @@ Corrective rules:
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
-- Preferred section order for narrative flow: seo, immediate_authority_hero, logos_of_trust_ribbon, youtube_grid, keynote_speeches, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
-- When both logos_of_trust_ribbon and youtube_grid are present, place youtube_grid immediately after logos_of_trust_ribbon.
+- Preferred section order for narrative flow: seo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
+- Soft preference: when immediate_authority_hero, youtube_grid, keynote_speeches, and logos_of_trust_ribbon are all present, place them in this narrative order: immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
 - For hybrid_content_section, intro is required.
@@ -1351,7 +1358,7 @@ function hydrateLandingPageWithAssets(
 		hydrateSectionWithAssets(section, input, plan)
 	);
 
-	const orderedSections = enforceYoutubeGridSectionOrder(enforceKeynoteSectionOrder(mvpSections));
+	const orderedSections = enforceNarrativeSoftOrder(mvpSections);
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
@@ -1404,14 +1411,6 @@ function collectLandingPageDocumentMvpIssues(
 		if (!sectionTypes.includes(requiredSectionType)) {
 			issues.push(`Landing page must include ${requiredSectionType} section.`);
 		}
-	}
-
-	const logosIndex = sectionTypes.indexOf('logos_of_trust_ribbon');
-	const youtubeGridIndex = sectionTypes.indexOf('youtube_grid');
-	if (logosIndex >= 0 && youtubeGridIndex >= 0 && youtubeGridIndex !== logosIndex + 1) {
-		issues.push(
-			'Landing page must place youtube_grid immediately after logos_of_trust_ribbon when both are present.'
-		);
 	}
 
 	return issues;

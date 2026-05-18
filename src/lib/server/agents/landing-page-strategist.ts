@@ -30,7 +30,7 @@ Corrective rules:
 - use only these allowed section types: ${allowedSectionTypes.join(', ')}
 - include these required section types: ${requiredSectionTypes.join(', ')}
 - sectionPlan must not contain duplicate section types
-- preferred section order for narrative flow: seo, immediate_authority_hero, logos_of_trust_ribbon, youtube_grid, keynote_speeches, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer
+- preferred section order for narrative flow: seo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer
 - when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos and assetPlan.hero.imageAssetId from input.assets.assetCatalog.heroImages
 - when youtube_grid is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 4 IDs from input.assets.assetCatalog.speakerInActionVideos and include assetPlan.speakerInAction.rationale
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.primaryImageAssetId from input.assets.assetCatalog.hybridSupportingImages
@@ -39,7 +39,7 @@ Corrective rules:
 - when hybrid_content_section is selected, choose one primaryImageAssetId that best supports the section narrative
 - youtube_grid is required when it appears in requiredSectionTypes
 - keynote_speeches is required when it appears in requiredSectionTypes
-- when both youtube_grid and logos_of_trust_ribbon are selected, place youtube_grid immediately after logos_of_trust_ribbon
+- soft preference: when immediate_authority_hero, youtube_grid, keynote_speeches, and logos_of_trust_ribbon are selected, place them in this narrative order: immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon
 - when both frictionless_funnel_booking and proof_of_performance are selected, place frictionless_funnel_booking above proof_of_performance
 - never invent logo IDs
 - never invent media IDs or media URLs

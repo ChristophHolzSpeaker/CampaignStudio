@@ -137,14 +137,6 @@ export function validateLandingPagePlanSections(
 			throw new Error(`Strategist plan missing required section type: ${requiredSectionType}`);
 		}
 	}
-
-	const logosIndex = sectionTypes.indexOf('logos_of_trust_ribbon');
-	const youtubeGridIndex = sectionTypes.indexOf('youtube_grid');
-	if (logosIndex >= 0 && youtubeGridIndex >= 0 && youtubeGridIndex !== logosIndex + 1) {
-		throw new Error(
-			'Strategist plan must place youtube_grid immediately after logos_of_trust_ribbon when both are present.'
-		);
-	}
 }
 
 export type LandingPagePlan = z.infer<typeof landingPagePlanSchema>;
