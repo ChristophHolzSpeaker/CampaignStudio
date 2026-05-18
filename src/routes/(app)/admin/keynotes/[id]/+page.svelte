@@ -13,7 +13,7 @@
 <section class="bookings-content space-y-8 p-6 lg:p-10">
 	<header class="mb-6">
 		<h1 class="text-3xl font-semibold tracking-tight">Edit keynote</h1>
-		<p class="mt-2 text-sm text-neutral-600">Update keynote title, summary, and image.</p>
+		<p class="mt-2 text-sm text-neutral-600">Update keynote metadata, full copy, and image.</p>
 	</header>
 
 	<form
@@ -30,6 +30,42 @@
 				value={data.keynote.keynote_title}
 				class="rounded border border-neutral-300 px-3 py-2"
 			/>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Subtitle</span>
+			<input
+				name="subtitle"
+				value={data.keynote.subtitle ?? ''}
+				class="rounded border border-neutral-300 px-3 py-2"
+			/>
+		</label>
+
+		<div class="grid gap-5 md:grid-cols-2">
+			<label class="flex flex-col gap-1 text-sm">
+				<span>Theme</span>
+				<input
+					name="theme"
+					value={data.keynote.theme ?? ''}
+					class="rounded border border-neutral-300 px-3 py-2"
+				/>
+			</label>
+
+			<label class="flex flex-col gap-1 text-sm">
+				<span>Language</span>
+				<input
+					name="language"
+					value={data.keynote.language ?? ''}
+					class="rounded border border-neutral-300 px-3 py-2"
+				/>
+			</label>
+		</div>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Audience</span>
+			<textarea name="audience" rows="4" class="rounded border border-neutral-300 px-3 py-2"
+				>{data.keynote.audience ?? ''}</textarea
+			>
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
@@ -66,6 +102,34 @@
 				required
 				rows="6"
 				class="rounded border border-neutral-300 px-3 py-2">{data.keynote.keynote_summary}</textarea
+			>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Moderation intro</span>
+			<textarea name="moderation" rows="6" class="rounded border border-neutral-300 px-3 py-2"
+				>{data.keynote.moderation ?? ''}</textarea
+			>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Long copy (HTML)</span>
+			<textarea name="keynoteLong" rows="14" class="rounded border border-neutral-300 px-3 py-2"
+				>{data.keynote.keynote_long ?? ''}</textarea
+			>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Short copy</span>
+			<textarea name="keynoteShort" rows="6" class="rounded border border-neutral-300 px-3 py-2"
+				>{data.keynote.keynote_short ?? ''}</textarea
+			>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Speaker bio</span>
+			<textarea name="speaker" rows="6" class="rounded border border-neutral-300 px-3 py-2"
+				>{data.keynote.speaker ?? ''}</textarea
 			>
 		</label>
 

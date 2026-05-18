@@ -47,7 +47,7 @@ export const logosOfTrustRibbonPropsSchema = z.object({
 });
 
 export const youtubeGridVideoItemSchema = z.object({
-	url: z.string().trim().url()
+	url: z.string().trim()
 });
 
 export const youtubeGridPropsSchema = z.object({
@@ -57,7 +57,7 @@ export const youtubeGridPropsSchema = z.object({
 export const keynoteSpeechItemSchema = z.object({
 	id: z.string().trim().min(1),
 	title: z.string().trim().min(1),
-	imageUrl: z.string().trim().url(),
+	imageUrl: z.string().trim(),
 	summary: z.string().trim().min(1)
 });
 

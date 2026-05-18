@@ -38,14 +38,16 @@
 
 <aside class="flex h-full min-h-screen flex-col gap-8 overflow-y-auto bg-[#f4f4f4] px-6 py-8">
 	<div>
-		<p class="text-[0.65rem] tracking-[0.18em] text-[#777] uppercase">{subtitle}</p>
-		<h2 class="mt-2 text-xl">{title}</h2>
+		<p class="text-[0.65rem] tracking-[0.18em] whitespace-nowrap text-[#777] uppercase">
+			{subtitle}
+		</p>
+		<h2 class="mt-2 text-xl whitespace-nowrap">{title}</h2>
 	</div>
 
 	{#snippet navItem(item: AdminSidebarNavItem)}
 		{#if item.disabled || !item.href}
 			<div
-				class={`px-2 py-3 font-sans text-xs text-[#9f9f9f] capitalize opacity-70 ${
+				class={`px-2 py-3 font-sans text-xs whitespace-nowrap text-[#9f9f9f] capitalize opacity-70 ${
 					item.level === 1 ? 'pl-6' : item.level === 2 ? 'pl-10' : ''
 				}`}
 				aria-disabled="true"
@@ -56,7 +58,7 @@
 		{:else}
 			<a
 				href={toHref(item.href)}
-				class={`px block pb-1 font-sans text-sm capitalize no-underline transition ${
+				class={`px block pb-1 font-sans text-sm whitespace-nowrap capitalize no-underline transition ${
 					item.level === 1
 						? 'ml-1 border-l border-l-stone-400 pl-2'
 						: item.level === 2
@@ -78,8 +80,8 @@
 		{/each}
 	</nav>
 
-	<div class="mt-auto flex flex-col gap-2 font-sans capitalize">
-		<a class="no-underline" href="/admin/documentation">Documentation</a>
-		<a href="/signout" class="text-left no-underline">Log Out</a>
+	<div class="mt-auto flex flex-col gap-2 font-sans text-xs whitespace-nowrap capitalize">
+		<a class="font-sans no-underline" href="/admin/documentation">Documentation</a>
+		<a href="/signout" class="text-left font-sans no-underline">Log Out</a>
 	</div>
 </aside>

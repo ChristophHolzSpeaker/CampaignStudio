@@ -58,6 +58,8 @@ type KeynoteRow = {
 	id: string;
 	title: string;
 	summary: string;
+	audience: string | null;
+	keynoteShort: string | null;
 	imageUrl: string;
 	imageAlt: string;
 };
@@ -124,6 +126,8 @@ async function loadActiveKeynotes(): Promise<KeynoteRow[]> {
 			id: keynotes.id,
 			title: keynotes.keynote_title,
 			summary: keynotes.keynote_summary,
+			audience: keynotes.audience,
+			keynoteShort: keynotes.keynote_short,
 			imageUrl: keynotes.image_url,
 			imageAlt: keynotes.image_alt
 		})
@@ -387,6 +391,8 @@ function buildKeynoteCatalog(rows: KeynoteRow[]): KeynoteOption[] {
 		id: keynote.id,
 		title: keynote.title,
 		summary: keynote.summary,
+		audience: keynote.audience ?? '',
+		keynoteShort: keynote.keynoteShort ?? keynote.summary,
 		imageUrl: keynote.imageUrl,
 		imageAlt: keynote.imageAlt
 	}));
