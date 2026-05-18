@@ -86,6 +86,8 @@ export const keynoteOptionSchema = z.object({
 	id: z.string().trim().min(1),
 	title: z.string().trim().min(1),
 	summary: z.string().trim().min(1),
+	audience: z.string().trim(),
+	keynoteShort: z.string().trim(),
 	imageUrl: z.string().trim().url(),
 	imageAlt: z.string().trim().min(1)
 });

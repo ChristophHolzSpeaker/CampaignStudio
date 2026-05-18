@@ -510,7 +510,59 @@ function resolveKeynoteSelection(
 		return resolved.slice(0, 3);
 	}
 
-	for (const fallbackKeynote of catalog) {
+	const normalizeText = (value: string): string => value.trim().toLowerCase();
+	const tokenizeText = (value: string): string[] =>
+		normalizeText(value)
+			.split(/[^a-z0-9]+/)
+			.filter((token) => token.length >= 3);
+	const contextTokens = new Set(
+		[
+			input.campaign.audience,
+			input.campaign.topic,
+			input.campaign.format,
+			input.adPackage.messagingAngle,
+			input.adGroup.intentSummary
+		].flatMap((value) => tokenizeText(value))
+	);
+	const scoreKeynoteFit = (keynote: (typeof catalog)[number]): number => {
+		if (contextTokens.size === 0) {
+			return 0;
+		}
+
+		const weightedFields = [
+			{ text: keynote.audience, weight: 4 },
+			{ text: keynote.keynoteShort || keynote.summary, weight: 3 },
+			{ text: keynote.title, weight: 2 },
+			{ text: keynote.summary, weight: 1 }
+		];
+
+		let score = 0;
+		for (const field of weightedFields) {
+			const tokens = tokenizeText(field.text);
+			if (tokens.length === 0) {
+				continue;
+			}
+
+			for (const token of tokens) {
+				if (contextTokens.has(token)) {
+					score += field.weight;
+				}
+			}
+		}
+
+		return score;
+	};
+
+	const rankedCatalog = [...catalog].sort((left, right) => {
+		const scoreDelta = scoreKeynoteFit(right) - scoreKeynoteFit(left);
+		if (scoreDelta !== 0) {
+			return scoreDelta;
+		}
+
+		return left.id.localeCompare(right.id);
+	});
+
+	for (const fallbackKeynote of rankedCatalog) {
 		if (resolved.length >= 3) {
 			break;
 		}
@@ -1203,7 +1255,7 @@ Corrective rules:
 - For hero media, use plan.assetPlan.hero.videoAssetId with input.assets.assetCatalog.heroVideos.
 - For youtube_grid media, use plan.assetPlan.speakerInAction.videoAssetIds with input.assets.assetCatalog.speakerInActionVideos.
 - For hybrid primary visual, use plan.assetPlan.hybridContentSection.primaryImageAssetId with input.assets.assetCatalog.hybridSupportingImages.
-- For keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog.
+- For keynote_speeches, use plan.assetPlan.keynoteSpeeches.keynoteIds resolved against input.assets.assetCatalog.keynoteCatalog.
 - Never invent media IDs or media URLs.
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
@@ -1220,7 +1272,7 @@ Corrective rules:
 - For hybrid_content_section, deepDiveTitle and deepDiveItems are required.
 - For hybrid_content_section, bias deepDiveTitle to "Why Christoph" and focus deepDiveItems on qualification proof.
 - For keynote_speeches, title and intro are required.
-- For keynote_speeches, include keynoteIds with exactly 3 values from input.assets.assetCatalog.keynoteCatalog order.
+- For keynote_speeches, include keynoteIds with exactly 3 values from plan.assetPlan.keynoteSpeeches.keynoteIds.
 
 Landing page generation input:
 ${JSON.stringify(input, null, 2)}
