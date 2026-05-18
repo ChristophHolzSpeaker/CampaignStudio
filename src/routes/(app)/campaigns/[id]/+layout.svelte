@@ -71,75 +71,78 @@
 	const publishAction = $derived(publishCampaign.for(String(getCampaign()?.id ?? 'none')));
 </script>
 
-<section class="p-6 lg:p-10">
-	<div class="mx-auto">
-		<header class="border border-stone-100 bg-white p-4">
-			<div class="">
-				<div class="flex items-center justify-between gap-2">
-					<div>
-						<span
-							class="rounded px-3 py-1 font-sans text-[10px] font-bold text-white uppercase"
-							class:bg-sky-400={getCampaign()?.status === 'draft'}
-							class:bg-green-400={getCampaign()?.status === 'published'}
-							class:bg-slate-400={getCampaign()?.status === 'archived'}
-						>
-							{(getCampaign()?.status ?? 'draft').toUpperCase()}
-						</span>
-						<span class="font-sans text-[10px] font-medium text-slate-400 uppercase">
-							Created {formatFriendlyDate(getCampaign()?.created_at)}
-						</span>
-					</div>
-					<form {...publishAction} class="flex justify-end">
-						<input type="hidden" name="id" value={getCampaign()?.id} />
-
-						<input type="hidden" name="target_status" value={targetStatus(getCampaign()?.status)} />
-						<Button>
-							{publishLabel(getCampaign()?.status)}
-						</Button>
-					</form>
-				</div>
-				<h1 class="mb-2 text-3xl leading-tight font-extrabold tracking-tighter text-on-surface">
+<header class="border-b border-stone-300 bg-white px-4 py-2">
+	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+		<!-- Left: Campaign identity -->
+		<div class="min-w-0 flex-1">
+			<div class="flex min-w-0 items-center gap-2">
+				<h1
+					class="truncate font-sans text-base leading-tight font-extrabold tracking-tighter text-on-surface"
+				>
 					{getCampaign()?.name ?? 'Campaign overview'}
 				</h1>
-				<p class="font-medium text-slate-500">
-					{getCampaign()?.topic ?? 'Campaign topic pending.'}
-					{getCampaign()?.audience ? ` · ${getCampaign()?.audience}` : ''}
-				</p>
+
+				<span
+					class="shrink-0 rounded px-2 py-0.5 font-sans text-[9px] font-bold text-white uppercase"
+					class:bg-sky-400={getCampaign()?.status === 'draft'}
+					class:bg-green-400={getCampaign()?.status === 'published'}
+					class:bg-slate-400={getCampaign()?.status === 'archived'}
+				>
+					{(getCampaign()?.status ?? 'draft').toUpperCase()}
+				</span>
 			</div>
-			{#if getCampaign()?.status === 'published'}
-				<div>
+
+			<div class="mt-0.5 flex min-w-0 items-center gap-2">
+				<span class="shrink-0 font-sans text-[10px] font-medium text-slate-400 uppercase">
+					Created {formatFriendlyDate(getCampaign()?.created_at)}
+				</span>
+
+				{#if getCampaign()?.status === 'published'}
+					<span class="text-[10px] text-slate-300">•</span>
+
 					{#if getLiveLandingUrl()}
-						<div class="space-x-3">
+						<div class="flex min-w-0 items-center gap-1">
 							<a
 								href={getLiveLandingUrl()}
-								class="hover:decoration-underline font-sans text-sm break-all text-blue-600 lowercase"
+								class="truncate font-sans text-[11px] text-blue-600 lowercase hover:underline"
 								target="_blank"
+								title={getLiveLandingUrl()}
 							>
 								{copied ? 'Copied!' : getLiveLandingUrl()}
 							</a>
 
 							<button
-								class="mdi--content-copy inline-block h-4 w-4 cursor-pointer hover:text-primary"
+								class="mdi--content-copy inline-block h-3.5 w-3.5 shrink-0 cursor-pointer text-slate-400 hover:text-primary"
 								onclick={copyLiveLandingUrl}
 								aria-label="Copy link to clipboard"
+								type="button"
 							></button>
-
-							{#if copyStatus === 'error'}
-								<p class="text-[11px] text-red-500">
-									Couldn't copy automatically. Copy it manually.
-								</p>
-							{/if}
 						</div>
 					{:else}
-						<p class="text-xs text-slate-500 italic">
+						<p class="truncate text-[11px] text-slate-500 italic">
 							Live URL will appear once the landing page slug is available.
 						</p>
 					{/if}
-				</div>
+				{/if}
+			</div>
+
+			{#if copyStatus === 'error'}
+				<p class="mt-1 text-[11px] text-red-500">Couldn't copy automatically. Copy it manually.</p>
 			{/if}
-		</header>
+		</div>
+
+		<!-- Right: Action -->
+		<form {...publishAction} class="flex shrink-0 justify-end">
+			<input type="hidden" name="id" value={getCampaign()?.id} />
+			<input type="hidden" name="target_status" value={targetStatus(getCampaign()?.status)} />
+
+			<Button>
+				{publishLabel(getCampaign()?.status)}
+			</Button>
+		</form>
 	</div>
-</section>
+</header>
+
 {@render children()}
 
 <style>
