@@ -128,7 +128,8 @@ Rules:
 	* when youtube_grid is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
 	* when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
-	* when keynote_speeches is selected, keynote selection is automatic from the first three entries in input.assets.assetCatalog.keynoteCatalog
+	* when keynote_speeches is selected, choose exactly three keynote IDs from input.assets.assetCatalog.keynoteCatalog in assetPlan.keynoteSpeeches.keynoteIds
+	* keynote selection must prioritize strategy fit by matching campaign and ad intent against keynote audience and keynoteShort fields
 	* youtube_grid is required when it appears in requiredSectionTypes
 	* keynote_speeches is required when it is in requiredSectionTypes
 	* when both logos_of_trust_ribbon and youtube_grid are selected, place youtube_grid immediately after logos_of_trust_ribbon
@@ -174,6 +175,7 @@ Return exactly one valid JSON object with this shape:
 		  "rationale": "string"
 		},
 		"keynoteSpeeches": {
+		  "keynoteIds": ["string"],
 		  "rationale": "string"
 		}
   }
@@ -269,7 +271,7 @@ Asset usage requirements:
 	* for hero media, resolve the selected ID from plan.assetPlan.hero.videoAssetId against input.assets.assetCatalog.heroVideos
 	* for hero image, resolve the selected ID from plan.assetPlan.hero.imageAssetId against input.assets.assetCatalog.heroImages
 * for hybrid primary visual, resolve ID from plan.assetPlan.hybridContentSection.primaryImageAssetId against input.assets.assetCatalog.hybridSupportingImages
-* for keynote_speeches, use the first three entries from input.assets.assetCatalog.keynoteCatalog
+* for keynote_speeches, resolve IDs from plan.assetPlan.keynoteSpeeches.keynoteIds against input.assets.assetCatalog.keynoteCatalog
 * for compliance footer fields, use input.assets.complianceDefaults
 * use only approved assets listed in input.assets
 	* do not invent assets outside input.assets
@@ -294,7 +296,7 @@ Hybrid section contract requirements:
 Keynote speeches contract requirements:
 
 * if keynote_speeches is included, props.title and props.intro are required
-* if keynote_speeches is included, props.keynoteIds must contain exactly 3 IDs from input.assets.assetCatalog.keynoteCatalog (first three by order)
+* if keynote_speeches is included, props.keynoteIds must contain exactly 3 IDs from plan.assetPlan.keynoteSpeeches.keynoteIds
 * if keynote_speeches is included, do not invent keynote entries or media URLs; keynote entries are resolved server-side from approved catalog`,
 		promptLibraryGuidance
 	);

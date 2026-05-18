@@ -282,7 +282,7 @@
 		<div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
 			<div class="space-y-2">
 				<div class="flex items-center gap-1 text-[0.7rem] tracking-[0.3em] text-[#777] uppercase">
-					<span>Prompt Library</span>
+					<span>Campaign Library</span>
 					<span class="text-[1rem] text-(--accent)">›</span>
 					<span>Editor</span>
 				</div>
@@ -301,7 +301,7 @@
 		<div class="flex gap-2">
 			<button
 				type="button"
-				class="horizontal-sm vertical-xs cursor-pointer px-3 uppercase"
+				class="btn horizontal-sm vertical-xs cursor-pointer px-3 uppercase"
 				class:bg-primary={mode === 'planner'}
 				class:text-white={mode === 'planner'}
 				class:bg-white={mode !== 'planner'}
@@ -312,7 +312,7 @@
 			</button>
 			<button
 				type="button"
-				class="horizontal-sm vertical-xs cursor-pointer px-3 uppercase"
+				class="btn horizontal-sm vertical-xs cursor-pointer px-3 uppercase"
 				class:bg-primary={mode === 'manual'}
 				class:text-white={mode === 'manual'}
 				class:bg-white={mode !== 'manual'}
