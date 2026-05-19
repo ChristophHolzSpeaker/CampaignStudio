@@ -29,6 +29,13 @@ const heroImageSwapInputSchema = z.object({
 	assetId: z.string().trim().min(1)
 });
 
+const layoutToggleInputSchema = z.object({
+	campaignId: z.number().int().positive(),
+	campaignPageId: z.number().int().positive(),
+	sectionIndex: z.number().int().min(0),
+	sectionType: z.literal('immediate_authority_hero')
+});
+
 function canEditField(field: HeroField, value: unknown): boolean {
 	if (field === 'eyebrow') {
 		return value === undefined || typeof value === 'string';
@@ -365,3 +372,136 @@ export const saveImmediateAuthorityHeroImage = command(heroImageSwapInputSchema,
 		createdSession: true
 	};
 });
+
+export const toggleImmediateAuthorityHeroLayout = command(
+	layoutToggleInputSchema,
+	async (input) => {
+		const event = getRequestEvent();
+		const {
+			data: { user }
+		} = await event.locals.supabase.auth.getUser();
+
+		if (!user) {
+			throw new Error('Unauthorized');
+		}
+
+		const [campaignRecord] = await db
+			.select({ id: campaigns.id, status: campaigns.status })
+			.from(campaigns)
+			.where(eq(campaigns.id, input.campaignId))
+			.limit(1);
+
+		if (!campaignRecord) {
+			throw new Error('Campaign not found');
+		}
+
+		if (campaignRecord.status === 'published') {
+			throw new Error('Inline edits are only allowed in preview mode');
+		}
+
+		const [sourcePageRecord] = await db
+			.select({
+				id: campaign_pages.id,
+				campaignId: campaign_pages.campaign_id,
+				structuredContentJson: campaign_pages.structured_content_json,
+				isPublished: campaign_pages.is_published,
+				changeNote: campaign_pages.change_note,
+				versionNumber: campaign_pages.version_number
+			})
+			.from(campaign_pages)
+			.where(
+				and(
+					eq(campaign_pages.id, input.campaignPageId),
+					eq(campaign_pages.campaign_id, input.campaignId)
+				)
+			)
+			.limit(1);
+
+		if (!sourcePageRecord) {
+			throw new Error('Campaign page not found');
+		}
+
+		if (sourcePageRecord.isPublished) {
+			throw new Error('Published pages cannot be edited inline');
+		}
+
+		const page = parseLandingPageDocument(sourcePageRecord.structuredContentJson);
+		const section = page.sections[input.sectionIndex];
+
+		if (!section) {
+			throw new Error('Section not found');
+		}
+
+		if (
+			section.type !== 'immediate_authority_hero' ||
+			input.sectionType !== 'immediate_authority_hero'
+		) {
+			throw new Error('Only Immediate Authority Hero layout can be edited here');
+		}
+
+		const nextLayout = section.props.layout === 'left' ? 'right' : 'left';
+
+		const updatedPage = {
+			...page,
+			sections: page.sections.map((item, index) => {
+				if (index !== input.sectionIndex || item.type !== 'immediate_authority_hero') {
+					return item;
+				}
+
+				return {
+					...item,
+					props: {
+						...item.props,
+						layout: nextLayout
+					}
+				};
+			})
+		};
+
+		const isExistingSession = (sourcePageRecord.changeNote ?? '').startsWith(
+			INLINE_EDIT_SESSION_PREFIX
+		);
+
+		if (isExistingSession) {
+			await db
+				.update(campaign_pages)
+				.set({
+					structured_content_json: updatedPage,
+					updated_at: new Date()
+				})
+				.where(eq(campaign_pages.id, sourcePageRecord.id));
+
+			return {
+				saved: true,
+				campaignPageId: sourcePageRecord.id,
+				layout: nextLayout,
+				createdSession: false
+			};
+		}
+
+		const [latestPage] = await db
+			.select({ id: campaign_pages.id })
+			.from(campaign_pages)
+			.where(eq(campaign_pages.campaign_id, input.campaignId))
+			.orderBy(desc(campaign_pages.version_number))
+			.limit(1);
+
+		if (!latestPage || latestPage.id !== sourcePageRecord.id) {
+			throw new Error('Inline edits are only available on the latest preview version');
+		}
+
+		const persisted = await persistGeneratedLandingPage(
+			input.campaignId,
+			updatedPage,
+			undefined,
+			`${INLINE_EDIT_SESSION_PREFIX} (v${sourcePageRecord.versionNumber})`
+		);
+
+		return {
+			saved: true,
+			campaignPageId: persisted.campaignPageId,
+			layout: nextLayout,
+			createdSession: true
+		};
+	}
+);

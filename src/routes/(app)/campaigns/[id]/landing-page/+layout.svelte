@@ -114,10 +114,6 @@
 
 <div class="landing-shell" style={`--settings-width: ${settingsWidth}px;`}>
 	<section class="preview-column">
-		<CampaignHeader
-			campaign={campaignData.campaign ?? null}
-			liveLandingUrl={campaignData.liveLandingUrl ?? null}
-		/>
 		<div class="preview-content">
 			{@render children()}
 		</div>
@@ -131,7 +127,12 @@
 		title="Drag to resize"
 	></button>
 	<aside class="settings-column" aria-label="Landing page settings rail">
-		<LandingPageSettingsRail />
+		<LandingPageSettingsRail>
+			<CampaignHeader
+				campaign={campaignData.campaign ?? null}
+				liveLandingUrl={campaignData.liveLandingUrl ?? null}
+			/>
+		</LandingPageSettingsRail>
 	</aside>
 </div>
 
@@ -139,27 +140,38 @@
 	.landing-shell {
 		display: grid;
 		grid-template-columns: minmax(0, 1fr) 10px var(--settings-width, 280px);
-		min-height: 100dvh;
+		height: 100dvh;
+		min-height: 0;
+		overflow: hidden;
+		align-items: stretch;
 	}
 
 	.preview-column {
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
 	}
 
 	.preview-content {
 		min-width: 0;
+		min-height: 0;
+		flex: 1;
+		overflow-y: auto;
 	}
 
 	.settings-column {
+		min-width: 0;
+		min-height: 0;
 		height: 100dvh;
-		overflow-y: auto;
+		overflow: hidden;
 		border-left: 1px solid #d9dbcf;
 		background: #f8fafc;
 	}
 
 	.resize-handle {
+		height: 100dvh;
 		cursor: col-resize;
 		border: 0;
 		padding: 0;

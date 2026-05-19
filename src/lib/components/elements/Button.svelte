@@ -2,7 +2,7 @@
 	type Props = {
 		isSubmitting?: undefined | boolean;
 		children?: any;
-		variant?: 'primary' | 'secondary' | 'dark' | 'outline';
+		variant?: 'primary' | 'secondary' | 'dark' | 'outline' | 'small';
 		onclick?: () => void;
 		type?: 'button' | 'reset' | 'submit' | null | undefined;
 	};
@@ -20,7 +20,8 @@
 		primary: 'btn-primary',
 		dark: 'btn-dark',
 		secondary: 'btn-secondary',
-		outline: 'btn-outline'
+		outline: 'btn-outline',
+		small: 'btn-primary p-2 text-sm font-sans'
 	};
 </script>
 
