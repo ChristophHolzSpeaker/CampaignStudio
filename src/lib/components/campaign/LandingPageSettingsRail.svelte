@@ -291,7 +291,7 @@
 						method="POST"
 						use:enhance={handleEditSubmit}
 						action="?/editPage"
-						class="absolute inset-x-0 bottom-0 z-20 border-t border-stone-300 bg-white p-3.5"
+						class="absolute inset-x-0 bottom-0 z-20 flex flex-col border-t border-stone-300 bg-white p-3.5"
 					>
 						<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
 						<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
