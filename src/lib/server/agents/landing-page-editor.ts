@@ -10,12 +10,15 @@ import {
 	campaign_ad_groups,
 	campaign_ad_packages,
 	campaign_pages,
-	campaigns
+	campaigns,
+	media_assets
 } from '$lib/server/db/schema';
 import { createRunId, traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq } from 'drizzle-orm';
 import type { ZodIssue } from 'zod';
 import { loadLandingPageAssets } from './config/landing-page-assets-store';
+import { landingPageOperationsEnvelopeSchema } from './landing-page-operations';
+import { applyLandingPageOperations } from './landing-page-patch-executor';
 import { persistGeneratedLandingPage } from './landing-page-pipeline';
 import { resolveEditorRequiredSectionTypes, resolvePageCapabilities } from './section-definitions';
 
@@ -38,131 +41,129 @@ function promptWantsLargeEmailHero(changePrompt: string): boolean {
 	return normalized.includes('email') && normalized.includes('hero');
 }
 
-function normalizeEditedResponse(input: unknown): unknown {
-	if (typeof input !== 'object' || input === null) {
-		return input;
-	}
-
-	const candidate = input as { sections?: unknown };
-	if (!Array.isArray(candidate.sections)) {
-		return input;
-	}
-
-	const normalizedSections = candidate.sections.map((section) => {
-		if (typeof section !== 'object' || section === null) {
-			return section;
-		}
-
-		const sectionRecord = section as { type?: unknown; props?: unknown };
-		const rawType = typeof sectionRecord.type === 'string' ? sectionRecord.type : undefined;
-		const props =
-			typeof sectionRecord.props === 'object' && sectionRecord.props !== null
-				? { ...(sectionRecord.props as Record<string, unknown>) }
-				: {};
-
-		if (rawType === 'booklet_cta_section') {
-			const labelText =
-				typeof props.labelText === 'string'
-					? props.labelText
-					: typeof props.label === 'string'
-						? props.label
-						: 'Free booklet';
-			const heading =
-				typeof props.heading === 'string'
-					? props.heading
-					: typeof props.headline === 'string'
-						? props.headline
-						: 'Meet Christoph in booklet form';
-			const paragraph =
-				typeof props.paragraph === 'string'
-					? props.paragraph
-					: typeof props.subheadline === 'string'
-						? props.subheadline
-						: 'Get a quick introduction to Christoph and his keynote themes.';
-			const buttonCtaText =
-				typeof props.buttonCtaText === 'string'
-					? props.buttonCtaText
-					: typeof props.ctaLabel === 'string'
-						? props.ctaLabel
-						: 'Download the booklet';
-
-			return {
-				...sectionRecord,
-				type: 'booklet_download_cta',
-				props: {
-					labelText,
-					heading,
-					paragraph,
-					buttonCtaText
-				}
-			};
-		}
-
-		if (rawType === 'hero_email_capture' || rawType === 'hero_email_capture_large') {
-			const heading =
-				typeof props.heading === 'string'
-					? props.heading
-					: typeof props.headline === 'string'
-						? props.headline
-						: 'Get event-fit insights in your inbox';
-			const labelText =
-				typeof props.labelText === 'string'
-					? props.labelText
-					: typeof props.placeholder === 'string'
-						? props.placeholder
-						: typeof props.buttonLabel === 'string'
-							? props.buttonLabel
-							: 'Enter your work email for updates';
-
-			return {
-				...sectionRecord,
-				type: 'hero_large_email_cta',
-				props: {
-					heading,
-					labelText
-				}
-			};
-		}
-
-		return section;
-	});
-
-	return {
-		...input,
-		sections: normalizedSections
-	};
-}
-
 function buildEditorSystemPrompt(): string {
 	return `You are a strict JSON editor for Campaign Studio landing page documents.
 
-You must update an existing landing page JSON document according to an edit request.
+You must convert an edit request into deterministic edit operations.
 
 Rules:
 - Return JSON only. No markdown, no commentary.
 - Keep changes surgical and minimal relative to the request.
-- Preserve schema validity at all times.
-- Keep section props compatible with each section type contract.
-- Keep exactly one seo section and it must stay first.
-- Keep exactly one compliance_transparency_footer section.
-- Do not use unknown section types.
+- Use operation types only: update_section_content, update_section_layout, replace_media, reorder_section.
+- Do not invent operation types or fields.
+- sectionType values must match existing section types from current landing page.
+- For update_section_content, always provide contentPatch as an object.
+- For update_section_layout, always provide layoutPatch as an object.
+- For hero orientation requests, use update_section_layout with layoutPatch.layout set to "left" or "right".
+- Do not use orientation or imagePosition keys for hero orientation.
 - If media changes are requested, only use approved media URLs from the provided asset catalog.
+- For youtube_grid, only use video URLs from approved media assets entries marked for youtube_grid.
 - Do not invent media URLs, IDs, testimonials, or logos.
 
 ${sectionContractGuidance}
 
-The output must be a valid landing page document object with this shape:
+The output must be a valid JSON object with this shape:
 {
-  "version": 1,
-  "title": "string",
-  "slug": "string (optional)",
-  "sections": [
+  "operations": [
     {
-      "type": "section_type",
-      "props": { ... }
+      "type": "update_section_content | update_section_layout | replace_media | reorder_section",
+      "sectionType": "string"
     }
   ]
-}`;
+}
+
+Valid examples:
+- { "operations": [{ "type": "update_section_content", "sectionType": "booklet_download_cta", "contentPatch": { "paragraph": "New paragraph" } }] }
+- { "operations": [{ "type": "update_section_layout", "sectionType": "immediate_authority_hero", "layoutPatch": { "layout": "right" } }] }
+- { "operations": [{ "type": "replace_media", "sectionType": "immediate_authority_hero", "field": "heroImageUrl", "value": "https://..." }] }
+- { "operations": [{ "type": "reorder_section", "sectionType": "proof_of_performance", "moveAfterSectionType": "frictionless_funnel_booking" }] }`;
+}
+
+function operationsTouchYoutubeGrid(operations: Array<{ sectionType: string }>): boolean {
+	return operations.some((operation) => operation.sectionType === 'youtube_grid');
+}
+
+async function loadApprovedYoutubeGridVideosFromMediaAssets(): Promise<
+	Array<{ id: string; title: string; videoEmbedUrl: string }>
+> {
+	const rows = await db
+		.select({
+			id: media_assets.id,
+			title: media_assets.title,
+			primaryUrl: media_assets.primary_url,
+			sectionTypes: media_assets.section_types
+		})
+		.from(media_assets)
+		.where(and(eq(media_assets.is_active, true), eq(media_assets.kind, 'video')))
+		.orderBy(asc(media_assets.priority), asc(media_assets.id));
+
+	return rows
+		.filter((row) => row.sectionTypes.includes('youtube_grid'))
+		.map((row) => ({
+			id: row.id,
+			title: row.title,
+			videoEmbedUrl: row.primaryUrl
+		}));
+}
+
+function normalizeOperationsResponse(input: unknown): unknown {
+	if (typeof input !== 'object' || input === null) {
+		return input;
+	}
+
+	const candidate = input as { operations?: unknown };
+	if (!Array.isArray(candidate.operations)) {
+		return input;
+	}
+
+	const operations = candidate.operations.map((operation) => {
+		if (typeof operation !== 'object' || operation === null) {
+			return operation;
+		}
+
+		const record = { ...(operation as Record<string, unknown>) };
+		const operationType = typeof record.type === 'string' ? record.type : null;
+
+		if (operationType === 'update_section_content') {
+			if (record.contentPatch === undefined) {
+				if (typeof record.field === 'string' && 'value' in record) {
+					record.contentPatch = { [record.field]: record.value };
+				} else {
+					record.contentPatch = {};
+				}
+			}
+		}
+
+		if (operationType === 'update_section_layout') {
+			if (record.layoutPatch === undefined) {
+				if (typeof record.field === 'string' && 'value' in record) {
+					record.layoutPatch = { [record.field]: record.value };
+				} else {
+					record.layoutPatch = {};
+				}
+			}
+
+			if (typeof record.layoutPatch === 'object' && record.layoutPatch !== null) {
+				const layoutPatch = { ...(record.layoutPatch as Record<string, unknown>) };
+				if (typeof layoutPatch.orientation === 'string' && layoutPatch.layout === undefined) {
+					layoutPatch.layout = layoutPatch.orientation;
+					delete layoutPatch.orientation;
+				}
+				if (typeof layoutPatch.imagePosition === 'string' && layoutPatch.layout === undefined) {
+					layoutPatch.layout = layoutPatch.imagePosition;
+					delete layoutPatch.imagePosition;
+				}
+				record.layoutPatch = layoutPatch;
+			}
+		}
+
+		return record;
+	});
+
+	return {
+		...input,
+		operations
+	};
 }
 
 function buildEditorUserPrompt(
@@ -174,9 +175,10 @@ function buildEditorUserPrompt(
 		videoThumbnailUrl: string;
 		heroImageUrl: string;
 	}>,
-	approvedHybridImages: Array<{ id: string; imageUrl: string }>
+	approvedHybridImages: Array<{ id: string; imageUrl: string }>,
+	approvedYoutubeVideos: Array<{ id: string; title: string; videoEmbedUrl: string }>
 ): string {
-	return `Apply this request to the landing page JSON.
+	return `Apply this request to the landing page JSON using operations.
 
 Request:
 ${changePrompt}
@@ -190,9 +192,12 @@ ${JSON.stringify(approvedHeroMedia, null, 2)}
 Approved hybrid supporting images:
 ${JSON.stringify(approvedHybridImages, null, 2)}
 
+Approved youtube_grid video options (use only these URLs for youtube_grid videos):
+${JSON.stringify(approvedYoutubeVideos, null, 2)}
+
 ${sectionContractGuidance}
 
-Return one valid updated landing page JSON object only.`;
+Return one valid operations JSON object only.`;
 }
 
 function buildRepairPrompt(
@@ -206,7 +211,8 @@ function buildRepairPrompt(
 		videoThumbnailUrl: string;
 		heroImageUrl: string;
 	}>,
-	approvedHybridImages: Array<{ id: string; imageUrl: string }>
+	approvedHybridImages: Array<{ id: string; imageUrl: string }>,
+	approvedYoutubeVideos: Array<{ id: string; title: string; videoEmbedUrl: string }>
 ): string {
 	const mustIncludeBooklet = promptWantsBookletSection(changePrompt)
 		? '- Because the request asks for booklet content, output must include exactly one section with type booklet_download_cta.'
@@ -215,7 +221,7 @@ function buildRepairPrompt(
 		? '- Because the request asks for an email-focused hero, output must include exactly one section with type hero_large_email_cta.'
 		: '';
 
-	return `Your previous JSON failed validation. Return a corrected JSON object only.
+	return `Your previous JSON failed validation. Return corrected operations JSON only.
 
 Request:
 ${changePrompt}
@@ -229,6 +235,9 @@ ${JSON.stringify(approvedHeroMedia, null, 2)}
 Approved hybrid supporting images:
 ${JSON.stringify(approvedHybridImages, null, 2)}
 
+Approved youtube_grid video options (use only these URLs for youtube_grid videos):
+${JSON.stringify(approvedYoutubeVideos, null, 2)}
+
 Previous invalid response:
 ${JSON.stringify(invalidResponse, null, 2)}
 
@@ -239,14 +248,16 @@ ${sectionContractGuidance}
 ${mustIncludeBooklet}
 ${mustIncludeEmailHero}
 
-Return corrected JSON only.`;
+Return corrected operations JSON only.`;
 }
 
 function validateEditedPageGuardrails(
 	input: LandingPageDocument,
 	currentPage: LandingPageDocument,
 	heroMedia: Array<{ videoEmbedUrl: string; videoThumbnailUrl: string; heroImageUrl: string }>,
-	hybridImages: Array<{ imageUrl: string }>
+	hybridImages: Array<{ imageUrl: string }>,
+	approvedYoutubeVideoUrls: string[],
+	enforceYoutubeGridCatalog: boolean
 ): LandingPageDocument {
 	const parsed = landingPageDocumentSchema.parse(input);
 	const requiredSectionTypes = resolveEditorRequiredSectionTypes();
@@ -329,6 +340,23 @@ function validateEditedPageGuardrails(
 	}
 
 	for (const section of parsed.sections) {
+		if (enforceYoutubeGridCatalog && section.type === 'youtube_grid') {
+			if (approvedYoutubeVideoUrls.length === 0) {
+				throw new Error(
+					'Edited page youtube_grid cannot be validated because no approved youtube_grid media assets are configured.'
+				);
+			}
+
+			const allowedYoutubeUrls = new Set(approvedYoutubeVideoUrls);
+			for (const video of section.props.videos) {
+				if (!allowedYoutubeUrls.has(video.url)) {
+					throw new Error(
+						'Edited page youtube_grid video URL is not in approved media assets for youtube_grid.'
+					);
+				}
+			}
+		}
+
 		if (section.type !== 'hybrid_content_section') {
 			continue;
 		}
@@ -363,7 +391,7 @@ async function generateEditedLandingPageDocument(
 	currentPage: LandingPageDocument,
 	changePrompt: string,
 	traceContext: LlmTraceContext = {}
-): Promise<LandingPageDocument> {
+): Promise<{ page: LandingPageDocument; operationTypes: string[] }> {
 	const assets = await loadLandingPageAssets();
 	const approvedHeroMedia = assets.assetCatalog.heroVideos.map((asset) => ({
 		id: asset.id,
@@ -387,12 +415,14 @@ async function generateEditedLandingPageDocument(
 		id: asset.id,
 		imageUrl: asset.imageUrl
 	}));
+	const approvedYoutubeVideos = await loadApprovedYoutubeGridVideosFromMediaAssets();
 
 	const userPrompt = buildEditorUserPrompt(
 		currentPage,
 		changePrompt,
 		approvedHeroMedia,
-		approvedHybridImages
+		approvedHybridImages,
+		approvedYoutubeVideos
 	);
 
 	let response;
@@ -424,8 +454,8 @@ async function generateEditedLandingPageDocument(
 		throw new Error(`Landing page editor failed: ${message}`);
 	}
 
-	const normalizedResponse = normalizeEditedResponse(response);
-	const parsed = landingPageDocumentSchema.safeParse(normalizedResponse);
+	const normalizedResponse = normalizeOperationsResponse(response);
+	const parsed = landingPageOperationsEnvelopeSchema.safeParse(normalizedResponse);
 	if (!parsed.success) {
 		traceLlm(
 			'agent_stage_validation_error',
@@ -434,6 +464,7 @@ async function generateEditedLandingPageDocument(
 				issues: parsed.error.issues
 			}
 		);
+		traceLlm('edit_operations_validation_failed', traceContext, { issues: parsed.error.issues });
 
 		let repairedResponse;
 		try {
@@ -446,7 +477,8 @@ async function generateEditedLandingPageDocument(
 					response,
 					parsed.error.issues,
 					approvedHeroMedia,
-					approvedHybridImages
+					approvedHybridImages,
+					approvedYoutubeVideos
 				),
 				responseFormat: 'json_object',
 				traceContext: { ...traceContext, stage: 'landing_page_editor_repair' }
@@ -461,31 +493,80 @@ async function generateEditedLandingPageDocument(
 			throw new Error(`Landing page editor repair failed: ${message}`);
 		}
 
-		const normalizedRepairedResponse = normalizeEditedResponse(repairedResponse);
-		const repairedParsed = landingPageDocumentSchema.safeParse(normalizedRepairedResponse);
+		const normalizedRepairedResponse = normalizeOperationsResponse(repairedResponse);
+		const repairedParsed = landingPageOperationsEnvelopeSchema.safeParse(
+			normalizedRepairedResponse
+		);
 		if (!repairedParsed.success) {
 			traceLlm(
 				'agent_stage_validation_error',
 				{ ...traceContext, stage: 'landing_page_editor_repair' },
 				{ issues: repairedParsed.error.issues }
 			);
-			throw new Error(`Invalid edited landing page JSON: ${repairedParsed.error.message}`);
+			traceLlm('edit_operations_validation_failed', traceContext, {
+				issues: repairedParsed.error.issues
+			});
+			throw new Error(`Invalid landing page operations JSON: ${repairedParsed.error.message}`);
 		}
 
-		return validateEditedPageGuardrails(
-			repairedParsed.data,
+		traceLlm('edit_operations_generated', traceContext, {
+			operations: repairedParsed.data.operations,
+			operationTypes: repairedParsed.data.operations.map((operation) => operation.type)
+		});
+		const enforceYoutubeGridCatalog = operationsTouchYoutubeGrid(repairedParsed.data.operations);
+
+		const editedPage = applyLandingPageOperations(currentPage, repairedParsed.data.operations);
+		traceLlm('edit_operations_applied', traceContext, {
+			operationCount: repairedParsed.data.operations.length,
+			operationTypes: repairedParsed.data.operations.map((operation) => operation.type)
+		});
+
+		const validatedEditedPage = validateEditedPageGuardrails(
+			editedPage,
 			currentPage,
 			approvedHeroMedia,
-			approvedHybridImages
+			approvedHybridImages,
+			approvedYoutubeVideos.map((video) => video.videoEmbedUrl),
+			enforceYoutubeGridCatalog
 		);
+		if (JSON.stringify(validatedEditedPage) === JSON.stringify(currentPage)) {
+			throw new Error('No effective changes were applied from generated operations.');
+		}
+
+		return {
+			page: validatedEditedPage,
+			operationTypes: repairedParsed.data.operations.map((operation) => operation.type)
+		};
 	}
 
-	return validateEditedPageGuardrails(
-		parsed.data,
+	traceLlm('edit_operations_generated', traceContext, {
+		operations: parsed.data.operations,
+		operationTypes: parsed.data.operations.map((operation) => operation.type)
+	});
+	const enforceYoutubeGridCatalog = operationsTouchYoutubeGrid(parsed.data.operations);
+
+	const editedPage = applyLandingPageOperations(currentPage, parsed.data.operations);
+	traceLlm('edit_operations_applied', traceContext, {
+		operationCount: parsed.data.operations.length,
+		operationTypes: parsed.data.operations.map((operation) => operation.type)
+	});
+
+	const validatedEditedPage = validateEditedPageGuardrails(
+		editedPage,
 		currentPage,
 		approvedHeroMedia,
-		approvedHybridImages
+		approvedHybridImages,
+		approvedYoutubeVideos.map((video) => video.videoEmbedUrl),
+		enforceYoutubeGridCatalog
 	);
+	if (JSON.stringify(validatedEditedPage) === JSON.stringify(currentPage)) {
+		throw new Error('No effective changes were applied from generated operations.');
+	}
+
+	return {
+		page: validatedEditedPage,
+		operationTypes: parsed.data.operations.map((operation) => operation.type)
+	};
 }
 
 export async function runLandingPageEditFromPrompt(
@@ -516,13 +597,15 @@ export async function runLandingPageEditFromPrompt(
 	}
 
 	const currentPage = parseLandingPageDocument(pageRecord.structuredContentJson);
-	const editedPage = await generateEditedLandingPageDocument(
+	const editResult = await generateEditedLandingPageDocument(
 		currentPage,
 		changePrompt,
 		traceContext
 	);
+	const editedPage = editResult.page;
 	const normalizedPrompt = changePrompt.replace(/\s+/g, ' ').trim();
-	const changeNote = `AI edit: ${normalizedPrompt.slice(0, 140)}${
+	const operationSummary = editResult.operationTypes.join(', ');
+	const changeNote = `AI edit (${operationSummary}): ${normalizedPrompt.slice(0, 140)}${
 		normalizedPrompt.length > 140 ? '...' : ''
 	}`;
 
@@ -557,7 +640,13 @@ export async function runLandingPageEditFromPrompt(
 
 	traceLlm('pipeline_success', traceContext, {
 		campaignId: pageRecord.campaignId,
-		campaignPageId: createdPage.campaignPageId
+		campaignPageId: createdPage.campaignPageId,
+		operationTypes: editResult.operationTypes
+	});
+	traceLlm('edit_operations_persisted', traceContext, {
+		campaignId: pageRecord.campaignId,
+		campaignPageId: createdPage.campaignPageId,
+		operationTypes: editResult.operationTypes
 	});
 
 	return {
