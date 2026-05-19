@@ -6,6 +6,17 @@ import type { PostgresJsTransaction } from 'drizzle-orm/postgres-js/session';
 import { generateLandingPagePlan } from './landing-page-strategist';
 import { loadLandingPageGenerationInput } from './landing-page-input';
 import { generateLandingPageDocument } from './landing-page-writer';
+import {
+	createLandingMediaPlan,
+	createLandingPageArchitecture,
+	createLandingStrategy,
+	validateLandingMediaPlan,
+	validateLandingPageArchitecture,
+	validateLandingStrategy,
+	validateLandingCritique
+} from './artifacts/landing-artifacts';
+import { assembleLandingPageDocument } from './landing-page-assembler';
+import { critiqueLandingPageDocument } from './landing-page-critic';
 import { createRunId, traceLlm } from '$lib/server/telemetry/llm-trace';
 
 type DrizzleClient = typeof db | PostgresJsTransaction<any, any>;
@@ -143,14 +154,34 @@ export async function runLandingPageGenerationForCampaign(
 	traceLlm('pipeline_step', traceContext, { step: 'plan_generated', plan });
 	console.log('Landing page pipeline: plan generated');
 
+	const strategy = validateLandingStrategy(createLandingStrategy(input, plan));
+	traceLlm('artifact_strategy', traceContext, { strategy });
+
+	const architecture = validateLandingPageArchitecture(createLandingPageArchitecture(plan));
+	traceLlm('artifact_architecture', traceContext, { architecture });
+
+	const mediaPlan = validateLandingMediaPlan(createLandingMediaPlan(plan));
+	traceLlm('artifact_media_plan', traceContext, { mediaPlan });
+
 	const pageDocument = await generateLandingPageDocument(input, plan, traceContext);
 	traceLlm('pipeline_step', traceContext, { step: 'document_generated', pageDocument });
 	console.log('Landing page pipeline: landing page document generated');
 
+	const assembledPageDocument = assembleLandingPageDocument(pageDocument);
+	traceLlm('pipeline_step', traceContext, {
+		step: 'document_assembled',
+		pageDocument: assembledPageDocument
+	});
+
+	const critique = validateLandingCritique(
+		critiqueLandingPageDocument(assembledPageDocument, architecture)
+	);
+	traceLlm('artifact_critique', traceContext, { critique });
+
 	const result = await db.transaction(async (tx) => {
 		const persistedPage = await persistGeneratedLandingPage(
 			campaignId,
-			pageDocument,
+			assembledPageDocument,
 			tx,
 			'Initial generation'
 		);
