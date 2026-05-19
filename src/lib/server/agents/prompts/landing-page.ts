@@ -1,4 +1,5 @@
 import type { PageSectionType } from '$lib/page-builder/sections';
+import type { LandingPageCapability } from '../section-definitions';
 import type { SectionCatalogItem } from '../section-catalog';
 import type { LandingPageGenerationInput } from '../schemas/landing-page-input';
 import type { LandingPagePlan } from '../schemas/landing-page-plan';
@@ -6,9 +7,15 @@ import type { LandingPagePlan } from '../schemas/landing-page-plan';
 type PromptContext = {
 	allowedSectionTypes: PageSectionType[];
 	requiredSectionTypes: PageSectionType[];
+	requiredCapabilities: LandingPageCapability[];
+	preferredSectionOrder: PageSectionType[];
 	sectionCatalog: SectionCatalogItem[];
 	disallowedReasonByType?: Partial<Record<PageSectionType, string>>;
 };
+
+function formatPreferredSectionOrder(sectionTypes: readonly string[]): string {
+	return sectionTypes.join(', ');
+}
 
 function buildGlobalCopyQualityRulesBlock(): string {
 	return [
@@ -73,6 +80,8 @@ function serializeContext(context: PromptContext): string {
 		{
 			allowedSectionTypes: context.allowedSectionTypes,
 			requiredSectionTypes: context.requiredSectionTypes,
+			requiredCapabilities: context.requiredCapabilities,
+			preferredSectionOrder: context.preferredSectionOrder,
 			disallowedReasonByType: context.disallowedReasonByType,
 			sectionCatalog: context.sectionCatalog
 		},
@@ -107,18 +116,10 @@ ${serializeContext(context)}
 Rules:
 
 * use only section types from allowedSectionTypes
-* include every type in requiredSectionTypes
+	* include every type in requiredSectionTypes
+	* ensure the final plan satisfies all requiredCapabilities
 	* preferred section order for narrative flow:
-	1) seo
-	2) immediate_authority_hero
-	3) youtube_grid
-	4) keynote_speeches
-	5) logos_of_trust_ribbon
-	6) hybrid_content_section
-	7) frictionless_funnel_booking
-	8) proof_of_performance
-	9) booklet_download_cta
-	10) compliance_transparency_footer
+	${formatPreferredSectionOrder(context.preferredSectionOrder)}
 * include exactly requiredSectionTypes.length sections
 * section selection must actively follow section catalog guidance (description, whenToUse, whenNotToUse, contentGuidance)
 * avoid selecting adjacent sections that do the same job or repeat the same narrative function
@@ -236,17 +237,9 @@ General requirements:
 
 * use only section types in allowedSectionTypes
 * include every section type in requiredSectionTypes
+	* ensure the final page satisfies all requiredCapabilities
 	* preferred section order for narrative flow:
-	1) seo
-	2) immediate_authority_hero
-	3) youtube_grid
-	4) keynote_speeches
-	5) logos_of_trust_ribbon
-	6) hybrid_content_section
-	7) frictionless_funnel_booking
-	8) proof_of_performance
-	9) booklet_download_cta
-	10) compliance_transparency_footer
+	${formatPreferredSectionOrder(context.preferredSectionOrder)}
 * use section props exactly as required by each section contract
 * ensure seo.props.description includes campaign geography naturally
 * include campaign geography in seo.props.title when it fits naturally and remains readable

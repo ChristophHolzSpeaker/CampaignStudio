@@ -17,8 +17,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import type { ZodIssue } from 'zod';
 import { loadLandingPageAssets } from './config/landing-page-assets-store';
 import { persistGeneratedLandingPage } from './landing-page-pipeline';
-
-const requiredSectionTypes = ['seo', 'compliance_transparency_footer'] as const;
+import { resolveEditorRequiredSectionTypes, resolvePageCapabilities } from './section-definitions';
 
 const sectionContractGuidance = `Valid section type names and required props (exact keys):
 - immediate_authority_hero: headline, subheadline, primaryCtaLabel, videoEmbedUrl, heroImageUrl, heroImageAlt, videoThumbnailUrl, videoThumbnailAlt
@@ -250,6 +249,7 @@ function validateEditedPageGuardrails(
 	hybridImages: Array<{ imageUrl: string }>
 ): LandingPageDocument {
 	const parsed = landingPageDocumentSchema.parse(input);
+	const requiredSectionTypes = resolveEditorRequiredSectionTypes();
 
 	if (parsed.sections[0]?.type !== 'seo') {
 		throw new Error('Edited page must keep seo as the first section.');
@@ -266,6 +266,13 @@ function validateEditedPageGuardrails(
 		if (count !== 1) {
 			throw new Error(`Edited page must contain exactly one ${requiredType} section.`);
 		}
+	}
+
+	const capabilityResolution = resolvePageCapabilities(parsed);
+	if (capabilityResolution.missingRequiredCapabilities.length > 0) {
+		throw new Error(
+			`Edited page is missing required capabilities: ${capabilityResolution.missingRequiredCapabilities.join(', ')}`
+		);
 	}
 
 	const allowedHeroEmbedUrls = new Set(heroMedia.map((asset) => asset.videoEmbedUrl));

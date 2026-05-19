@@ -6,6 +6,11 @@ import {
 	landingPageStrategistUserPrompt
 } from './prompts/landing-page';
 import { buildSectionCatalog } from './section-catalog';
+import {
+	requiredMvpCapabilities,
+	resolvePreferredSectionOrder,
+	resolveRequiredSectionTypes
+} from './section-definitions';
 import { getSectionEligibility } from './section-eligibility';
 import { resolvePromptGuidanceForCampaign } from './prompt-guidance';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
@@ -30,7 +35,7 @@ Corrective rules:
 - use only these allowed section types: ${allowedSectionTypes.join(', ')}
 - include these required section types: ${requiredSectionTypes.join(', ')}
 - sectionPlan must not contain duplicate section types
-- preferred section order for narrative flow: seo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer
+- preferred section order for narrative flow: ${requiredSectionTypes.join(', ')}
 - when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos and assetPlan.hero.imageAssetId from input.assets.assetCatalog.heroImages
 - when youtube_grid is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 4 IDs from input.assets.assetCatalog.speakerInActionVideos and include assetPlan.speakerInAction.rationale
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.primaryImageAssetId from input.assets.assetCatalog.hybridSupportingImages
@@ -65,6 +70,8 @@ export async function generateLandingPagePlan(
 	const promptContext = {
 		allowedSectionTypes: eligibility.allowedSectionTypes,
 		requiredSectionTypes: eligibility.requiredSectionTypes,
+		requiredCapabilities: [...requiredMvpCapabilities],
+		preferredSectionOrder: resolvePreferredSectionOrder(resolveRequiredSectionTypes()),
 		sectionCatalog,
 		disallowedReasonByType: eligibility.disallowedReasonByType
 	};
@@ -233,7 +240,8 @@ export async function generateLandingPagePlan(
 		validateLandingPagePlanSections(
 			repairedParsed.data,
 			eligibility.allowedSectionTypes,
-			eligibility.requiredSectionTypes
+			eligibility.requiredSectionTypes,
+			requiredMvpCapabilities
 		);
 
 		console.log('Landing page strategist: repaired plan validated');
@@ -243,7 +251,8 @@ export async function generateLandingPagePlan(
 	validateLandingPagePlanSections(
 		parsed.data,
 		eligibility.allowedSectionTypes,
-		eligibility.requiredSectionTypes
+		eligibility.requiredSectionTypes,
+		requiredMvpCapabilities
 	);
 
 	console.log('Landing page strategist: plan validated');

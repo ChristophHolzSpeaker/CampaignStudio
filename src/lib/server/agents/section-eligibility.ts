@@ -1,4 +1,9 @@
 import { pageSectionTypes, type PageSectionType } from '$lib/page-builder/sections';
+import {
+	resolveRequiredSectionTypes,
+	sectionDefinitions,
+	type SectionDefinition
+} from './section-definitions';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 
 export type SectionEligibility = {
@@ -7,76 +12,57 @@ export type SectionEligibility = {
 	disallowedReasonByType: Partial<Record<PageSectionType, string>>;
 };
 
-const requiredSectionTypes: PageSectionType[] = [
-	'seo',
-	'immediate_authority_hero',
-	'logos_of_trust_ribbon',
-	'youtube_grid',
-	'keynote_speeches',
-	'hybrid_content_section',
-	'frictionless_funnel_booking',
-	'proof_of_performance',
-	'booklet_download_cta',
-	'compliance_transparency_footer'
-];
+function evaluateMediaRequirement(
+	definition: SectionDefinition,
+	input: LandingPageGenerationInput
+): string | null {
+	switch (definition.media.requirement) {
+		case 'none':
+			return null;
+		case 'hero_defaults':
+			return input.assets.heroDefaults.videoEmbedUrl &&
+				(input.assets.heroDefaults.heroImageUrl || input.assets.heroDefaults.videoThumbnailUrl)
+				? null
+				: 'Hero media defaults are missing (video + hero image).';
+		case 'logos_any':
+			return input.assets.assetCatalog.logoCatalog.length > 0 ||
+				input.assets.fixedLogosRibbon.logos.length > 0
+				? null
+				: 'No active logos or fallback logos are configured.';
+		case 'keynotes_min_3':
+			return input.assets.assetCatalog.keynoteCatalog.length >= 3
+				? null
+				: 'At least 3 active keynotes are required in keynote catalog.';
+		case 'speaker_videos_min_4':
+			return input.assets.assetCatalog.speakerInActionVideos.length >= 4
+				? null
+				: 'At least 4 YouTube video assets are required.';
+		case 'proof_testimonials_any':
+			return input.assets.fixedProofOfPerformance.testimonials.length > 0
+				? null
+				: 'No proof testimonials are configured.';
+	}
+}
 
 export function getSectionEligibility(input: LandingPageGenerationInput): SectionEligibility {
 	const allowedSectionTypes: PageSectionType[] = [];
 	const disallowedReasonByType: Partial<Record<PageSectionType, string>> = {};
+	const requiredSectionTypes = resolveRequiredSectionTypes();
 
 	for (const sectionType of pageSectionTypes) {
-		switch (sectionType) {
-			case 'seo':
-			case 'booklet_download_cta':
-			case 'hybrid_content_section':
-			case 'frictionless_funnel_booking':
-			case 'compliance_transparency_footer':
-				allowedSectionTypes.push(sectionType);
-				break;
-			case 'immediate_authority_hero':
-				if (
-					input.assets.heroDefaults.videoEmbedUrl &&
-					(input.assets.heroDefaults.heroImageUrl || input.assets.heroDefaults.videoThumbnailUrl)
-				) {
-					allowedSectionTypes.push(sectionType);
-				} else {
-					disallowedReasonByType[sectionType] =
-						'Hero media defaults are missing (video + hero image).';
-				}
-				break;
-			case 'logos_of_trust_ribbon':
-				if (
-					input.assets.assetCatalog.logoCatalog.length > 0 ||
-					input.assets.fixedLogosRibbon.logos.length > 0
-				) {
-					allowedSectionTypes.push(sectionType);
-				} else {
-					disallowedReasonByType[sectionType] = 'No active logos or fallback logos are configured.';
-				}
-				break;
-			case 'keynote_speeches':
-				if (input.assets.assetCatalog.keynoteCatalog.length >= 3) {
-					allowedSectionTypes.push(sectionType);
-				} else {
-					disallowedReasonByType[sectionType] =
-						'At least 3 active keynotes are required in keynote catalog.';
-				}
-				break;
-			case 'youtube_grid':
-				if (input.assets.assetCatalog.speakerInActionVideos.length >= 4) {
-					allowedSectionTypes.push(sectionType);
-				} else {
-					disallowedReasonByType[sectionType] = 'At least 4 YouTube video assets are required.';
-				}
-				break;
-			case 'proof_of_performance':
-				if (input.assets.fixedProofOfPerformance.testimonials.length > 0) {
-					allowedSectionTypes.push(sectionType);
-				} else {
-					disallowedReasonByType[sectionType] = 'No proof testimonials are configured.';
-				}
-				break;
+		const definition = sectionDefinitions[sectionType];
+		if (!definition.generation.allowed) {
+			disallowedReasonByType[sectionType] = 'Section is disabled by generation policy.';
+			continue;
 		}
+
+		const disallowedReason = evaluateMediaRequirement(definition, input);
+		if (disallowedReason) {
+			disallowedReasonByType[sectionType] = disallowedReason;
+			continue;
+		}
+
+		allowedSectionTypes.push(sectionType);
 	}
 
 	for (const requiredType of requiredSectionTypes) {
