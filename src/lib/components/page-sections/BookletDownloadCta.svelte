@@ -4,6 +4,7 @@
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { BookletDownloadCtaProps } from '$lib/page-builder/sections/types';
 	import Button from '../elements/Button.svelte';
+	import NavButton from '../elements/NavButton.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 	import { saveBookletDownloadCtaField } from './BookletDownloadCtaInlineEdit.remote';
 
@@ -76,12 +77,16 @@
 				class="flex aspect-square items-center justify-center border border-surface/20 bg-surface/5 p-6"
 			>
 				<div class="absolute h-3/4 w-3/4 bg-primary/20 blur-3xl"></div>
-
-				<img
-					src="/christoph-holz-keynote-speaker-booklet-mockup.webp"
-					alt="Christoph Holz Keynote Speaker Booklet"
-					class="relative z-10 h-full w-full object-cover"
-				/>
+				<a
+					href="https://uploads-ssl.webflow.com/61263e0de406f497361dca55/6308862b5f040611761c02b5_Speaker.Christoph.Holz.Booklet.2022.pdf"
+					target="_blank"
+				>
+					<img
+						src="/christoph-holz-keynote-speaker-booklet-mockup.webp"
+						alt="Christoph Holz Keynote Speaker Booklet"
+						class="relative z-10 h-full w-full object-cover"
+					/>
+				</a>
 			</div>
 		</div>
 		<div>
@@ -112,14 +117,17 @@
 							onSave={(value) => saveBookletField('paragraph', value)}
 						/>
 						<div class="mt-10">
-							<Button>
+							<NavButton
+								href="https://uploads-ssl.webflow.com/61263e0de406f497361dca55/6308862b5f040611761c02b5_Speaker.Christoph.Holz.Booklet.2022.pdf"
+								target="_blank"
+							>
 								<ContentEditableText
 									as="span"
 									value={buttonCtaText}
 									editable={canInlineEdit}
 									onSave={(value) => saveBookletField('buttonCtaText', value)}
 								/>
-							</Button>
+							</NavButton>
 						</div>
 					</div>
 				</div>

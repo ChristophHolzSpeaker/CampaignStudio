@@ -53,8 +53,8 @@
 	const publishAction = $derived(publishCampaign.for(String(campaign?.id ?? 'none')));
 </script>
 
-<header class="border-b border-stone-300 bg-white px-4 py-2">
-	<div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+<header class="@container border-b border-stone-300 bg-white px-4 py-2">
+	<div class="@flex @flex-col @gap-2 @sm:flex-row @sm:items-center @sm:justify-between">
 		<div class="min-w-0 flex-1">
 			<div class="flex min-w-0 items-center gap-2">
 				<h1
@@ -116,7 +116,7 @@
 			<input type="hidden" name="id" value={campaign?.id} />
 			<input type="hidden" name="target_status" value={targetStatus(campaign?.status)} />
 
-			<Button>
+			<Button variant="small">
 				{publishLabel(campaign?.status)}
 			</Button>
 		</form>

@@ -1,11 +1,11 @@
 <script lang="ts">
-	type Props = {
+	import type { HTMLAnchorAttributes } from 'svelte/elements';
+	interface Props extends HTMLAnchorAttributes {
 		href: string;
 		children?: any;
 		variant?: 'default' | 'outline';
 		onclick?: (event: MouseEvent) => void;
-	};
-
+	}
 	let { href, variant = 'default', children, onclick, ...restProps }: Props = $props();
 
 	const variants = {

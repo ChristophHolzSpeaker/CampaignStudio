@@ -31,6 +31,7 @@ export interface ImmediateAuthorityHeroProps {
 	videoThumbnailAlt: string;
 	eyebrow?: string;
 	supportingBullets?: string[];
+	layout?: string;
 }
 
 export interface TrustLogoItem {
@@ -117,6 +118,7 @@ export interface HybridContentSectionProps {
 	deepDiveItems: HybridDeepDiveItem[];
 	primaryVisual?: HybridPrimaryVisual;
 	emailCtaTitle?: string;
+	layout?: string;
 }
 
 export interface TestimonialItem {
