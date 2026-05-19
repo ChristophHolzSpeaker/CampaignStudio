@@ -1217,12 +1217,21 @@ function normalizeRootResponse(response: unknown): unknown {
 function validateWithHydration(
 	response: unknown,
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	plan: LandingPagePlan,
+	traceContext: LlmTraceContext = {}
 ):
 	| { success: true; data: LandingPageDocument }
 	| { success: false; issues: ZodIssue[]; hydratedResponse: unknown } {
 	const normalizedResponse = normalizeRootResponse(response);
 	const hydratedResponse = hydrateLandingPageWithAssets(normalizedResponse, input, plan);
+	traceLlm(
+		'hydration_applied',
+		{ ...traceContext, stage: 'landing_page_writer' },
+		{
+			normalizedResponse,
+			hydratedResponse
+		}
+	);
 	const parsed = landingPageDocumentSchema.safeParse(hydratedResponse);
 	if (parsed.success) {
 		return { success: true, data: parsed.data };
@@ -1499,6 +1508,7 @@ export async function generateLandingPageDocument(
 				responsePreview: JSON.stringify(response)
 			}
 		);
+		traceLlm('writer_output', { ...traceContext, stage: 'landing_page_writer' }, { response });
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error('Landing page writer: OpenRouter error', message);
@@ -1506,7 +1516,7 @@ export async function generateLandingPageDocument(
 		throw new Error(`Landing page writer failed: ${message}`);
 	}
 
-	const firstValidation = validateWithHydration(response, input, plan);
+	const firstValidation = validateWithHydration(response, input, plan, traceContext);
 	let repairUserPrompt: string;
 	if (firstValidation.success) {
 		const firstMvpIssues = collectLandingPageDocumentMvpIssues(
@@ -1522,6 +1532,14 @@ export async function generateLandingPageDocument(
 		console.error('Landing page writer: MVP validation failed', firstMvpIssues);
 		traceLlm(
 			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: firstMvpIssues,
+				phase: 'initial_mvp_validation'
+			}
+		);
+		traceLlm(
+			'validation_failed',
 			{ ...traceContext, stage: 'landing_page_writer' },
 			{
 				issues: firstMvpIssues,
@@ -1548,6 +1566,14 @@ export async function generateLandingPageDocument(
 				phase: 'initial_validation'
 			}
 		);
+		traceLlm(
+			'validation_failed',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: firstValidation.issues,
+				phase: 'initial_validation'
+			}
+		);
 
 		repairUserPrompt = buildWriterRepairPrompt(
 			input,
@@ -1563,6 +1589,13 @@ export async function generateLandingPageDocument(
 	let repairedResponse;
 	try {
 		console.log('Landing page writer: requesting repair pass');
+		traceLlm(
+			'repair_pass_triggered',
+			{ ...traceContext, stage: 'landing_page_writer_repair' },
+			{
+				reason: 'writer_validation_failed'
+			}
+		);
 		repairedResponse = await callOpenRouter({
 			model: 'google/gemini-3.1-flash-lite-preview',
 			systemPrompt,
@@ -1578,6 +1611,13 @@ export async function generateLandingPageDocument(
 				responsePreview: JSON.stringify(repairedResponse)
 			}
 		);
+		traceLlm(
+			'writer_output',
+			{ ...traceContext, stage: 'landing_page_writer_repair' },
+			{
+				response: repairedResponse
+			}
+		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		traceLlm(
@@ -1588,11 +1628,19 @@ export async function generateLandingPageDocument(
 		throw new Error(`Landing page writer repair failed: ${message}`);
 	}
 
-	const secondValidation = validateWithHydration(repairedResponse, input, plan);
+	const secondValidation = validateWithHydration(repairedResponse, input, plan, traceContext);
 	if (!secondValidation.success) {
 		console.error('Landing page writer: repair validation failed', secondValidation.issues);
 		traceLlm(
 			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: secondValidation.issues,
+				phase: 'repair_validation'
+			}
+		);
+		traceLlm(
+			'validation_failed',
 			{ ...traceContext, stage: 'landing_page_writer' },
 			{
 				issues: secondValidation.issues,
@@ -1613,6 +1661,14 @@ export async function generateLandingPageDocument(
 		console.error('Landing page writer: repair MVP validation failed', secondMvpIssues);
 		traceLlm(
 			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: secondMvpIssues,
+				phase: 'repair_mvp_validation'
+			}
+		);
+		traceLlm(
+			'validation_failed',
 			{ ...traceContext, stage: 'landing_page_writer' },
 			{
 				issues: secondMvpIssues,

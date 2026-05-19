@@ -131,6 +131,11 @@ export async function generateLandingPagePlan(
 				responsePreview: JSON.stringify(response)
 			}
 		);
+		traceLlm(
+			'strategist_output',
+			{ ...traceContext, stage: 'landing_page_strategist' },
+			{ response }
+		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error('Landing page strategist: OpenRouter error', message);
@@ -152,10 +157,23 @@ export async function generateLandingPagePlan(
 				issues: parsed.error.issues
 			}
 		);
+		traceLlm(
+			'validation_failed',
+			{ ...traceContext, stage: 'landing_page_strategist' },
+			{
+				issues: parsed.error.issues,
+				phase: 'initial_validation'
+			}
+		);
 
 		let repairedResponse;
 		try {
 			console.log('Landing page strategist: requesting repair pass');
+			traceLlm(
+				'repair_pass_triggered',
+				{ ...traceContext, stage: 'landing_page_strategist_repair' },
+				{ reason: 'strategist_validation_failed' }
+			);
 			repairedResponse = await callOpenRouter({
 				model: 'google/gemini-3.1-flash-lite-preview',
 				systemPrompt,
@@ -177,6 +195,11 @@ export async function generateLandingPagePlan(
 					responsePreview: JSON.stringify(repairedResponse)
 				}
 			);
+			traceLlm(
+				'strategist_output',
+				{ ...traceContext, stage: 'landing_page_strategist_repair' },
+				{ response: repairedResponse }
+			);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			traceLlm(
@@ -194,6 +217,14 @@ export async function generateLandingPagePlan(
 				{ ...traceContext, stage: 'landing_page_strategist_repair' },
 				{
 					issues: repairedParsed.error.issues
+				}
+			);
+			traceLlm(
+				'validation_failed',
+				{ ...traceContext, stage: 'landing_page_strategist_repair' },
+				{
+					issues: repairedParsed.error.issues,
+					phase: 'repair_validation'
 				}
 			);
 			throw new Error(`Invalid strategist output after repair: ${repairedParsed.error.message}`);

@@ -88,6 +88,17 @@ export async function persistGeneratedLandingPage(
 		throw new Error(`Failed to persist generated landing page for campaign ${campaignId}`);
 	}
 
+	traceLlm(
+		'publish_action',
+		{ pipeline: 'landing_page', campaignId },
+		{
+			action: 'persist_generated_landing_page_version',
+			campaignPageId: createdPage.id,
+			versionNumber: nextVersionNumber,
+			slug
+		}
+	);
+
 	return { campaignPageId: createdPage.id };
 }
 
@@ -105,6 +116,16 @@ export async function attachLandingPageToAdGroup(
 	if (updated.length === 0) {
 		throw new Error(`Failed to link ad group ${adGroupId} to campaign page ${campaignPageId}`);
 	}
+
+	traceLlm(
+		'ad_group_relink_action',
+		{ pipeline: 'landing_page' },
+		{
+			action: 'attach_landing_page_to_ad_group',
+			adGroupId,
+			campaignPageId
+		}
+	);
 }
 
 export async function runLandingPageGenerationForCampaign(
