@@ -169,7 +169,7 @@
 					Categories
 				</button>
 				<a
-					href="https://cdn.prod.website-files.com/61263e0de406f497361dca55/6308862c3f689acc1eee77e7_Speaker.Christoph.Holz.Booklet_EN.2022.pdf"
+					href="https://uploads-ssl.webflow.com/61263e0de406f497361dca55/6308862b5f040611761c02b5_Speaker.Christoph.Holz.Booklet.2022.pdf"
 					target="_blank"
 					id="booklet-link"
 					class="nav-normal h-full border-b-2 border-transparent p-2 leading-6 hover:border-black"

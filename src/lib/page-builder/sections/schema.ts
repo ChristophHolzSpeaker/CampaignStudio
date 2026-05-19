@@ -6,6 +6,7 @@ export const pageSectionTypeSchema = z.enum(pageSectionTypes);
 export const ogTypeSchema = z.enum(['website', 'article']);
 
 export const twitterCardTypeSchema = z.enum(['summary', 'summary_large_image']);
+export const layoutOrientationsSchema = z.enum(['right', 'left']);
 
 export const seoPropsSchema = z.object({
 	title: z.string().trim().min(1),
@@ -31,7 +32,8 @@ export const immediateAuthorityHeroPropsSchema = z.object({
 	videoThumbnailUrl: z.string().trim(),
 	videoThumbnailAlt: z.string().trim().min(1),
 	eyebrow: z.string().trim().min(1).optional(),
-	supportingBullets: z.array(z.string().trim().min(1)).optional()
+	supportingBullets: z.array(z.string().trim().min(1)).optional(),
+	layout: layoutOrientationsSchema.optional()
 });
 
 export const trustLogoItemSchema = z.object({
@@ -117,7 +119,8 @@ export const hybridContentSectionPropsSchema = z.object({
 	deepDiveTitle: z.string().trim().min(1),
 	deepDiveItems: z.array(hybridDeepDiveItemSchema).min(1),
 	primaryVisual: hybridPrimaryVisualSchema.optional(),
-	emailCtaTitle: z.string().optional()
+	emailCtaTitle: z.string().optional(),
+	layout: layoutOrientationsSchema.optional()
 });
 
 export const testimonialItemSchema = z.object({

@@ -6,7 +6,10 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 	import DirectAccess from './DirectAccess.svelte';
-	import { saveHybridContentSectionField } from './HybridContentSectionInlineEdit.remote';
+	import {
+		saveHybridContentSectionField,
+		toggleHybridContentSectionLayout
+	} from './HybridContentSectionInlineEdit.remote';
 
 	let {
 		props,
@@ -54,6 +57,7 @@
 	});
 
 	const title = $derived(props?.title ?? 'Bridging the AI-Workforce Gap');
+	const layout = $derived(props?.layout ?? 'left');
 	const intro = $derived(
 		props?.intro ??
 			'This section clarifies what your audience will leave with from this format and topic, then shows why Christoph is uniquely qualified to deliver those outcomes.'
@@ -129,6 +133,31 @@
 			}
 		});
 	}
+
+	async function flipLayout(): Promise<void> {
+		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
+			return;
+		}
+
+		const result = await toggleHybridContentSectionLayout({
+			campaignId,
+			campaignPageId,
+			sectionIndex,
+			sectionType: 'hybrid_content_section'
+		});
+
+		if (!result.saved) {
+			return;
+		}
+
+		if (result.campaignPageId !== campaignPageId) {
+			const nextUrl = new URL(page.url);
+			nextUrl.searchParams.set('version', String(result.campaignPageId));
+			await goto(nextUrl.pathname + nextUrl.search, { invalidateAll: true, keepFocus: true });
+		} else {
+			await onInlineEditSaved?.();
+		}
+	}
 </script>
 
 <svelte:window bind:scrollY bind:innerHeight />
@@ -137,6 +166,7 @@
 	aria-label="Hybrid Content section"
 >
 	<SectionIdentifier props={{ id: 'hybrid_content_section' }}></SectionIdentifier>
+
 	<div class="mx-auto max-w-7xl">
 		<div class="mb-14 grid items-end gap-8 lg:mb-20 lg:grid-cols-12 lg:gap-12">
 			<div class="space-y-6 lg:col-span-8">
@@ -204,93 +234,117 @@
 	</div>
 </section>
 
-<section class="overflow-hidden bg-on-surface px-6 pt-20 text-surface sm:px-8 lg:px-12 lg:pt-28">
-	<div class="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2 lg:gap-16">
-		<div>
-			<ContentEditableText
-				as="h2"
-				value={deepDiveTitle}
-				editable={canInlineEdit}
-				className="mb-10 text-4xl leading-[0.95] font-bold tracking-tight lg:text-6xl"
-				onSave={(value) => saveHybridField({ kind: 'deepDiveTitle' }, value)}
-			/>
-			{#if deepDiveItems.length > 0}
-				<div class="space-y-10">
-					{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
-						<div
-							data-reveal-index={index + benefits.length}
-							class={[
-								'flex gap-4 transition-all duration-500 ease-out sm:gap-6',
-								disableScrollReveal || visibleItems.has(index + benefits.length)
-									? 'translate-y-0 opacity-100'
-									: 'translate-y-8 opacity-0'
-							]}
-							style={`transition-delay: ${index * 120}ms`}
-							bind:this={itemRefs[index + benefits.length]}
-						>
-							<span class="text-lg text-primary">{`0${index + 1}`}</span>
-							<div>
-								<ContentEditableText
-									as="h4"
-									value={item.title}
-									editable={canInlineEdit}
-									className="mb-2 text-2xl leading-tight font-bold tracking-tight"
-									onSave={(value) => saveHybridField({ kind: 'deepDiveItemTitle', index }, value)}
-								/>
-								<ContentEditableText
-									as="p"
-									value={item.body}
-									editable={canInlineEdit}
-									multiline={true}
-									className="text-base leading-relaxed text-surface/75 lg:text-lg"
-									onSave={(value) => saveHybridField({ kind: 'deepDiveItemBody', index }, value)}
-								/>
+<section
+	class="relative overflow-hidden bg-on-surface px-6 pt-20 text-surface sm:px-8 lg:px-12 lg:pt-28"
+>
+	{#if canInlineEdit}
+		<button
+			type="button"
+			onclick={flipLayout}
+			class="absolute top-4 right-4 z-50 inline-flex items-center gap-2 border border-emerald-400 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 transition hover:bg-emerald-100"
+			aria-label="Flip hybrid content layout orientation"
+		>
+			<span>Flip layout</span>
+			<span class="font-semibold">{layout === 'left' ? 'left' : 'right'}</span>
+		</button>
+	{/if}
+	<div class="mx-auto grid max-w-7xl items-start gap-14 lg:grid-cols-2 lg:gap-16">
+		{#snippet content()}
+			<div>
+				<ContentEditableText
+					as="h2"
+					value={deepDiveTitle}
+					editable={canInlineEdit}
+					className="mb-10 text-4xl leading-[0.95] font-bold tracking-tight lg:text-6xl"
+					onSave={(value) => saveHybridField({ kind: 'deepDiveTitle' }, value)}
+				/>
+				{#if deepDiveItems.length > 0}
+					<div class="space-y-10">
+						{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
+							<div
+								data-reveal-index={index + benefits.length}
+								class={[
+									'flex gap-4 transition-all duration-500 ease-out sm:gap-6',
+									disableScrollReveal || visibleItems.has(index + benefits.length)
+										? 'translate-y-0 opacity-100'
+										: 'translate-y-8 opacity-0'
+								]}
+								style={`transition-delay: ${index * 120}ms`}
+								bind:this={itemRefs[index + benefits.length]}
+							>
+								<span class="text-lg text-primary">{`0${index + 1}`}</span>
+								<div>
+									<ContentEditableText
+										as="h4"
+										value={item.title}
+										editable={canInlineEdit}
+										className="mb-2 text-2xl leading-tight font-bold tracking-tight"
+										onSave={(value) => saveHybridField({ kind: 'deepDiveItemTitle', index }, value)}
+									/>
+									<ContentEditableText
+										as="p"
+										value={item.body}
+										editable={canInlineEdit}
+										multiline={true}
+										className="text-base leading-relaxed text-surface/75 lg:text-lg"
+										onSave={(value) => saveHybridField({ kind: 'deepDiveItemBody', index }, value)}
+									/>
+								</div>
 							</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-		</div>
-
-		<div class="group relative">
-			<div
-				class="flex aspect-square items-center justify-center border border-surface/20 bg-surface/5 p-6"
-			>
-				<div class="absolute h-3/4 w-3/4 bg-primary/20 blur-3xl"></div>
-				{#if primaryVisual}
-					<img
-						src={primaryVisual.imageUrl}
-						alt={primaryVisual.alt}
-						class="relative z-10 h-full w-full object-cover"
-					/>
-				{:else}
-					<div class="relative z-10 p-10 text-center">
-						<span class="material-symbols-outlined mb-4 text-7xl text-primary">hub</span>
-						<p class="text-sm tracking-[0.2em] text-primary">Neural Network Analysis</p>
+						{/each}
 					</div>
 				{/if}
 			</div>
-			{#if canInlineEdit}
-				<button
-					type="button"
-					onclick={openHybridImagePicker}
-					class="absolute top-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface/92 text-on-surface opacity-0 shadow-lg transition group-hover:opacity-100 focus:opacity-100"
-					aria-label="Change hybrid primary visual"
+		{/snippet}
+		{#snippet image()}
+			<div class="group relative">
+				<div
+					class="flex aspect-square items-center justify-center border border-surface/20 bg-surface/5 p-6"
 				>
-					<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
-						<path
-							d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4z"
-							stroke="currentColor"
-							stroke-width="1.8"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						></path>
-						<path d="M13 7l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-						></path>
-					</svg>
-				</button>
-			{/if}
-		</div>
+					<div class="absolute h-3/4 w-3/4 bg-primary/20 blur-3xl"></div>
+					{#if primaryVisual}
+						<img
+							src={primaryVisual.imageUrl}
+							alt={primaryVisual.alt}
+							class="relative z-10 h-full w-full object-cover"
+						/>
+					{:else}
+						<div class="relative z-10 p-10 text-center">
+							<span class="material-symbols-outlined mb-4 text-7xl text-primary">hub</span>
+							<p class="text-sm tracking-[0.2em] text-primary">Neural Network Analysis</p>
+						</div>
+					{/if}
+				</div>
+				{#if canInlineEdit}
+					<button
+						type="button"
+						onclick={openHybridImagePicker}
+						class="absolute top-3 right-3 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full bg-surface/92 text-on-surface opacity-0 shadow-lg transition group-hover:opacity-100 focus:opacity-100"
+						aria-label="Change hybrid primary visual"
+					>
+						<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" aria-hidden="true">
+							<path
+								d="M4 20h4l10-10a2 2 0 0 0-4-4L4 16v4z"
+								stroke="currentColor"
+								stroke-width="1.8"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							></path>
+							<path d="M13 7l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+							></path>
+						</svg>
+					</button>
+				{/if}
+			</div>
+		{/snippet}
+
+		{#if layout === 'right'}
+			{@render content()}
+			{@render image()}
+		{:else if layout === 'left'}
+			{@render image()}
+			{@render content()}
+		{/if}
 	</div>
 </section>
 
