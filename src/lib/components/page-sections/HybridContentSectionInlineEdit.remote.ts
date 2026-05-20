@@ -1,9 +1,11 @@
 import { command, getRequestEvent } from '$app/server';
-import { parseLandingPageDocument } from '$lib/page-builder/page';
-import { persistGeneratedLandingPage } from '$lib/server/agents/landing-page-pipeline';
 import { db } from '$lib/server/db';
-import { campaign_pages, campaigns, media_assets } from '$lib/server/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { media_assets } from '$lib/server/db/schema';
+import {
+	loadEditablePageContext,
+	saveAsInlineSessionOrUpdate
+} from '$lib/server/landing-page-inline/context';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 const inlineEditInputSchema = z.object({
@@ -23,8 +25,6 @@ const inlineEditInputSchema = z.object({
 	]),
 	value: z.string()
 });
-
-const INLINE_EDIT_SESSION_PREFIX = 'Inline edit session';
 
 const hybridPrimaryVisualImageInputSchema = z.object({
 	campaignId: z.number().int().positive(),
@@ -46,58 +46,13 @@ function hasString(value: unknown): value is string {
 }
 
 export const saveHybridContentSectionField = command(inlineEditInputSchema, async (input) => {
-	const event = getRequestEvent();
-	const {
-		data: { user }
-	} = await event.locals.supabase.auth.getUser();
+	const context = await loadEditablePageContext({
+		event: getRequestEvent(),
+		campaignId: input.campaignId,
+		campaignPageId: input.campaignPageId
+	});
 
-	if (!user) {
-		throw new Error('Unauthorized');
-	}
-
-	const [campaignRecord] = await db
-		.select({ id: campaigns.id, status: campaigns.status })
-		.from(campaigns)
-		.where(eq(campaigns.id, input.campaignId))
-		.limit(1);
-
-	if (!campaignRecord) {
-		throw new Error('Campaign not found');
-	}
-
-	if (campaignRecord.status === 'published') {
-		throw new Error('Inline edits are only allowed in preview mode');
-	}
-
-	const [sourcePageRecord] = await db
-		.select({
-			id: campaign_pages.id,
-			campaignId: campaign_pages.campaign_id,
-			structuredContentJson: campaign_pages.structured_content_json,
-			isPublished: campaign_pages.is_published,
-			changeNote: campaign_pages.change_note,
-			versionNumber: campaign_pages.version_number
-		})
-		.from(campaign_pages)
-		.where(
-			and(
-				eq(campaign_pages.id, input.campaignPageId),
-				eq(campaign_pages.campaign_id, input.campaignId)
-			)
-		)
-		.limit(1);
-
-	if (!sourcePageRecord) {
-		throw new Error('Campaign page not found');
-	}
-
-	if (sourcePageRecord.isPublished) {
-		throw new Error('Published pages cannot be edited inline');
-	}
-
-	const page = parseLandingPageDocument(sourcePageRecord.structuredContentJson);
-	const section = page.sections[input.sectionIndex];
-
+	const section = context.page.sections[input.sectionIndex];
 	if (!section) {
 		throw new Error('Section not found');
 	}
@@ -159,179 +114,101 @@ export const saveHybridContentSectionField = command(inlineEditInputSchema, asyn
 	if (currentValue === input.value) {
 		return {
 			saved: false,
-			campaignPageId: sourcePageRecord.id,
+			campaignPageId: context.sourcePageRecord.id,
 			target: input.target,
 			value: currentValue,
 			createdSession: false
 		};
 	}
 
+	const updatedSection = (() => {
+		switch (input.target.kind) {
+			case 'title':
+			case 'intro':
+			case 'deepDiveTitle':
+			case 'emailCtaTitle':
+				return {
+					...section,
+					props: {
+						...section.props,
+						[input.target.kind]: input.value
+					}
+				};
+			case 'benefitTitle':
+			case 'benefitBody': {
+				const key = input.target.kind === 'benefitTitle' ? 'title' : 'body';
+				const targetIndex = input.target.index;
+				return {
+					...section,
+					props: {
+						...section.props,
+						benefits: section.props.benefits.map((benefit, benefitIndex) => {
+							if (benefitIndex !== targetIndex) {
+								return benefit;
+							}
+
+							return {
+								...benefit,
+								[key]: input.value
+							};
+						})
+					}
+				};
+			}
+			case 'deepDiveItemTitle':
+			case 'deepDiveItemBody': {
+				const key = input.target.kind === 'deepDiveItemTitle' ? 'title' : 'body';
+				const targetIndex = input.target.index;
+				return {
+					...section,
+					props: {
+						...section.props,
+						deepDiveItems: section.props.deepDiveItems.map((deepDiveItem, deepDiveIndex) => {
+							if (deepDiveIndex !== targetIndex) {
+								return deepDiveItem;
+							}
+
+							return {
+								...deepDiveItem,
+								[key]: input.value
+							};
+						})
+					}
+				};
+			}
+		}
+	})();
+
 	const updatedPage = {
-		...page,
-		sections: page.sections.map((item, index) => {
-			if (index !== input.sectionIndex || item.type !== 'hybrid_content_section') {
-				return item;
-			}
-
-			switch (input.target.kind) {
-				case 'title':
-				case 'intro':
-				case 'deepDiveTitle':
-				case 'emailCtaTitle': {
-					return {
-						...item,
-						props: {
-							...item.props,
-							[input.target.kind]: input.value
-						}
-					};
-				}
-				case 'benefitTitle':
-				case 'benefitBody': {
-					const key = input.target.kind === 'benefitTitle' ? 'title' : 'body';
-					const targetIndex = input.target.index;
-					return {
-						...item,
-						props: {
-							...item.props,
-							benefits: item.props.benefits.map((benefit, benefitIndex) => {
-								if (benefitIndex !== targetIndex) {
-									return benefit;
-								}
-
-								return {
-									...benefit,
-									[key]: input.value
-								};
-							})
-						}
-					};
-				}
-				case 'deepDiveItemTitle':
-				case 'deepDiveItemBody': {
-					const key = input.target.kind === 'deepDiveItemTitle' ? 'title' : 'body';
-					const targetIndex = input.target.index;
-					return {
-						...item,
-						props: {
-							...item.props,
-							deepDiveItems: item.props.deepDiveItems.map((deepDiveItem, deepDiveIndex) => {
-								if (deepDiveIndex !== targetIndex) {
-									return deepDiveItem;
-								}
-
-								return {
-									...deepDiveItem,
-									[key]: input.value
-								};
-							})
-						}
-					};
-				}
-			}
-		})
+		...context.page,
+		sections: context.page.sections.map((item, index) =>
+			index === input.sectionIndex ? updatedSection : item
+		)
 	};
 
-	const isExistingSession = (sourcePageRecord.changeNote ?? '').startsWith(
-		INLINE_EDIT_SESSION_PREFIX
-	);
-
-	if (isExistingSession) {
-		await db
-			.update(campaign_pages)
-			.set({
-				structured_content_json: updatedPage,
-				updated_at: new Date()
-			})
-			.where(eq(campaign_pages.id, sourcePageRecord.id));
-
-		return {
-			saved: true,
-			campaignPageId: sourcePageRecord.id,
-			target: input.target,
-			value: input.value,
-			createdSession: false
-		};
-	}
-
-	const [latestPage] = await db
-		.select({ id: campaign_pages.id })
-		.from(campaign_pages)
-		.where(eq(campaign_pages.campaign_id, input.campaignId))
-		.orderBy(desc(campaign_pages.version_number))
-		.limit(1);
-
-	if (!latestPage || latestPage.id !== sourcePageRecord.id) {
-		throw new Error('Inline edits are only available on the latest preview version');
-	}
-
-	const persisted = await persistGeneratedLandingPage(
-		input.campaignId,
-		updatedPage,
-		undefined,
-		`${INLINE_EDIT_SESSION_PREFIX} (v${sourcePageRecord.versionNumber})`
-	);
+	const persisted = await saveAsInlineSessionOrUpdate({
+		campaignId: input.campaignId,
+		sourcePageRecord: context.sourcePageRecord,
+		updatedPage
+	});
 
 	return {
 		saved: true,
 		campaignPageId: persisted.campaignPageId,
 		target: input.target,
 		value: input.value,
-		createdSession: true
+		createdSession: persisted.createdSession
 	};
 });
 
 export const saveHybridPrimaryVisualImage = command(
 	hybridPrimaryVisualImageInputSchema,
 	async (input) => {
-		const event = getRequestEvent();
-		const {
-			data: { user }
-		} = await event.locals.supabase.auth.getUser();
-
-		if (!user) {
-			throw new Error('Unauthorized');
-		}
-
-		const [campaignRecord] = await db
-			.select({ id: campaigns.id, status: campaigns.status })
-			.from(campaigns)
-			.where(eq(campaigns.id, input.campaignId))
-			.limit(1);
-
-		if (!campaignRecord) {
-			throw new Error('Campaign not found');
-		}
-
-		if (campaignRecord.status === 'published') {
-			throw new Error('Inline edits are only allowed in preview mode');
-		}
-
-		const [sourcePageRecord] = await db
-			.select({
-				id: campaign_pages.id,
-				campaignId: campaign_pages.campaign_id,
-				structuredContentJson: campaign_pages.structured_content_json,
-				isPublished: campaign_pages.is_published,
-				changeNote: campaign_pages.change_note,
-				versionNumber: campaign_pages.version_number
-			})
-			.from(campaign_pages)
-			.where(
-				and(
-					eq(campaign_pages.id, input.campaignPageId),
-					eq(campaign_pages.campaign_id, input.campaignId)
-				)
-			)
-			.limit(1);
-
-		if (!sourcePageRecord) {
-			throw new Error('Campaign page not found');
-		}
-
-		if (sourcePageRecord.isPublished) {
-			throw new Error('Published pages cannot be edited inline');
-		}
+		const context = await loadEditablePageContext({
+			event: getRequestEvent(),
+			campaignId: input.campaignId,
+			campaignPageId: input.campaignPageId
+		});
 
 		const [selectedAsset] = await db
 			.select({
@@ -367,9 +244,7 @@ export const saveHybridPrimaryVisualImage = command(
 			throw new Error('Selected asset has incomplete image metadata');
 		}
 
-		const page = parseLandingPageDocument(sourcePageRecord.structuredContentJson);
-		const section = page.sections[input.sectionIndex];
-
+		const section = context.page.sections[input.sectionIndex];
 		if (!section) {
 			throw new Error('Section not found');
 		}
@@ -398,136 +273,55 @@ export const saveHybridPrimaryVisualImage = command(
 		if (currentImageUrl === nextImageUrl && currentImageAlt === nextImageAlt) {
 			return {
 				saved: false,
-				campaignPageId: sourcePageRecord.id,
+				campaignPageId: context.sourcePageRecord.id,
 				imageUrl: currentImageUrl,
 				imageAlt: currentImageAlt,
 				createdSession: false
 			};
 		}
 
-		const updatedPage = {
-			...page,
-			sections: page.sections.map((item, index) => {
-				if (index !== input.sectionIndex || item.type !== 'hybrid_content_section') {
-					return item;
+		const updatedSection = {
+			...section,
+			props: {
+				...section.props,
+				primaryVisual: {
+					imageUrl: nextImageUrl,
+					alt: nextImageAlt
 				}
-
-				return {
-					...item,
-					props: {
-						...item.props,
-						primaryVisual: {
-							imageUrl: nextImageUrl,
-							alt: nextImageAlt
-						}
-					}
-				};
-			})
+			}
 		};
 
-		const isExistingSession = (sourcePageRecord.changeNote ?? '').startsWith(
-			INLINE_EDIT_SESSION_PREFIX
-		);
+		const updatedPage = {
+			...context.page,
+			sections: context.page.sections.map((item, index) =>
+				index === input.sectionIndex ? updatedSection : item
+			)
+		};
 
-		if (isExistingSession) {
-			await db
-				.update(campaign_pages)
-				.set({
-					structured_content_json: updatedPage,
-					updated_at: new Date()
-				})
-				.where(eq(campaign_pages.id, sourcePageRecord.id));
-
-			return {
-				saved: true,
-				campaignPageId: sourcePageRecord.id,
-				imageUrl: nextImageUrl,
-				imageAlt: nextImageAlt,
-				createdSession: false
-			};
-		}
-
-		const [latestPage] = await db
-			.select({ id: campaign_pages.id })
-			.from(campaign_pages)
-			.where(eq(campaign_pages.campaign_id, input.campaignId))
-			.orderBy(desc(campaign_pages.version_number))
-			.limit(1);
-
-		if (!latestPage || latestPage.id !== sourcePageRecord.id) {
-			throw new Error('Inline edits are only available on the latest preview version');
-		}
-
-		const persisted = await persistGeneratedLandingPage(
-			input.campaignId,
-			updatedPage,
-			undefined,
-			`${INLINE_EDIT_SESSION_PREFIX} (v${sourcePageRecord.versionNumber})`
-		);
+		const persisted = await saveAsInlineSessionOrUpdate({
+			campaignId: input.campaignId,
+			sourcePageRecord: context.sourcePageRecord,
+			updatedPage
+		});
 
 		return {
 			saved: true,
 			campaignPageId: persisted.campaignPageId,
 			imageUrl: nextImageUrl,
 			imageAlt: nextImageAlt,
-			createdSession: true
+			createdSession: persisted.createdSession
 		};
 	}
 );
 
 export const toggleHybridContentSectionLayout = command(layoutToggleInputSchema, async (input) => {
-	const event = getRequestEvent();
-	const {
-		data: { user }
-	} = await event.locals.supabase.auth.getUser();
+	const context = await loadEditablePageContext({
+		event: getRequestEvent(),
+		campaignId: input.campaignId,
+		campaignPageId: input.campaignPageId
+	});
 
-	if (!user) {
-		throw new Error('Unauthorized');
-	}
-
-	const [campaignRecord] = await db
-		.select({ id: campaigns.id, status: campaigns.status })
-		.from(campaigns)
-		.where(eq(campaigns.id, input.campaignId))
-		.limit(1);
-
-	if (!campaignRecord) {
-		throw new Error('Campaign not found');
-	}
-
-	if (campaignRecord.status === 'published') {
-		throw new Error('Inline edits are only allowed in preview mode');
-	}
-
-	const [sourcePageRecord] = await db
-		.select({
-			id: campaign_pages.id,
-			campaignId: campaign_pages.campaign_id,
-			structuredContentJson: campaign_pages.structured_content_json,
-			isPublished: campaign_pages.is_published,
-			changeNote: campaign_pages.change_note,
-			versionNumber: campaign_pages.version_number
-		})
-		.from(campaign_pages)
-		.where(
-			and(
-				eq(campaign_pages.id, input.campaignPageId),
-				eq(campaign_pages.campaign_id, input.campaignId)
-			)
-		)
-		.limit(1);
-
-	if (!sourcePageRecord) {
-		throw new Error('Campaign page not found');
-	}
-
-	if (sourcePageRecord.isPublished) {
-		throw new Error('Published pages cannot be edited inline');
-	}
-
-	const page = parseLandingPageDocument(sourcePageRecord.structuredContentJson);
-	const section = page.sections[input.sectionIndex];
-
+	const section = context.page.sections[input.sectionIndex];
 	if (!section) {
 		throw new Error('Section not found');
 	}
@@ -537,67 +331,31 @@ export const toggleHybridContentSectionLayout = command(layoutToggleInputSchema,
 	}
 
 	const nextLayout = section.props.layout === 'left' ? 'right' : 'left';
-
-	const updatedPage = {
-		...page,
-		sections: page.sections.map((item, index) => {
-			if (index !== input.sectionIndex || item.type !== 'hybrid_content_section') {
-				return item;
-			}
-
-			return {
-				...item,
-				props: {
-					...item.props,
-					layout: nextLayout
-				}
-			};
-		})
+	const updatedSection = {
+		...section,
+		props: {
+			...section.props,
+			layout: nextLayout
+		}
 	};
 
-	const isExistingSession = (sourcePageRecord.changeNote ?? '').startsWith(
-		INLINE_EDIT_SESSION_PREFIX
-	);
+	const updatedPage = {
+		...context.page,
+		sections: context.page.sections.map((item, index) =>
+			index === input.sectionIndex ? updatedSection : item
+		)
+	};
 
-	if (isExistingSession) {
-		await db
-			.update(campaign_pages)
-			.set({
-				structured_content_json: updatedPage,
-				updated_at: new Date()
-			})
-			.where(eq(campaign_pages.id, sourcePageRecord.id));
-
-		return {
-			saved: true,
-			campaignPageId: sourcePageRecord.id,
-			layout: nextLayout,
-			createdSession: false
-		};
-	}
-
-	const [latestPage] = await db
-		.select({ id: campaign_pages.id })
-		.from(campaign_pages)
-		.where(eq(campaign_pages.campaign_id, input.campaignId))
-		.orderBy(desc(campaign_pages.version_number))
-		.limit(1);
-
-	if (!latestPage || latestPage.id !== sourcePageRecord.id) {
-		throw new Error('Inline edits are only available on the latest preview version');
-	}
-
-	const persisted = await persistGeneratedLandingPage(
-		input.campaignId,
-		updatedPage,
-		undefined,
-		`${INLINE_EDIT_SESSION_PREFIX} (v${sourcePageRecord.versionNumber})`
-	);
+	const persisted = await saveAsInlineSessionOrUpdate({
+		campaignId: input.campaignId,
+		sourcePageRecord: context.sourcePageRecord,
+		updatedPage
+	});
 
 	return {
 		saved: true,
 		campaignPageId: persisted.campaignPageId,
 		layout: nextLayout,
-		createdSession: true
+		createdSession: persisted.createdSession
 	};
 });
