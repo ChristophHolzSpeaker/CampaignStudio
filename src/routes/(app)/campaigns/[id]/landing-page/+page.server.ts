@@ -1,6 +1,6 @@
 import { error, fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { parseLandingPageDocument } from '$lib/page-builder/page';
+import { landingPageDocumentSchema, parseLandingPageDocument } from '$lib/page-builder/page';
 import { db } from '$lib/server/db';
 import {
 	campaign_ad_groups,
@@ -9,22 +9,124 @@ import {
 	keynotes,
 	logos
 } from '$lib/server/db/schema';
-import { asc, desc, eq } from 'drizzle-orm';
-import { runLandingPageEditFromPrompt } from '$lib/server/agents/landing-page-editor';
+import { and, asc, desc, eq } from 'drizzle-orm';
+import {
+	buildLandingPageEditPreview,
+	type LandingPageEditPreview
+} from '$lib/server/agents/landing-page-editor';
 import { getCampaignById } from '$lib/server/campaigns/client';
 import {
 	persistGeneratedLandingPage,
 	runLandingPageGenerationForCampaign
 } from '$lib/server/agents/landing-page-pipeline';
+import { z } from 'zod';
+import {
+	completeGenerationJob,
+	createGenerationJob,
+	failGenerationJob,
+	markGenerationJobStage
+} from '$lib/server/generation-jobs';
 
 type LandingPageEditFormState = {
 	values: {
 		changePrompt: string;
+		autoApplySimple?: boolean;
 	};
+	preview?: LandingPageEditPreview;
 	message?: string;
 	success?: boolean;
 	campaignPageId?: number;
 };
+
+const previewModeSchema = z.enum(['preview', 'accept', 'reject']);
+
+const editPreviewPayloadSchema = z.object({
+	baseCampaignPageId: z.number().int().positive(),
+	changePrompt: z.string().trim().min(1),
+	editedPage: landingPageDocumentSchema,
+	operationTypes: z.array(z.string().trim().min(1)),
+	changeSummary: z.object({
+		impactedSections: z.array(z.string()),
+		contentChanges: z.array(z.string()),
+		layoutChanges: z.array(z.string()),
+		mediaChanges: z.array(z.string()),
+		reorderedSections: z.array(z.string()),
+		fieldDiffs: z.array(
+			z.object({
+				sectionType: z.string(),
+				field: z.string(),
+				before: z.string(),
+				after: z.string()
+			})
+		)
+	})
+});
+
+function isSimplePreview(preview: LandingPageEditPreview): boolean {
+	const hasOnlyContentOps = preview.operationTypes.every((operationType) =>
+		['update_section_content', 'update_section_layout'].includes(operationType)
+	);
+	return (
+		hasOnlyContentOps &&
+		preview.changeSummary.impactedSections.length === 1 &&
+		preview.changeSummary.mediaChanges.length === 0 &&
+		preview.changeSummary.reorderedSections.length === 0 &&
+		preview.changeSummary.fieldDiffs.length <= 3
+	);
+}
+
+async function persistAcceptedPreview(
+	candidatePageId: number,
+	previewPayload: LandingPageEditPreview
+): Promise<{ campaignPageId: number }> {
+	const normalizedPrompt = previewPayload.changePrompt.replace(/\s+/g, ' ').trim();
+	const operationSummary = previewPayload.operationTypes.join(', ');
+	const changeNote = `AI edit (${operationSummary}): ${normalizedPrompt.slice(0, 140)}${
+		normalizedPrompt.length > 140 ? '...' : ''
+	}`;
+
+	const createdPage = await db.transaction(async (tx) => {
+		const [pageRecord] = await tx
+			.select({ campaignId: campaign_pages.campaign_id })
+			.from(campaign_pages)
+			.where(eq(campaign_pages.id, candidatePageId))
+			.limit(1);
+
+		if (!pageRecord) {
+			throw new Error('Campaign page not found while saving preview.');
+		}
+
+		const persisted = await persistGeneratedLandingPage(
+			pageRecord.campaignId,
+			previewPayload.editedPage,
+			tx,
+			changeNote
+		);
+
+		const [latestAdPackage] = await tx
+			.select({ id: campaign_ad_packages.id })
+			.from(campaign_ad_packages)
+			.where(eq(campaign_ad_packages.campaign_id, pageRecord.campaignId))
+			.orderBy(desc(campaign_ad_packages.version_number))
+			.limit(1);
+
+		if (latestAdPackage) {
+			await tx
+				.update(campaign_ad_groups)
+				.set({ campaign_page_id: persisted.campaignPageId, updated_at: new Date() })
+				.where(
+					and(
+						eq(campaign_ad_groups.campaign_page_id, candidatePageId),
+						eq(campaign_ad_groups.ad_package_id, latestAdPackage.id)
+					)
+				);
+		}
+
+		return persisted;
+	});
+
+	return { campaignPageId: createdPage.campaignPageId };
+}
 
 export type LandingPagePreviewActionData = {
 	pageEdit?: LandingPageEditFormState;
@@ -87,7 +189,12 @@ export const actions: Actions = {
 		}
 
 		try {
-			const result = await runLandingPageGenerationForCampaign(campaignId);
+			const job = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_retry',
+				inputPayload: { reason: 'manual_retry' }
+			});
+			const result = await runLandingPageGenerationForCampaign(campaignId, { jobId: job.id });
 			return {
 				pageEdit: {
 					values: { changePrompt: '' },
@@ -98,6 +205,16 @@ export const actions: Actions = {
 			};
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
+			const job = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_retry',
+				inputPayload: { reason: 'manual_retry_failure' }
+			});
+			await failGenerationJob({
+				jobId: job.id,
+				errorMessage: detail,
+				stage: 'assembly'
+			});
 			return fail<LandingPagePreviewActionData>(500, {
 				pageEdit: {
 					values: { changePrompt: '' },
@@ -111,12 +228,34 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const candidatePageId = Number(formData.get('campaignPageId'));
 		const changePrompt = formData.get('change_prompt')?.toString().trim() ?? '';
+		const autoApplySimple = formData.get('auto_apply_simple')?.toString() === 'on';
+		const mode = previewModeSchema.safeParse(formData.get('mode')?.toString().trim() ?? 'preview');
 		const campaignId = Number(params.id);
+
+		if (!mode.success) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt },
+					message: 'Invalid edit mode.',
+					success: false
+				}
+			});
+		}
+
+		if (mode.data === 'reject') {
+			return {
+				pageEdit: {
+					values: { changePrompt: '', autoApplySimple },
+					success: true,
+					message: 'Edit preview discarded.'
+				}
+			};
+		}
 
 		if (!Number.isFinite(campaignId) || campaignId <= 0) {
 			return fail<LandingPagePreviewActionData>(400, {
 				pageEdit: {
-					values: { changePrompt },
+					values: { changePrompt, autoApplySimple },
 					message: 'Invalid campaign id.',
 					success: false
 				}
@@ -133,7 +272,7 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!changePrompt.length) {
+		if (!changePrompt.length && mode.data === 'preview') {
 			return fail<LandingPagePreviewActionData>(400, {
 				pageEdit: {
 					values: { changePrompt },
@@ -162,19 +301,176 @@ export const actions: Actions = {
 			});
 		}
 
+		if (mode.data === 'preview') {
+			try {
+				const previewJob = await createGenerationJob({
+					campaignId,
+					pipeline: 'landing_page_edit',
+					inputPayload: {
+						candidatePageId,
+						changePrompt,
+						mode: 'preview'
+					}
+				});
+				await markGenerationJobStage({
+					jobId: previewJob.id,
+					stage: 'edit_operations',
+					status: 'processing',
+					message: 'Generating edit operations preview.'
+				});
+				const result = await buildLandingPageEditPreview(candidatePageId, changePrompt);
+				await markGenerationJobStage({
+					jobId: previewJob.id,
+					stage: 'edit_operations',
+					status: 'completed',
+					message: 'Edit preview operations generated.',
+					level: 'success',
+					meta: { operationTypes: result.preview.operationTypes }
+				});
+				await completeGenerationJob({
+					jobId: previewJob.id,
+					outputPayload: {
+						preview: {
+							operationTypes: result.preview.operationTypes,
+							changeSummary: result.preview.changeSummary
+						}
+					}
+				});
+				if (autoApplySimple && isSimplePreview(result.preview)) {
+					const persisted = await persistAcceptedPreview(candidatePageId, result.preview);
+					return {
+						pageEdit: {
+							values: { changePrompt: '', autoApplySimple },
+							success: true,
+							message: 'Simple edit auto-applied.',
+							campaignPageId: persisted.campaignPageId
+						}
+					};
+				}
+
+				return {
+					pageEdit: {
+						values: { changePrompt, autoApplySimple },
+						success: true,
+						message: 'Preview generated. Review changes before saving.',
+						preview: result.preview
+					}
+				};
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				const failedJob = await createGenerationJob({
+					campaignId,
+					pipeline: 'landing_page_edit',
+					inputPayload: {
+						candidatePageId,
+						changePrompt,
+						mode: 'preview'
+					}
+				});
+				await failGenerationJob({
+					jobId: failedJob.id,
+					errorMessage: message,
+					stage: 'edit_operations'
+				});
+				return fail<LandingPagePreviewActionData>(500, {
+					pageEdit: {
+						values: { changePrompt, autoApplySimple },
+						message: `Landing page edit preview failed: ${message}`,
+						success: false
+					}
+				});
+			}
+		}
+
+		const rawPreviewPayload = formData.get('preview_payload')?.toString() ?? '';
+		let parsedPreviewPayload: LandingPageEditPreview;
 		try {
-			const result = await runLandingPageEditFromPrompt(candidatePageId, changePrompt);
+			const parsedJson = JSON.parse(rawPreviewPayload);
+			const parsed = editPreviewPayloadSchema.safeParse(parsedJson);
+			if (!parsed.success) {
+				return fail<LandingPagePreviewActionData>(400, {
+					pageEdit: {
+						values: { changePrompt },
+						message: 'Preview payload is invalid. Regenerate preview before saving.',
+						success: false
+					}
+				});
+			}
+			parsedPreviewPayload = parsed.data as LandingPageEditPreview;
+		} catch {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt },
+					message: 'Preview payload is missing. Regenerate preview before saving.',
+					success: false
+				}
+			});
+		}
+
+		if (parsedPreviewPayload.baseCampaignPageId !== candidatePageId) {
+			return fail<LandingPagePreviewActionData>(400, {
+				pageEdit: {
+					values: { changePrompt },
+					message: 'Preview does not match the selected campaign page version.',
+					success: false
+				}
+			});
+		}
+
+		try {
+			const applyJob = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_edit',
+				inputPayload: {
+					candidatePageId,
+					changePrompt: parsedPreviewPayload.changePrompt,
+					mode: 'accept'
+				}
+			});
+			await markGenerationJobStage({
+				jobId: applyJob.id,
+				stage: 'edit_operations',
+				status: 'processing',
+				message: 'Applying accepted edit operations.'
+			});
+			const createdPage = await persistAcceptedPreview(candidatePageId, parsedPreviewPayload);
+			await markGenerationJobStage({
+				jobId: applyJob.id,
+				stage: 'edit_operations',
+				status: 'completed',
+				message: 'Edit operations applied and saved as a new version.',
+				level: 'success',
+				meta: { campaignPageId: createdPage.campaignPageId }
+			});
+			await completeGenerationJob({
+				jobId: applyJob.id,
+				outputPayload: { campaignPageId: createdPage.campaignPageId }
+			});
 
 			return {
 				pageEdit: {
-					values: { changePrompt: '' },
+					values: { changePrompt: '', autoApplySimple },
 					success: true,
-					message: 'Landing page updated.',
-					campaignPageId: result.campaignPageId
+					message: 'Landing page updated from preview.',
+					campaignPageId: createdPage.campaignPageId
 				}
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
+			const failedApplyJob = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_edit',
+				inputPayload: {
+					candidatePageId,
+					changePrompt,
+					mode: 'accept'
+				}
+			});
+			await failGenerationJob({
+				jobId: failedApplyJob.id,
+				errorMessage: message,
+				stage: 'edit_operations'
+			});
 			return fail<LandingPagePreviewActionData>(500, {
 				pageEdit: {
 					values: { changePrompt },

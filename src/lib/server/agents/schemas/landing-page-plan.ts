@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import {
+	requiredMvpCapabilities,
+	sectionDefinitions,
+	type LandingPageCapability
+} from '../section-definitions';
 
 const landingPagePlanSectionSchema = z.object({
 	type: z.string().trim().min(1),
@@ -121,7 +126,8 @@ export const landingPagePlanSchema = z
 export function validateLandingPagePlanSections(
 	plan: LandingPagePlan,
 	allowedSectionTypes: readonly string[],
-	requiredSectionTypes: readonly string[]
+	requiredSectionTypes: readonly string[],
+	requiredCapabilities: readonly LandingPageCapability[] = requiredMvpCapabilities
 ): void {
 	const allowedSet = new Set(allowedSectionTypes);
 	const sectionTypes = plan.sectionPlan.map((section) => section.type);
@@ -135,6 +141,23 @@ export function validateLandingPagePlanSections(
 	for (const requiredSectionType of requiredSectionTypes) {
 		if (!sectionTypes.includes(requiredSectionType)) {
 			throw new Error(`Strategist plan missing required section type: ${requiredSectionType}`);
+		}
+	}
+
+	const capabilitySet = new Set<LandingPageCapability>();
+	for (const sectionType of sectionTypes) {
+		const definition = sectionDefinitions[sectionType as keyof typeof sectionDefinitions];
+		if (!definition) {
+			continue;
+		}
+		for (const capability of definition.capabilities) {
+			capabilitySet.add(capability);
+		}
+	}
+
+	for (const requiredCapability of requiredCapabilities) {
+		if (!capabilitySet.has(requiredCapability)) {
+			throw new Error(`Strategist plan is missing required capability: ${requiredCapability}`);
 		}
 	}
 }
