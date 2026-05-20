@@ -1,6 +1,5 @@
-import { landingPageDocumentSchema, type LandingPageDocument } from '$lib/page-builder/page';
+import type { LandingPageDocument } from '$lib/page-builder/page';
 import type { HybridPrimaryVisual, PageSectionType } from '$lib/page-builder/sections';
-import { callOpenRouter } from '$lib/server/openrouter/client';
 import type { PageSection } from '$lib/page-builder/sections';
 import { traceLlm, type LlmTraceContext } from '$lib/server/telemetry/llm-trace';
 import type { ZodIssue } from 'zod';
@@ -10,6 +9,16 @@ import {
 } from './prompts/landing-page';
 import { resolvePromptGuidanceForCampaign } from './prompt-guidance';
 import { buildSectionCatalog } from './section-catalog';
+import { requiredMvpCapabilities, resolvePreferredSectionOrder } from './section-definitions';
+import {
+	runLandingPageWriterGeneration,
+	runLandingPageWriterRepair
+} from './landing-page-generation-runner';
+import { validateWithHydrationPipeline } from './landing-page-hydration';
+import {
+	collectLandingPageDocumentMvpIssues,
+	validateLandingPageDocumentForMvp
+} from './landing-page-policy';
 import { getSectionEligibility } from './section-eligibility';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 import type { LandingPagePlan } from './schemas/landing-page-plan';
@@ -48,19 +57,6 @@ type HybridBenefitItem = HybridTextItem & {
 
 const inputFallbackBenefitBody =
 	'Your audience leaves with practical outcomes they can apply immediately in their role.';
-
-const requiredMvpSectionOrder: PageSectionType[] = [
-	'seo',
-	'immediate_authority_hero',
-	'logos_of_trust_ribbon',
-	'youtube_grid',
-	'keynote_speeches',
-	'hybrid_content_section',
-	'frictionless_funnel_booking',
-	'proof_of_performance',
-	'booklet_download_cta',
-	'compliance_transparency_footer'
-];
 
 const finalFallbackHeroVideoEmbedUrl = 'https://www.youtube.com/watch?v=mpbtCg2NSUs';
 const finalFallbackHeroImageUrl =
@@ -965,13 +961,11 @@ function ensureSeoSection(
 	return [seoSection, ...withoutSeo];
 }
 
-function enforceNarrativeSoftOrder(sections: PageSection[]): PageSection[] {
-	const preferredSequence: PageSectionType[] = [
-		'immediate_authority_hero',
-		'youtube_grid',
-		'keynote_speeches',
-		'logos_of_trust_ribbon'
-	];
+function enforceNarrativeSoftOrder(
+	sections: PageSection[],
+	preferredSectionOrder: readonly PageSectionType[]
+): PageSection[] {
+	const preferredSequence = preferredSectionOrder.filter((sectionType) => sectionType !== 'seo');
 
 	const presentSequence = preferredSequence.filter((type) =>
 		sections.some((section) => section.type === type)
@@ -1150,16 +1144,17 @@ function buildRequiredSectionFallback(
 function ensureRequiredMvpSections(
 	sections: PageSection[],
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	plan: LandingPagePlan,
+	requiredSectionTypes: readonly PageSectionType[]
 ): PageSection[] {
 	const existingByType = new Map<PageSectionType, PageSection>();
 	for (const section of sections) {
-		if (requiredMvpSectionOrder.includes(section.type)) {
+		if (requiredSectionTypes.includes(section.type)) {
 			existingByType.set(section.type, section);
 		}
 	}
 
-	return requiredMvpSectionOrder.map(
+	return requiredSectionTypes.map(
 		(sectionType) =>
 			existingByType.get(sectionType) ?? buildRequiredSectionFallback(sectionType, input, plan)
 	);
@@ -1214,35 +1209,6 @@ function normalizeRootResponse(response: unknown): unknown {
 	return response;
 }
 
-function validateWithHydration(
-	response: unknown,
-	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
-):
-	| { success: true; data: LandingPageDocument }
-	| { success: false; issues: ZodIssue[]; hydratedResponse: unknown } {
-	const normalizedResponse = normalizeRootResponse(response);
-	const hydratedResponse = hydrateLandingPageWithAssets(normalizedResponse, input, plan);
-	const parsed = landingPageDocumentSchema.safeParse(hydratedResponse);
-	if (parsed.success) {
-		return { success: true, data: parsed.data };
-	}
-
-	const withoutHybrid = removeHybridSections(hydratedResponse);
-	if (withoutHybrid.removed) {
-		const parsedWithoutHybrid = landingPageDocumentSchema.safeParse(withoutHybrid.result);
-		if (parsedWithoutHybrid.success) {
-			return { success: true, data: parsedWithoutHybrid.data };
-		}
-	}
-
-	return {
-		success: false,
-		issues: parsed.error.issues,
-		hydratedResponse
-	};
-}
-
 function buildWriterRepairPrompt(
 	input: LandingPageGenerationInput,
 	plan: LandingPagePlan,
@@ -1267,7 +1233,7 @@ Corrective rules:
 - Use only these allowed section types: ${allowedSectionTypes.join(', ')}.
 - Include these required section types: ${requiredSectionTypes.join(', ')}.
 - Top-level JSON must be a single object, never an array.
-- Preferred section order for narrative flow: seo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer.
+- Preferred section order for narrative flow: ${requiredSectionTypes.join(', ')}.
 - Soft preference: when immediate_authority_hero, youtube_grid, keynote_speeches, and logos_of_trust_ribbon are all present, place them in this narrative order: immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon.
 - Root title is required.
 - seo.props.title and seo.props.description are required.
@@ -1300,7 +1266,9 @@ ${JSON.stringify(mvpIssues, null, 2)}`;
 function hydrateLandingPageWithAssets(
 	response: unknown,
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan
+	plan: LandingPagePlan,
+	requiredSectionTypes: readonly PageSectionType[],
+	preferredSectionOrder: readonly PageSectionType[]
 ): unknown {
 	if (!isRecord(response)) {
 		return response;
@@ -1322,8 +1290,8 @@ function hydrateLandingPageWithAssets(
 		input.campaign.topic;
 
 	if (!Array.isArray(hydrated.sections)) {
-		const fallbackSections = ensureRequiredMvpSections([], input, plan).map((section) =>
-			hydrateSectionWithAssets(section, input, plan)
+		const fallbackSections = ensureRequiredMvpSections([], input, plan, requiredSectionTypes).map(
+			(section) => hydrateSectionWithAssets(section, input, plan)
 		);
 		return {
 			...hydrated,
@@ -1354,11 +1322,11 @@ function hydrateLandingPageWithAssets(
 		})
 		.map((section) => hydrateSectionWithAssets(section, input, plan));
 
-	const mvpSections = ensureRequiredMvpSections(sections, input, plan).map((section) =>
-		hydrateSectionWithAssets(section, input, plan)
+	const mvpSections = ensureRequiredMvpSections(sections, input, plan, requiredSectionTypes).map(
+		(section) => hydrateSectionWithAssets(section, input, plan)
 	);
 
-	const orderedSections = enforceNarrativeSoftOrder(mvpSections);
+	const orderedSections = enforceNarrativeSoftOrder(mvpSections, preferredSectionOrder);
 	const sectionsWithSeo = ensureSeoSection(
 		orderedSections,
 		fallbackPageTitle,
@@ -1372,60 +1340,19 @@ function hydrateLandingPageWithAssets(
 	};
 }
 
-function validateLandingPageDocumentForMvp(
-	page: LandingPageDocument,
-	allowedSectionTypes: readonly PageSectionType[],
-	requiredSectionTypes: readonly PageSectionType[]
-): void {
-	const issues = collectLandingPageDocumentMvpIssues(
-		page,
-		allowedSectionTypes,
-		requiredSectionTypes
-	);
-	if (issues.length > 0) {
-		throw new Error(issues.join(' | '));
-	}
-}
-
-function collectLandingPageDocumentMvpIssues(
-	page: LandingPageDocument,
-	allowedSectionTypes: readonly PageSectionType[],
-	requiredSectionTypes: readonly PageSectionType[]
-): string[] {
-	const minSections = requiredSectionTypes.length;
-	const issues: string[] = [];
-
-	if (page.sections.length < minSections) {
-		issues.push(`Landing page must include at least ${minSections} sections for this MVP.`);
-	}
-
-	const allowedTypes = new Set<string>(allowedSectionTypes);
-	const sectionTypes = page.sections.map((section) => section.type);
-	for (const sectionType of sectionTypes) {
-		if (!allowedTypes.has(sectionType)) {
-			issues.push(`Unsupported section type for MVP landing page: ${sectionType}`);
-		}
-	}
-
-	for (const requiredSectionType of requiredSectionTypes) {
-		if (!sectionTypes.includes(requiredSectionType)) {
-			issues.push(`Landing page must include ${requiredSectionType} section.`);
-		}
-	}
-
-	return issues;
-}
-
 export async function generateLandingPageDocument(
 	input: LandingPageGenerationInput,
 	plan: LandingPagePlan,
 	traceContext: LlmTraceContext = {}
 ): Promise<LandingPageDocument> {
 	const eligibility = getSectionEligibility(input);
+	const preferredSectionOrder = resolvePreferredSectionOrder(eligibility.requiredSectionTypes);
 	const sectionCatalog = buildSectionCatalog(eligibility.allowedSectionTypes);
 	const promptContext = {
 		allowedSectionTypes: eligibility.allowedSectionTypes,
 		requiredSectionTypes: eligibility.requiredSectionTypes,
+		requiredCapabilities: [...requiredMvpCapabilities],
+		preferredSectionOrder,
 		sectionCatalog,
 		disallowedReasonByType: eligibility.disallowedReasonByType
 	};
@@ -1474,39 +1401,28 @@ export async function generateLandingPageDocument(
 		promptLibraryGuidance
 	);
 
-	let response;
-	try {
-		console.log('Landing page writer: calling OpenRouter');
-		traceLlm(
-			'agent_stage_start',
-			{ ...traceContext, stage: 'landing_page_writer' },
-			{
-				model: 'google/gemini-3.1-flash-lite-preview'
-			}
-		);
-		response = await callOpenRouter({
-			model: 'google/gemini-3.1-flash-lite',
-			systemPrompt,
-			userPrompt,
-			responseFormat: 'json_object',
-			traceContext: { ...traceContext, stage: 'landing_page_writer' }
-		});
-		console.log('Landing page writer: OpenRouter responded');
-		traceLlm(
-			'agent_stage_response',
-			{ ...traceContext, stage: 'landing_page_writer' },
-			{
-				responsePreview: JSON.stringify(response)
-			}
-		);
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		console.error('Landing page writer: OpenRouter error', message);
-		traceLlm('agent_stage_error', { ...traceContext, stage: 'landing_page_writer' }, { message });
-		throw new Error(`Landing page writer failed: ${message}`);
-	}
+	const response = await runLandingPageWriterGeneration({
+		systemPrompt,
+		userPrompt,
+		traceContext
+	});
 
-	const firstValidation = validateWithHydration(response, input, plan);
+	const firstValidation = validateWithHydrationPipeline(
+		response,
+		{
+			normalizeRootResponse,
+			hydrateLandingPageWithAssets: (normalizedResponse) =>
+				hydrateLandingPageWithAssets(
+					normalizedResponse,
+					input,
+					plan,
+					eligibility.requiredSectionTypes,
+					preferredSectionOrder
+				),
+			removeHybridSections
+		},
+		traceContext
+	);
 	let repairUserPrompt: string;
 	if (firstValidation.success) {
 		const firstMvpIssues = collectLandingPageDocumentMvpIssues(
@@ -1522,6 +1438,14 @@ export async function generateLandingPageDocument(
 		console.error('Landing page writer: MVP validation failed', firstMvpIssues);
 		traceLlm(
 			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: firstMvpIssues,
+				phase: 'initial_mvp_validation'
+			}
+		);
+		traceLlm(
+			'validation_failed',
 			{ ...traceContext, stage: 'landing_page_writer' },
 			{
 				issues: firstMvpIssues,
@@ -1548,6 +1472,14 @@ export async function generateLandingPageDocument(
 				phase: 'initial_validation'
 			}
 		);
+		traceLlm(
+			'validation_failed',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: firstValidation.issues,
+				phase: 'initial_validation'
+			}
+		);
 
 		repairUserPrompt = buildWriterRepairPrompt(
 			input,
@@ -1560,39 +1492,40 @@ export async function generateLandingPageDocument(
 		);
 	}
 
-	let repairedResponse;
-	try {
-		console.log('Landing page writer: requesting repair pass');
-		repairedResponse = await callOpenRouter({
-			model: 'google/gemini-3.1-flash-lite-preview',
-			systemPrompt,
-			userPrompt: repairUserPrompt,
-			responseFormat: 'json_object',
-			traceContext: { ...traceContext, stage: 'landing_page_writer_repair' }
-		});
-		console.log('Landing page writer: repair response received');
-		traceLlm(
-			'agent_stage_response',
-			{ ...traceContext, stage: 'landing_page_writer_repair' },
-			{
-				responsePreview: JSON.stringify(repairedResponse)
-			}
-		);
-	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
-		traceLlm(
-			'agent_stage_error',
-			{ ...traceContext, stage: 'landing_page_writer_repair' },
-			{ message }
-		);
-		throw new Error(`Landing page writer repair failed: ${message}`);
-	}
+	const repairedResponse = await runLandingPageWriterRepair({
+		systemPrompt,
+		userPrompt: repairUserPrompt,
+		traceContext
+	});
 
-	const secondValidation = validateWithHydration(repairedResponse, input, plan);
+	const secondValidation = validateWithHydrationPipeline(
+		repairedResponse,
+		{
+			normalizeRootResponse,
+			hydrateLandingPageWithAssets: (normalizedResponse) =>
+				hydrateLandingPageWithAssets(
+					normalizedResponse,
+					input,
+					plan,
+					eligibility.requiredSectionTypes,
+					preferredSectionOrder
+				),
+			removeHybridSections
+		},
+		traceContext
+	);
 	if (!secondValidation.success) {
 		console.error('Landing page writer: repair validation failed', secondValidation.issues);
 		traceLlm(
 			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: secondValidation.issues,
+				phase: 'repair_validation'
+			}
+		);
+		traceLlm(
+			'validation_failed',
 			{ ...traceContext, stage: 'landing_page_writer' },
 			{
 				issues: secondValidation.issues,
@@ -1613,6 +1546,14 @@ export async function generateLandingPageDocument(
 		console.error('Landing page writer: repair MVP validation failed', secondMvpIssues);
 		traceLlm(
 			'agent_stage_validation_error',
+			{ ...traceContext, stage: 'landing_page_writer' },
+			{
+				issues: secondMvpIssues,
+				phase: 'repair_mvp_validation'
+			}
+		);
+		traceLlm(
+			'validation_failed',
 			{ ...traceContext, stage: 'landing_page_writer' },
 			{
 				issues: secondMvpIssues,

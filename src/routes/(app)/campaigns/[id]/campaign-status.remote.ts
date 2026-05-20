@@ -1,8 +1,11 @@
 import { error } from '@sveltejs/kit';
 import { form } from '$app/server';
+import { parseLandingPageDocument } from '$lib/page-builder/page';
 import { setCampaignStatus } from '$lib/server/campaigns/client';
 import { db } from '$lib/server/db';
 import { campaign_ad_groups, campaign_ad_packages, campaign_pages } from '$lib/server/db/schema';
+import { resolvePageCapabilities } from '$lib/server/agents/section-definitions';
+import { traceLlm } from '$lib/server/telemetry/llm-trace';
 import { and, desc, eq } from 'drizzle-orm';
 
 function slugify(value: string): string {
@@ -108,6 +111,15 @@ export const publishCampaign = form('unchecked', async (rawData) => {
 	}
 
 	if (targetStatus === 'published') {
+		traceLlm(
+			'publish_action',
+			{ pipeline: 'landing_page', campaignId: id },
+			{
+				action: 'publish_requested',
+				targetStatus,
+				candidatePageId: Number.isFinite(candidatePageId) ? candidatePageId : null
+			}
+		);
 		let selectedCampaignPageId: number | null = null;
 
 		if (Number.isFinite(candidatePageId) && candidatePageId > 0) {
@@ -134,6 +146,27 @@ export const publishCampaign = form('unchecked', async (rawData) => {
 		}
 
 		if (selectedCampaignPageId) {
+			const [selectedPageContent] = await db
+				.select({ structuredContentJson: campaign_pages.structured_content_json })
+				.from(campaign_pages)
+				.where(
+					and(eq(campaign_pages.id, selectedCampaignPageId), eq(campaign_pages.campaign_id, id))
+				)
+				.limit(1);
+
+			if (!selectedPageContent) {
+				throw error(404, 'Campaign page not found');
+			}
+
+			const parsedPage = parseLandingPageDocument(selectedPageContent.structuredContentJson);
+			const capabilityResolution = resolvePageCapabilities(parsedPage);
+			if (capabilityResolution.missingRequiredCapabilities.length > 0) {
+				throw error(
+					400,
+					`Cannot publish page missing capabilities: ${capabilityResolution.missingRequiredCapabilities.join(', ')}`
+				);
+			}
+
 			const publishedSlug = await resolvePublishedCampaignSlug(id, selectedCampaignPageId);
 			await db
 				.update(campaign_pages)
@@ -150,6 +183,16 @@ export const publishCampaign = form('unchecked', async (rawData) => {
 				})
 				.where(eq(campaign_pages.id, selectedCampaignPageId));
 
+			traceLlm(
+				'publish_action',
+				{ pipeline: 'landing_page', campaignId: id },
+				{
+					action: 'page_published',
+					selectedCampaignPageId,
+					publishedSlug
+				}
+			);
+
 			const [latestAdPackage] = await db
 				.select({ id: campaign_ad_packages.id })
 				.from(campaign_ad_packages)
@@ -162,9 +205,27 @@ export const publishCampaign = form('unchecked', async (rawData) => {
 					.update(campaign_ad_groups)
 					.set({ campaign_page_id: selectedCampaignPageId, updated_at: new Date() })
 					.where(eq(campaign_ad_groups.ad_package_id, latestAdPackage.id));
+
+				traceLlm(
+					'ad_group_relink_action',
+					{ pipeline: 'landing_page', campaignId: id },
+					{
+						action: 'publish_relink_latest_ad_package',
+						adPackageId: latestAdPackage.id,
+						campaignPageId: selectedCampaignPageId
+					}
+				);
 			}
 		}
 	} else {
+		traceLlm(
+			'publish_action',
+			{ pipeline: 'landing_page', campaignId: id },
+			{
+				action: 'unpublish_requested',
+				targetStatus
+			}
+		);
 		await db
 			.update(campaign_pages)
 			.set({ is_published: false, published_at: null, updated_at: new Date() })

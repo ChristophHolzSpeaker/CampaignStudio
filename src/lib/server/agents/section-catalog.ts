@@ -1,5 +1,6 @@
 import { sectionSpecs } from '$lib/page-builder/sections';
 import type { PageSectionType } from '$lib/page-builder/sections';
+import { sectionDefinitions } from './section-definitions';
 import type { ZodTypeAny } from 'zod';
 
 export type SectionCatalogItem = {
@@ -40,7 +41,7 @@ export function buildSectionCatalog(
 			whenToUse: spec.whenToUse,
 			whenNotToUse: spec.whenNotToUse,
 			contentGuidance: spec.contentGuidance,
-			requiredTopLevelProps: inferRequiredTopLevelProps(spec.propsSchema)
+			requiredTopLevelProps: inferRequiredTopLevelProps(sectionDefinitions[sectionType].schema)
 		};
 	});
 }

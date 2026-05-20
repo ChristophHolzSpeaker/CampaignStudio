@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PageSectionType } from '$lib/page-builder/sections';
+import type { LandingPageCapability } from '../section-definitions';
 import {
 	buildLandingPageStrategistSystemPrompt,
 	buildLandingPageWriterSystemPrompt
@@ -30,12 +31,36 @@ const TEST_CONTEXT = {
 		'booklet_download_cta',
 		'compliance_transparency_footer'
 	] as PageSectionType[],
+	requiredCapabilities: [
+		'seo_metadata',
+		'hero_authority',
+		'video_proof',
+		'keynote_offers',
+		'logo_proof',
+		'audience_outcomes',
+		'booking_cta',
+		'testimonial_proof',
+		'booklet_cta',
+		'compliance'
+	] as LandingPageCapability[],
+	preferredSectionOrder: [
+		'seo',
+		'immediate_authority_hero',
+		'youtube_grid',
+		'keynote_speeches',
+		'logos_of_trust_ribbon',
+		'hybrid_content_section',
+		'frictionless_funnel_booking',
+		'proof_of_performance',
+		'booklet_download_cta',
+		'compliance_transparency_footer'
+	] as PageSectionType[],
 	sectionCatalog: [],
 	disallowedReasonByType: {}
 };
 
 const REQUIRED_ORDER_RULE =
-	'Preferred section order for narrative flow: seo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer';
+	'preferred section order for narrative flow:\n\tseo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer';
 const YOUTUBE_GRID_RATIONALE_RULE =
 	'when youtube_grid is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale';
 const KEYNOTE_SELECTION_RULE =
