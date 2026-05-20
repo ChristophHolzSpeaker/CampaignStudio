@@ -36,6 +36,11 @@
 	};
 
 	const canUseAiEditor = () => canEditPage() && canRenderSelectedPage() && isViewingLatestVersion();
+	const currentEditPreview = $derived(page.form?.pageEdit?.preview);
+	const hasEditPreview = $derived(Boolean(currentEditPreview));
+	const serializedPreviewPayload = $derived(
+		currentEditPreview ? JSON.stringify(currentEditPreview) : ''
+	);
 
 	const getComposerHint = () => {
 		const viewData = getViewData();
@@ -47,7 +52,7 @@
 		if (viewData.campaignStatus === 'published') {
 			return 'This campaign is published. Archive it before editing the landing page.';
 		}
-		return 'Describe text, section order, section removal, or approved media changes.';
+		return 'Describe text, section order, section removal, approved media swaps, or layout adjustments.';
 	};
 
 	const formatVersionDate = (date: Date) =>
@@ -87,9 +92,21 @@
 
 	const handleEditSubmit: SubmitFunction = () => {
 		busy = true;
-		return async ({ update }) => {
+		return async ({ result, update }) => {
 			try {
 				await update({ reset: true, invalidateAll: true });
+				if (result.type === 'success') {
+					const nextCampaignPageId = result.data?.pageEdit?.campaignPageId;
+					if (typeof nextCampaignPageId === 'number' && Number.isFinite(nextCampaignPageId)) {
+						const nextUrl = new URL(page.url);
+						nextUrl.searchParams.set('version', String(nextCampaignPageId));
+						await goto(nextUrl.pathname + nextUrl.search, {
+							invalidateAll: true,
+							keepFocus: true,
+							replaceState: true
+						});
+					}
+				}
 			} finally {
 				busy = false;
 			}
@@ -294,6 +311,7 @@
 						class="absolute inset-x-0 bottom-0 z-20 flex flex-col border-t border-stone-300 bg-white p-3.5"
 					>
 						<input type="hidden" name="campaignPageId" value={viewData.campaignPageId ?? ''} />
+						<input type="hidden" name="preview_payload" value={serializedPreviewPayload} />
 						<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
 							<p
 								class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
@@ -306,16 +324,89 @@
 							value={page.form?.pageEdit?.values?.changePrompt ?? ''}
 							name="change_prompt"
 							rows="6"
-							placeholder="e.g. Move testimonials above the booking section and tighten the hero headline"
+							placeholder="e.g. Move the hero image left, make the hero more compact, and tighten the headline"
 							disabled={!canUseAiEditor()}
 							class="w-full resize-y border border-[#cbd5e1] bg-white px-3 py-2.5 text-[0.85rem] leading-[1.45] text-[#0f172a] disabled:bg-[#f1f5f9] disabled:text-[#64748b]"
 						></textarea>
+						<label class="flex items-center gap-2 text-[0.78rem] text-[#334155]">
+							<input
+								type="checkbox"
+								name="auto_apply_simple"
+								checked={page.form?.pageEdit?.values?.autoApplySimple ?? false}
+							/>
+							Auto-apply simple edits (single-section, no media or reordering)
+						</label>
+						{#if currentEditPreview}
+							<div class="grid gap-2 border border-[#d9dbcf] bg-[#f8fafc] p-2.5">
+								<p class="m-0 text-[0.72rem] font-bold tracking-[0.05em] text-[#0f172a] uppercase">
+									Preview summary
+								</p>
+								<p class="m-0 text-[0.78rem] text-[#334155]">
+									Operations: {currentEditPreview.operationTypes.join(', ') || 'none'}
+								</p>
+								<p class="m-0 text-[0.78rem] text-[#334155]">
+									Impacted sections:
+									{currentEditPreview.changeSummary.impactedSections.join(', ') || 'none'}
+								</p>
+								{#if currentEditPreview.changeSummary.layoutChanges.length > 0}
+									<p class="m-0 text-[0.76rem] text-[#334155]">
+										Layout changes: {currentEditPreview.changeSummary.layoutChanges.join(' ')}
+									</p>
+								{/if}
+								{#if currentEditPreview.changeSummary.mediaChanges.length > 0}
+									<p class="m-0 text-[0.76rem] text-[#334155]">
+										Media changes: {currentEditPreview.changeSummary.mediaChanges.join(' ')}
+									</p>
+								{/if}
+								{#if currentEditPreview.changeSummary.reorderedSections.length > 0}
+									<p class="m-0 text-[0.76rem] text-[#334155]">
+										Order changes:
+										{currentEditPreview.changeSummary.reorderedSections.join(' | ')}
+									</p>
+								{/if}
+								{#if currentEditPreview.changeSummary.fieldDiffs.length > 0}
+									<div class="grid gap-1.5 border-t border-[#d1d5db] pt-2">
+										<p
+											class="m-0 text-[0.72rem] font-semibold tracking-[0.04em] text-[#0f172a] uppercase"
+										>
+											Before / after
+										</p>
+										{#each currentEditPreview.changeSummary.fieldDiffs as diff, index (`${diff.sectionType}:${diff.field}:${index}`)}
+											<p class="m-0 text-[0.74rem] leading-[1.35] text-[#334155]">
+												<span class="font-semibold">{diff.sectionType}.{diff.field}</span>
+												<br />
+												<code>{diff.before}</code>
+												<span> -> </span>
+												<code>{diff.after}</code>
+											</p>
+										{/each}
+									</div>
+								{/if}
+							</div>
+						{/if}
 						<button
 							type="submit"
+							name="mode"
+							value={hasEditPreview ? 'accept' : 'preview'}
 							disabled={!canUseAiEditor() || busy}
 							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
-							>{busy ? 'Applying...' : 'Apply changes'}</button
-						>
+							>{busy
+								? 'Working...'
+								: hasEditPreview
+									? 'Accept and save preview'
+									: 'Generate preview'}
+						</button>
+						{#if hasEditPreview}
+							<button
+								type="submit"
+								name="mode"
+								value="reject"
+								disabled={busy}
+								class="mt-2 cursor-pointer self-start border border-[#94a3b8] bg-white px-[0.9rem] py-[0.55rem] text-[0.74rem] font-semibold tracking-[0.03em] text-[#334155] uppercase disabled:cursor-not-allowed disabled:opacity-[0.55]"
+							>
+								Discard preview
+							</button>
+						{/if}
 						{#if page.form?.pageEdit}
 							<p
 								class={[

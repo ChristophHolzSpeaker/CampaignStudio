@@ -3,7 +3,7 @@ import {
 	parseLandingPageDocument,
 	type LandingPageDocument
 } from '$lib/page-builder/page';
-import { pageSectionTypes } from '$lib/page-builder/sections';
+import { pageSectionTypes, type PageSection } from '$lib/page-builder/sections';
 import { callOpenRouter } from '$lib/server/openrouter/client';
 import { db } from '$lib/server/db';
 import {
@@ -21,15 +21,41 @@ import { landingPageOperationsEnvelopeSchema } from './landing-page-operations';
 import { applyLandingPageOperations } from './landing-page-patch-executor';
 import { persistGeneratedLandingPage } from './landing-page-pipeline';
 import { resolveEditorRequiredSectionTypes, resolvePageCapabilities } from './section-definitions';
+import type { LandingPageOperation } from './landing-page-operations';
+
+export type LandingPageEditPreview = {
+	baseCampaignPageId: number;
+	changePrompt: string;
+	editedPage: LandingPageDocument;
+	operationTypes: string[];
+	changeSummary: {
+		impactedSections: string[];
+		contentChanges: string[];
+		layoutChanges: string[];
+		mediaChanges: string[];
+		reorderedSections: string[];
+		fieldDiffs: Array<{
+			sectionType: string;
+			field: string;
+			before: string;
+			after: string;
+		}>;
+	};
+};
 
 const sectionContractGuidance = `Valid section type names and required props (exact keys):
 - immediate_authority_hero: headline, subheadline, primaryCtaLabel, videoEmbedUrl, heroImageUrl, heroImageAlt, videoThumbnailUrl, videoThumbnailAlt
 - hero_large_email_cta: heading, labelText
 - booklet_download_cta: labelText, heading, paragraph, buttonCtaText
+- hybrid_content_section: title, intro, benefits, deepDiveTitle, deepDiveItems, primaryVisual, emailCtaTitle, layout
 
 Common invalid aliases to NEVER use:
 - booklet_cta_section -> use booklet_download_cta
-- hero_email_capture or hero_email_capture_large -> use hero_large_email_cta`;
+- hero_email_capture or hero_email_capture_large -> use hero_large_email_cta
+
+Hybrid image change rules:
+- For hybrid primary image swaps, target field primaryVisual.imageUrl via replace_media.
+- Keep primaryVisual.alt and primaryVisual.caption intact unless explicitly requested.`;
 
 function promptWantsBookletSection(changePrompt: string): boolean {
 	const normalized = changePrompt.toLowerCase();
@@ -59,6 +85,11 @@ Rules:
 - If media changes are requested, only use approved media URLs from the provided asset catalog.
 - For youtube_grid, only use video URLs from approved media assets entries marked for youtube_grid.
 - Do not invent media URLs, IDs, testimonials, or logos.
+- Preferred command mappings:
+  - "move image left/right" -> update_section_layout on immediate_authority_hero with layoutPatch.layout = "left"|"right"
+  - "make the hero more compact/spacious" -> update_section_layout on immediate_authority_hero with layoutPatch.density = "compact"|"spacious"
+  - "make this more executive" -> update_section_content with concise tone adjustments
+  - "shorten this section" -> update_section_content with reduced copy length
 
 ${sectionContractGuidance}
 
@@ -77,6 +108,63 @@ Valid examples:
 - { "operations": [{ "type": "update_section_layout", "sectionType": "immediate_authority_hero", "layoutPatch": { "layout": "right" } }] }
 - { "operations": [{ "type": "replace_media", "sectionType": "immediate_authority_hero", "field": "heroImageUrl", "value": "https://..." }] }
 - { "operations": [{ "type": "reorder_section", "sectionType": "proof_of_performance", "moveAfterSectionType": "frictionless_funnel_booking" }] }`;
+}
+
+function tryBuildDeterministicOperations(
+	currentPage: LandingPageDocument,
+	changePrompt: string
+): LandingPageOperation[] | null {
+	const normalized = changePrompt.toLowerCase();
+	const hasHero = currentPage.sections.some(
+		(section) => section.type === 'immediate_authority_hero'
+	);
+	if (!hasHero) {
+		return null;
+	}
+
+	if ((normalized.includes('move') || normalized.includes('put')) && normalized.includes('image')) {
+		if (normalized.includes('left')) {
+			return [
+				{
+					type: 'update_section_layout',
+					sectionType: 'immediate_authority_hero',
+					layoutPatch: { layout: 'left' }
+				}
+			];
+		}
+
+		if (normalized.includes('right')) {
+			return [
+				{
+					type: 'update_section_layout',
+					sectionType: 'immediate_authority_hero',
+					layoutPatch: { layout: 'right' }
+				}
+			];
+		}
+	}
+
+	if (normalized.includes('hero') && normalized.includes('compact')) {
+		return [
+			{
+				type: 'update_section_layout',
+				sectionType: 'immediate_authority_hero',
+				layoutPatch: { density: 'compact' }
+			}
+		];
+	}
+
+	if (normalized.includes('hero') && normalized.includes('spacious')) {
+		return [
+			{
+				type: 'update_section_layout',
+				sectionType: 'immediate_authority_hero',
+				layoutPatch: { density: 'spacious' }
+			}
+		];
+	}
+
+	return null;
 }
 
 function operationsTouchYoutubeGrid(operations: Array<{ sectionType: string }>): boolean {
@@ -123,6 +211,7 @@ function normalizeOperationsResponse(input: unknown): unknown {
 
 		const record = { ...(operation as Record<string, unknown>) };
 		const operationType = typeof record.type === 'string' ? record.type : null;
+		const sectionType = typeof record.sectionType === 'string' ? record.sectionType : null;
 
 		if (operationType === 'update_section_content') {
 			if (record.contentPatch === undefined) {
@@ -154,6 +243,16 @@ function normalizeOperationsResponse(input: unknown): unknown {
 					delete layoutPatch.imagePosition;
 				}
 				record.layoutPatch = layoutPatch;
+			}
+		}
+
+		if (operationType === 'replace_media') {
+			if (
+				sectionType === 'hybrid_content_section' &&
+				typeof record.field === 'string' &&
+				record.field === 'imageUrl'
+			) {
+				record.field = 'primaryVisual.imageUrl';
 			}
 		}
 
@@ -425,6 +524,35 @@ async function generateEditedLandingPageDocument(
 		approvedYoutubeVideos
 	);
 
+	const deterministicOperations = tryBuildDeterministicOperations(currentPage, changePrompt);
+	if (deterministicOperations) {
+		traceLlm('edit_operations_generated', traceContext, {
+			operations: deterministicOperations,
+			operationTypes: deterministicOperations.map((operation) => operation.type),
+			source: 'deterministic_command_mapping'
+		});
+
+		const editedPage = applyLandingPageOperations(currentPage, deterministicOperations);
+		const enforceYoutubeGridCatalog = operationsTouchYoutubeGrid(deterministicOperations);
+		const validatedEditedPage = validateEditedPageGuardrails(
+			editedPage,
+			currentPage,
+			approvedHeroMedia,
+			approvedHybridImages,
+			approvedYoutubeVideos.map((video) => video.videoEmbedUrl),
+			enforceYoutubeGridCatalog
+		);
+
+		if (JSON.stringify(validatedEditedPage) === JSON.stringify(currentPage)) {
+			throw new Error('No effective changes were applied from generated operations.');
+		}
+
+		return {
+			page: validatedEditedPage,
+			operationTypes: deterministicOperations.map((operation) => operation.type)
+		};
+	}
+
 	let response;
 	try {
 		traceLlm(
@@ -566,6 +694,173 @@ async function generateEditedLandingPageDocument(
 	return {
 		page: validatedEditedPage,
 		operationTypes: parsed.data.operations.map((operation) => operation.type)
+	};
+}
+
+function describeSectionMove(
+	current: string[],
+	next: string[],
+	sectionType: string
+): string | null {
+	const fromIndex = current.indexOf(sectionType);
+	const toIndex = next.indexOf(sectionType);
+	if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+		return null;
+	}
+
+	const fromLabel = fromIndex === 0 ? 'start' : `position ${fromIndex + 1}`;
+	const toLabel = toIndex === 0 ? 'start' : `position ${toIndex + 1}`;
+	return `${sectionType}: ${fromLabel} -> ${toLabel}`;
+}
+
+function buildEditChangeSummary(
+	currentPage: LandingPageDocument,
+	editedPage: LandingPageDocument,
+	operationTypes: string[]
+): LandingPageEditPreview['changeSummary'] {
+	const impactedSections = new Set<string>();
+	const contentChanges = new Set<string>();
+	const layoutChanges = new Set<string>();
+	const mediaChanges = new Set<string>();
+	const reorderedSections = new Set<string>();
+	const fieldDiffs: LandingPageEditPreview['changeSummary']['fieldDiffs'] = [];
+
+	const currentByType = new Map<string, PageSection>();
+	for (const section of currentPage.sections) {
+		if (!currentByType.has(section.type)) {
+			currentByType.set(section.type, section);
+		}
+	}
+
+	const editedByType = new Map<string, PageSection>();
+	for (const section of editedPage.sections) {
+		if (!editedByType.has(section.type)) {
+			editedByType.set(section.type, section);
+		}
+	}
+
+	for (const [sectionType, nextSection] of editedByType.entries()) {
+		const currentSection = currentByType.get(sectionType);
+		if (!currentSection) {
+			impactedSections.add(sectionType);
+			continue;
+		}
+
+		const currentProps = JSON.stringify(currentSection.props);
+		const nextProps = JSON.stringify(nextSection.props);
+		if (currentProps !== nextProps) {
+			impactedSections.add(sectionType);
+
+			const currentRecord = currentSection.props as unknown as Record<string, unknown>;
+			const nextRecord = nextSection.props as unknown as Record<string, unknown>;
+			const candidateKeys = new Set<string>([
+				...Object.keys(currentRecord),
+				...Object.keys(nextRecord)
+			]);
+			for (const key of candidateKeys) {
+				const beforeValue = currentRecord[key];
+				const afterValue = nextRecord[key];
+				if (JSON.stringify(beforeValue) === JSON.stringify(afterValue)) {
+					continue;
+				}
+
+				fieldDiffs.push({
+					sectionType,
+					field: key,
+					before: JSON.stringify(beforeValue ?? null),
+					after: JSON.stringify(afterValue ?? null)
+				});
+			}
+		}
+	}
+
+	const currentOrder = currentPage.sections.map((section) => section.type);
+	const nextOrder = editedPage.sections.map((section) => section.type);
+	for (const sectionType of nextOrder) {
+		const moveDescription = describeSectionMove(currentOrder, nextOrder, sectionType);
+		if (!moveDescription) {
+			continue;
+		}
+
+		reorderedSections.add(moveDescription);
+		impactedSections.add(sectionType);
+	}
+
+	for (const operationType of operationTypes) {
+		if (operationType === 'update_section_content') {
+			contentChanges.add('Updated section copy/content fields.');
+		}
+		if (operationType === 'update_section_layout') {
+			layoutChanges.add('Updated section layout/visual arrangement fields.');
+		}
+		if (operationType === 'replace_media') {
+			mediaChanges.add('Replaced section media fields (images/videos).');
+		}
+		if (operationType === 'reorder_section') {
+			reorderedSections.add('Section order changed.');
+		}
+	}
+
+	return {
+		impactedSections: Array.from(impactedSections),
+		contentChanges: Array.from(contentChanges),
+		layoutChanges: Array.from(layoutChanges),
+		mediaChanges: Array.from(mediaChanges),
+		reorderedSections: Array.from(reorderedSections),
+		fieldDiffs: fieldDiffs.slice(0, 30)
+	};
+}
+
+export async function buildLandingPageEditPreview(
+	campaignPageId: number,
+	changePrompt: string
+): Promise<{ campaignId: number; preview: LandingPageEditPreview }> {
+	const runId = createRunId('landing_page_edit_preview');
+	const traceContext = { runId, campaignPageId, pipeline: 'landing_page_edit_preview' };
+	traceLlm('pipeline_start', traceContext, { changePrompt });
+
+	const [pageRecord] = await db
+		.select({
+			campaignId: campaign_pages.campaign_id,
+			structuredContentJson: campaign_pages.structured_content_json,
+			campaignStatus: campaigns.status
+		})
+		.from(campaign_pages)
+		.innerJoin(campaigns, eq(campaigns.id, campaign_pages.campaign_id))
+		.where(eq(campaign_pages.id, campaignPageId))
+		.limit(1);
+
+	if (!pageRecord) {
+		throw new Error(`Campaign page ${campaignPageId} not found.`);
+	}
+
+	if (pageRecord.campaignStatus === 'published') {
+		throw new Error('Cannot edit landing page while campaign is published. Archive first.');
+	}
+
+	const currentPage = parseLandingPageDocument(pageRecord.structuredContentJson);
+	const editResult = await generateEditedLandingPageDocument(
+		currentPage,
+		changePrompt,
+		traceContext
+	);
+
+	const preview: LandingPageEditPreview = {
+		baseCampaignPageId: campaignPageId,
+		changePrompt,
+		editedPage: editResult.page,
+		operationTypes: editResult.operationTypes,
+		changeSummary: buildEditChangeSummary(currentPage, editResult.page, editResult.operationTypes)
+	};
+
+	traceLlm('pipeline_success', traceContext, {
+		campaignId: pageRecord.campaignId,
+		previewOperationTypes: preview.operationTypes
+	});
+
+	return {
+		campaignId: pageRecord.campaignId,
+		preview
 	};
 }
 

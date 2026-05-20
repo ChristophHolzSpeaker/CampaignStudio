@@ -27,13 +27,43 @@ function applyLayoutPatch(section: PageSection, patch: Record<string, unknown>):
 }
 
 function applyReplaceMediaField(section: PageSection, field: string, value: unknown): PageSection {
+	if (!field.includes('.')) {
+		return {
+			...section,
+			props: {
+				...section.props,
+				[field]: value
+			}
+		} as PageSection;
+	}
+
+	const fieldPath = field.split('.').filter((token) => token.length > 0);
+	if (fieldPath.length === 0) {
+		return section;
+	}
+
+	const root = structuredClone(section.props) as unknown as Record<string, unknown>;
+	let cursor: Record<string, unknown> = root;
+	for (let index = 0; index < fieldPath.length - 1; index += 1) {
+		const key = fieldPath[index];
+		const next = cursor[key];
+		if (typeof next === 'object' && next !== null && !Array.isArray(next)) {
+			cursor = next as Record<string, unknown>;
+			continue;
+		}
+
+		const created: Record<string, unknown> = {};
+		cursor[key] = created;
+		cursor = created;
+	}
+
+	const leafKey = fieldPath[fieldPath.length - 1];
+	cursor[leafKey] = value;
+
 	return {
 		...section,
-		props: {
-			...section.props,
-			[field]: value
-		}
-	} as PageSection;
+		props: root
+	} as unknown as PageSection;
 }
 
 function reorderSections(
