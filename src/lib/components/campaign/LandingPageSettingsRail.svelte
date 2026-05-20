@@ -3,7 +3,29 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import type { SubmitFunction } from '@sveltejs/kit';
+	import { onMount } from 'svelte';
 	import { getLandingPagePreview } from '../../../routes/(app)/campaigns/[id]/landing-page/landing-page.remote';
+
+	type GenerationJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+
+	type GenerationJob = {
+		id: number;
+		status: GenerationJobStatus;
+		inputPayload: unknown;
+		outputPayload: unknown;
+		errorMessage: string | null;
+		createdAt: string;
+		completedAt: string | null;
+	};
+
+	type GenerationJobStage = {
+		name: string;
+		status: GenerationJobStatus;
+		message: string;
+		level: 'info' | 'success' | 'error';
+		timestamp: string;
+		meta?: Record<string, unknown>;
+	};
 
 	let { children } = $props();
 
@@ -89,12 +111,110 @@
 	};
 
 	let busy = $state(false);
+	let generationJobs = $state<GenerationJob[]>([]);
+	let generationJobsLoading = $state(false);
+	let generationJobsError = $state<string | null>(null);
+	let expandedJobIds = $state<number[]>([]);
+	let jobsRefreshTimer: ReturnType<typeof setInterval> | null = null;
+
+	const getJobPipeline = (job: GenerationJob): string => {
+		if (!job.outputPayload || typeof job.outputPayload !== 'object') {
+			return 'unknown';
+		}
+
+		const pipeline = (job.outputPayload as { pipeline?: unknown }).pipeline;
+		return typeof pipeline === 'string' && pipeline.trim().length > 0 ? pipeline : 'unknown';
+	};
+
+	const getJobStages = (job: GenerationJob): GenerationJobStage[] => {
+		if (!job.outputPayload || typeof job.outputPayload !== 'object') {
+			return [];
+		}
+
+		const stages = (job.outputPayload as { stages?: unknown }).stages;
+		if (!Array.isArray(stages)) {
+			return [];
+		}
+
+		return stages.filter(
+			(stage): stage is GenerationJobStage =>
+				typeof stage === 'object' &&
+				stage !== null &&
+				typeof (stage as { name?: unknown }).name === 'string' &&
+				typeof (stage as { status?: unknown }).status === 'string' &&
+				typeof (stage as { message?: unknown }).message === 'string' &&
+				typeof (stage as { timestamp?: unknown }).timestamp === 'string' &&
+				typeof (stage as { level?: unknown }).level === 'string'
+		);
+	};
+
+	const getLatestJobStage = (job: GenerationJob): GenerationJobStage | null => {
+		const stages = getJobStages(job);
+		return stages.length > 0 ? stages[stages.length - 1] : null;
+	};
+
+	const isJobExpanded = (jobId: number): boolean => expandedJobIds.includes(jobId);
+
+	const toggleJobExpanded = (jobId: number): void => {
+		expandedJobIds = expandedJobIds.includes(jobId)
+			? expandedJobIds.filter((id) => id !== jobId)
+			: [...expandedJobIds, jobId];
+	};
+
+	const hasProcessingJobs = (): boolean =>
+		generationJobs.some((job) => job.status === 'processing');
+
+	const startJobsRefreshTimer = (): void => {
+		if (typeof window === 'undefined' || jobsRefreshTimer) {
+			return;
+		}
+
+		jobsRefreshTimer = setInterval(() => {
+			if (hasProcessingJobs()) {
+				void refreshGenerationJobs();
+			}
+		}, 5000);
+	};
+
+	const stopJobsRefreshTimer = (): void => {
+		if (jobsRefreshTimer) {
+			clearInterval(jobsRefreshTimer);
+			jobsRefreshTimer = null;
+		}
+	};
+
+	async function refreshGenerationJobs(): Promise<void> {
+		if (!Number.isFinite(campaignId) || campaignId <= 0) {
+			generationJobs = [];
+			generationJobsError = 'Invalid campaign id for generation jobs.';
+			return;
+		}
+
+		generationJobsLoading = true;
+		generationJobsError = null;
+
+		try {
+			const response = await fetch(`/campaigns/${campaignId}/generation-jobs?limit=20`);
+			if (!response.ok) {
+				throw new Error(`Unable to load generation runs (${response.status}).`);
+			}
+
+			const payload = (await response.json()) as { jobs?: GenerationJob[] };
+			generationJobs = Array.isArray(payload.jobs) ? payload.jobs : [];
+		} catch (error) {
+			generationJobsError =
+				error instanceof Error ? error.message : 'Unable to load generation runs.';
+		} finally {
+			generationJobsLoading = false;
+		}
+	}
 
 	const handleEditSubmit: SubmitFunction = () => {
 		busy = true;
 		return async ({ result, update }) => {
 			try {
 				await update({ reset: true, invalidateAll: true });
+				await refreshGenerationJobs();
 				if (result.type === 'success') {
 					const nextCampaignPageId = result.data?.pageEdit?.campaignPageId;
 					if (typeof nextCampaignPageId === 'number' && Number.isFinite(nextCampaignPageId)) {
@@ -118,6 +238,7 @@
 		return async ({ result, update }) => {
 			try {
 				await update({ reset: true, invalidateAll: true });
+				await refreshGenerationJobs();
 				if (result.type === 'success') {
 					await goto(page.url.pathname, {
 						invalidateAll: true,
@@ -130,6 +251,15 @@
 			}
 		};
 	};
+
+	onMount(() => {
+		void refreshGenerationJobs();
+		startJobsRefreshTimer();
+
+		return () => {
+			stopJobsRefreshTimer();
+		};
+	});
 </script>
 
 <div class="sticky top-0 h-dvh min-h-0 overflow-hidden border-l border-stone-200 bg-white">
@@ -195,6 +325,96 @@
 						{busy ? 'Restoring...' : 'Restore viewed version as latest'}
 					</button>
 				</form>
+			</section>
+
+			<section class="border border-[#d9dbcf] bg-white" aria-label="Generation runs">
+				<div class="border-b border-[#e5e7eb] p-3.5">
+					<p class="m-0 text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase">
+						Generation runs
+					</p>
+					<p class="mt-1 mr-0 mb-0 ml-0 text-[0.78rem] text-[#4b5563]">
+						Recent generation and edit jobs for this campaign.
+					</p>
+				</div>
+				<div class="grid gap-2 p-3.5">
+					<div class="flex items-center justify-between gap-2">
+						<p class="m-0 text-[0.74rem] text-[#475569]">Latest 20 runs</p>
+						<button
+							type="button"
+							onclick={() => void refreshGenerationJobs()}
+							disabled={generationJobsLoading}
+							class="cursor-pointer border border-[#cbd5e1] bg-white px-2 py-1 text-[0.66rem] font-semibold tracking-[0.05em] text-[#334155] uppercase disabled:cursor-not-allowed disabled:opacity-60"
+						>
+							{generationJobsLoading ? 'Refreshing...' : 'Refresh'}
+						</button>
+					</div>
+					{#if generationJobsError}
+						<p class="m-0 text-[0.74rem] text-[#b91c1c]">{generationJobsError}</p>
+					{:else if generationJobs.length === 0}
+						<p class="m-0 text-[0.74rem] text-[#64748b]">No generation runs yet.</p>
+					{:else}
+						<div class="grid max-h-[280px] gap-2 overflow-auto">
+							{#each generationJobs as job (job.id)}
+								{@const latestStage = getLatestJobStage(job)}
+								<div class="border border-[#e2e8f0] bg-[#f8fafc] p-2.5">
+									<div class="flex items-start justify-between gap-2">
+										<div class="grid gap-1">
+											<p class="m-0 text-[0.72rem] font-semibold text-[#0f172a]">
+												#{job.id} · {getJobPipeline(job)}
+											</p>
+											<p class="m-0 text-[0.7rem] text-[#64748b]">
+												{formatVersionDate(new Date(job.createdAt))}
+												{#if job.completedAt}
+													· done {formatVersionDate(new Date(job.completedAt))}
+												{/if}
+											</p>
+											<p class="m-0 text-[0.72rem] text-[#334155]">
+												{latestStage?.message ?? 'No stage messages yet.'}
+											</p>
+										</div>
+										<span
+											class={[
+												'px-1.5 py-0.5 text-[0.62rem] font-bold tracking-[0.05em] uppercase',
+												job.status === 'completed' && 'bg-[#dcfce7] text-[#166534]',
+												job.status === 'processing' && 'bg-[#dbeafe] text-[#1d4ed8]',
+												job.status === 'failed' && 'bg-[#fee2e2] text-[#b91c1c]',
+												job.status === 'pending' && 'bg-[#e2e8f0] text-[#334155]'
+											]}
+										>
+											{job.status}
+										</span>
+									</div>
+									<button
+										type="button"
+										onclick={() => toggleJobExpanded(job.id)}
+										class="mt-2 cursor-pointer border border-[#cbd5e1] bg-white px-2 py-1 text-[0.64rem] font-semibold tracking-[0.05em] text-[#334155] uppercase"
+									>
+										{isJobExpanded(job.id) ? 'Hide details' : 'Show details'}
+									</button>
+									{#if isJobExpanded(job.id)}
+										<div class="mt-2 grid gap-1.5 border-t border-[#dbe3ed] pt-2">
+											{#if job.errorMessage}
+												<p class="m-0 text-[0.72rem] text-[#b91c1c]">{job.errorMessage}</p>
+											{/if}
+											{#if getJobStages(job).length === 0}
+												<p class="m-0 text-[0.72rem] text-[#64748b]">No stage timeline.</p>
+											{:else}
+												{#each getJobStages(job) as stage, stageIndex (`${job.id}:${stage.name}:${stageIndex}`)}
+													<p class="m-0 text-[0.7rem] leading-[1.35] text-[#334155]">
+														<span class="font-semibold">{stage.name}</span>
+														· {stage.status}
+														<br />
+														{stage.message}
+													</p>
+												{/each}
+											{/if}
+										</div>
+									{/if}
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
 			</section>
 
 			{#if canRenderSelectedPage()}
