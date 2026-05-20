@@ -7,6 +7,12 @@ import { runGoogleAdsGenerationForCampaign } from '$lib/server/agents/google-ads
 import { runLandingPageGenerationForCampaign } from '$lib/server/agents/landing-page-pipeline';
 import { publishCampaignPipelineEvent } from '$lib/server/campaign-pipeline-progress';
 import { createRunId } from '$lib/server/telemetry/llm-trace';
+import {
+	completeGenerationJob,
+	createGenerationJob,
+	failGenerationJob,
+	markGenerationJobStage
+} from '$lib/server/generation-jobs';
 
 type FieldErrors = Record<string, string[] | undefined>;
 
@@ -226,6 +232,7 @@ export const actions: Actions = {
 		const createdBy = userData?.user?.id ?? null;
 
 		let createdCampaign;
+		let generationJobId: number | null = null;
 		try {
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'saving_campaign',
@@ -248,6 +255,22 @@ export const actions: Actions = {
 				level: 'success',
 				message: `Campaign #${createdCampaign.id} saved.`
 			});
+			const createdJob = await createGenerationJob({
+				campaignId: createdCampaign.id,
+				runId: pipelineRunId,
+				pipeline: 'campaign_create',
+				inputPayload: {
+					mode,
+					campaignDraft: campaignData
+				}
+			});
+			generationJobId = createdJob.id;
+			await markGenerationJobStage({
+				jobId: generationJobId,
+				stage: 'campaign_create',
+				status: 'processing',
+				message: 'Campaign record created and pipeline initialized.'
+			});
 			console.log(`Campaign ${createdCampaign.id} saved, starting Google Ads pipeline.`);
 		} catch (error) {
 			console.error('Failed to create campaign:', error);
@@ -267,12 +290,29 @@ export const actions: Actions = {
 		}
 
 		try {
+			if (generationJobId) {
+				await markGenerationJobStage({
+					jobId: generationJobId,
+					stage: 'google_ads',
+					status: 'processing',
+					message: 'Generating Google Ads assets.'
+				});
+			}
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'generating_google_ads',
 				level: 'info',
 				message: 'Generating Google Ads assets.'
 			});
 			await runGoogleAdsGenerationForCampaign(createdCampaign.id);
+			if (generationJobId) {
+				await markGenerationJobStage({
+					jobId: generationJobId,
+					stage: 'google_ads',
+					status: 'completed',
+					message: 'Google Ads assets generated.',
+					level: 'success'
+				});
+			}
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'google_ads_done',
 				level: 'success',
@@ -281,6 +321,13 @@ export const actions: Actions = {
 			console.log('Google Ads generation completed for campaign', createdCampaign.id);
 		} catch (error) {
 			console.error('Google Ads generation failed:', error);
+			if (generationJobId) {
+				await failGenerationJob({
+					jobId: generationJobId,
+					errorMessage: error instanceof Error ? error.message : String(error),
+					stage: 'google_ads'
+				});
+			}
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'failed',
 				level: 'error',
@@ -298,12 +345,23 @@ export const actions: Actions = {
 		}
 
 		try {
+			if (generationJobId) {
+				await markGenerationJobStage({
+					jobId: generationJobId,
+					stage: 'assembly',
+					status: 'processing',
+					message: 'Generating landing page.'
+				});
+			}
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'generating_landing_page',
 				level: 'info',
 				message: 'Generating landing page structure.'
 			});
-			await runLandingPageGenerationForCampaign(createdCampaign.id);
+			await runLandingPageGenerationForCampaign(createdCampaign.id, {
+				jobId: generationJobId ?? undefined,
+				runId: pipelineRunId
+			});
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'landing_page_done',
 				level: 'success',
@@ -312,6 +370,13 @@ export const actions: Actions = {
 			console.log('Landing page generation completed for campaign', createdCampaign.id);
 		} catch (error) {
 			console.error('Landing page generation failed:', error);
+			if (generationJobId) {
+				await failGenerationJob({
+					jobId: generationJobId,
+					errorMessage: error instanceof Error ? error.message : String(error),
+					stage: 'assembly'
+				});
+			}
 			publishCampaignPipelineEvent(pipelineRunId, {
 				step: 'failed',
 				level: 'error',
@@ -334,6 +399,15 @@ export const actions: Actions = {
 			level: 'success',
 			message: 'Campaign pipeline completed. Redirecting to campaign details.'
 		});
+
+		if (generationJobId) {
+			await completeGenerationJob({
+				jobId: generationJobId,
+				outputPayload: {
+					message: 'Campaign creation pipeline completed successfully.'
+				}
+			});
+		}
 
 		throw redirect(303, '/campaigns/' + createdCampaign.id);
 	},

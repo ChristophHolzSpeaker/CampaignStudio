@@ -20,6 +20,12 @@ import {
 	runLandingPageGenerationForCampaign
 } from '$lib/server/agents/landing-page-pipeline';
 import { z } from 'zod';
+import {
+	completeGenerationJob,
+	createGenerationJob,
+	failGenerationJob,
+	markGenerationJobStage
+} from '$lib/server/generation-jobs';
 
 type LandingPageEditFormState = {
 	values: {
@@ -183,7 +189,12 @@ export const actions: Actions = {
 		}
 
 		try {
-			const result = await runLandingPageGenerationForCampaign(campaignId);
+			const job = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_retry',
+				inputPayload: { reason: 'manual_retry' }
+			});
+			const result = await runLandingPageGenerationForCampaign(campaignId, { jobId: job.id });
 			return {
 				pageEdit: {
 					values: { changePrompt: '' },
@@ -194,6 +205,16 @@ export const actions: Actions = {
 			};
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
+			const job = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_retry',
+				inputPayload: { reason: 'manual_retry_failure' }
+			});
+			await failGenerationJob({
+				jobId: job.id,
+				errorMessage: detail,
+				stage: 'assembly'
+			});
 			return fail<LandingPagePreviewActionData>(500, {
 				pageEdit: {
 					values: { changePrompt: '' },
@@ -282,7 +303,39 @@ export const actions: Actions = {
 
 		if (mode.data === 'preview') {
 			try {
+				const previewJob = await createGenerationJob({
+					campaignId,
+					pipeline: 'landing_page_edit',
+					inputPayload: {
+						candidatePageId,
+						changePrompt,
+						mode: 'preview'
+					}
+				});
+				await markGenerationJobStage({
+					jobId: previewJob.id,
+					stage: 'edit_operations',
+					status: 'processing',
+					message: 'Generating edit operations preview.'
+				});
 				const result = await buildLandingPageEditPreview(candidatePageId, changePrompt);
+				await markGenerationJobStage({
+					jobId: previewJob.id,
+					stage: 'edit_operations',
+					status: 'completed',
+					message: 'Edit preview operations generated.',
+					level: 'success',
+					meta: { operationTypes: result.preview.operationTypes }
+				});
+				await completeGenerationJob({
+					jobId: previewJob.id,
+					outputPayload: {
+						preview: {
+							operationTypes: result.preview.operationTypes,
+							changeSummary: result.preview.changeSummary
+						}
+					}
+				});
 				if (autoApplySimple && isSimplePreview(result.preview)) {
 					const persisted = await persistAcceptedPreview(candidatePageId, result.preview);
 					return {
@@ -305,6 +358,20 @@ export const actions: Actions = {
 				};
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
+				const failedJob = await createGenerationJob({
+					campaignId,
+					pipeline: 'landing_page_edit',
+					inputPayload: {
+						candidatePageId,
+						changePrompt,
+						mode: 'preview'
+					}
+				});
+				await failGenerationJob({
+					jobId: failedJob.id,
+					errorMessage: message,
+					stage: 'edit_operations'
+				});
 				return fail<LandingPagePreviewActionData>(500, {
 					pageEdit: {
 						values: { changePrompt, autoApplySimple },
@@ -351,7 +418,34 @@ export const actions: Actions = {
 		}
 
 		try {
+			const applyJob = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_edit',
+				inputPayload: {
+					candidatePageId,
+					changePrompt: parsedPreviewPayload.changePrompt,
+					mode: 'accept'
+				}
+			});
+			await markGenerationJobStage({
+				jobId: applyJob.id,
+				stage: 'edit_operations',
+				status: 'processing',
+				message: 'Applying accepted edit operations.'
+			});
 			const createdPage = await persistAcceptedPreview(candidatePageId, parsedPreviewPayload);
+			await markGenerationJobStage({
+				jobId: applyJob.id,
+				stage: 'edit_operations',
+				status: 'completed',
+				message: 'Edit operations applied and saved as a new version.',
+				level: 'success',
+				meta: { campaignPageId: createdPage.campaignPageId }
+			});
+			await completeGenerationJob({
+				jobId: applyJob.id,
+				outputPayload: { campaignPageId: createdPage.campaignPageId }
+			});
 
 			return {
 				pageEdit: {
@@ -363,6 +457,20 @@ export const actions: Actions = {
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
+			const failedApplyJob = await createGenerationJob({
+				campaignId,
+				pipeline: 'landing_page_edit',
+				inputPayload: {
+					candidatePageId,
+					changePrompt,
+					mode: 'accept'
+				}
+			});
+			await failGenerationJob({
+				jobId: failedApplyJob.id,
+				errorMessage: message,
+				stage: 'edit_operations'
+			});
 			return fail<LandingPagePreviewActionData>(500, {
 				pageEdit: {
 					values: { changePrompt },

@@ -18,6 +18,12 @@ import {
 import { assembleLandingPageDocument } from './landing-page-assembler';
 import { critiqueLandingPageDocument } from './landing-page-critic';
 import { createRunId, traceLlm } from '$lib/server/telemetry/llm-trace';
+import {
+	completeGenerationJob,
+	createGenerationJob,
+	failGenerationJob,
+	markGenerationJobStage
+} from '$lib/server/generation-jobs';
 
 type DrizzleClient = typeof db | PostgresJsTransaction<any, any>;
 
@@ -140,57 +146,139 @@ export async function attachLandingPageToAdGroup(
 }
 
 export async function runLandingPageGenerationForCampaign(
-	campaignId: number
+	campaignId: number,
+	options?: { jobId?: number; runId?: string }
 ): Promise<{ campaignPageId: number }> {
-	const runId = createRunId('landing_page');
+	const runId = options?.runId ?? createRunId('landing_page');
 	const traceContext = { runId, campaignId, pipeline: 'landing_page' };
+	const jobId =
+		options?.jobId ??
+		(
+			await createGenerationJob({
+				campaignId,
+				runId,
+				pipeline: 'landing_page',
+				inputPayload: { campaignId }
+			})
+		).id;
+
+	await markGenerationJobStage({
+		jobId,
+		stage: 'strategy',
+		status: 'processing',
+		message: 'Landing page generation started.'
+	});
+
 	traceLlm('pipeline_start', traceContext);
 	console.log(`Landing page pipeline: start campaign ${campaignId}`);
-	const input = await loadLandingPageGenerationInput(campaignId);
-	traceLlm('pipeline_step', traceContext, { step: 'input_normalized', input });
-	console.log('Landing page pipeline: generation input normalized');
 
-	const plan = await generateLandingPagePlan(input, traceContext);
-	traceLlm('pipeline_step', traceContext, { step: 'plan_generated', plan });
-	console.log('Landing page pipeline: plan generated');
+	try {
+		const input = await loadLandingPageGenerationInput(campaignId);
+		traceLlm('pipeline_step', traceContext, { step: 'input_normalized', input });
+		console.log('Landing page pipeline: generation input normalized');
 
-	const strategy = validateLandingStrategy(createLandingStrategy(input, plan));
-	traceLlm('artifact_strategy', traceContext, { strategy });
+		const plan = await generateLandingPagePlan(input, traceContext);
+		traceLlm('pipeline_step', traceContext, { step: 'plan_generated', plan });
+		console.log('Landing page pipeline: plan generated');
+		await markGenerationJobStage({
+			jobId,
+			stage: 'strategy',
+			status: 'processing',
+			message: 'Strategy and plan generated.'
+		});
 
-	const architecture = validateLandingPageArchitecture(createLandingPageArchitecture(plan));
-	traceLlm('artifact_architecture', traceContext, { architecture });
+		const strategy = validateLandingStrategy(createLandingStrategy(input, plan));
+		traceLlm('artifact_strategy', traceContext, { strategy });
 
-	const mediaPlan = validateLandingMediaPlan(createLandingMediaPlan(plan));
-	traceLlm('artifact_media_plan', traceContext, { mediaPlan });
+		const architecture = validateLandingPageArchitecture(createLandingPageArchitecture(plan));
+		traceLlm('artifact_architecture', traceContext, { architecture });
+		await markGenerationJobStage({
+			jobId,
+			stage: 'architecture',
+			status: 'processing',
+			message: 'Architecture artifact validated.'
+		});
 
-	const pageDocument = await generateLandingPageDocument(input, plan, traceContext);
-	traceLlm('pipeline_step', traceContext, { step: 'document_generated', pageDocument });
-	console.log('Landing page pipeline: landing page document generated');
+		const mediaPlan = validateLandingMediaPlan(createLandingMediaPlan(plan));
+		traceLlm('artifact_media_plan', traceContext, { mediaPlan });
+		await markGenerationJobStage({
+			jobId,
+			stage: 'media',
+			status: 'processing',
+			message: 'Media plan artifact validated.'
+		});
 
-	const assembledPageDocument = assembleLandingPageDocument(pageDocument);
-	traceLlm('pipeline_step', traceContext, {
-		step: 'document_assembled',
-		pageDocument: assembledPageDocument
-	});
+		const pageDocument = await generateLandingPageDocument(input, plan, traceContext);
+		traceLlm('pipeline_step', traceContext, { step: 'document_generated', pageDocument });
+		console.log('Landing page pipeline: landing page document generated');
+		await markGenerationJobStage({
+			jobId,
+			stage: 'content',
+			status: 'processing',
+			message: 'Content document generated.'
+		});
 
-	const critique = validateLandingCritique(
-		critiqueLandingPageDocument(assembledPageDocument, architecture)
-	);
-	traceLlm('artifact_critique', traceContext, { critique });
+		const assembledPageDocument = assembleLandingPageDocument(pageDocument);
+		traceLlm('pipeline_step', traceContext, {
+			step: 'document_assembled',
+			pageDocument: assembledPageDocument
+		});
+		await markGenerationJobStage({
+			jobId,
+			stage: 'assembly',
+			status: 'processing',
+			message: 'Document assembled deterministically.'
+		});
 
-	const result = await db.transaction(async (tx) => {
-		const persistedPage = await persistGeneratedLandingPage(
-			campaignId,
-			assembledPageDocument,
-			tx,
-			'Initial generation'
+		const critique = validateLandingCritique(
+			critiqueLandingPageDocument(assembledPageDocument, architecture)
 		);
-		await attachLandingPageToAdGroup(input.adGroup.id, persistedPage.campaignPageId, tx);
+		traceLlm('artifact_critique', traceContext, { critique });
+		await markGenerationJobStage({
+			jobId,
+			stage: 'critique',
+			status: 'processing',
+			message: 'Critique artifact validated.'
+		});
 
-		return persistedPage;
-	});
+		const result = await db.transaction(async (tx) => {
+			const persistedPage = await persistGeneratedLandingPage(
+				campaignId,
+				assembledPageDocument,
+				tx,
+				'Initial generation'
+			);
+			await attachLandingPageToAdGroup(input.adGroup.id, persistedPage.campaignPageId, tx);
 
-	traceLlm('pipeline_success', traceContext, { campaignPageId: result.campaignPageId });
-	console.log(`Landing page pipeline: persisted page ${result.campaignPageId}`);
-	return result;
+			return persistedPage;
+		});
+
+		await markGenerationJobStage({
+			jobId,
+			stage: 'assembly',
+			status: 'completed',
+			message: `Landing page persisted as version ${result.campaignPageId}.`,
+			level: 'success',
+			meta: { campaignPageId: result.campaignPageId }
+		});
+		await completeGenerationJob({
+			jobId,
+			outputPayload: {
+				artifacts: { strategy, architecture, mediaPlan, critique },
+				campaignPageId: result.campaignPageId
+			}
+		});
+
+		traceLlm('pipeline_success', traceContext, { campaignPageId: result.campaignPageId });
+		console.log(`Landing page pipeline: persisted page ${result.campaignPageId}`);
+		return result;
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		await failGenerationJob({
+			jobId,
+			errorMessage: message,
+			stage: 'assembly'
+		});
+		throw error;
+	}
 }
