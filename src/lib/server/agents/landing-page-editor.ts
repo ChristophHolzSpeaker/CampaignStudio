@@ -85,6 +85,8 @@ Rules:
 - If media changes are requested, only use approved media URLs from the provided asset catalog.
 - For youtube_grid, only use video URLs from approved media assets entries marked for youtube_grid.
 - Do not invent media URLs, IDs, testimonials, or logos.
+- If the request is broad or ambiguous (e.g. "more executive"), infer likely intent from current page content and section structure, then apply a minimal high-impact change to the most relevant section.
+- For ambiguous requests, prefer copy/layout updates before structural reordering.
 - Preferred command mappings:
   - "move image left/right" -> update_section_layout on immediate_authority_hero with layoutPatch.layout = "left"|"right"
   - "make the hero more compact/spacious" -> update_section_layout on immediate_authority_hero with layoutPatch.density = "compact"|"spacious"
@@ -115,14 +117,42 @@ function tryBuildDeterministicOperations(
 	changePrompt: string
 ): LandingPageOperation[] | null {
 	const normalized = changePrompt.toLowerCase();
-	const hasHero = currentPage.sections.some(
+	const heroSection = currentPage.sections.find(
 		(section) => section.type === 'immediate_authority_hero'
 	);
-	if (!hasHero) {
-		return null;
+	const hybridSection = currentPage.sections.find(
+		(section) => section.type === 'hybrid_content_section'
+	);
+
+	function shortenCopy(value: string): string {
+		const sentenceChunks = value
+			.split(/(?<=[.!?])\s+/)
+			.map((chunk) => chunk.trim())
+			.filter((chunk) => chunk.length > 0);
+		if (sentenceChunks.length > 1) {
+			return sentenceChunks[0] ?? value;
+		}
+
+		const words = value.split(/\s+/).filter((word) => word.length > 0);
+		if (words.length <= 10) {
+			return value;
+		}
+
+		return `${words.slice(0, Math.max(8, Math.floor(words.length * 0.6))).join(' ')}...`;
+	}
+
+	function executiveTone(value: string): string {
+		return value
+			.replace(/\bdeeply researched\b/gi, 'evidence-backed')
+			.replace(/\bactionable insights\b/gi, 'clear executive guidance')
+			.replace(/\bbridging the gap\b/gi, 'aligning strategy and execution')
+			.replace(/\bnext\b/gi, 'upcoming');
 	}
 
 	if ((normalized.includes('move') || normalized.includes('put')) && normalized.includes('image')) {
+		if (!heroSection) {
+			return null;
+		}
 		if (normalized.includes('left')) {
 			return [
 				{
@@ -145,6 +175,9 @@ function tryBuildDeterministicOperations(
 	}
 
 	if (normalized.includes('hero') && normalized.includes('compact')) {
+		if (!heroSection) {
+			return null;
+		}
 		return [
 			{
 				type: 'update_section_layout',
@@ -155,11 +188,71 @@ function tryBuildDeterministicOperations(
 	}
 
 	if (normalized.includes('hero') && normalized.includes('spacious')) {
+		if (!heroSection) {
+			return null;
+		}
 		return [
 			{
 				type: 'update_section_layout',
 				sectionType: 'immediate_authority_hero',
 				layoutPatch: { density: 'spacious' }
+			}
+		];
+	}
+
+	if (
+		normalized.includes('shorten') &&
+		(normalized.includes('hero') ||
+			normalized.includes('headline') ||
+			normalized.includes('subheadline')) &&
+		heroSection
+	) {
+		const nextHeadline = shortenCopy((heroSection.props as { headline?: string }).headline ?? '');
+		const nextSubheadline = shortenCopy(
+			(heroSection.props as { subheadline?: string }).subheadline ?? ''
+		);
+		return [
+			{
+				type: 'update_section_content',
+				sectionType: 'immediate_authority_hero',
+				contentPatch: {
+					headline: nextHeadline,
+					subheadline: nextSubheadline
+				}
+			}
+		];
+	}
+
+	if (
+		normalized.includes('more executive') &&
+		(normalized.includes('hero') || normalized.includes('tone')) &&
+		heroSection
+	) {
+		const sourceSubheadline = (heroSection.props as { subheadline?: string }).subheadline ?? '';
+		const nextSubheadline = executiveTone(sourceSubheadline);
+		if (nextSubheadline === sourceSubheadline) {
+			return null;
+		}
+		return [
+			{
+				type: 'update_section_content',
+				sectionType: 'immediate_authority_hero',
+				contentPatch: {
+					subheadline: nextSubheadline
+				}
+			}
+		];
+	}
+
+	if (normalized.includes('shorten') && normalized.includes('hybrid') && hybridSection) {
+		const nextIntro = shortenCopy((hybridSection.props as { intro?: string }).intro ?? '');
+		return [
+			{
+				type: 'update_section_content',
+				sectionType: 'hybrid_content_section',
+				contentPatch: {
+					intro: nextIntro
+				}
 			}
 		];
 	}
@@ -219,6 +312,26 @@ function normalizeOperationsResponse(input: unknown): unknown {
 					record.contentPatch = { [record.field]: record.value };
 				} else {
 					record.contentPatch = {};
+				}
+			}
+
+			if (
+				sectionType === 'hybrid_content_section' &&
+				typeof record.contentPatch === 'object' &&
+				record.contentPatch !== null
+			) {
+				const contentPatch = { ...(record.contentPatch as Record<string, unknown>) };
+				const imageValue =
+					typeof contentPatch.primaryVisualImageUrl === 'string'
+						? contentPatch.primaryVisualImageUrl
+						: typeof contentPatch.imageUrl === 'string'
+							? contentPatch.imageUrl
+							: null;
+				if (imageValue) {
+					record.type = 'replace_media';
+					record.field = 'primaryVisual.imageUrl';
+					record.value = imageValue;
+					delete record.contentPatch;
 				}
 			}
 		}
@@ -543,14 +656,17 @@ async function generateEditedLandingPageDocument(
 			enforceYoutubeGridCatalog
 		);
 
-		if (JSON.stringify(validatedEditedPage) === JSON.stringify(currentPage)) {
-			throw new Error('No effective changes were applied from generated operations.');
+		if (JSON.stringify(validatedEditedPage) !== JSON.stringify(currentPage)) {
+			return {
+				page: validatedEditedPage,
+				operationTypes: deterministicOperations.map((operation) => operation.type)
+			};
 		}
 
-		return {
-			page: validatedEditedPage,
-			operationTypes: deterministicOperations.map((operation) => operation.type)
-		};
+		traceLlm('deterministic_mapping_noop_fallback', traceContext, {
+			operations: deterministicOperations,
+			changePrompt
+		});
 	}
 
 	let response;
