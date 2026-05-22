@@ -15,6 +15,26 @@ const landingPageInputAdSchema = z.object({
 	path2: z.string().nullable().optional()
 });
 
+const campaignIntentBriefSchema = z.object({
+	audience: z.string(),
+	problemStatement: z.string(),
+	promise: z.string(),
+	offer: z.string(),
+	proofPoints: z.array(z.string()),
+	ctaObjective: z.string(),
+	tone: z.string(),
+	constraints: z.array(z.string())
+});
+
+const landingMessageMapSchema = z.object({
+	primaryAudience: z.string(),
+	primaryPain: z.string(),
+	primaryOutcome: z.string(),
+	proofAnchors: z.array(z.string()),
+	ctaIntent: z.string(),
+	bannedGenericPhrases: z.array(z.string())
+});
+
 export const landingPageGenerationInputSchema = z.object({
 	campaign: z.object({
 		id: z.number().int().positive(),
@@ -40,6 +60,8 @@ export const landingPageGenerationInputSchema = z.object({
 		keywords: z.array(landingPageInputKeywordSchema),
 		ads: z.array(landingPageInputAdSchema)
 	}),
+	campaignIntentBrief: campaignIntentBriefSchema,
+	messageMap: landingMessageMapSchema,
 	assets: landingPageAssetsSchema
 });
 
