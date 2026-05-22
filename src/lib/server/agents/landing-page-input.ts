@@ -10,6 +10,18 @@ import {
 import { loadLandingPageAssets } from './config/landing-page-assets-store';
 import { adPackageStrategySchema } from './schemas/ad-package-strategy';
 
+function splitProofPoints(notes: string | null | undefined): string[] {
+	if (!notes) {
+		return [];
+	}
+
+	return notes
+		.split(/\n|\.|;/)
+		.map((line) => line.trim())
+		.filter((line) => line.length >= 12)
+		.slice(0, 4);
+}
+
 export async function loadLandingPageGenerationInput(
 	campaignId: number
 ): Promise<LandingPageGenerationInput> {
@@ -89,6 +101,34 @@ export async function loadLandingPageGenerationInput(
 				path1: ad.path_1 ?? null,
 				path2: ad.path_2 ?? null
 			}))
+		},
+		campaignIntentBrief: {
+			audience: campaign.audience,
+			problemStatement: parsedStrategy.data.targetingSummary,
+			promise: parsedStrategy.data.messagingAngle,
+			offer: `A ${campaign.format} tailored for ${campaign.audience} on ${campaign.topic}`,
+			proofPoints: splitProofPoints(campaign.notes),
+			ctaObjective: parsedStrategy.data.conversionGoal,
+			tone: 'Confident, practical, and specific',
+			constraints: [
+				'No generic speaker claims',
+				'No fabricated social proof',
+				'Every section must add new value'
+			]
+		},
+		messageMap: {
+			primaryAudience: campaign.audience,
+			primaryPain: parsedStrategy.data.targetingSummary,
+			primaryOutcome: parsedStrategy.data.messagingAngle,
+			proofAnchors: splitProofPoints(campaign.notes),
+			ctaIntent: parsedStrategy.data.conversionGoal,
+			bannedGenericPhrases: [
+				'unlock your potential',
+				'inspire innovation',
+				'future-ready success',
+				'this approach works',
+				'strategic relevance'
+			]
 		},
 		assets: landingPageAssets
 	});

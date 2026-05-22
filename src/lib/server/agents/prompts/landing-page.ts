@@ -26,7 +26,8 @@ function buildGlobalCopyQualityRulesBlock(): string {
 		'* avoid repeating the same sentence or near-identical phrase across headline, subheadline, intro, benefits, deep-dive items, and booking copy',
 		'* every section must add distinct information and advance the conversion narrative',
 		'* visible copy must not read like SEO metadata, ad targeting logic, or search strategy notes',
-		'* avoid abstract filler and meta-marketing phrasing such as "searchers looking for", "this approach works", "strategic relevance", or similarly generic language'
+		'* avoid abstract filler and meta-marketing phrasing such as "searchers looking for", "this approach works", "strategic relevance", or similarly generic language',
+		'* avoid phrases listed in input.messageMap.bannedGenericPhrases unless directly quoted from a real source'
 	].join('\n');
 }
 
@@ -105,6 +106,7 @@ You must design exactly one focused landing page aligned to the single ad group.
 Your priorities are:
 
 * strong alignment between keyword intent, ad concept, and landing page
+* strict alignment to input.campaignIntentBrief and input.messageMap
 * premium, credible positioning
 * clear conversion path
 * message match with the ad group
@@ -142,6 +144,7 @@ Rules:
 * section order should reflect a strong conversion narrative
 * avoid bloated or repetitive pages
 * maintain message match with ad intent without collapsing multiple sections into one repeated line
+* map each section to at least one distinct anchor from input.messageMap (pain, outcome, proof, or CTA intent)
 * keep the page premium, specific, and commercially credible
 * do not invent fake claims, fake client names, fake testimonials, fake metrics, or fake credentials
 * return JSON only
@@ -244,6 +247,7 @@ General requirements:
 * ensure seo.props.description includes campaign geography naturally
 * include campaign geography in seo.props.title when it fits naturally and remains readable
 * preserve message match with ad group and strategy
+* preserve alignment to input.campaignIntentBrief and input.messageMap in all visible copy
 * section catalog rules are binding generation constraints, including whenNotToUse and contentGuidance
 * return JSON only
 
