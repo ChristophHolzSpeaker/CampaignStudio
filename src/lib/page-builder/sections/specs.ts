@@ -246,8 +246,7 @@ export const sectionSpecs: PageSectionSpecMap = {
 			'Deep-dive intro should make the credibility argument feel natural: why this speaker, why this topic, why this audience, why now.',
 			'Deep-dive items should explain why Christoph is qualified to deliver the stated outcomes, drawing on his mix of keynote experience, AI and technology themes, aviation, robotics, science communication, humour, and distinctive stage presence.',
 			'The primary visual should clarify and amplify the content, not decorate it.',
-			'Overall, the section should feel like three useful takeaways plus a credible reason to believe Christoph can make them land in the room.',
-			'emailCtaTitle should say "Send an email right now" and its target language equavilant'
+			'Overall, the section should feel like three useful takeaways plus a credible reason to believe Christoph can make them land in the room.'
 		],
 		propsSchema: hybridContentSectionPropsSchema
 	},

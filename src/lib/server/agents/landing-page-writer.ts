@@ -19,6 +19,7 @@ import {
 	collectLandingPageDocumentMvpIssues,
 	validateLandingPageDocumentForMvp
 } from './landing-page-policy';
+import { evaluateLandingPageCopyQuality } from './landing-page-copy-quality';
 import { getSectionEligibility } from './section-eligibility';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 import type { LandingPagePlan } from './schemas/landing-page-plan';
@@ -1263,6 +1264,42 @@ MVP validation errors:
 ${JSON.stringify(mvpIssues, null, 2)}`;
 }
 
+function buildCopyQualityRepairPrompt(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan,
+	currentDocument: LandingPageDocument,
+	warnings: string[],
+	revisionSuggestions: string[]
+): string {
+	return `Your previous landing page JSON is structurally valid but the copy quality is below target.
+
+Revise the copy while preserving the same section types, structure, and approved assets.
+
+Copy quality rules:
+- Keep all current section types and overall narrative order.
+- Do not invent credentials, metrics, testimonials, or client claims.
+- Keep strict alignment with input.campaignIntentBrief and input.messageMap.
+- Avoid generic phrasing and repeated long-form copy across sections.
+- Ensure each section adds distinct campaign-specific information.
+- Anchor visible copy to audience, pain, outcomes, proof, and CTA intent from input.messageMap.
+- Return one JSON object only.
+
+Landing page generation input:
+${JSON.stringify(input, null, 2)}
+
+Landing page plan:
+${JSON.stringify(plan, null, 2)}
+
+Current valid JSON to improve:
+${JSON.stringify(currentDocument, null, 2)}
+
+Quality warnings:
+${JSON.stringify(warnings, null, 2)}
+
+Revision suggestions:
+${JSON.stringify(revisionSuggestions, null, 2)}`;
+}
+
 function hydrateLandingPageWithAssets(
 	response: unknown,
 	input: LandingPageGenerationInput,
@@ -1431,37 +1468,53 @@ export async function generateLandingPageDocument(
 			eligibility.requiredSectionTypes
 		);
 		if (firstMvpIssues.length === 0) {
-			console.log('Landing page writer: document validated');
-			return firstValidation.data;
+			const initialCopyQuality = evaluateLandingPageCopyQuality(firstValidation.data, input);
+			traceLlm(
+				'artifact_copy_quality',
+				{ ...traceContext, stage: 'landing_page_writer' },
+				initialCopyQuality
+			);
+			if (initialCopyQuality.passed) {
+				console.log('Landing page writer: document validated');
+				return firstValidation.data;
+			}
+
+			repairUserPrompt = buildCopyQualityRepairPrompt(
+				input,
+				plan,
+				firstValidation.data,
+				initialCopyQuality.warnings,
+				initialCopyQuality.revisionSuggestions
+			);
+		} else {
+			console.error('Landing page writer: MVP validation failed', firstMvpIssues);
+			traceLlm(
+				'agent_stage_validation_error',
+				{ ...traceContext, stage: 'landing_page_writer' },
+				{
+					issues: firstMvpIssues,
+					phase: 'initial_mvp_validation'
+				}
+			);
+			traceLlm(
+				'validation_failed',
+				{ ...traceContext, stage: 'landing_page_writer' },
+				{
+					issues: firstMvpIssues,
+					phase: 'initial_mvp_validation'
+				}
+			);
+
+			repairUserPrompt = buildWriterRepairPrompt(
+				input,
+				plan,
+				firstValidation.data,
+				[],
+				firstMvpIssues,
+				eligibility.allowedSectionTypes,
+				eligibility.requiredSectionTypes
+			);
 		}
-
-		console.error('Landing page writer: MVP validation failed', firstMvpIssues);
-		traceLlm(
-			'agent_stage_validation_error',
-			{ ...traceContext, stage: 'landing_page_writer' },
-			{
-				issues: firstMvpIssues,
-				phase: 'initial_mvp_validation'
-			}
-		);
-		traceLlm(
-			'validation_failed',
-			{ ...traceContext, stage: 'landing_page_writer' },
-			{
-				issues: firstMvpIssues,
-				phase: 'initial_mvp_validation'
-			}
-		);
-
-		repairUserPrompt = buildWriterRepairPrompt(
-			input,
-			plan,
-			firstValidation.data,
-			[],
-			firstMvpIssues,
-			eligibility.allowedSectionTypes,
-			eligibility.requiredSectionTypes
-		);
 	} else {
 		console.error('Landing page writer: validation failed', firstValidation.issues);
 		traceLlm(
@@ -1570,6 +1623,17 @@ export async function generateLandingPageDocument(
 		eligibility.allowedSectionTypes,
 		eligibility.requiredSectionTypes
 	);
+	const repairedCopyQuality = evaluateLandingPageCopyQuality(secondValidation.data, input);
+	traceLlm(
+		'artifact_copy_quality',
+		{ ...traceContext, stage: 'landing_page_writer_repair' },
+		repairedCopyQuality
+	);
+	if (!repairedCopyQuality.passed) {
+		throw new Error(
+			`Landing page copy quality below moderate threshold (${repairedCopyQuality.score}/100): ${repairedCopyQuality.warnings.join(' | ')}`
+		);
+	}
 	console.log('Landing page writer: document validated');
 	return secondValidation.data;
 }
