@@ -121,9 +121,9 @@
 			}
 
 			return [
-				{ label: 'Morning', slots: morning },
-				{ label: 'Afternoon', slots: afternoon },
-				{ label: 'Evening', slots: evening }
+				{ label: 'Vormittag', slots: morning },
+				{ label: 'Nachmittag', slots: afternoon },
+				{ label: 'Abend', slots: evening }
 			].filter((group) => group.slots.length > 0);
 		})()
 	);
@@ -137,6 +137,7 @@
 	const showFailureMessage = $derived(
 		Boolean(submitResult?.message && !submitResult.success && !hideFailureMessage)
 	);
+	const showFormContent = $derived(!showFailureMessage);
 	const resultTone = $derived(
 		submitResult?.success
 			? 'border-emerald-400/70 bg-emerald-50 text-emerald-700'
@@ -145,7 +146,7 @@
 
 	function formatDayLabel(dateKey: string): string {
 		const date = new Date(`${dateKey}T00:00:00.000Z`);
-		return date.toLocaleDateString('en-US', {
+		return date.toLocaleDateString('de-DE', {
 			weekday: 'short',
 			month: 'short',
 			day: 'numeric'
@@ -156,11 +157,11 @@
 		const startsAt = new Date(startsAtIso);
 		const endsAt = new Date(endsAtIso);
 
-		const startTime = startsAt.toLocaleTimeString('en-US', {
+		const startTime = startsAt.toLocaleTimeString('de-DE', {
 			hour: 'numeric',
 			minute: '2-digit'
 		});
-		const endTime = endsAt.toLocaleTimeString('en-US', {
+		const endTime = endsAt.toLocaleTimeString('de-DE', {
 			hour: 'numeric',
 			minute: '2-digit'
 		});
@@ -224,230 +225,236 @@ Veranstaltungsort:`;
 							resetBookingFormUi();
 						}}
 					>
-						Retry booking request
+						Buchung erneut versuchen
 					</a>
 				</div>
 			{/if}
-			<input type="hidden" name="campaignId" value={campaignId ?? ''} />
-			<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
-			<input type="hidden" name="pageSlug" value={pageSlug ?? ''} />
-			{#if !showIntakeStep}
-				<input type="hidden" name="email" value={effectiveIntakeEmail} />
-				<input type="hidden" name="name" value={effectiveIntakeName} />
-				<input type="hidden" name="phone" value={effectiveIntakePhone} />
-				<input type="hidden" name="company" value={effectiveIntakeCompany} />
-				<input type="hidden" name="scope" value={effectiveIntakeScope} />
-			{/if}
-			<input type="hidden" name="bookingSurface" value={bookingSurface ?? ''} />
-			<input type="hidden" name="ctaKey" value={ctaKey ?? ''} />
-			<input type="hidden" name="ctaSection" value={ctaSection ?? ''} />
-			<input type="hidden" name="ctaVariant" value={ctaVariant ?? ''} />
-			<input type="hidden" name="selected_starts_at" value={selectedStartsAt} />
-			<input type="hidden" name="selected_ends_at" value={selectedEndsAt} />
+			{#if showFormContent}
+				<input type="hidden" name="campaignId" value={campaignId ?? ''} />
+				<input type="hidden" name="campaignPageId" value={campaignPageId ?? ''} />
+				<input type="hidden" name="pageSlug" value={pageSlug ?? ''} />
+				{#if !showIntakeStep}
+					<input type="hidden" name="email" value={effectiveIntakeEmail} />
+					<input type="hidden" name="name" value={effectiveIntakeName} />
+					<input type="hidden" name="phone" value={effectiveIntakePhone} />
+					<input type="hidden" name="company" value={effectiveIntakeCompany} />
+					<input type="hidden" name="scope" value={effectiveIntakeScope} />
+				{/if}
+				<input type="hidden" name="bookingSurface" value={bookingSurface ?? ''} />
+				<input type="hidden" name="ctaKey" value={ctaKey ?? ''} />
+				<input type="hidden" name="ctaSection" value={ctaSection ?? ''} />
+				<input type="hidden" name="ctaVariant" value={ctaVariant ?? ''} />
+				<input type="hidden" name="selected_starts_at" value={selectedStartsAt} />
+				<input type="hidden" name="selected_ends_at" value={selectedEndsAt} />
 
-			{#if hasSlots}
-				{#if showSlotStage}
-					<section class="space-y-5">
-						<div class="space-y-1">
-							<h2 class="text-xl text-(--text-primary)">Let's talk</h2>
-						</div>
+				{#if hasSlots}
+					{#if showSlotStage}
+						<section class="space-y-5">
+							<div class="space-y-1">
+								<h2 class="text-xl text-(--text-primary)">Lassen Sie uns sprechen</h2>
+							</div>
 
-						<div role="tablist" aria-label="Available briefing days" class="flex flex-wrap gap-2">
-							{#each normalizedSlotGroups as day (day.dateKey)}
-								<button
-									type="button"
-									role="tab"
-									id={`inline-booking-day-tab-${day.dateKey}`}
-									aria-controls={`inline-booking-day-panel-${day.dateKey}`}
-									aria-selected={resolvedDayKey === day.dateKey}
-									class={[
-										'btn border px-3 py-2  text-xl font-bold uppercase transition',
-										!hasSelectedDay || resolvedDayKey === day.dateKey
-											? 'border-(--accent-strong) bg-(--accent-strong) text-white'
-											: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
-									]}
-									onclick={() => {
-										selectDay(day.dateKey);
-									}}
-								>
-									{formatDayLabel(day.dateKey)}
-								</button>
-							{/each}
-						</div>
-
-						{#if dayPreference && resolvedDayKey}
 							<div
-								role="tabpanel"
-								id={`inline-booking-day-panel-${resolvedDayKey}`}
-								aria-labelledby={`inline-booking-day-tab-${resolvedDayKey}`}
-								class="grid grid-cols-1 space-y-4 space-x-4 md:grid-cols-3"
+								role="tablist"
+								aria-label="Verfuegbare Briefing-Tage"
+								class="flex flex-wrap gap-2"
 							>
-								{#each slotGroupsForSelectedDay as slotGroup (slotGroup.label)}
-									<div class="space-y-2">
-										<h3 class="text-xs tracking-[0.18em] text-slate-500 uppercase">
-											{slotGroup.label}
-										</h3>
-										<div class="flex flex-col gap-2" role="radiogroup">
-											{#each slotGroup.slots as slot (slot.startsAtIso)}
-												<button
-													type="button"
-													role="radio"
-													aria-checked={selectedStartsAt === slot.startsAtIso}
-													class={[
-														'border px-3 py-3 text-center font-sans text-base  transition',
-														selectedStartsAt === slot.startsAtIso
-															? 'border-(--accent-strong) bg-rose-50 text-(--text-primary)'
-															: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
-													]}
-													onclick={() => {
-														selectSlot(slot);
-													}}
-												>
-													{formatSlotRange(slot.startsAtIso, slot.endsAtIso)}
-												</button>
-											{/each}
-										</div>
-									</div>
+								{#each normalizedSlotGroups as day (day.dateKey)}
+									<button
+										type="button"
+										role="tab"
+										id={`inline-booking-day-tab-${day.dateKey}`}
+										aria-controls={`inline-booking-day-panel-${day.dateKey}`}
+										aria-selected={resolvedDayKey === day.dateKey}
+										class={[
+											'btn border px-3 py-2  text-xl font-bold uppercase transition',
+											!hasSelectedDay || resolvedDayKey === day.dateKey
+												? 'border-(--accent-strong) bg-(--accent-strong) text-white'
+												: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
+										]}
+										onclick={() => {
+											selectDay(day.dateKey);
+										}}
+									>
+										{formatDayLabel(day.dateKey)}
+									</button>
 								{/each}
 							</div>
-						{/if}
 
-						{#if !showIntakeStep}
+							{#if dayPreference && resolvedDayKey}
+								<div
+									role="tabpanel"
+									id={`inline-booking-day-panel-${resolvedDayKey}`}
+									aria-labelledby={`inline-booking-day-tab-${resolvedDayKey}`}
+									class="grid grid-cols-1 space-y-4 space-x-4 md:grid-cols-3"
+								>
+									{#each slotGroupsForSelectedDay as slotGroup (slotGroup.label)}
+										<div class="space-y-2">
+											<h3 class="text-xs tracking-[0.18em] text-slate-500 uppercase">
+												{slotGroup.label}
+											</h3>
+											<div class="flex flex-col gap-2" role="radiogroup">
+												{#each slotGroup.slots as slot (slot.startsAtIso)}
+													<button
+														type="button"
+														role="radio"
+														aria-checked={selectedStartsAt === slot.startsAtIso}
+														class={[
+															'border px-3 py-3 text-center font-sans text-base  transition',
+															selectedStartsAt === slot.startsAtIso
+																? 'border-(--accent-strong) bg-rose-50 text-(--text-primary)'
+																: 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
+														]}
+														onclick={() => {
+															selectSlot(slot);
+														}}
+													>
+														{formatSlotRange(slot.startsAtIso, slot.endsAtIso)}
+													</button>
+												{/each}
+											</div>
+										</div>
+									{/each}
+								</div>
+							{/if}
+
+							{#if !showIntakeStep}
+								<div
+									class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
+								>
+									<p class="text-xs text-slate-600">
+										{#if hasSelectedSlot}
+											Ausgewaehlter Termin:
+											<strong class="text-slate-900"
+												>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
+											>
+										{:else}
+											Bitte waehlen Sie einen Termin aus, um fortzufahren.
+										{/if}
+									</p>
+									<button
+										type="submit"
+										class="btn-primary inline-flex items-center gap-2"
+										disabled={isSubmitDisabled}
+									>
+										{#if resolvedSubmitAction.pending}
+											Bitte warten...
+										{:else}
+											Briefing-Termin bestaetigen
+										{/if}
+									</button>
+								</div>
+							{/if}
+						</section>
+					{:else if showIntakeStep}
+						<section class=" space-y-5">
+							<div class="space-y-1">
+								<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Schritt 2</p>
+								<h2 class="text-xl text-(--text-primary)">Teilen Sie Ihre Briefing-Details</h2>
+							</div>
+
+							<div class="grid gap-5 md:grid-cols-2">
+								<Input
+									id="inline-booking-email"
+									name="email"
+									label="Email*"
+									type="email"
+									placeholder="sie@beispiel.de"
+									required
+									autocomplete="email"
+									bind:value={intakeEmail}
+								/>
+
+								<Input
+									id="inline-booking-name"
+									name="name"
+									label="Name*"
+									type="text"
+									placeholder="Ihr Name"
+									required
+									autocomplete="name"
+									bind:value={intakeName}
+								/>
+							</div>
+
+							<Input
+								id="inline-booking-phone"
+								name="phone"
+								label="Telefon (optional)"
+								type="tel"
+								placeholder="+491234567890"
+								autocomplete="tel"
+								bind:value={intakePhone}
+							/>
+
+							<Input
+								id="inline-booking-company"
+								name="company"
+								label="Unternehmen*"
+								type="text"
+								placeholder="Ihr Unternehmen"
+								required
+								autocomplete="organization"
+								bind:value={intakeCompany}
+							/>
+
+							<TextArea
+								id="inline-booking-scope"
+								name="scope"
+								label="Anfrage-Details*"
+								placeholder={meetingScopePlaceholder}
+								rows={4}
+								required
+								bind:value={intakeScope}
+							/>
+
 							<div
-								class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
+								class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
 							>
 								<p class="text-xs text-slate-600">
-									{#if hasSelectedSlot}
-										Selected slot:
-										<strong class="text-slate-900"
-											>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
-										>
-									{:else}
-										Please select a slot to continue.
-									{/if}
+									Ausgewaehlter Termin:
+									<strong class="text-slate-900"
+										>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
+									>
 								</p>
-								<button
-									type="submit"
-									class="btn-primary inline-flex items-center gap-2"
-									disabled={isSubmitDisabled}
-								>
-									{#if resolvedSubmitAction.pending}
-										Please wait...
-									{:else}
-										Confirm briefing slot
-									{/if}
-								</button>
+								<div class="flex items-center gap-3">
+									<button
+										type="button"
+										class="text-xs tracking-[0.15em] text-slate-600 uppercase underline hover:text-slate-900"
+										onclick={() => {
+											resetToSlotStage();
+										}}
+									>
+										Termin aendern
+									</button>
+									<button
+										type="submit"
+										class="btn btn-primary inline-flex items-center gap-2"
+										disabled={isSubmitDisabled}
+									>
+										{#if resolvedSubmitAction.pending}
+											Bitte warten...
+										{:else}
+											Briefing-Termin bestaetigen
+										{/if}
+									</button>
+								</div>
 							</div>
-						{/if}
-					</section>
-				{:else if showIntakeStep}
-					<section class=" space-y-5">
-						<div class="space-y-1">
-							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
-							<h2 class="text-xl text-(--text-primary)">Share your briefing details</h2>
-						</div>
-
-						<div class="grid gap-5 md:grid-cols-2">
-							<Input
-								id="inline-booking-email"
-								name="email"
-								label="Email*"
-								type="email"
-								placeholder="you@example.com"
-								required
-								autocomplete="email"
-								bind:value={intakeEmail}
-							/>
-
-							<Input
-								id="inline-booking-name"
-								name="name"
-								label="Name*"
-								type="text"
-								placeholder="Your name"
-								required
-								autocomplete="name"
-								bind:value={intakeName}
-							/>
-						</div>
-
-						<Input
-							id="inline-booking-phone"
-							name="phone"
-							label="Phone (optional)"
-							type="tel"
-							placeholder="+491234567890"
-							autocomplete="tel"
-							bind:value={intakePhone}
-						/>
-
-						<Input
-							id="inline-booking-company"
-							name="company"
-							label="Company*"
-							type="text"
-							placeholder="Your organization"
-							required
-							autocomplete="organization"
-							bind:value={intakeCompany}
-						/>
-
-						<TextArea
-							id="inline-booking-scope"
-							name="scope"
-							label="Meeting scope*"
-							placeholder={meetingScopePlaceholder}
-							rows={4}
-							required
-							bind:value={intakeScope}
-						/>
-
-						<div
-							class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
-						>
-							<p class="text-xs text-slate-600">
-								Selected slot:
-								<strong class="text-slate-900"
-									>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
-								>
-							</p>
-							<div class="flex items-center gap-3">
-								<button
-									type="button"
-									class="text-xs tracking-[0.15em] text-slate-600 uppercase underline hover:text-slate-900"
-									onclick={() => {
-										resetToSlotStage();
-									}}
-								>
-									Change slot
-								</button>
-								<button
-									type="submit"
-									class="btn btn-primary inline-flex items-center gap-2"
-									disabled={isSubmitDisabled}
-								>
-									{#if resolvedSubmitAction.pending}
-										Please wait...
-									{:else}
-										Confirm briefing slot
-									{/if}
-								</button>
-							</div>
-						</div>
-					</section>
-				{/if}
-			{:else}
-				<div
-					class="space-y-3 border border-amber-300/80 bg-amber-50 px-4 py-4 text-sm text-amber-800"
-				>
-					<p>No slots are currently available from this page context.</p>
-					<a
-						href="mailto:speaker@christophholz.com"
-						class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
+						</section>
+					{/if}
+				{:else}
+					<div
+						class="space-y-3 border border-amber-300/80 bg-amber-50 px-4 py-4 text-sm text-amber-800"
 					>
-						Contact us to request a custom time
-					</a>
-				</div>
+						<p>Derzeit sind ueber diese Seite keine Termine verfuegbar.</p>
+						<a
+							href="mailto:speaker@christophholz.com"
+							class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
+						>
+							Kontaktieren Sie uns fuer einen individuellen Termin
+						</a>
+					</div>
+				{/if}
 			{/if}
 		</form>
 	{/if}

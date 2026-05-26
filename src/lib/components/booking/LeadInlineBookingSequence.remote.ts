@@ -83,7 +83,8 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		return {
 			success: false,
 			message:
-				parseResult.error.issues[0]?.message ?? 'Please review your details and selected slot.',
+				parseResult.error.issues[0]?.message ??
+				'Bitte pruefen Sie Ihre Angaben und den ausgewaehlten Termin.',
 			confirmationState: 'invalid'
 		};
 	}
@@ -91,7 +92,8 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	if (!Number.isInteger(campaignId) || campaignId <= 0) {
 		return {
 			success: false,
-			message: 'Missing campaign context. Please refresh and try again.',
+			message:
+				'Fehlender Kampagnenkontext. Bitte laden Sie die Seite neu und versuchen Sie es erneut.',
 			confirmationState: 'booking_unavailable'
 		};
 	}
@@ -99,7 +101,8 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	if (!Number.isInteger(campaignPageId) || campaignPageId <= 0) {
 		return {
 			success: false,
-			message: 'Missing page context. Please refresh and try again.',
+			message:
+				'Fehlender Seitenkontext. Bitte laden Sie die Seite neu und versuchen Sie es erneut.',
 			confirmationState: 'booking_unavailable'
 		};
 	}
@@ -128,7 +131,8 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	if (policy.state !== 'active') {
 		return {
 			success: false,
-			message: getPublicBookingUnavailableMessage(policy) ?? 'Booking is currently unavailable.',
+			message:
+				getPublicBookingUnavailableMessage(policy) ?? 'Die Buchung ist aktuell nicht verfuegbar.',
 			confirmationState: 'booking_unavailable'
 		};
 	}
@@ -144,7 +148,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		return {
 			success: false,
 			message:
-				'We could not verify your request intent right now. Please try again shortly or email us directly.',
+				'Wir konnten Ihre Anfrage derzeit nicht verifizieren. Bitte versuchen Sie es in Kuerze erneut oder schreiben Sie uns direkt per E-Mail.',
 			confirmationState: 'qualification_failed'
 		};
 	}
@@ -153,7 +157,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		return {
 			success: false,
 			message:
-				'Thanks for your request. This booking path is reserved for speaking engagement inquiries only.',
+				'Vielen Dank fuer Ihre Anfrage. Dieser Buchungsweg ist ausschliesslich fuer Anfragen zu Speaking-Engagements vorgesehen.',
 			confirmationState: 'qualification_failed',
 			qualification: intentDecision
 		};
@@ -163,7 +167,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	if (!normalizedEmail) {
 		return {
 			success: false,
-			message: 'Please provide a valid email address.',
+			message: 'Bitte geben Sie eine gueltige E-Mail-Adresse an.',
 			confirmationState: 'invalid'
 		};
 	}
@@ -176,7 +180,8 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	if (!campaignContext) {
 		return {
 			success: false,
-			message: 'Unable to confirm booking right now. Please refresh and try again.',
+			message:
+				'Die Buchung kann derzeit nicht bestaetigt werden. Bitte laden Sie die Seite neu und versuchen Sie es erneut.',
 			confirmationState: 'booking_unavailable'
 		};
 	}
@@ -280,7 +285,8 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	if (confirmation.state !== 'confirmed') {
 		return {
 			success: false,
-			message: confirmation.message,
+			message:
+				'Die Buchung konnte nicht bestaetigt werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.',
 			confirmationState: confirmation.state
 		};
 	}
@@ -293,7 +299,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	return {
 		success: true,
 		message:
-			"Briefing confirmed. Woody, Christoph's AI assistant will email you shortly. Please check your inbox for the calendar invite.",
+			'Briefing bestaetigt. Woody, Christophs KI-Assistenz, schreibt Ihnen in Kuerze per E-Mail. Bitte pruefen Sie Ihren Posteingang auf die Kalendereinladung.',
 		confirmationState: 'confirmed',
 		confirmedBookingId: confirmation.booking.id,
 		slotGroups: bookingFlow.slotGroups
