@@ -62,26 +62,38 @@ function hasInvalidFormatting(value: string): boolean {
 }
 
 function validateHtmlShape(bodyHtml: string): void {
-	const requiredLabels = [
-		'Event Topic',
-		'Talking Length',
-		'Location',
-		'Date/Time',
-		'Event Name',
-		'Audience',
-		'Agent',
-		'Client'
-	];
-
 	const lowerHtml = bodyHtml.toLowerCase();
 	if (!lowerHtml.includes('<ul') || !lowerHtml.includes('</ul>')) {
 		throw new Error('Generated HTML must include a <ul> summary list');
 	}
 
-	for (const label of requiredLabels) {
-		if (!bodyHtml.includes(label)) {
-			throw new Error(`Generated HTML is missing required summary label: ${label}`);
-		}
+	const listItemMatches = bodyHtml.match(/<li\b[^>]*>[\s\S]*?<\/li>/gi) ?? [];
+	if (listItemMatches.length !== 8) {
+		throw new Error('Generated HTML summary list must contain exactly 8 list items');
+	}
+}
+
+function hasForbiddenLeadWording(value: string): boolean {
+	const normalized = value.toLowerCase();
+	return (
+		normalized.includes('lead call') ||
+		normalized.includes('your lead call') ||
+		normalized.includes('this lead call') ||
+		normalized.includes('sales call')
+	);
+}
+
+function validateNoForbiddenLeadWording(input: {
+	subject: string;
+	bodyHtml: string;
+	bodyText: string;
+}): void {
+	if (
+		hasForbiddenLeadWording(input.subject) ||
+		hasForbiddenLeadWording(input.bodyHtml) ||
+		hasForbiddenLeadWording(input.bodyText)
+	) {
+		throw new Error('Generated output contains forbidden lead-call wording');
 	}
 }
 
@@ -157,6 +169,11 @@ export async function generateWoodyReply(
 		}
 
 		validateHtmlShape(modelOutput.body_html);
+		validateNoForbiddenLeadWording({
+			subject: modelOutput.subject,
+			bodyHtml: modelOutput.body_html,
+			bodyText: modelOutput.body_text
+		});
 
 		const output: WoodyGenerateReplyOutput = {
 			subject: modelOutput.subject,

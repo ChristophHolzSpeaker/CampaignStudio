@@ -1,6 +1,6 @@
 import type { WoodyGenerateReplyInput } from './types';
 
-export const WOODY_PROMPT_VERSION = 'woody_v1';
+export const WOODY_PROMPT_VERSION = 'woody_v2';
 
 export function buildWoodyPrompt(input: WoodyGenerateReplyInput): {
 	system_prompt: string;
@@ -32,13 +32,25 @@ Rules:
 - Introduce Woody as Christoph's AI assistant.
 - Mention this is part of an AI-assisted coordination experiment in a professional way.
 - Do not promise availability.
-- Do not invent certainty. If unknown, use "To Determine".
+- Do not invent certainty. If unknown, use "TBD".
 - Include ONLY the provided booking link; do not add other links.
 - Do not mention Calendly.
-- body_html must be simple email-safe HTML and include a <ul> with exactly these labels:
-  Event Topic, Talking Length, Location, Date/Time, Event Name, Audience, Agent, Client.
-- body_text must be a plain-text fallback with the same factual content.
-- Use requested response language for subject/body content.`;
+- Do not use or imply "lead", "lead call", "your lead call", or similar lead wording anywhere in subject/body.
+- Use the language of the inbound sender message for subject/body content.
+- body_html must be simple email-safe HTML and include exactly one summary <ul> with exactly eight <li> items in this exact order:
+  1) Event Topic
+  2) Talking Length
+  3) Location
+  4) Date/Time
+  5) Event Name
+  6) Audience
+  7) Agent
+  8) Client
+- Localize the labels above to the response language while keeping the exact order unchanged.
+- If a value is unknown, write "TBD".
+- body_text must be a plain-text fallback with the same factual content and the same summary-item order.
+- Include this exact German sentence in German responses:
+  "Wenn Sie MS-Teams oder eine andere Software fuer die Videokonferenz bevorzugen, senden Sie uns bitte eine Kalendereinladung zum reservierten Termin."`;
 
 	const userPrompt = JSON.stringify(
 		{

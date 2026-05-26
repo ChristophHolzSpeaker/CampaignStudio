@@ -22,9 +22,9 @@ function validModelContent(): string {
 	return JSON.stringify({
 		subject: 'Thanks for reaching out',
 		body_html:
-			'<p>Hello</p><ul><li>Event Topic: Product Launch</li><li>Talking Length: 45 minutes</li><li>Location: Berlin</li><li>Date/Time: To Determine</li><li>Event Name: Innovation Summit</li><li>Audience: Founders</li><li>Agent: To Determine</li><li>Client: To Determine</li></ul><p>Please book here: https://book.domain.com/example</p>',
+			'<p>Hello</p><ul><li>Event Topic: Product Launch</li><li>Talking Length: 45 minutes</li><li>Location: Berlin</li><li>Date/Time: TBD</li><li>Event Name: Innovation Summit</li><li>Audience: Founders</li><li>Agent: TBD</li><li>Client: TBD</li></ul><p>Please book here: https://book.domain.com/example</p>',
 		body_text:
-			'Hello\nEvent Topic: Product Launch\nTalking Length: 45 minutes\nLocation: Berlin\nDate/Time: To Determine\nEvent Name: Innovation Summit\nAudience: Founders\nAgent: To Determine\nClient: To Determine\nPlease book here: https://book.domain.com/example',
+			'Hello\nEvent Topic: Product Launch\nTalking Length: 45 minutes\nLocation: Berlin\nDate/Time: TBD\nEvent Name: Innovation Summit\nAudience: Founders\nAgent: TBD\nClient: TBD\nPlease book here: https://book.domain.com/example',
 		extracted_fields: {
 			event_topic: 'Product Launch',
 			talking_length: '45 minutes',
@@ -66,8 +66,8 @@ describe('generate woody reply', () => {
 
 		expect(result.generation_status).toBe('success');
 		expect(result.provider).toBe('openrouter');
-		expect(result.extracted_fields.date_time).toBe('To Determine');
-		expect(result.extracted_fields.agent).toBe('To Determine');
+		expect(result.extracted_fields.date_time).toBe('TBD');
+		expect(result.extracted_fields.agent).toBe('TBD');
 	});
 
 	it('falls back unsupported language to english explicitly', async () => {
@@ -126,7 +126,7 @@ describe('generate woody reply', () => {
 
 		expect(result.generation_status).toBe('error');
 		expect(result.subject).toBe('');
-		expect(result.extracted_fields.event_topic).toBe('To Determine');
+		expect(result.extracted_fields.event_topic).toBe('TBD');
 	});
 
 	it('returns controlled error when html summary list labels are missing', async () => {
@@ -136,19 +136,58 @@ describe('generate woody reply', () => {
 				body_html: '<p>No summary list</p><ul><li>Only one item</li></ul>',
 				body_text: 'Hello',
 				extracted_fields: {
-					event_topic: 'To Determine',
-					talking_length: 'To Determine',
-					location: 'To Determine',
-					date_time: 'To Determine',
-					event_name: 'To Determine',
-					audience: 'To Determine',
-					agent: 'To Determine',
-					client: 'To Determine'
+					event_topic: 'TBD',
+					talking_length: 'TBD',
+					location: 'TBD',
+					date_time: 'TBD',
+					event_name: 'TBD',
+					audience: 'TBD',
+					agent: 'TBD',
+					client: 'TBD'
 				}
 			}),
 			model: 'openai/gpt-4.1-mini',
 			usage: null,
 			raw_response: { id: 'resp_4' }
+		});
+
+		const result = await generateWoodyReply(makeEnv(), {
+			sender_name: null,
+			sender_email: 'jane@example.com',
+			inbound_subject: 'Inquiry',
+			inbound_body: 'Please share details',
+			response_language: 'English',
+			booking_link: 'https://book.domain.com/example',
+			response_type: 'initial_speaking_inquiry_ack',
+			campaign_id: null,
+			campaign_page_id: null,
+			lead_journey_id: null
+		});
+
+		expect(result.generation_status).toBe('error');
+	});
+
+	it('returns controlled error when forbidden lead-call wording appears', async () => {
+		mockedCallOpenRouterChat.mockResolvedValue({
+			content: JSON.stringify({
+				subject: 'Your lead call is now locked in',
+				body_html:
+					'<p>Hello</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
+				body_text: 'Your lead call is now locked in',
+				extracted_fields: {
+					event_topic: 'TBD',
+					talking_length: 'TBD',
+					location: 'TBD',
+					date_time: 'TBD',
+					event_name: 'TBD',
+					audience: 'TBD',
+					agent: 'TBD',
+					client: 'TBD'
+				}
+			}),
+			model: 'openai/gpt-4.1-mini',
+			usage: null,
+			raw_response: { id: 'resp_5' }
 		});
 
 		const result = await generateWoodyReply(makeEnv(), {

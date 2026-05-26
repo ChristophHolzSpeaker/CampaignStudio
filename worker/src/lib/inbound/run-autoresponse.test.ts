@@ -144,14 +144,14 @@ describe('runAutoresponsePipeline', () => {
 			body_html: '',
 			body_text: '',
 			extracted_fields: {
-				event_topic: 'To Determine',
-				talking_length: 'To Determine',
-				location: 'To Determine',
-				date_time: 'To Determine',
-				event_name: 'To Determine',
-				audience: 'To Determine',
-				agent: 'To Determine',
-				client: 'To Determine'
+				event_topic: 'TBD',
+				talking_length: 'TBD',
+				location: 'TBD',
+				date_time: 'TBD',
+				event_name: 'TBD',
+				audience: 'TBD',
+				agent: 'TBD',
+				client: 'TBD'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
@@ -181,17 +181,17 @@ describe('runAutoresponsePipeline', () => {
 		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
 			subject: 'Subject',
 			body_html:
-				'<p>Body</p><ul><li>Event Topic: To Determine</li><li>Talking Length: To Determine</li><li>Location: To Determine</li><li>Date/Time: To Determine</li><li>Event Name: To Determine</li><li>Audience: To Determine</li><li>Agent: To Determine</li><li>Client: To Determine</li></ul>',
+				'<p>Body</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
 			body_text: 'Body',
 			extracted_fields: {
-				event_topic: 'To Determine',
-				talking_length: 'To Determine',
-				location: 'To Determine',
-				date_time: 'To Determine',
-				event_name: 'To Determine',
-				audience: 'To Determine',
-				agent: 'To Determine',
-				client: 'To Determine'
+				event_topic: 'TBD',
+				talking_length: 'TBD',
+				location: 'TBD',
+				date_time: 'TBD',
+				event_name: 'TBD',
+				audience: 'TBD',
+				agent: 'TBD',
+				client: 'TBD'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
@@ -259,17 +259,17 @@ describe('runAutoresponsePipeline', () => {
 		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
 			subject: 'Subject',
 			body_html:
-				'<p>Body</p><ul><li>Event Topic: To Determine</li><li>Talking Length: To Determine</li><li>Location: To Determine</li><li>Date/Time: To Determine</li><li>Event Name: To Determine</li><li>Audience: To Determine</li><li>Agent: To Determine</li><li>Client: To Determine</li></ul>',
+				'<p>Body</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
 			body_text: 'Body',
 			extracted_fields: {
-				event_topic: 'To Determine',
-				talking_length: 'To Determine',
-				location: 'To Determine',
-				date_time: 'To Determine',
-				event_name: 'To Determine',
-				audience: 'To Determine',
-				agent: 'To Determine',
-				client: 'To Determine'
+				event_topic: 'TBD',
+				talking_length: 'TBD',
+				location: 'TBD',
+				date_time: 'TBD',
+				event_name: 'TBD',
+				audience: 'TBD',
+				agent: 'TBD',
+				client: 'TBD'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
@@ -309,17 +309,17 @@ describe('runAutoresponsePipeline', () => {
 		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
 			subject: 'Subject',
 			body_html:
-				'<p>Body</p><ul><li>Event Topic: To Determine</li><li>Talking Length: To Determine</li><li>Location: To Determine</li><li>Date/Time: To Determine</li><li>Event Name: To Determine</li><li>Audience: To Determine</li><li>Agent: To Determine</li><li>Client: To Determine</li></ul>',
+				'<p>Body</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
 			body_text: 'Body',
 			extracted_fields: {
-				event_topic: 'To Determine',
-				talking_length: 'To Determine',
-				location: 'To Determine',
-				date_time: 'To Determine',
-				event_name: 'To Determine',
-				audience: 'To Determine',
-				agent: 'To Determine',
-				client: 'To Determine'
+				event_topic: 'TBD',
+				talking_length: 'TBD',
+				location: 'TBD',
+				date_time: 'TBD',
+				event_name: 'TBD',
+				audience: 'TBD',
+				agent: 'TBD',
+				client: 'TBD'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
