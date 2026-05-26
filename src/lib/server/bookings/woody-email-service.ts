@@ -97,7 +97,7 @@ function getLocalizedConfirmedSubject(languageTag: string): string {
 function getLocalizedAlternativeVideoCallLine(languageTag: string): string {
 	switch (languageTag) {
 		case 'de':
-			return 'Wenn Sie ein anderes Video-Tool bevorzugen, planen Sie es bitte ein und antworten Sie mit dem Link fuer Christoph.';
+			return 'Wenn Sie MS-Teams oder eine andere Software fuer die Videokonferenz bevorzugen, senden Sie uns bitte eine Kalendereinladung zum reservierten Termin.';
 		case 'fr':
 			return 'Si vous preferez un autre outil de visioconference, planifiez-le et repondez avec le lien pour Christoph.';
 		case 'es':
@@ -347,7 +347,7 @@ export function composeBookingLinkInviteEmail(context: BookingLinkInviteEmailCon
 			'',
 			`Please book your preferred slot here: ${context.bookingLinkUrl}`,
 			'',
-			'Once you choose a time, your booking will be locked in and we will send your confirmation details.',
+			'Once you choose a time, we will send your confirmation details and the calendar invitation.',
 			'',
 			'Best,',
 			'Woody'

@@ -226,20 +226,25 @@ async function resolveAutoresponseLanguage(
 		bodyText: string;
 	}
 ): Promise<string> {
-	const campaignLanguage = await resolveCampaignLanguage(env, input.campaignId);
-	if (campaignLanguage) {
-		return campaignLanguage;
-	}
-
 	const headerLanguage = resolveLanguageFromHeaders(input.rawMetadata);
 	if (headerLanguage) {
 		return headerLanguage;
 	}
 
-	return resolveLanguageFromMessageText({
+	const inferredFromText = resolveLanguageFromMessageText({
 		subject: input.subject,
 		bodyText: input.bodyText
 	});
+	if (inferredFromText !== 'English') {
+		return inferredFromText;
+	}
+
+	const campaignLanguage = await resolveCampaignLanguage(env, input.campaignId);
+	if (campaignLanguage) {
+		return campaignLanguage;
+	}
+
+	return inferredFromText;
 }
 
 export async function processInboundGmailMessage(

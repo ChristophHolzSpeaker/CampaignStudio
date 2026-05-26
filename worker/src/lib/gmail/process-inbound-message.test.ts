@@ -284,6 +284,52 @@ describe('processInboundGmailMessage', () => {
 		);
 	});
 
+	it('prioritizes inbound language over campaign language', async () => {
+		mockedNormalizeGmailMessage.mockReturnValue({
+			...sampleNormalizedInbound(),
+			subject: 'Anfrage fuer Vortrag',
+			body_text: 'Wir planen ein Event und bitten um Rueckmeldung.'
+		});
+		mockedSelectOne
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({ language: 'English' })
+			.mockResolvedValueOnce(null);
+		mockedResolveInboundJourney.mockResolvedValue({
+			lead_journey_id: 'journey_1',
+			campaign_id: 12,
+			campaign_page_id: 3,
+			attribution_status: 'new_lead',
+			created_new_journey: true,
+			matched_by: 'new_journey'
+		});
+		mockedUpsertOne.mockResolvedValue({ id: 'lead_message_1' });
+		mockedIsInternalSender.mockReturnValue(false);
+		mockedClassifyInboundMessage.mockReturnValue({
+			classification: 'speaking_inquiry',
+			classification_confidence: 0.9,
+			reason: 'strong_positive_signals'
+		});
+		mockedEvaluateInboundAutoResponseDecision.mockResolvedValue({
+			classification: 'speaking_inquiry',
+			classification_confidence: 0.9,
+			auto_response_decision: 'eligible_for_autoresponse',
+			eligible_for_autoresponse: true,
+			skipped_reason: null,
+			lead_journey_id: 'journey_1',
+			lead_message_id: 'lead_message_1'
+		});
+
+		await processInboundGmailMessage(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			gmailMessage: { id: 'msg_1', threadId: 'thread_1' }
+		} as never);
+
+		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ response_language: 'German' })
+		);
+	});
+
 	it('skips classifier for internal sender and logs only decision + receipt events', async () => {
 		mockedNormalizeGmailMessage.mockReturnValue(sampleNormalizedInbound());
 		mockedSelectOne.mockResolvedValue(null);

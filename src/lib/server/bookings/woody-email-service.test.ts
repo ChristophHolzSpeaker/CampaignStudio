@@ -167,6 +167,8 @@ describe('woody-email-service', () => {
 		});
 
 		expect(composed.bodyText).toContain('https://book.example.com/book/l/token-1');
+		expect(composed.bodyText.toLowerCase()).not.toContain('lead call');
+		expect(composed.bodyText.toLowerCase()).not.toContain('locked in');
 	});
 
 	it('composeBookingConfirmedEmail uses personalized briefing copy with calendar invite', () => {
@@ -234,7 +236,7 @@ describe('woody-email-service', () => {
 		);
 		expect(composed.bodyText).toContain('Sie erhalten in Kuerze eine Kalendereinladung:');
 		expect(composed.bodyText).toContain(
-			'Wenn Sie ein anderes Video-Tool bevorzugen, planen Sie es bitte ein und antworten Sie mit dem Link fuer Christoph.'
+			'Wenn Sie MS-Teams oder eine andere Software fuer die Videokonferenz bevorzugen, senden Sie uns bitte eine Kalendereinladung zum reservierten Termin.'
 		);
 		expect(composed.bodyText.toLowerCase()).not.toContain('lead call');
 	});

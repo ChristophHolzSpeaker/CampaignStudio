@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { woodyResponseTypes } from './types';
 
-const toDetermine = 'To Determine';
+const toDetermine = 'TBD';
 
 function normalizeExtractedValue(value: string): string {
 	const trimmed = value.trim();
