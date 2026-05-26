@@ -121,6 +121,138 @@ function getLocalizedUrgentPhoneLine(languageTag: string): string {
 	}
 }
 
+function getLocalizedConfirmedGreeting(input: {
+	languageTag: string;
+	greetingName: string;
+}): string {
+	switch (input.languageTag) {
+		case 'de':
+			return `Hallo ${input.greetingName},`;
+		case 'fr':
+			return `Bonjour ${input.greetingName},`;
+		case 'es':
+			return `Hola ${input.greetingName},`;
+		default:
+			return `Hi ${input.greetingName},`;
+	}
+}
+
+function getLocalizedConfirmedIntro(languageTag: string): string {
+	switch (languageTag) {
+		case 'de':
+			return 'ich bin Woody, Christophs Assistent. Danke, dass Sie sich die Zeit nehmen, Christoph fuer Ihr Event in Betracht zu ziehen.';
+		case 'fr':
+			return "je suis Woody, l'assistant de Christoph. Merci de prendre le temps d'envisager Christoph pour votre evenement.";
+		case 'es':
+			return 'soy Woody, el asistente de Christoph. Gracias por tomarte el tiempo de considerar a Christoph para tu evento.';
+		default:
+			return "I'm Woody, Christoph's assistant. Thank you for taking the time to consider Christoph for your event.";
+	}
+}
+
+function getLocalizedConfirmedSummaryLine(languageTag: string): string {
+	switch (languageTag) {
+		case 'de':
+			return 'Ich habe Ihre Anfrage zur Vorbereitung auf das Video-Briefing zusammengefasst:';
+		case 'fr':
+			return "J'ai resume votre demande pour preparer le video briefing :";
+		case 'es':
+			return 'He resumido tu solicitud para preparar el video briefing:';
+		default:
+			return 'I have summarized your request in preparation for the video briefing:';
+	}
+}
+
+function getLocalizedConfirmedBriefingTimeLine(input: {
+	languageTag: string;
+	timeRange: string;
+}): string {
+	switch (input.languageTag) {
+		case 'de':
+			return `Zeit fuer das Video-Briefing: ${input.timeRange}`;
+		case 'fr':
+			return `Horaire du video briefing : ${input.timeRange}`;
+		case 'es':
+			return `Horario del video briefing: ${input.timeRange}`;
+		default:
+			return `Video briefing time: ${input.timeRange}`;
+	}
+}
+
+function getLocalizedConfirmedEventSummaryLine(input: {
+	languageTag: string;
+	meetingScope: string;
+}): string {
+	switch (input.languageTag) {
+		case 'de':
+			return `Zusammenfassung Ihres Event-Kontexts: ${input.meetingScope}`;
+		case 'fr':
+			return `Resume de votre contexte evenementiel : ${input.meetingScope}`;
+		case 'es':
+			return `Resumen del contexto de tu evento: ${input.meetingScope}`;
+		default:
+			return `Your event context summary: ${input.meetingScope}`;
+	}
+}
+
+function getLocalizedConfirmedCalendarInviteLine(input: {
+	languageTag: string;
+	calendarEventUrl: string;
+}): string {
+	switch (input.languageTag) {
+		case 'de':
+			return `Sie erhalten in Kuerze eine Kalendereinladung: ${input.calendarEventUrl}`;
+		case 'fr':
+			return `Vous recevrez sous peu une invitation calendrier : ${input.calendarEventUrl}`;
+		case 'es':
+			return `Recibiras en breve una invitacion de calendario: ${input.calendarEventUrl}`;
+		default:
+			return `You will receive a calendar invite shortly: ${input.calendarEventUrl}`;
+	}
+}
+
+function getLocalizedConfirmedVideoCallLine(input: {
+	languageTag: string;
+	zoomLink: string;
+}): string {
+	switch (input.languageTag) {
+		case 'de':
+			return `Link fuer das Video-Briefing: ${input.zoomLink}`;
+		case 'fr':
+			return `Lien du video briefing : ${input.zoomLink}`;
+		case 'es':
+			return `Enlace del video briefing: ${input.zoomLink}`;
+		default:
+			return `Video briefing link: ${input.zoomLink}`;
+	}
+}
+
+function getLocalizedConfirmedClosing(languageTag: string): string {
+	switch (languageTag) {
+		case 'de':
+			return 'Wir freuen uns auf das Gespraech.';
+		case 'fr':
+			return "Au plaisir d'echanger avec vous.";
+		case 'es':
+			return 'Esperamos hablar contigo pronto.';
+		default:
+			return 'Looking forward to speaking with you.';
+	}
+}
+
+function getLocalizedConfirmedSignoff(languageTag: string): string {
+	switch (languageTag) {
+		case 'de':
+			return 'Viele Gruesse,';
+		case 'fr':
+			return 'Bien cordialement,';
+		case 'es':
+			return 'Saludos cordiales,';
+		default:
+			return 'Best,';
+	}
+}
+
 export async function buildBookingLinkInviteEmailContext(input: {
 	leadJourneyId: string;
 	bookingLinkUrl: string;
@@ -233,40 +365,55 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 		startsAt: context.confirmedStartsAt,
 		endsAt: context.confirmedEndsAt
 	});
-	const bookingKindLabel = context.bookingType === 'lead' ? 'lead call' : 'briefing call';
 	const zoomLink = 'https://zoom.christophholz.com';
 	const languageTag = normalizeLanguageTag(context.language);
+	const greetingLine = getLocalizedConfirmedGreeting({ languageTag, greetingName });
+	const introLine = getLocalizedConfirmedIntro(languageTag);
+	const summaryLine = getLocalizedConfirmedSummaryLine(languageTag);
+	const briefingTimeLine = getLocalizedConfirmedBriefingTimeLine({ languageTag, timeRange });
+	const eventSummaryLine = getLocalizedConfirmedEventSummaryLine({
+		languageTag,
+		meetingScope: context.meetingScope
+	});
+	const calendarInviteLine = getLocalizedConfirmedCalendarInviteLine({
+		languageTag,
+		calendarEventUrl: context.calendarEventUrl
+	});
+	const videoCallLine = getLocalizedConfirmedVideoCallLine({ languageTag, zoomLink });
 	const alternativeVideoCallLine = getLocalizedAlternativeVideoCallLine(languageTag);
 	const urgentPhoneLine = getLocalizedUrgentPhoneLine(languageTag);
+	const closingLine = getLocalizedConfirmedClosing(languageTag);
+	const signoffLine = getLocalizedConfirmedSignoff(languageTag);
 
 	return {
 		subject: getLocalizedConfirmedSubject(languageTag),
 		bodyText: [
-			`Hi ${greetingName},`,
+			greetingLine,
 			'',
-			`I'm Woody, Christoph's assistant. Your ${bookingKindLabel} is now locked in.`,
-			`Time: ${timeRange}`,
-			`Focus: ${context.meetingScope}`,
+			introLine,
+			summaryLine,
+			briefingTimeLine,
+			eventSummaryLine,
 			'',
-			`Video call link: ${zoomLink}`,
-			`Fallback if the link is not clickable: ${zoomLink}`,
+			calendarInviteLine,
+			videoCallLine,
 			alternativeVideoCallLine,
 			urgentPhoneLine,
 			'',
-			'Looking forward to it.',
+			closingLine,
 			'',
-			'Best,',
+			signoffLine,
 			'Woody'
 		].join('\n'),
 		bodyHtml: [
-			`<p>Hi ${greetingName},</p>`,
-			`<p>I'm Woody, Christoph's assistant. Your ${bookingKindLabel} is now locked in.</p>`,
-			`<p>Time: ${timeRange}<br/>Focus: ${context.meetingScope}</p>`,
-			`<p>Video call link: <a href="${zoomLink}">${zoomLink}</a><br/>Fallback if the link is not clickable: ${zoomLink}</p>`,
+			`<p>${greetingLine}</p>`,
+			`<p>${introLine}</p>`,
+			`<p>${summaryLine}<br/>${briefingTimeLine}<br/>${eventSummaryLine}</p>`,
+			`<p>${calendarInviteLine}<br/><a href="${context.calendarEventUrl}">${context.calendarEventUrl}</a><br/>${videoCallLine}<br/><a href="${zoomLink}">${zoomLink}</a></p>`,
 			`<p>${alternativeVideoCallLine}</p>`,
 			`<p>${urgentPhoneLine}</p>`,
-			'<p>Looking forward to it.</p>',
-			'<p>Best,<br/>Woody</p>'
+			`<p>${closingLine}</p>`,
+			`<p>${signoffLine}<br/>Woody</p>`
 		].join('')
 	};
 }

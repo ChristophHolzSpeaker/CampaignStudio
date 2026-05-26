@@ -169,7 +169,7 @@ describe('woody-email-service', () => {
 		expect(composed.bodyText).toContain('https://book.example.com/book/l/token-1');
 	});
 
-	it('composeBookingConfirmedEmail includes localized confirmation language and zoom link', () => {
+	it('composeBookingConfirmedEmail uses personalized briefing copy with calendar invite', () => {
 		const composed = composeBookingConfirmedEmail({
 			intent: 'booking_confirmed',
 			recipientEmail: 'lead@example.com',
@@ -189,8 +189,16 @@ describe('woody-email-service', () => {
 		});
 
 		expect(composed.subject).toBe('Your video briefing with Christoph is confirmed');
-		expect(composed.bodyText.toLowerCase()).toContain('locked in');
+		expect(composed.bodyText).toContain('Thank you for taking the time to consider Christoph');
+		expect(composed.bodyText).toContain(
+			'I have summarized your request in preparation for the video briefing:'
+		);
+		expect(composed.bodyText).toContain('Video briefing time:');
+		expect(composed.bodyText).toContain('Your event context summary: Discuss launch strategy');
+		expect(composed.bodyText).toContain('You will receive a calendar invite shortly:');
+		expect(composed.bodyText.toLowerCase()).not.toContain('lead call');
 		expect(composed.bodyText).toContain('https://zoom.christophholz.com');
+		expect(composed.bodyText).toContain('https://calendar.google.com/event?eid=evt_1');
 		expect(composed.bodyText).toContain(
 			'If you prefer another video calling tool please schedule it and reply with the link for Christoph.'
 		);
@@ -198,6 +206,37 @@ describe('woody-email-service', () => {
 			'If anything is urgent please feel free to call this number directly: +4369917407401'
 		);
 		expect(composed.bodyHtml).toContain('<a href="https://zoom.christophholz.com">');
+		expect(composed.bodyHtml).toContain('<a href="https://calendar.google.com/event?eid=evt_1">');
+	});
+
+	it('composeBookingConfirmedEmail renders fully localized German copy', () => {
+		const composed = composeBookingConfirmedEmail({
+			intent: 'booking_confirmed',
+			recipientEmail: 'lead@example.com',
+			recipientName: 'Lead User',
+			language: 'de',
+			leadJourneyId: 'journey-1',
+			campaignId: 7,
+			campaignPageId: 11,
+			bookingId: 'booking-1',
+			bookingType: 'lead',
+			meetingScope: 'Wir planen ein Event im August',
+			requestSummary: 'Wir planen ein Event im August',
+			organization: 'ACME',
+			confirmedStartsAt: new Date('2026-06-01T10:00:00.000Z'),
+			confirmedEndsAt: new Date('2026-06-01T10:30:00.000Z'),
+			calendarEventUrl: 'https://calendar.google.com/event?eid=evt_1'
+		});
+
+		expect(composed.subject).toBe('Ihr Video-Briefing mit Christoph ist bestaetigt');
+		expect(composed.bodyText).toContain(
+			'Ich habe Ihre Anfrage zur Vorbereitung auf das Video-Briefing zusammengefasst:'
+		);
+		expect(composed.bodyText).toContain('Sie erhalten in Kuerze eine Kalendereinladung:');
+		expect(composed.bodyText).toContain(
+			'Wenn Sie ein anderes Video-Tool bevorzugen, planen Sie es bitte ein und antworten Sie mit dem Link fuer Christoph.'
+		);
+		expect(composed.bodyText.toLowerCase()).not.toContain('lead call');
 	});
 
 	it('sendBookingLinkInviteEmailForLeadSubmission triggers worker invocation with expected payload', async () => {
