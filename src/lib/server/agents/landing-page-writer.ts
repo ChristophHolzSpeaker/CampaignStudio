@@ -19,7 +19,11 @@ import {
 	collectLandingPageDocumentMvpIssues,
 	validateLandingPageDocumentForMvp
 } from './landing-page-policy';
-import { evaluateLandingPageCopyQuality } from './landing-page-copy-quality';
+import {
+	evaluateLandingPageCopyQuality,
+	hasLanguageMismatchWarning,
+	hasMetaLanguageWarning
+} from './landing-page-copy-quality';
 import { getSectionEligibility } from './section-eligibility';
 import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 import type { LandingPagePlan } from './schemas/landing-page-plan';
@@ -45,6 +49,22 @@ function inferBenefitTitle(value: string, index: number): string {
 	}
 
 	return `Audience outcome ${index + 1}`;
+}
+
+function resolveBuyerAudience(input: LandingPageGenerationInput): string {
+	return (
+		input.messageMap.buyerAudience?.trim() ||
+		input.campaignIntentBrief.buyerAudience?.trim() ||
+		input.campaign.audience
+	);
+}
+
+function resolveAttendeeAudience(input: LandingPageGenerationInput): string {
+	return (
+		input.messageMap.attendeeAudience?.trim() ||
+		input.campaignIntentBrief.attendeeAudience?.trim() ||
+		'event attendees'
+	);
 }
 
 type HybridTextItem = {
@@ -213,22 +233,22 @@ function resolveLegacyPrimaryVisualFromProps(
 }
 
 function buildHybridBenefitFallbacks(input: LandingPageGenerationInput): HybridTextItem[] {
-	const audience = input.campaign.audience;
+	const attendeeAudience = resolveAttendeeAudience(input);
 	const topic = input.campaign.topic;
 	const format = input.campaign.format;
 
 	return [
 		{
 			title: 'Decision-ready understanding',
-			body: `${audience} leave this ${format} with a clear understanding of ${topic} and what matters most now.`
+			body: `${attendeeAudience} leave this ${format} with a clear understanding of ${topic} and the decisions that matter most now.`
 		},
 		{
 			title: 'Practical application playbook',
-			body: `${audience} get concrete ways to apply ${topic} insights in the exact decisions and workflows this ${format} is designed to influence.`
+			body: `The session delivers concrete ways to apply ${topic} insights in real decisions and workflows.`
 		},
 		{
 			title: 'Immediate next actions',
-			body: `${audience} walk away with specific next actions they can execute right after the ${format} to convert ${topic} into measurable progress.`
+			body: `Attendees leave with specific next actions they can execute right after the ${format} to turn ${topic} into measurable progress.`
 		}
 	];
 }
@@ -281,18 +301,18 @@ function buildWhyChristophFallbacks(
 	input: LandingPageGenerationInput,
 	benefits: HybridTextItem[]
 ): HybridTextItem[] {
-	const audience = input.campaign.audience;
+	const buyerAudience = resolveBuyerAudience(input);
 	const topic = input.campaign.topic;
 	const format = input.campaign.format;
 
 	return [
 		{
 			title: 'Proven translator of complex AI',
-			body: `Christoph has a track record of turning complex ${topic} shifts into clear decisions that ${audience} can act on immediately.`
+			body: `Christoph translates complex ${topic} shifts into clear decisions ${buyerAudience} can approve with confidence.`
 		},
 		{
 			title: 'Built for this audience and format',
-			body: `He structures each ${format} for ${audience}, balancing strategic perspective with practical guidance that can be used the same day.`
+			body: `He structures each ${format} to match executive expectations while delivering practical guidance attendees can use immediately.`
 		},
 		{
 			title: 'Outcome-focused delivery',
@@ -390,6 +410,10 @@ function resolveSpeakerInActionSelection(
 	}[] = [];
 
 	for (const id of selectedIds) {
+		if (resolved.some((item) => item.assetId === id)) {
+			continue;
+		}
+
 		const selected = catalogById.get(id);
 		if (!selected) {
 			console.warn(
@@ -682,6 +706,7 @@ function hydrateSectionWithAssets(
 		}
 
 		case 'keynote_speeches': {
+			const buyerAudience = resolveBuyerAudience(input);
 			const keynoteIdsFromProps = Array.isArray(section.props.keynoteIds)
 				? section.props.keynoteIds
 						.map((value) => (typeof value === 'string' ? value.trim() : ''))
@@ -693,10 +718,10 @@ function hydrateSectionWithAssets(
 				...section,
 				props: {
 					...section.props,
-					title: section.props.title?.trim() || 'Keynote topics that resonate with this audience',
+					title: section.props.title?.trim() || 'Keynote topics that match your event goals',
 					intro:
 						section.props.intro?.trim() ||
-						`Choose from proven keynote topics tailored for ${input.campaign.audience}. Each talk is optimized for ${input.campaign.format} impact and practical relevance.`,
+						`Choose from proven keynote topics tailored for ${buyerAudience}. Each talk is designed for practical event impact and attendee relevance.`,
 					keynoteIds: keynotes.map((keynote) => keynote.id),
 					keynotes
 				}
@@ -716,6 +741,8 @@ function hydrateSectionWithAssets(
 		}
 
 		case 'hybrid_content_section': {
+			const buyerAudience = resolveBuyerAudience(input);
+			const attendeeAudience = resolveAttendeeAudience(input);
 			const props: Record<string, unknown> = isRecord(section.props) ? section.props : {};
 			const selectedPrimaryVisual = resolveHybridPrimaryVisualSelection(input, plan);
 			const fallbackPrimaryVisual = resolveLegacyPrimaryVisualFromProps(props);
@@ -799,11 +826,11 @@ function hydrateSectionWithAssets(
 				normalizedDeepDiveItems.length > 0 ? normalizedDeepDiveItems : deepDiveFallbacks;
 
 			const title =
-				getString(props.title) || 'What your audience will leave with from this session';
+				getString(props.title) || 'What your attendees will leave with from this session';
 
 			const intro =
 				getString(props.intro) ||
-				`Most ${input.campaign.format} sessions stay abstract. This section clarifies what ${input.campaign.audience} will leave with on ${input.campaign.topic} and why those outcomes are achievable.`;
+				`Most ${input.campaign.format} sessions stay abstract. This section helps ${buyerAudience} see what ${attendeeAudience} will gain from a session on ${input.campaign.topic}.`;
 
 			const deepDiveTitle = getString(props.deepDiveTitle) || 'Why Christoph';
 
@@ -1049,18 +1076,20 @@ function buildRequiredSectionFallback(
 				}
 			};
 		case 'keynote_speeches': {
+			const buyerAudience = resolveBuyerAudience(input);
 			const keynotes = resolveKeynoteSelection(input, plan, []);
 			return {
 				type: 'keynote_speeches',
 				props: {
-					title: 'Keynote topics that resonate with this audience',
-					intro: `Choose from proven keynote topics tailored for ${input.campaign.audience}.`,
+					title: 'Keynote topics that match your event goals',
+					intro: `Choose from proven keynote topics tailored for ${buyerAudience}.`,
 					keynoteIds: keynotes.map((keynote) => keynote.id),
 					keynotes
 				}
 			};
 		}
 		case 'hybrid_content_section': {
+			const buyerAudience = resolveBuyerAudience(input);
 			const benefitImageUrls = buildBenefitImagePool(input, null, {});
 			const fallbackBenefits = normalizeBenefitsToThree(
 				[],
@@ -1071,8 +1100,8 @@ function buildRequiredSectionFallback(
 			return {
 				type: 'hybrid_content_section',
 				props: {
-					title: 'What your audience will leave with from this session',
-					intro: `This section clarifies what ${input.campaign.audience} will leave with on ${input.campaign.topic}.`,
+					title: 'What your attendees will leave with from this session',
+					intro: `${buyerAudience} can expect clear attendee outcomes on ${input.campaign.topic}, not abstract inspiration.`,
 					benefits: fallbackBenefits,
 					deepDiveTitle: 'Why Christoph',
 					deepDiveItems
@@ -1300,6 +1329,57 @@ Revision suggestions:
 ${JSON.stringify(revisionSuggestions, null, 2)}`;
 }
 
+function buildMetaLanguageRepairPrompt(
+	input: LandingPageGenerationInput,
+	plan: LandingPagePlan,
+	currentDocument: LandingPageDocument,
+	warnings: string[],
+	matchedSnippets: string[]
+): string {
+	return `Your previous landing page JSON is structurally valid but contains meta/instructional phrasing in visible copy.
+
+Rewrite only the visible text fields that contain meta language so they become final customer-facing prose.
+
+Hard constraints:
+- Keep the same section order and section types.
+- Keep approved media selections and IDs unchanged.
+- Keep layout and structure unchanged unless strictly needed to replace meta language.
+- Do not use phrasing like "this section will", "this paragraph will", "should describe", "placeholder", or "TBD".
+- Do not add commentary or markdown.
+- Return one JSON object only.
+
+Landing page generation input:
+${JSON.stringify(input, null, 2)}
+
+Landing page plan:
+${JSON.stringify(plan, null, 2)}
+
+Current valid JSON to improve:
+${JSON.stringify(currentDocument, null, 2)}
+
+Quality warnings:
+${JSON.stringify(warnings, null, 2)}
+
+Matched meta snippets:
+${JSON.stringify(matchedSnippets, null, 2)}`;
+}
+
+function buildWriterPlanView(plan: LandingPagePlan): {
+	pageTitle: string;
+	conversionGoal: string;
+	messagingAngle: string;
+	sectionPlan: Array<{ type: string }>;
+	assetPlan: LandingPagePlan['assetPlan'];
+} {
+	return {
+		pageTitle: plan.pageTitle,
+		conversionGoal: plan.conversionGoal,
+		messagingAngle: plan.messagingAngle,
+		sectionPlan: plan.sectionPlan.map((section) => ({ type: section.type })),
+		assetPlan: plan.assetPlan
+	};
+}
+
 function hydrateLandingPageWithAssets(
 	response: unknown,
 	input: LandingPageGenerationInput,
@@ -1323,7 +1403,6 @@ function hydrateLandingPageWithAssets(
 		input.adGroup.intentSummary ||
 		plan.messagingAngle ||
 		input.adPackage.messagingAngle ||
-		input.adPackage.targetingSummary ||
 		input.campaign.topic;
 
 	if (!Array.isArray(hydrated.sections)) {
@@ -1394,7 +1473,8 @@ export async function generateLandingPageDocument(
 		disallowedReasonByType: eligibility.disallowedReasonByType
 	};
 
-	const userPrompt = landingPageWriterUserPrompt(input, plan, promptContext);
+	const writerPlanView = buildWriterPlanView(plan);
+	const userPrompt = landingPageWriterUserPrompt(input, writerPlanView, promptContext);
 	const selectedSectionTypes = plan.sectionPlan.map((section) => section.type);
 
 	let promptLibraryGuidance = '';
@@ -1474,18 +1554,51 @@ export async function generateLandingPageDocument(
 				{ ...traceContext, stage: 'landing_page_writer' },
 				initialCopyQuality
 			);
+			if (hasMetaLanguageWarning(initialCopyQuality)) {
+				traceLlm(
+					'copy_quality_meta_language_detected',
+					{
+						...traceContext,
+						stage: 'landing_page_writer'
+					},
+					{
+						snippets: initialCopyQuality.metaLanguageMatches ?? []
+					}
+				);
+			}
+			if (hasLanguageMismatchWarning(initialCopyQuality)) {
+				traceLlm(
+					'copy_quality_language_mismatch_detected',
+					{ ...traceContext, stage: 'landing_page_writer' },
+					{ warnings: initialCopyQuality.warnings }
+				);
+			}
 			if (initialCopyQuality.passed) {
 				console.log('Landing page writer: document validated');
 				return firstValidation.data;
 			}
 
-			repairUserPrompt = buildCopyQualityRepairPrompt(
-				input,
-				plan,
-				firstValidation.data,
-				initialCopyQuality.warnings,
-				initialCopyQuality.revisionSuggestions
-			);
+			if (hasMetaLanguageWarning(initialCopyQuality)) {
+				traceLlm('copy_quality_meta_language_repair_triggered', {
+					...traceContext,
+					stage: 'landing_page_writer_repair'
+				});
+				repairUserPrompt = buildMetaLanguageRepairPrompt(
+					input,
+					plan,
+					firstValidation.data,
+					initialCopyQuality.warnings,
+					initialCopyQuality.metaLanguageMatches ?? []
+				);
+			} else {
+				repairUserPrompt = buildCopyQualityRepairPrompt(
+					input,
+					plan,
+					firstValidation.data,
+					initialCopyQuality.warnings,
+					initialCopyQuality.revisionSuggestions
+				);
+			}
 		} else {
 			console.error('Landing page writer: MVP validation failed', firstMvpIssues);
 			traceLlm(
@@ -1629,6 +1742,26 @@ export async function generateLandingPageDocument(
 		{ ...traceContext, stage: 'landing_page_writer_repair' },
 		repairedCopyQuality
 	);
+	if (hasMetaLanguageWarning(repairedCopyQuality)) {
+		traceLlm(
+			'copy_quality_meta_language_detected',
+			{
+				...traceContext,
+				stage: 'landing_page_writer_repair'
+			},
+			{
+				snippets: repairedCopyQuality.metaLanguageMatches ?? []
+			}
+		);
+		throw new Error(
+			`Landing page contains non-publishable meta copy after repair (${repairedCopyQuality.score}/100): ${repairedCopyQuality.warnings.join(' | ')}`
+		);
+	}
+	if (hasLanguageMismatchWarning(repairedCopyQuality)) {
+		throw new Error(
+			`Landing page language does not match campaign.language after repair (${repairedCopyQuality.score}/100): ${repairedCopyQuality.warnings.join(' | ')}`
+		);
+	}
 	if (!repairedCopyQuality.passed) {
 		throw new Error(
 			`Landing page copy quality below moderate threshold (${repairedCopyQuality.score}/100): ${repairedCopyQuality.warnings.join(' | ')}`

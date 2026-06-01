@@ -15,10 +15,21 @@
 
 	type PlannerState = {
 		messages: PlannerMessage[];
-		resolvedFields: CampaignFormSubmission;
+		resolvedFields: CampaignFormSubmission & {
+			decisionMakerAudience: string;
+			attendeeAudience: string;
+		};
 		planMarkdown: string;
 		questions: string[];
-		missingFields: Array<'name' | 'audience' | 'format' | 'topic' | 'language' | 'geography'>;
+		missingFields: Array<
+			| 'name'
+			| 'decisionMakerAudience'
+			| 'attendeeAudience'
+			| 'format'
+			| 'topic'
+			| 'language'
+			| 'geography'
+		>;
 		readyToCreate: boolean;
 	};
 
@@ -60,10 +71,22 @@
 
 	const defaultPlanner: PlannerState = {
 		messages: [],
-		resolvedFields: defaultValues,
+		resolvedFields: {
+			...defaultValues,
+			decisionMakerAudience: '',
+			attendeeAudience: ''
+		},
 		planMarkdown: '',
 		questions: [],
-		missingFields: ['name', 'audience', 'format', 'topic', 'language', 'geography'],
+		missingFields: [
+			'name',
+			'decisionMakerAudience',
+			'attendeeAudience',
+			'format',
+			'topic',
+			'language',
+			'geography'
+		],
 		readyToCreate: false
 	};
 

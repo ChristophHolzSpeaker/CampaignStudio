@@ -13,10 +13,14 @@ import {
 	failGenerationJob,
 	markGenerationJobStage
 } from '$lib/server/generation-jobs';
+import type { PlannerRequiredField } from '$lib/server/agents/schemas/campaign-planner';
 
 type FieldErrors = Record<string, string[] | undefined>;
 
-type PlannerRequiredField = 'name' | 'audience' | 'format' | 'topic' | 'language' | 'geography';
+type PlannerResolvedFields = CampaignFormSubmission & {
+	decisionMakerAudience: string;
+	attendeeAudience: string;
+};
 
 type PlannerMessage = {
 	role: 'user' | 'assistant';
@@ -25,7 +29,7 @@ type PlannerMessage = {
 
 type PlannerState = {
 	messages: PlannerMessage[];
-	resolvedFields: CampaignFormSubmission;
+	resolvedFields: PlannerResolvedFields;
 	planMarkdown: string;
 	questions: string[];
 	missingFields: PlannerRequiredField[];
@@ -48,16 +52,19 @@ const getTrimmedField = (formData: FormData, key: string) =>
 
 const requiredPlannerFields: PlannerRequiredField[] = [
 	'name',
-	'audience',
+	'decisionMakerAudience',
+	'attendeeAudience',
 	'format',
 	'topic',
 	'language',
 	'geography'
 ];
 
-const getEmptyValues = (): CampaignFormSubmission => ({
+const getEmptyValues = (): PlannerResolvedFields => ({
 	name: '',
 	audience: '',
+	decisionMakerAudience: '',
+	attendeeAudience: '',
 	format: '',
 	topic: '',
 	language: '',
@@ -81,7 +88,7 @@ const parsePlannerState = (rawValue: FormDataEntryValue | null): PlannerState =>
 
 	try {
 		const parsed = JSON.parse(rawValue.toString()) as Partial<PlannerState>;
-		const resolved = (parsed.resolvedFields ?? {}) as Partial<CampaignFormSubmission>;
+		const resolved = (parsed.resolvedFields ?? {}) as Partial<PlannerResolvedFields>;
 		const messages = Array.isArray(parsed.messages)
 			? parsed.messages
 					.filter(
@@ -100,6 +107,10 @@ const parsePlannerState = (rawValue: FormDataEntryValue | null): PlannerState =>
 			resolvedFields: {
 				name: typeof resolved.name === 'string' ? resolved.name : '',
 				audience: typeof resolved.audience === 'string' ? resolved.audience : '',
+				decisionMakerAudience:
+					typeof resolved.decisionMakerAudience === 'string' ? resolved.decisionMakerAudience : '',
+				attendeeAudience:
+					typeof resolved.attendeeAudience === 'string' ? resolved.attendeeAudience : '',
 				format: typeof resolved.format === 'string' ? resolved.format : '',
 				topic: typeof resolved.topic === 'string' ? resolved.topic : '',
 				language: typeof resolved.language === 'string' ? resolved.language : '',
@@ -127,9 +138,9 @@ const parsePlannerState = (rawValue: FormDataEntryValue | null): PlannerState =>
 };
 
 const mergeResolvedFields = (
-	previous: CampaignFormSubmission,
-	proposed: Partial<CampaignFormSubmission>
-): CampaignFormSubmission => {
+	previous: PlannerResolvedFields,
+	proposed: Partial<PlannerResolvedFields>
+): PlannerResolvedFields => {
 	const normalizeText = (value: string | undefined, fallback: string) => {
 		if (typeof value !== 'string') {
 			return fallback;
@@ -141,6 +152,11 @@ const mergeResolvedFields = (
 
 	return {
 		name: normalizeText(proposed.name, previous.name),
+		decisionMakerAudience: normalizeText(
+			proposed.decisionMakerAudience,
+			previous.decisionMakerAudience
+		),
+		attendeeAudience: normalizeText(proposed.attendeeAudience, previous.attendeeAudience),
 		audience: normalizeText(proposed.audience, previous.audience),
 		format: normalizeText(proposed.format, previous.format),
 		topic: normalizeText(proposed.topic, previous.topic),
@@ -150,15 +166,19 @@ const mergeResolvedFields = (
 	};
 };
 
-const getMissingPlannerFields = (values: CampaignFormSubmission): PlannerRequiredField[] => {
+const getMissingPlannerFields = (values: PlannerResolvedFields): PlannerRequiredField[] => {
 	const missing: PlannerRequiredField[] = [];
 
 	if (!values.name.trim()) {
 		missing.push('name');
 	}
 
-	if (!values.audience.trim()) {
-		missing.push('audience');
+	if (!values.decisionMakerAudience.trim()) {
+		missing.push('decisionMakerAudience');
+	}
+
+	if (!values.attendeeAudience.trim()) {
+		missing.push('attendeeAudience');
 	}
 
 	if (!values.format.trim()) {
@@ -178,6 +198,28 @@ const getMissingPlannerFields = (values: CampaignFormSubmission): PlannerRequire
 	}
 
 	return missing;
+};
+
+const toCampaignSubmission = (values: PlannerResolvedFields): CampaignFormSubmission => {
+	const attendeeAudience = values.attendeeAudience.trim() || values.audience.trim();
+	const decisionMakerAudience = values.decisionMakerAudience.trim();
+	const notesParts: string[] = [];
+	if (decisionMakerAudience.length > 0) {
+		notesParts.push(`Decision maker audience: ${decisionMakerAudience}`);
+	}
+	if (values.notes.trim().length > 0) {
+		notesParts.push(values.notes.trim());
+	}
+
+	return {
+		name: values.name,
+		audience: attendeeAudience,
+		format: values.format,
+		topic: values.topic,
+		language: values.language,
+		geography: values.geography,
+		notes: notesParts.join('\n')
+	};
 };
 
 const getSubmittedValues = (formData: FormData): CampaignFormSubmission => ({
@@ -200,6 +242,8 @@ export const actions: Actions = {
 			getTrimmedField(formData, 'pipelineRunId') || createRunId('campaign_create');
 
 		const values = getSubmittedValues(formData);
+		const valuesForValidation =
+			mode === 'planner' && planner ? toCampaignSubmission(planner.resolvedFields) : values;
 
 		publishCampaignPipelineEvent(pipelineRunId, {
 			step: 'queued',
@@ -207,7 +251,7 @@ export const actions: Actions = {
 			message: 'Request received. Validating campaign brief.'
 		});
 
-		const parseResult = campaignFormSchema.safeParse(values);
+		const parseResult = campaignFormSchema.safeParse(valuesForValidation);
 
 		if (!parseResult.success) {
 			const { fieldErrors } = parseResult.error.flatten();
@@ -219,7 +263,7 @@ export const actions: Actions = {
 
 			return fail<CampaignFormActionData>(400, {
 				errors: fieldErrors,
-				values,
+				values: valuesForValidation,
 				pipelineRunId,
 				planner,
 				mode
@@ -282,7 +326,7 @@ export const actions: Actions = {
 
 			return fail<CampaignFormActionData>(500, {
 				message: 'Unable to save the campaign right now. Please try again.',
-				values,
+				values: valuesForValidation,
 				pipelineRunId,
 				planner,
 				mode
@@ -337,7 +381,7 @@ export const actions: Actions = {
 			return fail<CampaignFormActionData>(500, {
 				message: 'Campaign saved, but Google Ads generation failed. Please retry.',
 				pipelineMessage: error instanceof Error ? error.message : String(error),
-				values,
+				values: valuesForValidation,
 				pipelineRunId,
 				planner,
 				mode
@@ -387,7 +431,7 @@ export const actions: Actions = {
 				message: 'Campaign saved, but landing page generation failed. Please retry.',
 				pipelineMessage: error instanceof Error ? error.message : String(error),
 				createdCampaignId: createdCampaign.id,
-				values,
+				values: valuesForValidation,
 				pipelineRunId,
 				planner,
 				mode
