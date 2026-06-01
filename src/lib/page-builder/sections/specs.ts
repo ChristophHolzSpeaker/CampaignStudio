@@ -58,7 +58,7 @@ export const sectionSpecs: PageSectionSpecMap = {
 		],
 		contentGuidance: [
 			'Headline should be concrete, punchy, and specific to the campaign audience, topic, and promised transformation.',
-			'Subheadline should connect the audience’s business challenge to Christoph’s distinctive mix of AI, transformation, aviation, robotics, science, humour, and stage energy.',
+			'Subheadline should connect the audience’s business challenge to Christoph’s distinctive mix of AI, transformation, robotics, science, humour, and stage energy.',
 			'Copy should feel bold, curious, and alive — more “this will be memorable” than standard corporate keynote language.',
 			'Label text should create immediate authority or relevance, using ideas like “Keynote speaker”, “AI transformation keynote”, “For leaders navigating change”, or campaign-specific audience framing.',
 			'CTA copy should describe a confident next step, such as starting a conversation, watching the showreel, checking availability, or enquiring about a keynote.',

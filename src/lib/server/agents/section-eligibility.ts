@@ -33,10 +33,10 @@ function evaluateMediaRequirement(
 			return input.assets.assetCatalog.keynoteCatalog.length >= 3
 				? null
 				: 'At least 3 active keynotes are required in keynote catalog.';
-		case 'speaker_videos_min_4':
-			return input.assets.assetCatalog.speakerInActionVideos.length >= 4
+		case 'speaker_videos_min_3':
+			return input.assets.assetCatalog.speakerInActionVideos.length >= 3
 				? null
-				: 'At least 4 YouTube video assets are required.';
+				: 'At least 3 YouTube video assets are required.';
 		case 'proof_testimonials_any':
 			return input.assets.fixedProofOfPerformance.testimonials.length > 0
 				? null

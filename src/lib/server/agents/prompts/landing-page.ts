@@ -22,6 +22,12 @@ function buildGlobalCopyQualityRulesBlock(): string {
 		'* section specs are binding writing constraints at generation time, not optional context',
 		'* internal strategy fields are planning inputs, not publishable copy',
 		'* do not copy targetingSummary, messagingAngle, intentSummary, landingPageAngle, section purpose, or contentDirection verbatim into visible copy',
+		'* visible copy must be final customer-facing prose, ready to publish',
+		'* never describe what content will be written; write the final content itself',
+		'* disallowed meta wording examples: "this section will", "this paragraph will", "should describe", "placeholder", "tbd"',
+		'* address buyer decision-makers directly and prove value through attendee outcomes',
+		'* do not repeat buyer persona labels in every section; vary phrasing naturally',
+		'* never use targeting jargon in visible copy (for example: "high-intent searchers", "actively searching")',
 		'* if strategy language is reused, rewrite it naturally for human readers and section context',
 		'* avoid repeating the same sentence or near-identical phrase across headline, subheadline, intro, benefits, deep-dive items, and booking copy',
 		'* every section must add distinct information and advance the conversion narrative',
@@ -128,7 +134,7 @@ Rules:
 * section purpose and contentDirection are internal planning artifacts, not final customer-facing copy
 * contentDirection must describe what unique job each section must accomplish in the conversion narrative
 	* when immediate_authority_hero is selected, choose exactly one hero video from input.assets.assetCatalog.heroVideos by ID and exactly one hero image from input.assets.assetCatalog.heroImages by ID
-	* when youtube_grid is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale
+	* when youtube_grid is selected, choose exactly three videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale
 	* when hybrid_content_section is selected, choose 1-3 supporting images from input.assets.assetCatalog.hybridSupportingImages by ID
 	* when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
 	* when keynote_speeches is selected, choose exactly three keynote IDs from input.assets.assetCatalog.keynoteCatalog in assetPlan.keynoteSpeeches.keynoteIds
@@ -249,6 +255,12 @@ General requirements:
 * preserve message match with ad group and strategy
 * preserve alignment to input.campaignIntentBrief and input.messageMap in all visible copy
 * section catalog rules are binding generation constraints, including whenNotToUse and contentGuidance
+* all visible strings must be final publication-ready prose
+* never output planning or instructional text in customer-facing fields
+* disallowed phrases in visible copy include: "this paragraph will", "this section will", "should describe", "placeholder", "tbd"
+* follow input.campaign.language for all customer-facing copy; do not mix languages
+* buyer/attendee framing rule: speak to buyer decision-makers and justify attendee value and outcomes
+* avoid repeating the exact buyer audience phrase across multiple sections
 * return JSON only
 
 Global copy quality rules:
@@ -301,10 +313,13 @@ Keynote speeches contract requirements:
 
 export const landingPageWriterUserPrompt = (
 	input: LandingPageGenerationInput,
-	plan: LandingPagePlan,
+	planForPrompt: unknown,
 	context: PromptContext
 ) =>
 	`Convert this landing page generation input and strategic page plan into the exact final landing page document JSON required by the application.
+
+All visible strings must be final customer-facing copy that is ready to publish.
+Do not describe what content should be written. Write the final content directly.
 
 Context:
 ${serializeContext(context)}
@@ -313,4 +328,4 @@ Landing page generation input:
 ${JSON.stringify(input, null, 2)}
 
 Landing page plan:
-${JSON.stringify(plan, null, 2)}`;
+${JSON.stringify(planForPrompt, null, 2)}`;

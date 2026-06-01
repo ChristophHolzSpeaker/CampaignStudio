@@ -4,9 +4,54 @@ import {
 	campaignPlannerInputSchema,
 	campaignPlannerOutputSchema,
 	type CampaignPlannerInput,
-	type CampaignPlannerOutput
+	type CampaignPlannerOutput,
+	type PlannerRequiredField
 } from './schemas/campaign-planner';
 import { campaignPlannerSystemPrompt, campaignPlannerUserPrompt } from './prompts/campaign-planner';
+
+const channelLikeFormatPattern =
+	/\b(linkedin|ads?|email|outreach|ppc|seo|instagram|facebook|google ads?|youtube ads?|display)\b/i;
+
+function normalizePlannerOutput(output: CampaignPlannerOutput): CampaignPlannerOutput {
+	const resolvedFields = { ...output.resolvedFields };
+	const questions = [...output.questions];
+	let missingFields = [...output.missingFields] as PlannerRequiredField[];
+
+	if (!resolvedFields.attendeeAudience && resolvedFields.audience) {
+		resolvedFields.attendeeAudience = resolvedFields.audience;
+	}
+
+	if (!resolvedFields.audience && resolvedFields.attendeeAudience) {
+		resolvedFields.audience = resolvedFields.attendeeAudience;
+	}
+
+	if (resolvedFields.format && channelLikeFormatPattern.test(resolvedFields.format)) {
+		if (!missingFields.includes('format')) {
+			missingFields.push('format');
+		}
+		questions.push(
+			'What is the event delivery format (for example: Keynote, Dinner speech, Workshop, Webinar)?'
+		);
+		const existingNotes = resolvedFields.notes?.trim() ?? '';
+		resolvedFields.notes = [existingNotes, `Channel hint: ${resolvedFields.format}`]
+			.filter((value) => value.length > 0)
+			.join('\n');
+		resolvedFields.format = undefined;
+	}
+
+	const dedupedMissing = [...new Set(missingFields)] as PlannerRequiredField[];
+	const dedupedQuestions = [
+		...new Set(questions.map((question) => question.trim()).filter(Boolean))
+	];
+
+	return {
+		...output,
+		resolvedFields,
+		missingFields: dedupedMissing,
+		questions: dedupedQuestions,
+		readyToCreate: dedupedMissing.length === 0
+	};
+}
 
 export async function runCampaignPlanner(
 	input: CampaignPlannerInput,
@@ -56,5 +101,5 @@ export async function runCampaignPlanner(
 		throw new Error(`Invalid planner output: ${parsedOutput.error.message}`);
 	}
 
-	return parsedOutput.data;
+	return normalizePlannerOutput(parsedOutput.data);
 }
