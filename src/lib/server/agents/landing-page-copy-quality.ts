@@ -3,12 +3,26 @@ import type { LandingPageGenerationInput } from './schemas/landing-page-input';
 
 const moderateQualityThreshold = 70;
 
+const metaLanguageWarning = 'Detected non-publishable meta/instructional copy in visible content.';
+const languageMismatchWarning =
+	'Detected visible-copy language mismatch against campaign.language.';
+
 const defaultGenericPhrases = [
 	'unlock your potential',
 	'inspire innovation',
 	'future-ready success',
 	'this approach works',
 	'strategic relevance'
+];
+
+const nonPublishableMetaPatterns: Array<{ label: string; pattern: RegExp }> = [
+	{ label: 'this section will', pattern: /\bthis section will\b/i },
+	{ label: 'this paragraph will', pattern: /\bthis paragraph will\b/i },
+	{ label: 'should describe', pattern: /\bshould describe\b/i },
+	{ label: 'placeholder', pattern: /\bplaceholder\b/i },
+	{ label: 'tbd', pattern: /\btbd\b/i },
+	{ label: 'the following section', pattern: /\bthe following (section|paragraph|content)\b/i },
+	{ label: 'we will describe', pattern: /\bwe will (describe|outline|cover)\b/i }
 ];
 
 function extractStrings(value: unknown, bucket: string[]): void {
@@ -47,12 +61,82 @@ function candidateAudienceTokens(audience: string): string[] {
 		.filter((token) => token.length >= 4 && !stopWords.has(token));
 }
 
+function detectLanguageMismatch(
+	strings: string[],
+	campaignLanguage: string
+): { mismatch: boolean; detail: string } {
+	const normalizedLanguage = campaignLanguage.toLowerCase().trim();
+	const corpus = strings.join(' ').toLowerCase();
+
+	if (normalizedLanguage.startsWith('de')) {
+		const germanMarkers = [
+			' und ',
+			' mit ',
+			' fuer ',
+			' für ',
+			' ihre ',
+			' sie ',
+			' keynote',
+			' veranstaltung '
+		];
+		const englishMarkers = [
+			' the ',
+			' and ',
+			' for ',
+			' with ',
+			' your ',
+			' attendees ',
+			' decision-makers '
+		];
+
+		const germanHits = germanMarkers.filter((marker) => corpus.includes(marker)).length;
+		const englishHits = englishMarkers.filter((marker) => corpus.includes(marker)).length;
+		const mismatch = englishHits >= 3 && englishHits > germanHits + 1;
+		return {
+			mismatch,
+			detail: `de expected; germanMarkers=${germanHits}, englishMarkers=${englishHits}`
+		};
+	}
+
+	return { mismatch: false, detail: 'language check skipped for non-de campaign language' };
+}
+
 export type LandingPageCopyQuality = {
 	score: number;
 	passed: boolean;
 	warnings: string[];
 	revisionSuggestions: string[];
+	metaLanguageMatches?: string[];
 };
+
+function truncateSnippet(value: string, maxLength = 120): string {
+	if (value.length <= maxLength) {
+		return value;
+	}
+
+	return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function detectMetaLanguage(strings: string[]): { hits: string[]; matchedSnippets: string[] } {
+	const hitLabels = new Set<string>();
+	const matchedSnippets = new Set<string>();
+
+	for (const text of strings) {
+		for (const matcher of nonPublishableMetaPatterns) {
+			if (!matcher.pattern.test(text)) {
+				continue;
+			}
+
+			hitLabels.add(matcher.label);
+			matchedSnippets.add(truncateSnippet(text));
+		}
+	}
+
+	return {
+		hits: [...hitLabels],
+		matchedSnippets: [...matchedSnippets].slice(0, 5)
+	};
+}
 
 export function evaluateLandingPageCopyQuality(
 	page: LandingPageDocument,
@@ -67,6 +151,25 @@ export function evaluateLandingPageCopyQuality(
 	const warnings: string[] = [];
 	const revisionSuggestions: string[] = [];
 	let score = 100;
+	const metaLanguage = detectMetaLanguage(strings);
+	if (metaLanguage.hits.length > 0) {
+		score -= 35;
+		warnings.push(metaLanguageWarning);
+		warnings.push(`Meta phrasing hits: ${metaLanguage.hits.join(', ')}.`);
+		revisionSuggestions.push(
+			'Rewrite flagged lines as final customer-facing prose instead of instructions or placeholders.'
+		);
+	}
+
+	const languageMismatch = detectLanguageMismatch(strings, input.campaign.language);
+	if (languageMismatch.mismatch) {
+		score -= 25;
+		warnings.push(languageMismatchWarning);
+		warnings.push(`Language detail: ${languageMismatch.detail}`);
+		revisionSuggestions.push(
+			`Rewrite visible copy to consistently match campaign.language (${input.campaign.language}).`
+		);
+	}
 
 	const repeatedMap = new Map<string, number>();
 	for (const value of strings) {
@@ -130,6 +233,15 @@ export function evaluateLandingPageCopyQuality(
 		score: boundedScore,
 		passed: boundedScore >= moderateQualityThreshold,
 		warnings,
-		revisionSuggestions
+		revisionSuggestions,
+		metaLanguageMatches: metaLanguage.matchedSnippets
 	};
+}
+
+export function hasMetaLanguageWarning(copyQuality: LandingPageCopyQuality): boolean {
+	return copyQuality.warnings.includes(metaLanguageWarning);
+}
+
+export function hasLanguageMismatchWarning(copyQuality: LandingPageCopyQuality): boolean {
+	return copyQuality.warnings.includes(languageMismatchWarning);
 }

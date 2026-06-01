@@ -37,7 +37,7 @@ Corrective rules:
 - sectionPlan must not contain duplicate section types
 - preferred section order for narrative flow: ${requiredSectionTypes.join(', ')}
 - when immediate_authority_hero is selected, include assetPlan.hero.videoAssetId from input.assets.assetCatalog.heroVideos and assetPlan.hero.imageAssetId from input.assets.assetCatalog.heroImages
-- when youtube_grid is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 4 IDs from input.assets.assetCatalog.speakerInActionVideos and include assetPlan.speakerInAction.rationale
+- when youtube_grid is selected, include assetPlan.speakerInAction.videoAssetIds with exactly 3 IDs from input.assets.assetCatalog.speakerInActionVideos and include assetPlan.speakerInAction.rationale
 - when hybrid_content_section is selected, include assetPlan.hybridContentSection.primaryImageAssetId from input.assets.assetCatalog.hybridSupportingImages
 - when logos_of_trust_ribbon is selected, logo selection is automatic from the first four entries in input.assets.assetCatalog.logoCatalog
 - when keynote_speeches is selected, include assetPlan.keynoteSpeeches.keynoteIds with exactly 3 IDs from input.assets.assetCatalog.keynoteCatalog based on best strategy fit to keynote audience and keynoteShort

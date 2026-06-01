@@ -22,6 +22,29 @@ function splitProofPoints(notes: string | null | undefined): string[] {
 		.slice(0, 4);
 }
 
+function inferAttendeeAudience(campaignAudience: string, campaignFormat: string): string {
+	const normalizedAudience = campaignAudience.trim();
+	if (normalizedAudience.length === 0) {
+		return `attendees of the ${campaignFormat}`;
+	}
+
+	return `attendees served by ${normalizedAudience}`;
+}
+
+function extractDecisionMakerAudience(notes: string | null | undefined): string | null {
+	if (!notes) {
+		return null;
+	}
+
+	const match = notes.match(/decision maker audience:\s*(.+)/i);
+	if (!match) {
+		return null;
+	}
+
+	const value = match[1]?.trim();
+	return value && value.length > 0 ? value : null;
+}
+
 export async function loadLandingPageGenerationInput(
 	campaignId: number
 ): Promise<LandingPageGenerationInput> {
@@ -67,6 +90,9 @@ export async function loadLandingPageGenerationInput(
 		conversionGoal: parsedStrategy.data.conversionGoal
 	});
 
+	const buyerAudience = extractDecisionMakerAudience(campaign.notes) ?? campaign.audience;
+	const attendeeAudience = inferAttendeeAudience(campaign.audience, campaign.format);
+
 	const normalized = landingPageGenerationInputSchema.parse({
 		campaign: {
 			id: campaign.id,
@@ -104,6 +130,8 @@ export async function loadLandingPageGenerationInput(
 		},
 		campaignIntentBrief: {
 			audience: campaign.audience,
+			buyerAudience,
+			attendeeAudience,
 			problemStatement: parsedStrategy.data.targetingSummary,
 			promise: parsedStrategy.data.messagingAngle,
 			offer: `A ${campaign.format} tailored for ${campaign.audience} on ${campaign.topic}`,
@@ -118,6 +146,8 @@ export async function loadLandingPageGenerationInput(
 		},
 		messageMap: {
 			primaryAudience: campaign.audience,
+			buyerAudience,
+			attendeeAudience,
 			primaryPain: parsedStrategy.data.targetingSummary,
 			primaryOutcome: parsedStrategy.data.messagingAngle,
 			proofAnchors: splitProofPoints(campaign.notes),

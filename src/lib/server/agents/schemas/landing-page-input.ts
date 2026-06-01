@@ -17,6 +17,8 @@ const landingPageInputAdSchema = z.object({
 
 const campaignIntentBriefSchema = z.object({
 	audience: z.string(),
+	buyerAudience: z.string().optional(),
+	attendeeAudience: z.string().optional(),
 	problemStatement: z.string(),
 	promise: z.string(),
 	offer: z.string(),
@@ -28,6 +30,8 @@ const campaignIntentBriefSchema = z.object({
 
 const landingMessageMapSchema = z.object({
 	primaryAudience: z.string(),
+	buyerAudience: z.string().optional(),
+	attendeeAudience: z.string().optional(),
 	primaryPain: z.string(),
 	primaryOutcome: z.string(),
 	proofAnchors: z.array(z.string()),
