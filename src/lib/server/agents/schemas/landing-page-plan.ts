@@ -24,7 +24,7 @@ const hybridAssetSelectionSchema = z.object({
 
 const speakerInActionAssetSelectionSchema = z
 	.object({
-		videoAssetIds: z.array(z.string().trim().min(1)).min(4).max(4),
+		videoAssetIds: z.array(z.string().trim().min(1)).min(3).max(3),
 		rationale: z.string().trim().min(1)
 	})
 	.refine((selection) => new Set(selection.videoAssetIds).size === selection.videoAssetIds.length, {

@@ -431,12 +431,12 @@ function resolveSpeakerInActionSelection(
 		});
 	}
 
-	if (resolved.length >= 4) {
-		return resolved.slice(0, 4);
+	if (resolved.length >= 3) {
+		return resolved.slice(0, 3);
 	}
 
 	for (const fallbackAsset of catalog) {
-		if (resolved.length >= 4) {
+		if (resolved.length >= 3) {
 			break;
 		}
 
@@ -453,10 +453,10 @@ function resolveSpeakerInActionSelection(
 		});
 	}
 
-	if (resolved.length < 4) {
+	if (resolved.length < 3) {
 		const fallbackMedia = buildFallbackSpeakerMediaAssets(input);
 		for (const fallback of fallbackMedia) {
-			if (resolved.length >= 4) {
+			if (resolved.length >= 3) {
 				break;
 			}
 
@@ -464,7 +464,7 @@ function resolveSpeakerInActionSelection(
 		}
 	}
 
-	return resolved.slice(0, 4);
+	return resolved.slice(0, 3);
 }
 
 function resolveLogosOfTrustSelection(

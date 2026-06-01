@@ -314,7 +314,11 @@ function buildCatalogFromMediaAssets(rows: MediaAssetRow[]): {
 			});
 		}
 
-		if (asset.kind === 'video' && asset.sectionTypes.includes('speaker_in_action')) {
+		if (
+			asset.kind === 'video' &&
+			(asset.sectionTypes.includes('speaker_in_action') ||
+				asset.sectionTypes.includes('youtube_grid'))
+		) {
 			if (!asset.thumbnailUrl || !asset.thumbnailAlt) {
 				continue;
 			}
@@ -351,12 +355,12 @@ function ensureSpeakerInActionCatalog(
 	speakerInActionVideos: SpeakerInActionVideoOption[],
 	heroVideos: HeroVideoOption[]
 ): SpeakerInActionVideoOption[] {
-	if (speakerInActionVideos.length >= 4 || heroVideos.length === 0) {
+	if (speakerInActionVideos.length >= 3 || heroVideos.length === 0) {
 		return speakerInActionVideos;
 	}
 
 	const fallbackVideos: SpeakerInActionVideoOption[] = [...speakerInActionVideos];
-	for (let index = speakerInActionVideos.length; index < 4; index += 1) {
+	for (let index = speakerInActionVideos.length; index < 3; index += 1) {
 		const heroSource = heroVideos[index % heroVideos.length];
 		fallbackVideos.push({
 			id: `fallback-speaker-${index + 1}`,

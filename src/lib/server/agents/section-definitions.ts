@@ -37,7 +37,7 @@ export type SectionDefinition = {
 			| 'hero_defaults'
 			| 'logos_any'
 			| 'keynotes_min_3'
-			| 'speaker_videos_min_4'
+			| 'speaker_videos_min_3'
 			| 'proof_testimonials_any';
 	};
 };
@@ -109,7 +109,7 @@ const baseDefinitions: Record<PageSectionType, Omit<SectionDefinition, 'schema'>
 			preferredNarrativeOrder: 3
 		},
 		editing: {},
-		media: { requirement: 'speaker_videos_min_4' }
+		media: { requirement: 'speaker_videos_min_3' }
 	},
 	keynote_speeches: {
 		type: 'keynote_speeches',
@@ -129,7 +129,7 @@ const baseDefinitions: Record<PageSectionType, Omit<SectionDefinition, 'schema'>
 		capabilities: ['video_proof'],
 		generation: { allowed: true },
 		editing: {},
-		media: { requirement: 'speaker_videos_min_4' }
+		media: { requirement: 'speaker_videos_min_3' }
 	},
 	hybrid_content_section: {
 		type: 'hybrid_content_section',

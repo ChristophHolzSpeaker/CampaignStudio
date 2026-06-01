@@ -62,7 +62,7 @@ const TEST_CONTEXT = {
 const REQUIRED_ORDER_RULE =
 	'preferred section order for narrative flow:\n\tseo, immediate_authority_hero, youtube_grid, keynote_speeches, logos_of_trust_ribbon, hybrid_content_section, frictionless_funnel_booking, proof_of_performance, booklet_download_cta, compliance_transparency_footer';
 const YOUTUBE_GRID_RATIONALE_RULE =
-	'when youtube_grid is selected, choose exactly four videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale';
+	'when youtube_grid is selected, choose exactly three videos from input.assets.assetCatalog.speakerInActionVideos by ID and include a non-empty assetPlan.speakerInAction.rationale';
 const KEYNOTE_SELECTION_RULE =
 	'when keynote_speeches is selected, choose exactly three keynote IDs from input.assets.assetCatalog.keynoteCatalog in assetPlan.keynoteSpeeches.keynoteIds';
 
