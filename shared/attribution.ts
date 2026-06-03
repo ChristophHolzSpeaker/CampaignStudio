@@ -32,3 +32,5 @@ export type LeadEventInput = AttributionIdentity & {
 	event_source: string;
 	event_payload: Record<string, unknown>;
 } & CTATrackingFields;
+
+export const MAILTO_CLICKED_EVENT = 'mailto_clicked';

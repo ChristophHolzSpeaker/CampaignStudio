@@ -2,6 +2,7 @@
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
 	import {
@@ -238,11 +239,12 @@
 					<a
 						href={mailtoHref}
 						type="button"
+						onclick={trackMailtoClick}
 						class={[
 							'inline-block border border-slate-300  bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50'
 						]}
 					>
-						Schreib mit eine email: speaker@christophholz.com
+						Schreib eine email: speaker@christophholz.com
 					</a>
 				</div>
 			</div>
