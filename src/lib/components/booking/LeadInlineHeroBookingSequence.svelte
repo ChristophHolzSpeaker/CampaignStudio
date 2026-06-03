@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { browser } from '$app/environment';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import { submitInlineLeadBooking } from '$lib/components/booking/LeadInlineBookingSequence.remote';
@@ -143,6 +144,30 @@
 			? 'border-emerald-400/70 bg-emerald-50 text-emerald-700'
 			: 'border-rose-400/70 bg-rose-50 text-rose-700'
 	);
+
+	type WindowWithDataLayer = Window & {
+		dataLayer?: Array<Record<string, unknown>>;
+	};
+
+	let hasTrackedCalendarBookingConfirmed = false;
+
+	function trackCalendarBookingConfirmed(): void {
+		if (!browser || hasTrackedCalendarBookingConfirmed || !submitResult?.success) {
+			return;
+		}
+
+		hasTrackedCalendarBookingConfirmed = true;
+
+		const dataLayerWindow = window as WindowWithDataLayer;
+		dataLayerWindow.dataLayer = dataLayerWindow.dataLayer || [];
+		dataLayerWindow.dataLayer.push({
+			event: 'calendar_booking_confirmed'
+		});
+	}
+
+	$effect(() => {
+		trackCalendarBookingConfirmed();
+	});
 
 	function formatDayLabel(dateKey: string): string {
 		const date = new Date(`${dateKey}T00:00:00.000Z`);

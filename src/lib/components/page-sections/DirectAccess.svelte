@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 
 	type DirectAccessProps = {
@@ -106,6 +107,7 @@
 				<div class="flex flex-row items-center justify-between gap-8 text-black">
 					<a
 						href={props?.mailtoHref ?? 'mailto:speaker@christophholz.com'}
+						onclick={trackMailtoClick}
 						class="text-xl leading-tight break-all hover:text-primary md:text-7xl"
 					>
 						{copied ? 'Copied!' : 'speaker@christophholz.com'}
