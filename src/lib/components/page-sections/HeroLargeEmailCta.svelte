@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HeroLargeEmailCtaProps } from '$lib/page-builder/sections/types';
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
@@ -51,6 +52,7 @@
 			<a
 				class="block border-l-8 border-primary bg-white p-8 transition-colors duration-300 group-hover:border-white md:border-l-16 md:p-12"
 				href={emailHref}
+				onclick={trackMailtoClick}
 			>
 				<div class="flex flex-col items-center justify-between gap-8 md:flex-row">
 					<span

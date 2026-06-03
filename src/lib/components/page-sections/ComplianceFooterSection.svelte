@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import type { ComplianceTransparencyFooterProps } from '$lib/page-builder/sections/types';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
@@ -76,7 +77,10 @@
 						class="footer-link">presse@christophholz.com<br /><br /></a
 					>Keynote-Anfragen:<br /><a
 						href={emailHref}
-						onclick={trackDirectEmailCta}
+						onclick={() => {
+							trackDirectEmailCta();
+							trackMailtoClick();
+						}}
 						class="footer-link">speaker@christophholz.com</a
 					><br /><a href="tel:+4369917407401" class="footer-link">+43 699 17407401</a>
 				</p>

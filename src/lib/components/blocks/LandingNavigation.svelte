@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import NavButton from '../elements/NavButton.svelte';
 	type LandingPageNavigationData = {
 		mailto?: string;
@@ -207,7 +208,15 @@
 					})}
 				</div>
 
-				<NavButton href={mailto} onclick={() => trackEmailCta('default')}>{mailtoCta}</NavButton>
+				<NavButton
+					href={mailto}
+					onclick={() => {
+						trackEmailCta('default');
+						trackMailtoClick();
+					}}
+				>
+					{mailtoCta}
+				</NavButton>
 			</nav>
 		</div>
 
@@ -376,7 +385,15 @@
 			</div>
 
 			<div class="mt-4">
-				<NavButton href={mailto} onclick={() => trackEmailCta('mobile')}>{mailtoCta}</NavButton>
+				<NavButton
+					href={mailto}
+					onclick={() => {
+						trackEmailCta('mobile');
+						trackMailtoClick();
+					}}
+				>
+					{mailtoCta}
+				</NavButton>
 			</div>
 		</div>
 	</nav>
