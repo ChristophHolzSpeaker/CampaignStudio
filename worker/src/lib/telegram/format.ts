@@ -79,9 +79,9 @@ function formatNewLead(input: NewLeadTelegramNotification): string {
 
 function formatBookingConfirmed(input: BookingConfirmedTelegramNotification): string {
 	return [
-		'[BOOKING CONFIRMED]',
-		`Booking ID: ${input.booking_id}`,
-		`Booking type: ${input.booking_type}`,
+		'[VIDEO BRIEFING CONFIRMED]',
+		`Briefing ID: ${input.booking_id}`,
+		`Briefing type: ${input.booking_type}`,
 		optionalLine('Name', input.attendee_name),
 		optionalLine('Email', input.attendee_email),
 		optionalLine('Phone', input.attendee_phone),
@@ -98,9 +98,9 @@ function formatBookingConfirmed(input: BookingConfirmedTelegramNotification): st
 
 function formatBookingRescheduled(input: BookingRescheduledTelegramNotification): string {
 	return [
-		'[BOOKING RESCHEDULED]',
-		`Booking ID: ${input.booking_id}`,
-		`Booking type: ${input.booking_type}`,
+		'[VIDEO BRIEFING RESCHEDULED]',
+		`Briefing ID: ${input.booking_id}`,
+		`Briefing type: ${input.booking_type}`,
 		optionalLine('Name', input.attendee_name),
 		optionalLine('Email', input.attendee_email),
 		optionalLine('Phone', input.attendee_phone),
