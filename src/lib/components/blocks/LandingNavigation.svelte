@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import NavButton from '../elements/NavButton.svelte';
 	type LandingPageNavigationData = {
@@ -155,7 +154,7 @@
 					aria-label="home">Christoph Holz</a
 				>
 			</div>
-			<nav class="flex w-full justify-end gap-4">
+			<nav class="flex w-full items-stretch justify-end gap-4">
 				<button
 					type="button"
 					bind:this={trigger}
@@ -165,7 +164,7 @@
 					}}
 					aria-expanded={categoriesDropdown}
 					aria-controls="categories-menu"
-					class="nav-normal h-full border-b-2 border-transparent p-2 leading-6 hover:border-black"
+					class="nav-normal flex items-center border-b-2 border-transparent p-2 hover:border-black"
 				>
 					Categories
 				</button>
@@ -173,12 +172,13 @@
 					href="https://uploads-ssl.webflow.com/61263e0de406f497361dca55/6308862b5f040611761c02b5_Speaker.Christoph.Holz.Booklet.2022.pdf"
 					target="_blank"
 					id="booklet-link"
-					class="nav-normal h-full border-b-2 border-transparent p-2 leading-6 hover:border-black"
+					class="nav-normal flex items-center border-b-2 border-transparent p-2 hover:border-black"
 					>Booklet
 				</a>
 				<a
 					href="#booking"
-					class="nav-normal h-full border-b-2 border-transparent p-2 hover:border-black">Contact</a
+					class="nav-normal flex items-center border-b-2 border-transparent p-2 hover:border-black"
+					>Contact</a
 				>
 				<div class="flex h-full items-center gap-4">
 					{#snippet socialIcon({ href, icon }: { href: string; icon: string })}
@@ -252,7 +252,7 @@
 			<div class="expand-align-center">
 				{#snippet categoryItem({ href, headline, subline, image }: CategoryItem)}
 					<div role="listitem" class="flex items-center gap-4 border-r border-stone-300">
-						<a title={headline} {href} class="flex h-16 w-16 items-center justify-center">
+						<a title={headline} {href} class="flex h-16 w-16 shrink-0 items-center justify-center">
 							<img src={image} alt={headline} class="block h-16 w-16 rounded-full object-cover" />
 						</a>
 						<div class="expand-flex">
