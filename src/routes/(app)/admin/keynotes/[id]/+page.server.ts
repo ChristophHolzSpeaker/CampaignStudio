@@ -1,8 +1,5 @@
 import type { Actions, PageServerLoad } from './$types';
-import {
-	getKeynoteById,
-	updateKeynote
-} from '$lib/server/keynotes/keynote';
+import { getKeynoteById, updateKeynote } from '$lib/server/keynotes/keynote';
 import { keynoteFormSchema } from '$lib/validation/keynotes';
 import { error, fail, redirect } from '@sveltejs/kit';
 
@@ -19,7 +16,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	return { keynote };
 };
 
-	export const actions: Actions = {
+export const actions: Actions = {
 	default: async ({ params, request, locals }) => {
 		const existing = await getKeynoteById(params.id);
 		if (!existing) {

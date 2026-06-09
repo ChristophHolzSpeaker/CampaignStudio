@@ -196,10 +196,7 @@ export async function updateKeynoteStatus(
 	id: string,
 	status: 'active' | 'draft' | 'review' | 'archived'
 ): Promise<void> {
-	await db
-		.update(keynotes)
-		.set({ status, updated_at: new Date() })
-		.where(eq(keynotes.id, id));
+	await db.update(keynotes).set({ status, updated_at: new Date() }).where(eq(keynotes.id, id));
 }
 
 export async function deleteKeynote(id: string, supabase: SupabaseClient): Promise<void> {

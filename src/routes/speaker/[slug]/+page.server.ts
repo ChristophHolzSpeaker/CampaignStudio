@@ -13,6 +13,91 @@ import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { resolvePublicBookingSlotPreview } from '$lib/server/bookings';
+import type { LandingPageDocument } from '$lib/page-builder/page';
+import type { SeoProps } from '$lib/page-builder/sections';
+
+type SpeakerJsonLd = {
+	'@context': 'https://schema.org';
+	'@graph': Array<Record<string, unknown>>;
+};
+
+function getSeoSection(page: LandingPageDocument): SeoProps | undefined {
+	const section = page.sections.find((item) => item.type === 'seo');
+
+	if (!section || section.type !== 'seo') {
+		return undefined;
+	}
+
+	return section.props;
+}
+
+function getHeroSection(page: LandingPageDocument) {
+	const section = page.sections.find((item) => item.type === 'immediate_authority_hero');
+
+	if (!section || section.type !== 'immediate_authority_hero') {
+		return undefined;
+	}
+
+	return section;
+}
+
+function buildSpeakerJsonLd({
+	page,
+	origin,
+	slug
+}: {
+	page: ReturnType<typeof parseLandingPageDocument>;
+	origin: string;
+	slug: string;
+}): string {
+	const seo = getSeoSection(page);
+	const hero = getHeroSection(page);
+	const canonicalUrl = seo?.canonicalUrl?.trim() || new URL(`/speaker/${slug}`, origin).href;
+	const pageUrl = new URL(canonicalUrl, origin);
+	const homeUrl = new URL('/', origin).href;
+	const pageDescription = seo?.description?.trim() || page.title;
+	const heroProps = hero?.props;
+	const personDescription = heroProps?.subheadline.trim() || pageDescription;
+	const imageUrl = heroProps?.heroImageUrl?.trim() || heroProps?.videoThumbnailUrl?.trim();
+	const webPageId = `${pageUrl.href}#webpage`;
+	const personId = `${homeUrl}#person`;
+
+	const jsonLd: SpeakerJsonLd = {
+		'@context': 'https://schema.org',
+		'@graph': [
+			{
+				'@type': 'WebPage',
+				'@id': webPageId,
+				url: pageUrl.href,
+				name: seo?.title?.trim() || page.title,
+				description: pageDescription,
+				inLanguage: 'en',
+				about: { '@id': personId },
+				mainEntity: { '@id': personId },
+				...(imageUrl
+					? {
+							primaryImageOfPage: {
+								'@type': 'ImageObject',
+								url: imageUrl
+							}
+						}
+					: {})
+			},
+			{
+				'@type': 'Person',
+				'@id': personId,
+				name: 'Christoph Holz',
+				url: homeUrl,
+				description: personDescription,
+				jobTitle: 'Keynote Speaker',
+				mainEntityOfPage: { '@id': webPageId },
+				...(imageUrl ? { image: imageUrl } : {})
+			}
+		]
+	};
+
+	return JSON.stringify(jsonLd).replace(/</g, '\\u003c');
+}
 
 export const load: PageServerLoad = async ({ params, cookies, url, request }) => {
 	const slug = params.slug?.trim();
@@ -44,6 +129,7 @@ export const load: PageServerLoad = async ({ params, cookies, url, request }) =>
 
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
 	const slotPreview = await resolvePublicBookingSlotPreview({ bookingType: 'lead' });
+	const jsonLd = buildSpeakerJsonLd({ page, origin: url.origin, slug });
 
 	const visitorIdentifier = getOrCreateVisitorIdentifier({
 		cookies,
@@ -67,6 +153,7 @@ export const load: PageServerLoad = async ({ params, cookies, url, request }) =>
 		page,
 		campaignId: pageRecord.campaignId,
 		campaignPageId: pageRecord.campaignPageId,
+		jsonLd,
 		bookingSlotGroups: slotPreview.slotGroups,
 		speakerMailtoHref: buildSpeakerMailtoHref({
 			campaignId: pageRecord.campaignId,
