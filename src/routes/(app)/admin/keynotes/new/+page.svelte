@@ -68,16 +68,6 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Keynote summary</span>
-			<textarea
-				name="keynoteSummary"
-				required
-				rows="6"
-				class="rounded border border-neutral-300 px-3 py-2"
-			></textarea>
-		</label>
-
-		<label class="flex flex-col gap-1 text-sm">
 			<span>Moderation intro</span>
 			<textarea name="moderation" rows="6" class="rounded border border-neutral-300 px-3 py-2"
 			></textarea>
@@ -90,7 +80,7 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Short copy</span>
+			<span>Keynote summary</span>
 			<textarea name="keynoteShort" rows="6" class="rounded border border-neutral-300 px-3 py-2"
 			></textarea>
 		</label>

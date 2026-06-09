@@ -2,6 +2,35 @@
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 
 	let { data } = $props();
+
+	const keynoteStatuses = ['active', 'draft', 'review', 'archived'] as const;
+	type KeynoteStatus = (typeof keynoteStatuses)[number];
+
+	function statusLabel(status: KeynoteStatus): string {
+		switch (status) {
+			case 'active':
+				return 'Active';
+			case 'draft':
+				return 'Draft';
+			case 'review':
+				return 'Review';
+			case 'archived':
+				return 'Archived';
+		}
+	}
+
+	function statusClass(status: KeynoteStatus): string {
+		switch (status) {
+			case 'active':
+				return 'bg-emerald-100 text-emerald-800';
+			case 'draft':
+				return 'bg-neutral-200 text-neutral-700';
+			case 'review':
+				return 'bg-amber-100 text-amber-800';
+			case 'archived':
+				return 'bg-rose-100 text-rose-800';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -32,7 +61,10 @@
 				{#each data.keynotes as keynote (keynote.id)}
 					<tr class="border-t border-neutral-100 align-top">
 						<td class="px-4 py-3">
-							<div class="flex items-center gap-3">
+							<a
+								href={`/admin/keynotes/${keynote.id}`}
+								class="flex items-center gap-3 font-sans no-underline"
+							>
 								<img
 									src={keynote.image_url}
 									alt={keynote.image_alt}
@@ -42,32 +74,33 @@
 									<div class="font-medium text-neutral-900">{keynote.keynote_title}</div>
 									<div class="text-xs text-neutral-500">{keynote.id}</div>
 								</div>
-							</div>
+							</a>
 						</td>
 						<td class="px-4 py-3">
 							<span
-								class={`rounded-full px-2 py-1 text-xs ${keynote.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-200 text-neutral-700'}`}
+								class={`rounded-full px-2 py-1 text-xs ${statusClass(keynote.status as KeynoteStatus)}`}
 							>
-								{keynote.is_active ? 'Active' : 'Inactive'}
+								{statusLabel(keynote.status as KeynoteStatus)}
 							</span>
 						</td>
 						<td class="px-4 py-3">
 							<div class="flex flex-wrap items-center gap-2">
-								<a
-									href={`/admin/keynotes/${keynote.id}`}
-									class="rounded border border-neutral-300 px-2 py-1 text-xs text-neutral-700 no-underline"
-								>
-									Edit
-								</a>
-								<form method="POST" action="?/toggle">
+								<form method="POST" action="?/status" class="flex items-center gap-2">
 									<input type="hidden" name="id" value={keynote.id} />
-									<input type="hidden" name="active" value={keynote.is_active ? 'false' : 'true'} />
-									<button
-										type="submit"
-										class="rounded border border-neutral-300 px-2 py-1 text-xs text-neutral-700"
-									>
-										{keynote.is_active ? 'Deactivate' : 'Activate'}
-									</button>
+									<label class="flex items-center gap-2 text-xs text-neutral-600">
+										<span>Status</span>
+										<select
+											name="status"
+											onchange={(event) => event.currentTarget.form?.requestSubmit()}
+											class="rounded border border-neutral-300 px-2 py-1 text-xs text-neutral-700"
+										>
+											{#each keynoteStatuses as status (status)}
+												<option value={status} selected={keynote.status === status}>
+													{statusLabel(status)}
+												</option>
+											{/each}
+										</select>
+									</label>
 								</form>
 								<form method="POST" action="?/delete">
 									<input type="hidden" name="id" value={keynote.id} />

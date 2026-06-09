@@ -28,6 +28,7 @@ export const booking_reschedule_actor = pgEnum('booking_reschedule_actor', [
 	'admin',
 	'system'
 ]);
+export const keynote_status = pgEnum('keynote_status', ['active', 'draft', 'review', 'archived']);
 
 export const campaigns = pgTable('campaigns', {
 	id: serial('id').primaryKey(),
@@ -680,7 +681,6 @@ export const keynotes = pgTable(
 	{
 		id: text('id').primaryKey(),
 		keynote_title: text('keynote_title').notNull(),
-		keynote_summary: text('keynote_summary').notNull(),
 		theme: text('theme'),
 		audience: text('audience'),
 		language: text('language'),
@@ -688,6 +688,7 @@ export const keynotes = pgTable(
 		moderation: text('moderation'),
 		keynote_long: text('keynote_long'),
 		keynote_short: text('keynote_short'),
+		status: keynote_status('status').notNull().default('draft'),
 		speaker: text('speaker'),
 		image_url: text('image_url').notNull(),
 		image_bucket: text('image_bucket'),
