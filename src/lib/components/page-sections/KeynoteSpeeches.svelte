@@ -2,11 +2,14 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
+	import Button from '../elements/Button.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import { getAdditionalKeynotes } from './KeynoteSpeeches.remote';
 	import { saveKeynoteSpeechesField } from './KeynoteSpeechesInlineEdit.remote';
 	import { SvelteSet } from 'svelte/reactivity';
 
 	type Keynote = {
+		id: string;
 		title: string;
 		imageUrl: string;
 		summary: string;
@@ -15,6 +18,7 @@
 	type KeynoteSpeechesSectionProps = {
 		title: string;
 		intro: string;
+		keynoteIds: string[];
 		keynotes: Keynote[];
 	};
 
@@ -40,10 +44,18 @@
 	let innerHeight = $state(0);
 	let sectionEl = $state<HTMLElement | null>(null);
 	let visibleItems = new SvelteSet<number>();
+	let additionalKeynotes = $state<Keynote[]>([]);
+	let loadingMoreKeynotes = $state(false);
+	let hasMoreKeynotes = $state(true);
 	const revealOffset = 600;
 	const canInlineEdit = $derived(
 		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
 	);
+	const displayedKeynotes = $derived([...props.keynotes, ...additionalKeynotes]);
+	const displayedKeynoteIds = $derived([
+		...props.keynoteIds,
+		...additionalKeynotes.map((keynote) => keynote.id)
+	]);
 
 	async function saveKeynoteField(
 		field: 'title' | 'intro',
@@ -75,6 +87,22 @@
 			nextValue: result.value,
 			nextCampaignPageId: result.campaignPageId
 		};
+	}
+
+	async function loadMoreKeynotes(): Promise<void> {
+		if (loadingMoreKeynotes || !hasMoreKeynotes) {
+			return;
+		}
+
+		loadingMoreKeynotes = true;
+
+		try {
+			const nextKeynotes = await getAdditionalKeynotes({ keynoteIds: displayedKeynoteIds });
+			additionalKeynotes = [...additionalKeynotes, ...nextKeynotes];
+			hasMoreKeynotes = nextKeynotes.length === 3;
+		} finally {
+			loadingMoreKeynotes = false;
+		}
 	}
 
 	$effect(() => {
@@ -133,16 +161,10 @@
 
 		{#if props.keynotes.length > 0}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{#each props.keynotes as keynote, index (`keynote-${keynote.title}`)}
+				{#each displayedKeynotes as keynote, index (keynote.id)}
 					<article
 						data-reveal-index={index}
-						class={[
-							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
-							disableScrollReveal || visibleItems.has(index)
-								? 'translate-y-0 opacity-100'
-								: 'translate-y-8 opacity-0'
-						]}
-						style={`transition-delay: ${index * 120}ms`}
+						class={['relative flex h-full flex-col gap-4 transition-all duration-500 ease-out']}
 					>
 						<span>0{index + 1}</span>
 
@@ -158,6 +180,13 @@
 					</article>
 				{/each}
 			</div>
+			{#if hasMoreKeynotes}
+				<div class="mt-8 flex justify-center">
+					<Button variant="dark" isSubmitting={loadingMoreKeynotes} onclick={loadMoreKeynotes}>
+						{loadingMoreKeynotes ? 'Weitere Vorträge werden geladen…' : 'Weitere Vorträge anzeigen'}
+					</Button>
+				</div>
+			{/if}
 		{/if}
 	</div>
 </section>
