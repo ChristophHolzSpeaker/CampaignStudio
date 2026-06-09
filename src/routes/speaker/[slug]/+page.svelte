@@ -15,6 +15,7 @@
 			page: LandingPageDocument;
 			campaignId: number | null;
 			campaignPageId: number | null;
+			jsonLd: string;
 			speakerMailtoHref: string;
 			bookingSlotGroups: PageData['bookingSlotGroups'];
 		};
@@ -38,6 +39,7 @@
 		})(window, document, 'script', 'dataLayer', 'GTM-MCDDK28B');
 	</script>
 	<!-- End Google Tag Manager -->
+	{@html '<script type="application/ld+json">' + data.jsonLd + '</script>'}
 </svelte:head>
 
 <!-- Google Tag Manager (noscript) -->
