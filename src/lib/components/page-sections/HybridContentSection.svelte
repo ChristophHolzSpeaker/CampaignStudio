@@ -196,10 +196,22 @@
 				{#each benefits as benefit, index (`hybrid-benefit-${benefit.title}`)}
 					<article
 						data-reveal-index={index}
-						class={['relative flex h-full flex-col gap-4 transition-all duration-500 ease-out']}
+						class={[
+							'relative flex h-full flex-col gap-4 transition-all duration-500 ease-out',
+							disableScrollReveal || visibleItems.has(index)
+								? 'translate-y-0 opacity-100'
+								: 'translate-y-8 opacity-0'
+						]}
+						style={`transition-delay: ${index * 120}ms`}
+						bind:this={itemRefs[index]}
 					>
 						<span>0{index + 1}</span>
 
+						<!--<img
+							src={benefit.imageUrl ?? '/momentum.png'}
+							alt={benefit.title}
+							class="aspect-4/2 object-cover"
+						/>-->
 						<ContentEditableText
 							as="h3"
 							value={benefit.title}
@@ -248,10 +260,17 @@
 				/>
 				{#if deepDiveItems.length > 0}
 					<div class="space-y-10">
-						{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
+					{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
 							<div
 								data-reveal-index={index + benefits.length}
-								class={['flex gap-4 transition-all duration-500 ease-out sm:gap-6']}
+								class={[
+									'flex gap-4 transition-all duration-500 ease-out sm:gap-6',
+									disableScrollReveal || visibleItems.has(index + benefits.length)
+										? 'translate-y-0 opacity-100'
+										: 'translate-y-8 opacity-0'
+								]}
+								style={`transition-delay: ${index * 120}ms`}
+								bind:this={itemRefs[index + benefits.length]}
 							>
 								<span class="text-lg text-primary">{`0${index + 1}`}</span>
 								<div>
