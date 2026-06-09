@@ -1,5 +1,8 @@
 import type { Actions, PageServerLoad } from './$types';
-import { getKeynoteById, updateKeynote } from '$lib/server/keynotes/keynote';
+import {
+	getKeynoteById,
+	updateKeynote
+} from '$lib/server/keynotes/keynote';
 import { keynoteFormSchema } from '$lib/validation/keynotes';
 import { error, fail, redirect } from '@sveltejs/kit';
 
@@ -16,7 +19,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	return { keynote };
 };
 
-export const actions: Actions = {
+	export const actions: Actions = {
 	default: async ({ params, request, locals }) => {
 		const existing = await getKeynoteById(params.id);
 		if (!existing) {
@@ -25,9 +28,9 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const imageFile = formData.get('imageFile');
+		const status = String(formData.get('status') ?? '').trim();
 		const parsed = keynoteFormSchema.safeParse({
 			keynoteTitle: getString(formData, 'keynoteTitle'),
-			keynoteSummary: getString(formData, 'keynoteSummary'),
 			imageAlt: getString(formData, 'imageAlt'),
 			theme: getString(formData, 'theme'),
 			audience: getString(formData, 'audience'),
@@ -45,10 +48,20 @@ export const actions: Actions = {
 			});
 		}
 
+		if (!['active', 'draft', 'review', 'archived'].includes(status)) {
+			return fail(400, { formError: 'Keynote status is invalid.' });
+		}
+
 		const parsedImageFile = imageFile instanceof File ? imageFile : null;
 
 		try {
-			await updateKeynote(params.id, parsed.data, parsedImageFile, locals.supabase);
+			await updateKeynote(
+				params.id,
+				parsed.data,
+				parsedImageFile,
+				locals.supabase,
+				status as 'active' | 'draft' | 'review' | 'archived'
+			);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unable to update keynote.';
 			return fail(400, { formError: message });

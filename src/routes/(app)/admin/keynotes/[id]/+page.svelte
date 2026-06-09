@@ -4,6 +4,22 @@
 	import NavButton from '$lib/components/elements/NavButton.svelte';
 
 	let { data, form } = $props();
+
+	const keynoteStatuses = ['active', 'draft', 'review', 'archived'] as const;
+	type KeynoteStatus = (typeof keynoteStatuses)[number];
+
+	function statusLabel(status: KeynoteStatus): string {
+		switch (status) {
+			case 'active':
+				return 'Active';
+			case 'draft':
+				return 'Draft';
+			case 'review':
+				return 'Review';
+			case 'archived':
+				return 'Archived';
+		}
+	}
 </script>
 
 <svelte:head>
@@ -39,6 +55,20 @@
 				value={data.keynote.subtitle ?? ''}
 				class="rounded border border-neutral-300 px-3 py-2"
 			/>
+		</label>
+
+		<label class="flex flex-col gap-1 text-sm">
+			<span>Status</span>
+			<select
+				name="status"
+				class="rounded border border-neutral-300 px-3 py-2"
+			>
+				{#each keynoteStatuses as status (status)}
+					<option value={status} selected={data.keynote.status === status}>
+						{statusLabel(status)}
+					</option>
+				{/each}
+			</select>
 		</label>
 
 		<div class="grid gap-5 md:grid-cols-2">
@@ -96,16 +126,6 @@
 		</div>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Keynote summary</span>
-			<textarea
-				name="keynoteSummary"
-				required
-				rows="6"
-				class="rounded border border-neutral-300 px-3 py-2">{data.keynote.keynote_summary}</textarea
-			>
-		</label>
-
-		<label class="flex flex-col gap-1 text-sm">
 			<span>Moderation intro</span>
 			<textarea name="moderation" rows="6" class="rounded border border-neutral-300 px-3 py-2"
 				>{data.keynote.moderation ?? ''}</textarea
@@ -120,7 +140,7 @@
 		</label>
 
 		<label class="flex flex-col gap-1 text-sm">
-			<span>Short copy</span>
+			<span>Keynote summary</span>
 			<textarea name="keynoteShort" rows="6" class="rounded border border-neutral-300 px-3 py-2"
 				>{data.keynote.keynote_short ?? ''}</textarea
 			>

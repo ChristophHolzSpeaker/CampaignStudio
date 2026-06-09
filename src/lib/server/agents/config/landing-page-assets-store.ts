@@ -57,7 +57,7 @@ type LogoRow = {
 type KeynoteRow = {
 	id: string;
 	title: string;
-	summary: string;
+	summary: string | null;
 	audience: string | null;
 	keynoteShort: string | null;
 	imageUrl: string;
@@ -125,14 +125,14 @@ async function loadActiveKeynotes(): Promise<KeynoteRow[]> {
 		.select({
 			id: keynotes.id,
 			title: keynotes.keynote_title,
-			summary: keynotes.keynote_summary,
+			summary: keynotes.keynote_short,
 			audience: keynotes.audience,
 			keynoteShort: keynotes.keynote_short,
 			imageUrl: keynotes.image_url,
 			imageAlt: keynotes.image_alt
 		})
 		.from(keynotes)
-		.where(eq(keynotes.is_active, true))
+		.where(eq(keynotes.status, 'active'))
 		.orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
 
 	return rows;
@@ -394,9 +394,9 @@ function buildKeynoteCatalog(rows: KeynoteRow[]): KeynoteOption[] {
 	return rows.map((keynote) => ({
 		id: keynote.id,
 		title: keynote.title,
-		summary: keynote.summary,
+		summary: keynote.keynoteShort ?? keynote.summary ?? '',
 		audience: keynote.audience ?? '',
-		keynoteShort: keynote.keynoteShort ?? keynote.summary,
+		keynoteShort: keynote.keynoteShort ?? keynote.summary ?? '',
 		imageUrl: keynote.imageUrl,
 		imageAlt: keynote.imageAlt
 	}));

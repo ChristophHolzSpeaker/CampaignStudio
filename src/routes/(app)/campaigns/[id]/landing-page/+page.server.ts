@@ -633,14 +633,21 @@ export const actions: Actions = {
 			.select({
 				id: keynotes.id,
 				title: keynotes.keynote_title,
-				summary: keynotes.keynote_summary,
+				summary: keynotes.keynote_short,
 				imageUrl: keynotes.image_url
 			})
 			.from(keynotes)
-			.where(eq(keynotes.is_active, true))
+			.where(eq(keynotes.status, 'active'))
 			.orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
 
-		const keynotesById = new Map(availableKeynotes.map((keynote) => [keynote.id, keynote]));
+		const availableKeynotesWithFallback = availableKeynotes.map((keynote) => ({
+			...keynote,
+			summary: keynote.summary ?? ''
+		}));
+
+		const keynotesById = new Map(
+			availableKeynotesWithFallback.map((keynote) => [keynote.id, keynote])
+		);
 		const resolvedKeynotes = selectedKeynoteIds
 			.map((id) => keynotesById.get(id))
 			.filter((keynote): keynote is NonNullable<typeof keynote> => Boolean(keynote))

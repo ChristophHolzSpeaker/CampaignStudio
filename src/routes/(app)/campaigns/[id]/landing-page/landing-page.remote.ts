@@ -112,13 +112,18 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 		.select({
 			id: keynotes.id,
 			title: keynotes.keynote_title,
-			summary: keynotes.keynote_summary,
+			summary: keynotes.keynote_short,
 			imageUrl: keynotes.image_url,
 			imageAlt: keynotes.image_alt
 		})
 		.from(keynotes)
-		.where(eq(keynotes.is_active, true))
+		.where(eq(keynotes.status, 'active'))
 		.orderBy(asc(keynotes.keynote_title), asc(keynotes.id));
+
+	const availableKeynotesWithFallback = availableKeynotes.map((keynote) => ({
+		...keynote,
+		summary: keynote.summary ?? ''
+	}));
 
 	const availableHeroImages = await db
 		.select({
@@ -144,7 +149,7 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 		canRenderPage,
 		renderErrorMessage,
 		availableLogos,
-		availableKeynotes,
+		availableKeynotes: availableKeynotesWithFallback,
 		availableHeroImages: filteredHeroImages,
 		campaignId,
 		campaignPageId: selectedPageRecord?.campaignPageId ?? null,
