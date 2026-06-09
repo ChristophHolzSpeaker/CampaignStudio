@@ -59,10 +59,7 @@
 
 		<label class="flex flex-col gap-1 text-sm">
 			<span>Status</span>
-			<select
-				name="status"
-				class="rounded border border-neutral-300 px-3 py-2"
-			>
+			<select name="status" class="rounded border border-neutral-300 px-3 py-2">
 				{#each keynoteStatuses as status (status)}
 					<option value={status} selected={data.keynote.status === status}>
 						{statusLabel(status)}

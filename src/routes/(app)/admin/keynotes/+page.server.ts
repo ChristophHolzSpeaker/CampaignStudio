@@ -1,9 +1,5 @@
 import type { Actions, PageServerLoad } from './$types';
-import {
-	deleteKeynote,
-	listKeynotes,
-	updateKeynoteStatus
-} from '$lib/server/keynotes/keynote';
+import { deleteKeynote, listKeynotes, updateKeynoteStatus } from '$lib/server/keynotes/keynote';
 import { fail } from '@sveltejs/kit';
 
 const keynoteStatuses = ['active', 'draft', 'review', 'archived'] as const;

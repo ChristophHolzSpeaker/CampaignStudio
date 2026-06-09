@@ -260,7 +260,7 @@
 				/>
 				{#if deepDiveItems.length > 0}
 					<div class="space-y-10">
-					{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
+						{#each deepDiveItems as item, index (`hybrid-deep-dive-${item.title}`)}
 							<div
 								data-reveal-index={index + benefits.length}
 								class={[
