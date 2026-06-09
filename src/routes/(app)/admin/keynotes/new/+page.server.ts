@@ -15,7 +15,6 @@ export const actions: Actions = {
 		const imageFile = formData.get('imageFile');
 		const parsed = keynoteFormSchema.safeParse({
 			keynoteTitle: getString(formData, 'keynoteTitle'),
-			keynoteSummary: getString(formData, 'keynoteSummary'),
 			imageAlt: getString(formData, 'imageAlt'),
 			theme: getString(formData, 'theme'),
 			audience: getString(formData, 'audience'),

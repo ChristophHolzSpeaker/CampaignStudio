@@ -118,7 +118,6 @@ export async function createKeynote(
 	await db.insert(keynotes).values({
 		id,
 		keynote_title: input.keynoteTitle,
-		keynote_summary: input.keynoteSummary,
 		theme: input.theme,
 		audience: input.audience,
 		language: input.language,
@@ -140,7 +139,8 @@ export async function updateKeynote(
 	id: string,
 	input: KeynoteFormInput,
 	imageFile: File | null,
-	supabase: SupabaseClient
+	supabase: SupabaseClient,
+	status?: 'active' | 'draft' | 'review' | 'archived'
 ): Promise<void> {
 	const existing = await getKeynoteById(id);
 	if (!existing) {
@@ -163,7 +163,6 @@ export async function updateKeynote(
 		.update(keynotes)
 		.set({
 			keynote_title: input.keynoteTitle,
-			keynote_summary: input.keynoteSummary,
 			theme: input.theme,
 			audience: input.audience,
 			language: input.language,
@@ -171,6 +170,7 @@ export async function updateKeynote(
 			moderation: input.moderation,
 			keynote_long: input.keynoteLong,
 			keynote_short: input.keynoteShort,
+			...(status ? { status } : {}),
 			speaker: input.speaker,
 			image_url: imageUrl,
 			image_bucket: imageBucket,
@@ -189,6 +189,16 @@ export async function toggleKeynoteActive(id: string, active: boolean): Promise<
 	await db
 		.update(keynotes)
 		.set({ is_active: active, updated_at: new Date() })
+		.where(eq(keynotes.id, id));
+}
+
+export async function updateKeynoteStatus(
+	id: string,
+	status: 'active' | 'draft' | 'review' | 'archived'
+): Promise<void> {
+	await db
+		.update(keynotes)
+		.set({ status, updated_at: new Date() })
 		.where(eq(keynotes.id, id));
 }
 
