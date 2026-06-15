@@ -2,6 +2,14 @@ packages:
   - '.'
   - 'worker'
 
+allowBuilds:
+  '@prisma/client': true
+  better-sqlite3: true
+  esbuild: true
+  sharp: true
+  supabase: true
+  workerd: true
+
 onlyBuiltDependencies:
   - esbuild
   - supabase

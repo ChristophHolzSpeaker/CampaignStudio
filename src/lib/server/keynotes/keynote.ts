@@ -140,7 +140,7 @@ export async function updateKeynote(
 	input: KeynoteFormInput,
 	imageFile: File | null,
 	supabase: SupabaseClient,
-	status?: 'active' | 'draft' | 'review' | 'archived'
+	status?: 'active' | 'draft' | 'review' | 'archived' | 'alt'
 ): Promise<void> {
 	const existing = await getKeynoteById(id);
 	if (!existing) {
@@ -194,7 +194,7 @@ export async function toggleKeynoteActive(id: string, active: boolean): Promise<
 
 export async function updateKeynoteStatus(
 	id: string,
-	status: 'active' | 'draft' | 'review' | 'archived'
+	status: 'active' | 'draft' | 'review' | 'archived' | 'alt'
 ): Promise<void> {
 	await db.update(keynotes).set({ status, updated_at: new Date() }).where(eq(keynotes.id, id));
 }
