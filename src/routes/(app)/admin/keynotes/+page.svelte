@@ -1,9 +1,7 @@
 <script lang="ts">
-	import NavButton from '$lib/components/elements/NavButton.svelte';
-
 	let { data } = $props();
 
-	const keynoteStatuses = ['active', 'draft', 'review', 'archived'] as const;
+	const keynoteStatuses = ['active', 'draft', 'review', 'archived', 'alt'] as const;
 	type KeynoteStatus = (typeof keynoteStatuses)[number];
 
 	function statusLabel(status: KeynoteStatus): string {
@@ -16,6 +14,8 @@
 				return 'Review';
 			case 'archived':
 				return 'Archived';
+			case 'alt':
+				return 'Alt';
 		}
 	}
 
@@ -29,6 +29,8 @@
 				return 'bg-amber-100 text-amber-800';
 			case 'archived':
 				return 'bg-rose-100 text-rose-800';
+			case 'alt':
+				return 'bg-neutral-200 text-neutral-700';
 		}
 	}
 </script>
@@ -45,7 +47,6 @@
 				Manage keynote entries used by landing page generation.
 			</p>
 		</div>
-		<NavButton href="/admin/keynotes/new">Add keynote</NavButton>
 	</header>
 
 	<div class="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
@@ -54,7 +55,6 @@
 				<tr>
 					<th class="px-4 py-3">Keynote</th>
 					<th class="px-4 py-3">Status</th>
-					<th class="px-4 py-3">Actions</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -82,36 +82,6 @@
 							>
 								{statusLabel(keynote.status as KeynoteStatus)}
 							</span>
-						</td>
-						<td class="px-4 py-3">
-							<div class="flex flex-wrap items-center gap-2">
-								<form method="POST" action="?/status" class="flex items-center gap-2">
-									<input type="hidden" name="id" value={keynote.id} />
-									<label class="flex items-center gap-2 text-xs text-neutral-600">
-										<span>Status</span>
-										<select
-											name="status"
-											onchange={(event) => event.currentTarget.form?.requestSubmit()}
-											class="rounded border border-neutral-300 px-2 py-1 text-xs text-neutral-700"
-										>
-											{#each keynoteStatuses as status (status)}
-												<option value={status} selected={keynote.status === status}>
-													{statusLabel(status)}
-												</option>
-											{/each}
-										</select>
-									</label>
-								</form>
-								<form method="POST" action="?/delete">
-									<input type="hidden" name="id" value={keynote.id} />
-									<button
-										type="submit"
-										class="rounded border border-rose-300 px-2 py-1 text-xs text-rose-700"
-									>
-										Delete
-									</button>
-								</form>
-							</div>
 						</td>
 					</tr>
 				{:else}
