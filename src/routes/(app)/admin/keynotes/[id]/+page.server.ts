@@ -45,7 +45,7 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!['active', 'draft', 'review', 'archived'].includes(status)) {
+		if (!['active', 'draft', 'review', 'archived', 'alt'].includes(status)) {
 			return fail(400, { formError: 'Keynote status is invalid.' });
 		}
 
@@ -57,7 +57,7 @@ export const actions: Actions = {
 				parsed.data,
 				parsedImageFile,
 				locals.supabase,
-				status as 'active' | 'draft' | 'review' | 'archived'
+				status as 'active' | 'draft' | 'review' | 'archived' | 'alt'
 			);
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Unable to update keynote.';

@@ -3,7 +3,7 @@
 
 	let { data } = $props();
 
-	const keynoteStatuses = ['active', 'draft', 'review', 'archived'] as const;
+	const keynoteStatuses = ['active', 'draft', 'review', 'archived', 'alt'] as const;
 	type KeynoteStatus = (typeof keynoteStatuses)[number];
 
 	function statusLabel(status: KeynoteStatus): string {
@@ -16,6 +16,8 @@
 				return 'Review';
 			case 'archived':
 				return 'Archived';
+			case 'alt':
+				return 'Alt';
 		}
 	}
 
@@ -29,6 +31,8 @@
 				return 'bg-amber-100 text-amber-800';
 			case 'archived':
 				return 'bg-rose-100 text-rose-800';
+			case 'alt':
+				return 'bg-neutral-200 text-neutral-700';
 		}
 	}
 </script>
