@@ -1,11 +1,6 @@
-import type { Actions, PageServerLoad } from './$types';
-import { getKeynoteById, updateKeynote } from '$lib/server/keynotes/keynote';
-import { keynoteFormSchema } from '$lib/validation/keynotes';
-import { error, fail, redirect } from '@sveltejs/kit';
-
-function getString(formData: FormData, key: string): string {
-	return String(formData.get(key) ?? '').trim();
-}
+import type { PageServerLoad } from './$types';
+import { getKeynoteById } from '$lib/server/keynotes/keynote';
+import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const keynote = await getKeynoteById(params.id);
@@ -14,56 +9,4 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	return { keynote };
-};
-
-export const actions: Actions = {
-	default: async ({ params, request, locals }) => {
-		const existing = await getKeynoteById(params.id);
-		if (!existing) {
-			throw error(404, 'Keynote not found');
-		}
-
-		const formData = await request.formData();
-		const imageFile = formData.get('imageFile');
-		const status = String(formData.get('status') ?? '').trim();
-		const parsed = keynoteFormSchema.safeParse({
-			keynoteTitle: getString(formData, 'keynoteTitle'),
-			imageAlt: getString(formData, 'imageAlt'),
-			theme: getString(formData, 'theme'),
-			audience: getString(formData, 'audience'),
-			language: getString(formData, 'language'),
-			subtitle: getString(formData, 'subtitle'),
-			moderation: getString(formData, 'moderation'),
-			keynoteLong: getString(formData, 'keynoteLong'),
-			keynoteShort: getString(formData, 'keynoteShort'),
-			speaker: getString(formData, 'speaker')
-		});
-
-		if (!parsed.success) {
-			return fail(400, {
-				formError: parsed.error.issues[0]?.message ?? 'Invalid keynote form input.'
-			});
-		}
-
-		if (!['active', 'draft', 'review', 'archived', 'alt'].includes(status)) {
-			return fail(400, { formError: 'Keynote status is invalid.' });
-		}
-
-		const parsedImageFile = imageFile instanceof File ? imageFile : null;
-
-		try {
-			await updateKeynote(
-				params.id,
-				parsed.data,
-				parsedImageFile,
-				locals.supabase,
-				status as 'active' | 'draft' | 'review' | 'archived' | 'alt'
-			);
-		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Unable to update keynote.';
-			return fail(400, { formError: message });
-		}
-
-		throw redirect(303, '/admin/keynotes');
-	}
 };
