@@ -2,17 +2,12 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 import { parseLandingPageDocument } from '$lib/page-builder/page';
 import {
-	getOrCreateVisitorIdentifier,
-	logCampaignVisit
-} from '$lib/server/attribution/campaign-visits';
-import {
 	buildSpeakerMailtoHref,
 	DEFAULT_SPEAKER_EMAIL_SUBJECT
 } from '$lib/server/attribution/mailto';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
-import { resolvePublicBookingSlotPreview } from '$lib/server/bookings';
 import type { LandingPageDocument } from '$lib/page-builder/page';
 import type { SeoProps } from '$lib/page-builder/sections';
 
@@ -99,7 +94,7 @@ function buildSpeakerJsonLd({
 	return JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 }
 
-export const load: PageServerLoad = async ({ params, cookies, url, request }) => {
+export const load: PageServerLoad = async ({ params, url }) => {
 	const slug = params.slug?.trim();
 
 	if (!slug) {
@@ -128,33 +123,13 @@ export const load: PageServerLoad = async ({ params, cookies, url, request }) =>
 	}
 
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
-	const slotPreview = await resolvePublicBookingSlotPreview({ bookingType: 'lead' });
 	const jsonLd = buildSpeakerJsonLd({ page, origin: url.origin, slug });
-
-	const visitorIdentifier = getOrCreateVisitorIdentifier({
-		cookies,
-		secureCookie: url.protocol === 'https:'
-	});
-
-	try {
-		await logCampaignVisit({
-			campaignId: pageRecord.campaignId,
-			campaignPageId: pageRecord.campaignPageId,
-			slug,
-			searchParams: url.searchParams,
-			headers: request.headers,
-			visitorIdentifier
-		});
-	} catch (visitLoggingError) {
-		console.error('Campaign visit logging failed', visitLoggingError);
-	}
 
 	return {
 		page,
 		campaignId: pageRecord.campaignId,
 		campaignPageId: pageRecord.campaignPageId,
 		jsonLd,
-		bookingSlotGroups: slotPreview.slotGroups,
 		speakerMailtoHref: buildSpeakerMailtoHref({
 			campaignId: pageRecord.campaignId,
 			campaignPageId: pageRecord.campaignPageId,
