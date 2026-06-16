@@ -6,7 +6,6 @@
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
-	import LeadBookingPage from '../../book/l/[token]/+page.svelte';
 	import { getSpeakerBookingSlotPreview } from './speaker-booking-slots.remote';
 	import { logSpeakerVisit } from './speaker.remote';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
@@ -159,9 +158,11 @@
 
 {#if modal?.kind === 'booking'}
 	<ShallowRouteModal title="Schedule a Call" onclose={() => history.back()}>
-		<LeadBookingPage
-			data={modal.data as import('../../book/l/[token]/$types').PageData}
-			form={null}
-		/>
+		{#await import('../../book/l/[token]/+page.svelte') then { default: LeadBookingPage }}
+			<LeadBookingPage
+				data={modal.data as import('../../book/l/[token]/$types').PageData}
+				form={null}
+			/>
+		{/await}
 	</ShallowRouteModal>
 {/if}
