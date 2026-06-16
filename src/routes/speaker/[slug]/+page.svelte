@@ -1,12 +1,19 @@
 <script lang="ts">
+	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { onMount } from 'svelte';
 	import LandingNavigation from '$lib/components/blocks/LandingNavigation.svelte';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
-	import LeadBookingPage from '../../book/l/[token]/+page.svelte';
+	import { getSpeakerBookingSlotPreview } from './speaker-booking-slots.remote';
+	import { logSpeakerVisit } from './speaker.remote';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
-	import type { PageData } from './$types';
+
+	type BookingSlotGroups = Array<{
+		dateKey: string;
+		slots: Array<{ startsAtIso: string; endsAtIso: string }>;
+	}>;
 
 	let {
 		data
@@ -17,11 +24,84 @@
 			campaignPageId: number | null;
 			jsonLd: string;
 			speakerMailtoHref: string;
-			bookingSlotGroups: PageData['bookingSlotGroups'];
 		};
 	} = $props();
 
 	const modal = $derived((page.state as App.PageState).modal);
+	const VISITOR_IDENTIFIER_KEY = 'cs_vid';
+
+	let bookingSlotGroups = $state<BookingSlotGroups | undefined>(undefined);
+	let bookingSlotsRequestId = 0;
+	let visitLogged = $state(false);
+
+	function getVisitorIdentifier(): string {
+		try {
+			const existing = localStorage.getItem(VISITOR_IDENTIFIER_KEY);
+			if (existing) {
+				return existing;
+			}
+
+			const created = crypto.randomUUID();
+			localStorage.setItem(VISITOR_IDENTIFIER_KEY, created);
+			return created;
+		} catch {
+			return crypto.randomUUID();
+		}
+	}
+
+	async function loadBookingSlots(): Promise<void> {
+		const requestId = ++bookingSlotsRequestId;
+		bookingSlotGroups = undefined;
+
+		try {
+			const preview = await getSpeakerBookingSlotPreview();
+			if (requestId !== bookingSlotsRequestId) {
+				return;
+			}
+
+			bookingSlotGroups = preview.slotGroups;
+		} catch (error) {
+			if (requestId !== bookingSlotsRequestId) {
+				return;
+			}
+
+			console.error('Speaker booking slot preview failed', error);
+			bookingSlotGroups = [];
+		}
+	}
+
+	onMount(() => {
+		void loadBookingSlots();
+		void logVisit();
+		return afterNavigate(() => {
+			void loadBookingSlots();
+			void logVisit();
+		});
+	});
+
+	async function logVisit(): Promise<void> {
+		if (visitLogged) {
+			return;
+		}
+
+		const campaignId = data.campaignId;
+		const campaignPageId = data.campaignPageId;
+		const slug = page.params.slug;
+
+		if (campaignId === null || campaignPageId === null || !slug) {
+			return;
+		}
+
+		visitLogged = true;
+
+		void logSpeakerVisit({
+			campaignId,
+			campaignPageId,
+			slug,
+			visitorIdentifier: getVisitorIdentifier(),
+			searchParams: Object.fromEntries(page.url.searchParams)
+		});
+	}
 </script>
 
 <svelte:head>
@@ -39,7 +119,10 @@
 		})(window, document, 'script', 'dataLayer', 'GTM-MCDDK28B');
 	</script>
 	<!-- End Google Tag Manager -->
-	{@html '<script type="application/ld+json">' + data.jsonLd + '</script>'}
+	<!-- prettier-ignore -->
+	<script type="application/ld+json">
+{data.jsonLd}
+	</script>
 </svelte:head>
 
 <!-- Google Tag Manager (noscript) -->
@@ -64,7 +147,7 @@
 	campaignId={data.campaignId}
 	campaignPageId={data.campaignPageId}
 	mailtoHref={data.speakerMailtoHref}
-	bookingSlotGroups={data.bookingSlotGroups}
+	{bookingSlotGroups}
 />
 
 {#if modal?.kind === 'youtube'}
@@ -75,9 +158,11 @@
 
 {#if modal?.kind === 'booking'}
 	<ShallowRouteModal title="Schedule a Call" onclose={() => history.back()}>
-		<LeadBookingPage
-			data={modal.data as import('../../book/l/[token]/$types').PageData}
-			form={null}
-		/>
+		{#await import('../../book/l/[token]/+page.svelte') then { default: LeadBookingPage }}
+			<LeadBookingPage
+				data={modal.data as import('../../book/l/[token]/$types').PageData}
+				form={null}
+			/>
+		{/await}
 	</ShallowRouteModal>
 {/if}

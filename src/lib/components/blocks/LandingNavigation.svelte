@@ -9,7 +9,7 @@
 	};
 	let {
 		mailto = 'mailto:speaker@christophholz.com?subject=Request%20a%20talk',
-		mailtoCta = 'Request a talk',
+		mailtoCta = 'Vortrag Anfragen',
 		campaignId = null,
 		campaignPageId = null
 	}: LandingPageNavigationData = $props();
@@ -146,14 +146,13 @@
 <div class="fixed inset-x-0 top-0 z-50 bg-white px-4 py-2 lg:px-0 lg:py-4">
 	<div class="mx-auto w-full max-w-7xl">
 		<div class="hidden justify-between lg:flex">
-			<div class="w-full">
-				<a
-					href="https://www.christophholz.com/"
-					aria-current="page"
-					class="mr-2 text-5xl"
-					aria-label="home">Christoph Holz</a
-				>
-			</div>
+			<a
+				href="https://www.christophholz.com/"
+				aria-current="page"
+				class="mr-2 text-5xl whitespace-nowrap"
+				aria-label="home">Christoph Holz</a
+			>
+
 			<nav class="flex w-full items-stretch justify-end gap-4">
 				<button
 					type="button"
@@ -166,7 +165,7 @@
 					aria-controls="categories-menu"
 					class="nav-normal flex items-center border-b-2 border-transparent p-2 hover:border-black"
 				>
-					Categories
+					Kategorien
 				</button>
 				<a
 					href="https://uploads-ssl.webflow.com/61263e0de406f497361dca55/6308862b5f040611761c02b5_Speaker.Christoph.Holz.Booklet.2022.pdf"
@@ -178,7 +177,7 @@
 				<a
 					href="#booking"
 					class="nav-normal flex items-center border-b-2 border-transparent p-2 hover:border-black"
-					>Contact</a
+					>Kontakt</a
 				>
 				<div class="flex h-full items-center gap-4">
 					{#snippet socialIcon({ href, icon }: { href: string; icon: string })}
