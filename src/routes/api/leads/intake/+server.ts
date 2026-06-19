@@ -198,7 +198,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	const now = new Date();
 	const { journey } = await findOrCreateLeadJourneyFromInquiry({
 		campaignId: campaignContext.campaignId,
-		campaignPageId: campaignContext.campaignPageId ?? 0,
+		campaignPageId: campaignContext.campaignPageId,
 		contactEmail: normalizedEmail,
 		contactName: parseResult.data.name ?? '',
 		visitorIdentifier: null,

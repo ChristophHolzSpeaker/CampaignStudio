@@ -35,7 +35,7 @@ export async function findRecentOpenLeadJourney(input: {
 
 export async function createLeadJourney(input: {
 	campaignId: number;
-	campaignPageId: number;
+	campaignPageId: number | null;
 	contactEmail: string;
 	contactName: string;
 	firstTouchType: 'form';
@@ -64,7 +64,7 @@ export async function createLeadJourney(input: {
 
 export async function touchLeadJourney(input: {
 	journeyId: string;
-	campaignPageId: number;
+	campaignPageId: number | null;
 	contactName: string;
 	updatedAt: Date;
 }): Promise<LeadJourneyRecord> {
@@ -120,7 +120,7 @@ export async function markLeadJourneyBookingLinkInviteEmailSent(input: {
 
 export async function findOrCreateLeadJourneyFromInquiry(input: {
 	campaignId: number;
-	campaignPageId: number;
+	campaignPageId: number | null;
 	contactEmail: string;
 	contactName: string;
 	visitorIdentifier?: string | null;
