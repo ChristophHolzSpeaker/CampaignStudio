@@ -1,4 +1,16 @@
 -- Sentinel campaign for direct Webflow lead form submissions (no campaign context)
-insert into public.campaigns (name, slug, is_active, created_at, updated_at)
-values ('Webflow Direct', 'webflow-direct', true, now(), now())
-on conflict (slug) do nothing;
+-- Ensure idempotency: remove any previous version then insert fresh
+delete from public.campaigns where name = 'Webflow Direct';
+
+insert into public.campaigns (name, audience, format, topic, language, geography, status, created_at, updated_at)
+values (
+  'Webflow Direct',
+  'Webflow visitors',
+  'Direct lead form',
+  'Speaking engagement inquiry',
+  'en',
+  'Global',
+  'active',
+  now(),
+  now()
+);

@@ -14,9 +14,50 @@ import {
 import { bookingIntakeSchema } from '$lib/validation/booking-intake';
 
 const WEBFLOW_SURFACE = 'webflow';
-const WEBFLOW_DIRECT_CAMPAIGN_SLUG = 'webflow-direct';
+const WEBFLOW_DIRECT_CAMPAIGN_NAME = 'Webflow Direct';
 const WEBFLOW_EVENT_SOURCE = 'sveltekit.webflow_lead_intake';
 const WEBFLOW_NOTIFICATION_FLOW = 'webflow_lead_intake';
+
+const ALLOWED_ORIGINS: string[] = (process.env.PRIVATE_ALLOWED_WEBFLOW_ORIGINS || '')
+	.split(',')
+	.map((o: string) => o.trim())
+	.filter(Boolean);
+
+function isOriginAllowed(origin: string | null, currentOrigin: string): boolean {
+	if (!origin) return false;
+	if (origin === currentOrigin) return true;
+	return ALLOWED_ORIGINS.includes(origin);
+}
+
+function corsHeaders(origin: string) {
+	return {
+		'Access-Control-Allow-Origin': origin,
+		'Access-Control-Allow-Methods': 'POST, OPTIONS',
+		'Access-Control-Allow-Headers': 'Content-Type'
+	};
+}
+
+function allowedJson(data: unknown, init: ResponseInit = {}, origin?: string) {
+	const headers = new Headers(init.headers);
+	if (origin) {
+		Object.entries(corsHeaders(origin)).forEach(([k, v]) => headers.set(k, v));
+	}
+	return json(data, { ...init, headers });
+}
+
+export const OPTIONS: RequestHandler = async ({ request, url }) => {
+	const origin = request.headers.get('origin');
+	const currentOrigin = url.origin;
+
+	if (isOriginAllowed(origin, currentOrigin)) {
+		return new Response(null, {
+			status: 204,
+			headers: corsHeaders(origin!)
+		});
+	}
+
+	return new Response(null, { status: 403 });
+};
 
 function readSingleString(input: unknown): string | undefined {
 	if (typeof input === 'string') return input;
@@ -49,7 +90,7 @@ async function resolveWebflowCampaignContext(campaignId?: number, campaignPageId
 	const [sentinel] = await db
 		.select({ id: campaigns.id })
 		.from(campaigns)
-		.where(eq(campaigns.slug, WEBFLOW_DIRECT_CAMPAIGN_SLUG))
+		.where(eq(campaigns.name, WEBFLOW_DIRECT_CAMPAIGN_NAME))
 		.limit(1);
 
 	if (!sentinel) {
@@ -60,6 +101,10 @@ async function resolveWebflowCampaignContext(campaignId?: number, campaignPageId
 }
 
 export const POST: RequestHandler = async ({ request, url }) => {
+	const origin = request.headers.get('origin');
+	const currentOrigin = url.origin;
+	const allowedOrigin = isOriginAllowed(origin, currentOrigin) ? origin! : null;
+
 	let raw: Record<string, unknown>;
 
 	const contentType = request.headers.get('content-type') || '';
@@ -80,9 +125,10 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 	const parseResult = bookingIntakeSchema.safeParse(intake);
 	if (!parseResult.success) {
-		return json(
+		return allowedJson(
 			{ success: false, message: parseResult.error.issues[0]?.message ?? 'Invalid submission.' },
-			{ status: 400 }
+			{ status: 400 },
+			allowedOrigin || undefined
 		);
 	}
 
@@ -98,7 +144,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 			Number.isNaN(campaignPageIdInput) ? undefined : campaignPageIdInput
 		);
 	} catch {
-		return json({ success: false, message: 'Service temporarily unavailable.' }, { status: 503 });
+		return allowedJson(
+			{ success: false, message: 'Service temporarily unavailable.' },
+			{ status: 503 },
+			allowedOrigin || undefined
+		);
 	}
 
 	try {
