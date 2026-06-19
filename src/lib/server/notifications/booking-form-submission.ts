@@ -6,7 +6,8 @@ type BookingFormSubmissionInput = {
 		| 'inline_lead_sequence_hero'
 		| 'book_l_new'
 		| 'book_l_existing'
-		| 'book_g';
+		| 'book_g'
+		| 'webflow_lead_intake';
 	email: string;
 	name?: string | null;
 	phone?: string | null;

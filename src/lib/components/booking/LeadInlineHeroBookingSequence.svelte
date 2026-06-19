@@ -47,7 +47,7 @@
 		campaignId = null,
 		campaignPageId = null,
 		pageSlug = null,
-		slotGroups = [],
+		slotGroups,
 		showIntakeStep = true,
 		formActionKey = 'hero-inline-lead-booking',
 		bookingSurface = 'hero',
@@ -81,6 +81,7 @@
 	const effectiveIntakeScope = $derived(showIntakeStep ? intakeScope : (initialValues.scope ?? ''));
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
+	const isLoadingSlotGroups = $derived(slotGroups === undefined);
 	const hasSlots = $derived(normalizedSlotGroups.length > 0);
 	const resolvedDayKey = $derived(
 		(() => {
@@ -151,7 +152,7 @@
 
 	let hasTrackedCalendarBookingConfirmed = false;
 
-	function trackCalendarBookingConfirmed(): void {
+	$effect(() => {
 		if (!browser || hasTrackedCalendarBookingConfirmed || !submitResult?.success) {
 			return;
 		}
@@ -163,10 +164,6 @@
 		dataLayerWindow.dataLayer.push({
 			event: 'calendar_booking_confirmed'
 		});
-	}
-
-	$effect(() => {
-		trackCalendarBookingConfirmed();
 	});
 
 	function formatDayLabel(dateKey: string): string {
@@ -272,7 +269,20 @@ Veranstaltungsort:`;
 				<input type="hidden" name="selected_starts_at" value={selectedStartsAt} />
 				<input type="hidden" name="selected_ends_at" value={selectedEndsAt} />
 
-				{#if hasSlots}
+				{#if isLoadingSlotGroups}
+					<div
+						class="space-y-4 border border-slate-300/70 bg-white/80 px-4 py-5 text-sm text-slate-600"
+						aria-busy="true"
+						aria-live="polite"
+					>
+						<p>Checking available briefing slots...</p>
+						<div class="grid gap-2 sm:grid-cols-3">
+							<div class="h-10 animate-pulse bg-slate-200"></div>
+							<div class="h-10 animate-pulse bg-slate-200"></div>
+							<div class="h-10 animate-pulse bg-slate-200"></div>
+						</div>
+					</div>
+				{:else if hasSlots}
 					{#if showSlotStage}
 						<section class="space-y-5">
 							<div class="space-y-1">
