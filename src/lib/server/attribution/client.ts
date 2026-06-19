@@ -54,20 +54,49 @@ export async function trackCTA(input: CTAEventInput): Promise<void> {
 	await parseWorkerResponse<WorkerSuccessResponse>(response);
 }
 
+const BOOKING_LINK_NOT_FOUND_ERROR = 'Lead journey not found';
+const BOOKING_LINK_MAX_ATTEMPTS = 3;
+const BOOKING_LINK_RETRY_DELAY_MS = 400;
+
+function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function createBookingLink(input: {
 	lead_journey_id: string;
 	campaign_id?: number;
 }): Promise<BookingLinkResponse> {
 	const baseUrl = requireWorkerEnv('ATTRIBUTION_WORKER_URL');
 	const url = new URL('/booking/link', baseUrl);
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: {
-			Authorization: buildWorkerAuthHeader(),
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(input)
-	});
 
-	return parseWorkerResponse<BookingLinkResponse>(response);
+	// The lead journey is written via the app's direct Postgres connection, while the
+	// worker reads it via the Supabase REST API. A freshly-inserted journey may not yet
+	// be visible to the worker's read path, so retry only on the "not found" race.
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= BOOKING_LINK_MAX_ATTEMPTS; attempt += 1) {
+		try {
+			const response = await fetch(url, {
+				method: 'POST',
+				headers: {
+					Authorization: buildWorkerAuthHeader(),
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(input)
+			});
+
+			return await parseWorkerResponse<BookingLinkResponse>(response);
+		} catch (error) {
+			lastError = error;
+			const isNotFoundRace =
+				error instanceof Error && error.message === BOOKING_LINK_NOT_FOUND_ERROR;
+
+			if (!isNotFoundRace || attempt === BOOKING_LINK_MAX_ATTEMPTS) {
+				throw error;
+			}
+
+			await delay(BOOKING_LINK_RETRY_DELAY_MS * attempt);
+		}
+	}
+
+	throw lastError instanceof Error ? lastError : new Error('Failed to create booking link');
 }
