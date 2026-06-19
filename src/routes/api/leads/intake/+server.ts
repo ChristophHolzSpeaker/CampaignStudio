@@ -11,6 +11,7 @@ import {
 	classifyLeadBookingIntent,
 	isLeadBookingIntentApproved
 } from '$lib/server/bookings/intent-classification';
+import { sendBookingLinkInviteEmailForLeadSubmission } from '$lib/server/bookings/woody-email-service';
 import { bookingIntakeSchema } from '$lib/validation/booking-intake';
 
 const WEBFLOW_SURFACE = 'webflow';
@@ -170,40 +171,27 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		});
 	}
 
-	let intentDecision;
+	let intentDecision: Awaited<ReturnType<typeof classifyLeadBookingIntent>> | null = null;
 	try {
 		intentDecision = await classifyLeadBookingIntent({
 			scope: parseResult.data.scope,
 			company: parseResult.data.company,
 			name: parseResult.data.name
 		});
-	} catch {
-		return json(
-			{
-				success: false,
-				message:
-					'We could not verify your request at this time. Please try again shortly or email us directly.'
-			},
-			{ status: 400 }
-		);
+	} catch (error) {
+		console.error('webflow_lead_intent_classification_failed', {
+			error: error instanceof Error ? error.message : 'unknown_error'
+		});
 	}
 
-	if (!isLeadBookingIntentApproved(intentDecision)) {
-		return json(
-			{
-				success: false,
-				message:
-					'Thank you. This booking path is reserved exclusively for speaking engagement inquiries.'
-			},
-			{ status: 400 }
-		);
-	}
+	const intentApproved = intentDecision ? isLeadBookingIntentApproved(intentDecision) : false;
 
 	const normalizedEmail = normalizeEmailAddress(parseResult.data.email);
 	if (!normalizedEmail) {
-		return json(
+		return allowedJson(
 			{ success: false, message: 'Please provide a valid email address.' },
-			{ status: 400 }
+			{ status: 400 },
+			allowedOrigin || undefined
 		);
 	}
 
@@ -224,6 +212,11 @@ export const POST: RequestHandler = async ({ request, url }) => {
 		eventType: 'form_submitted',
 		eventSource: WEBFLOW_EVENT_SOURCE,
 		eventPayload: {
+			attribution: {
+				page_path: pagePath,
+				page_slug: pageSlug,
+				campaign_page_id: campaignContext.campaignPageId
+			},
 			form: {
 				email: normalizedEmail,
 				full_name: parseResult.data.name ?? '',
@@ -233,12 +226,28 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				form_type: 'webflow_lead_intake'
 			},
 			qualification: intentDecision,
+			intent_approved: intentApproved,
 			booking_surface: WEBFLOW_SURFACE
 		}
 	});
 
-	return json({
-		success: true,
-		message: 'Thank you. Woody will review your request and respond by email shortly.'
-	});
+	if (intentApproved) {
+		try {
+			await sendBookingLinkInviteEmailForLeadSubmission({ leadJourneyId: journey.id });
+		} catch (emailError) {
+			console.error('webflow_woody_booking_link_invite_failed', {
+				lead_journey_id: journey.id,
+				error: emailError instanceof Error ? emailError.message : 'unknown_email_error'
+			});
+		}
+	}
+
+	return allowedJson(
+		{
+			success: true,
+			message: 'Thank you. Your request has been received and we will respond by email shortly.'
+		},
+		{},
+		allowedOrigin || undefined
+	);
 };
