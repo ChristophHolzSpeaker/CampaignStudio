@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	type HeaderRoute = '/campaigns' | '/admin/prompts' | '/campaigns/analytics' | '/admin/bookings';
+	type HeaderRoute =
+		| '/campaigns'
+		| '/admin/prompts'
+		| '/admin/leads'
+		| '/campaigns/analytics'
+		| '/admin/bookings';
 	type CurrentUser = {
 		id: string;
 		displayName: string;
@@ -12,6 +17,7 @@
 	const navLinks: { label: string; href: HeaderRoute }[] = [
 		{ label: 'Campaigns', href: '/campaigns' },
 		{ label: 'Prompt Library', href: '/admin/prompts' },
+		{ label: 'Leads', href: '/admin/leads' },
 		{ label: 'Analytics', href: '/campaigns/analytics' },
 		{ label: 'Settings', href: '/admin/bookings' }
 	];
