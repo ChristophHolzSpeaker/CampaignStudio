@@ -11,7 +11,12 @@ import {
 import { resolveInboundJourney } from '../journeys/resolve-inbound-journey';
 import { runAutoresponsePipeline, type RunAutoresponseStatus } from '../inbound/run-autoresponse';
 import type { GmailMessage } from './client';
+import { gmailEnsureLabel, gmailModifyMessage } from './client';
 import { normalizeGmailMessage } from './messages';
+
+const WOODY_PROCESSED_LABEL_NAME = 'WOODY_PROCESSED';
+const WOODY_RESPONDED_LABEL_NAME = 'WOODY_RESPONDED';
+const ensuredLabelIdByUserAndName = new Map<string, string>();
 
 type ExistingLeadMessageRow = {
 	id: string;
@@ -73,6 +78,76 @@ async function findMessageByProviderId(
 	});
 
 	return selectOne<ExistingLeadMessageRow>(env, 'lead_messages', query);
+}
+
+async function resolveOrCreateLabelId(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		labelName: string;
+	}
+): Promise<string> {
+	const cacheKey = `${params.gmailUser}:${params.labelName}`;
+	const cached = ensuredLabelIdByUserAndName.get(cacheKey);
+	if (cached) {
+		return cached;
+	}
+
+	const label = await gmailEnsureLabel(env, {
+		gmailUser: params.gmailUser,
+		name: params.labelName
+	});
+
+	ensuredLabelIdByUserAndName.set(cacheKey, label.id);
+	return label.id;
+}
+
+async function applyInboundProcessingLabels(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		providerMessageId: string;
+		markResponded: boolean;
+	}
+): Promise<void> {
+	const labelNames = params.markResponded
+		? [WOODY_PROCESSED_LABEL_NAME, WOODY_RESPONDED_LABEL_NAME]
+		: [WOODY_PROCESSED_LABEL_NAME];
+
+	const addLabelIds: string[] = [];
+	for (const labelName of labelNames) {
+		const labelId = await resolveOrCreateLabelId(env, {
+			gmailUser: params.gmailUser,
+			labelName
+		});
+		addLabelIds.push(labelId);
+	}
+
+	await gmailModifyMessage(env, {
+		gmailUser: params.gmailUser,
+		messageId: params.providerMessageId,
+		addLabelIds: [...new Set(addLabelIds)]
+	});
+}
+
+async function applyInboundProcessingLabelsSafely(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		providerMessageId: string;
+		markResponded: boolean;
+	}
+): Promise<void> {
+	try {
+		await applyInboundProcessingLabels(env, params);
+	} catch (error) {
+		console.warn('gmail_inbound_labeling_failed', {
+			gmail_user: params.gmailUser,
+			provider_message_id: params.providerMessageId,
+			mark_responded: params.markResponded,
+			error: error instanceof Error ? error.message : 'unknown'
+		});
+	}
 }
 
 function mapDecisionEventType(decision: AutoResponseDecision): LegacyEventType {
@@ -305,6 +380,12 @@ export async function processInboundGmailMessage(
 
 	const existing = await findMessageByProviderId(env, normalized.provider_message_id);
 	if (existing) {
+		await applyInboundProcessingLabelsSafely(env, {
+			gmailUser: params.gmailUser,
+			providerMessageId: normalized.provider_message_id,
+			markResponded: false
+		});
+
 		return {
 			status: 'duplicate_ignored',
 			lead_journey_id: existing.lead_journey_id,
@@ -574,6 +655,17 @@ export async function processInboundGmailMessage(
 		},
 		campaign_id: journeyResolution.campaign_id,
 		campaign_page_id: journeyResolution.campaign_page_id
+	});
+
+	const markResponded =
+		autoresponse.status === 'sent_successfully' ||
+		autoresponse.status === 'already_responded' ||
+		decision.auto_response_decision === 'do_not_autorespond_already_sent';
+
+	await applyInboundProcessingLabelsSafely(env, {
+		gmailUser: params.gmailUser,
+		providerMessageId: normalized.provider_message_id,
+		markResponded
 	});
 
 	return {

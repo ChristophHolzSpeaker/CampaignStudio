@@ -65,6 +65,18 @@ export type GmailHistoryListResponse = {
 	nextPageToken?: string;
 };
 
+export type GmailLabel = {
+	id: string;
+	name: string;
+	type?: 'system' | 'user';
+	messageListVisibility?: 'show' | 'hide';
+	labelListVisibility?: 'labelShow' | 'labelShowIfUnread' | 'labelHide';
+};
+
+export type GmailLabelListResponse = {
+	labels?: GmailLabel[];
+};
+
 export class GmailApiError extends Error {
 	status: number;
 	body: unknown;
@@ -190,6 +202,73 @@ export async function gmailGetMessage(
 		{
 			method: 'GET',
 			query
+		}
+	);
+}
+
+export async function gmailListLabels(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+	}
+): Promise<GmailLabelListResponse> {
+	return gmailRequest<GmailLabelListResponse>(env, params.gmailUser, '/users/me/labels', {
+		method: 'GET'
+	});
+}
+
+export async function gmailCreateLabel(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		name: string;
+	}
+): Promise<GmailLabel> {
+	return gmailRequest<GmailLabel>(env, params.gmailUser, '/users/me/labels', {
+		method: 'POST',
+		body: {
+			name: params.name,
+			labelListVisibility: 'labelShow',
+			messageListVisibility: 'show'
+		}
+	});
+}
+
+export async function gmailEnsureLabel(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		name: string;
+	}
+): Promise<GmailLabel> {
+	const existing = await gmailListLabels(env, { gmailUser: params.gmailUser });
+	const match = existing.labels?.find((label) => label.name === params.name);
+	if (match) {
+		return match;
+	}
+
+	return gmailCreateLabel(env, params);
+}
+
+export async function gmailModifyMessage(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		messageId: string;
+		addLabelIds?: string[];
+		removeLabelIds?: string[];
+	}
+): Promise<{ id: string; threadId: string; labelIds?: string[] }> {
+	return gmailRequest<{ id: string; threadId: string; labelIds?: string[] }>(
+		env,
+		params.gmailUser,
+		`/users/me/messages/${encodeURIComponent(params.messageId)}/modify`,
+		{
+			method: 'POST',
+			body: {
+				addLabelIds: params.addLabelIds ?? [],
+				removeLabelIds: params.removeLabelIds ?? []
+			}
 		}
 	);
 }

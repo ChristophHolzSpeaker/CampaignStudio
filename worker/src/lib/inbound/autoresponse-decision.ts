@@ -4,8 +4,13 @@ import type { InboundClassificationResult } from './classify-message';
 
 type LeadJourneyAutoresponseState = {
 	id: string;
+	contact_email: string | null;
 	auto_response_sent_at: string | null;
 	auto_response_message_id: string | null;
+};
+
+type ExistingRespondedJourneyRow = {
+	id: string;
 };
 
 export type AutoResponseDecision =
@@ -30,12 +35,31 @@ async function loadJourneyResponseState(
 	leadJourneyId: string
 ): Promise<LeadJourneyAutoresponseState | null> {
 	const query = new URLSearchParams({
-		select: 'id,auto_response_sent_at,auto_response_message_id',
+		select: 'id,contact_email,auto_response_sent_at,auto_response_message_id',
 		id: `eq.${leadJourneyId}`,
 		limit: '1'
 	});
 
 	return selectOne<LeadJourneyAutoresponseState>(env, 'lead_journeys', query);
+}
+
+async function loadExistingRespondedJourneyByContact(
+	env: WorkerEnv,
+	params: {
+		excludeJourneyId: string;
+		contactEmail: string;
+	}
+): Promise<ExistingRespondedJourneyRow | null> {
+	const query = new URLSearchParams({
+		select: 'id',
+		id: `neq.${params.excludeJourneyId}`,
+		contact_email: `eq.${params.contactEmail}`,
+		or: '(auto_response_sent_at.not.is.null,auto_response_message_id.not.is.null)',
+		order: 'updated_at.desc',
+		limit: '1'
+	});
+
+	return selectOne<ExistingRespondedJourneyRow>(env, 'lead_journeys', query);
 }
 
 export async function evaluateInboundAutoResponseDecision(
@@ -74,6 +98,25 @@ export async function evaluateInboundAutoResponseDecision(
 			lead_journey_id: input.lead_journey_id,
 			lead_message_id: input.lead_message_id
 		};
+	}
+
+	if (journey.contact_email) {
+		const existingRespondedJourney = await loadExistingRespondedJourneyByContact(env, {
+			excludeJourneyId: input.lead_journey_id,
+			contactEmail: journey.contact_email
+		});
+
+		if (existingRespondedJourney) {
+			return {
+				classification: input.classification?.classification ?? null,
+				classification_confidence: input.classification?.classification_confidence ?? null,
+				auto_response_decision: 'do_not_autorespond_already_sent',
+				eligible_for_autoresponse: false,
+				skipped_reason: 'already_sent',
+				lead_journey_id: input.lead_journey_id,
+				lead_message_id: input.lead_message_id
+			};
+		}
 	}
 
 	if (!input.classification || input.classification.classification === 'uncertain') {

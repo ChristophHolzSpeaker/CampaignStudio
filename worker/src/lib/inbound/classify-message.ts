@@ -40,6 +40,16 @@ const NEGATIVE_SIGNALS = [
 	'newsletter'
 ] as const;
 
+const GRATITUDE_SIGNALS = [
+	'thank you',
+	'thanks',
+	'thx',
+	'much appreciated',
+	'appreciate it'
+] as const;
+
+const CLOSURE_SIGNALS = ['got it', 'sounds good', 'perfect', 'great, thanks', 'all good'] as const;
+
 function countMatches(text: string, signals: readonly string[]): number {
 	let count = 0;
 	for (const signal of signals) {
@@ -64,6 +74,25 @@ export function classifyInboundMessage(
 
 	const positiveCount = countMatches(text, POSITIVE_SIGNALS);
 	const negativeCount = countMatches(text, NEGATIVE_SIGNALS);
+	const gratitudeCount = countMatches(text, GRATITUDE_SIGNALS);
+	const closureCount = countMatches(text, CLOSURE_SIGNALS);
+	const hasQuestion = text.includes('?');
+
+	if (gratitudeCount > 0 && !hasQuestion && positiveCount <= 2) {
+		return {
+			classification: 'not_speaking_inquiry',
+			classification_confidence: 0.88,
+			reason: 'gratitude_acknowledgement'
+		};
+	}
+
+	if (closureCount > 0 && !hasQuestion && positiveCount <= 1) {
+		return {
+			classification: 'not_speaking_inquiry',
+			classification_confidence: 0.82,
+			reason: 'closure_acknowledgement'
+		};
+	}
 
 	if (negativeCount > 0 && positiveCount === 0) {
 		return {
