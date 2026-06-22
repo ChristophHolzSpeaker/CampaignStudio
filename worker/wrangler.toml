@@ -5,8 +5,8 @@ compatibility_date = "2026-04-14"
 # Local defaults for `wrangler dev`.
 # Sensitive values come from `worker/.dev.vars`.
 [vars]
-BOOKING_BASE_URL = "https://campaignstudio-attribution-worker-staging.speaker.workers.dev"
-BOOKING_CALENDAR_ID = "podcast@christophholz.com"
+BOOKING_BASE_URL = "https://speaker.christophholz.com"
+BOOKING_CALENDAR_ID = "speaker@christophholz.com"
 BOOKING_LINK_TTL_SECONDS = "2592000"
 
 [triggers]
@@ -42,8 +42,8 @@ persist = true
 head_sampling_rate = 1
 
 [env.production.vars]
-BOOKING_BASE_URL = "https://campaignstudio-attribution-worker.speaker.workers.dev"
-BOOKING_CALENDAR_ID = "podcast@christophholz.com"
+BOOKING_BASE_URL = "https://speaker.christophholz.com"
+BOOKING_CALENDAR_ID = "speaker@christophholz.com"
 BOOKING_LINK_TTL_SECONDS = "2592000"
 
 [env.production.triggers]

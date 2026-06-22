@@ -32,6 +32,11 @@ vi.mock('../inbound/run-autoresponse', () => ({
 	runAutoresponsePipeline: vi.fn()
 }));
 
+vi.mock('./client', () => ({
+	gmailEnsureLabel: vi.fn(),
+	gmailModifyMessage: vi.fn()
+}));
+
 import { insertOne, selectOne, updateMany, upsertOne } from '../db';
 import { resolveInboundJourney } from '../journeys/resolve-inbound-journey';
 import { normalizeGmailMessage } from './messages';
@@ -39,6 +44,7 @@ import { isInternalSender } from '../email/internal-senders';
 import { classifyInboundMessage } from '../inbound/classify-message';
 import { evaluateInboundAutoResponseDecision } from '../inbound/autoresponse-decision';
 import { runAutoresponsePipeline } from '../inbound/run-autoresponse';
+import { gmailEnsureLabel, gmailModifyMessage } from './client';
 import { processInboundGmailMessage } from './process-inbound-message';
 
 const mockedInsertOne = vi.mocked(insertOne);
@@ -51,6 +57,8 @@ const mockedIsInternalSender = vi.mocked(isInternalSender);
 const mockedClassifyInboundMessage = vi.mocked(classifyInboundMessage);
 const mockedEvaluateInboundAutoResponseDecision = vi.mocked(evaluateInboundAutoResponseDecision);
 const mockedRunAutoresponsePipeline = vi.mocked(runAutoresponsePipeline);
+const mockedGmailEnsureLabel = vi.mocked(gmailEnsureLabel);
+const mockedGmailModifyMessage = vi.mocked(gmailModifyMessage);
 
 function sampleNormalizedInbound() {
 	return {
@@ -83,6 +91,8 @@ describe('processInboundGmailMessage', () => {
 		mockedClassifyInboundMessage.mockReset();
 		mockedEvaluateInboundAutoResponseDecision.mockReset();
 		mockedRunAutoresponsePipeline.mockReset();
+		mockedGmailEnsureLabel.mockReset();
+		mockedGmailModifyMessage.mockReset();
 		mockedRunAutoresponsePipeline.mockResolvedValue({
 			status: 'skipped_not_eligible',
 			lead_journey_id: 'journey_1',
@@ -95,6 +105,13 @@ describe('processInboundGmailMessage', () => {
 			generation_status: null,
 			send_status: null
 		});
+		mockedGmailEnsureLabel.mockImplementation(async (_env, params) => {
+			if (params.name === 'WOODY_RESPONDED') {
+				return { id: 'label_responded', name: params.name } as never;
+			}
+			return { id: 'label_processed', name: params.name } as never;
+		});
+		mockedGmailModifyMessage.mockResolvedValue({ id: 'msg_123', threadId: 'thread_456' } as never);
 	});
 
 	it('returns invalid_message when normalization fails', async () => {
@@ -141,6 +158,7 @@ describe('processInboundGmailMessage', () => {
 		expect(result.status).toBe('duplicate_ignored');
 		expect(result.matched_by).toBe('duplicate');
 		expect(mockedResolveInboundJourney).not.toHaveBeenCalled();
+		expect(mockedGmailModifyMessage).toHaveBeenCalledTimes(1);
 	});
 
 	it('returns invalid_sender_email when sender is missing', async () => {
@@ -188,6 +206,18 @@ describe('processInboundGmailMessage', () => {
 
 	it('processes inbound message and logs classification + decision events', async () => {
 		mockedNormalizeGmailMessage.mockReturnValue(sampleNormalizedInbound());
+		mockedRunAutoresponsePipeline.mockResolvedValueOnce({
+			status: 'sent_successfully',
+			lead_journey_id: 'journey_1',
+			inbound_lead_message_id: 'lead_message_1',
+			outbound_lead_message_id: 'outbound_1',
+			booking_link_id: 'booking_1',
+			provider_message_id: 'provider_out_1',
+			provider_thread_id: 'thread_456',
+			skipped_reason: null,
+			generation_status: 'success',
+			send_status: 'sent'
+		});
 		mockedSelectOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ language: 'German' });
 		mockedResolveInboundJourney.mockResolvedValue({
 			lead_journey_id: 'journey_1',
@@ -228,6 +258,14 @@ describe('processInboundGmailMessage', () => {
 		);
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
 		expect(mockedInsertOne).toHaveBeenCalledTimes(4);
+		expect(mockedGmailModifyMessage).toHaveBeenCalledTimes(1);
+		expect(mockedGmailModifyMessage).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({
+				messageId: 'msg_123',
+				addLabelIds: ['label_processed', 'label_responded']
+			})
+		);
 
 		const eventTypes = mockedInsertOne.mock.calls.map(
 			(call) => (call[2] as { event_type?: string }).event_type
@@ -362,6 +400,7 @@ describe('processInboundGmailMessage', () => {
 		expect(result.auto_response_decision).toBe('do_not_autorespond_internal_sender');
 		expect(mockedClassifyInboundMessage).not.toHaveBeenCalled();
 		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledTimes(1);
+		expect(mockedGmailModifyMessage).toHaveBeenCalledTimes(1);
 
 		const eventTypes = mockedInsertOne.mock.calls.map(
 			(call) => (call[2] as { event_type?: string }).event_type

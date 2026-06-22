@@ -38,7 +38,26 @@ describe('classify inbound message', () => {
 			body_text: 'Thanks'
 		});
 
-		expect(result.classification).toBe('uncertain');
-		expect(result.reason).toBe('insufficient_signal');
+		expect(result.classification).toBe('not_speaking_inquiry');
+		expect(result.reason).toBe('gratitude_acknowledgement');
+	});
+
+	it('classifies gratitude follow-up replies as non-inquiry', () => {
+		const result = classifyInboundMessage({
+			subject: 'Re: speaking inquiry',
+			body_text: 'Thank you, sounds good.'
+		});
+
+		expect(result.classification).toBe('not_speaking_inquiry');
+		expect(result.reason).toBe('gratitude_acknowledgement');
+	});
+
+	it('keeps question-based follow-up as speaking inquiry when asking for details', () => {
+		const result = classifyInboundMessage({
+			subject: 'Re: keynote request',
+			body_text: 'Thanks. Can you share your availability and fee?'
+		});
+
+		expect(result.classification).toBe('speaking_inquiry');
 	});
 });

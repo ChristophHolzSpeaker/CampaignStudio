@@ -8,8 +8,12 @@ vi.mock('./auth', () => ({
 import { getGmailAccessToken } from './auth';
 import {
 	GmailApiError,
+	gmailCreateLabel,
+	gmailEnsureLabel,
 	gmailGetMessage,
 	gmailListHistory,
+	gmailListLabels,
+	gmailModifyMessage,
 	gmailSendMessage,
 	gmailStop,
 	gmailWatch,
@@ -129,6 +133,95 @@ describe('gmail client', () => {
 		const calledUrl = String(fetchSpy.mock.calls[0]?.[0]);
 		expect(calledUrl).toContain('/users/me/stop');
 		expect(fetchSpy.mock.calls[0]?.[1]?.method).toBe('POST');
+	});
+
+	it('lists labels for mailbox', async () => {
+		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			new Response(JSON.stringify({ labels: [{ id: 'Label_1', name: 'WOODY_PROCESSED' }] }), {
+				status: 200
+			})
+		);
+
+		const response = await gmailListLabels(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com'
+		});
+
+		expect(response.labels?.[0]?.name).toBe('WOODY_PROCESSED');
+		const calledUrl = String(fetchSpy.mock.calls[0]?.[0]);
+		expect(calledUrl).toContain('/users/me/labels');
+	});
+
+	it('creates user label for mailbox', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValue(
+				new Response(JSON.stringify({ id: 'Label_1', name: 'WOODY_PROCESSED' }), { status: 200 })
+			);
+
+		const label = await gmailCreateLabel(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			name: 'WOODY_PROCESSED'
+		});
+
+		expect(label.id).toBe('Label_1');
+		const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+		expect(body).toEqual({
+			name: 'WOODY_PROCESSED',
+			labelListVisibility: 'labelShow',
+			messageListVisibility: 'show'
+		});
+	});
+
+	it('ensures label returns existing label without creating', async () => {
+		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			new Response(JSON.stringify({ labels: [{ id: 'Label_99', name: 'WOODY_PROCESSED' }] }), {
+				status: 200
+			})
+		);
+
+		const label = await gmailEnsureLabel(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			name: 'WOODY_PROCESSED'
+		});
+
+		expect(label.id).toBe('Label_99');
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it('ensures label creates when missing', async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, 'fetch')
+			.mockResolvedValueOnce(new Response(JSON.stringify({ labels: [] }), { status: 200 }))
+			.mockResolvedValueOnce(
+				new Response(JSON.stringify({ id: 'Label_101', name: 'WOODY_RESPONDED' }), { status: 200 })
+			);
+
+		const label = await gmailEnsureLabel(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			name: 'WOODY_RESPONDED'
+		});
+
+		expect(label.id).toBe('Label_101');
+		expect(fetchSpy).toHaveBeenCalledTimes(2);
+	});
+
+	it('modifies message labels', async () => {
+		const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+			new Response(JSON.stringify({ id: 'm1', threadId: 't1', labelIds: ['Label_1'] }), {
+				status: 200
+			})
+		);
+
+		await gmailModifyMessage(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			messageId: 'm/1',
+			addLabelIds: ['Label_1']
+		});
+
+		const calledUrl = String(fetchSpy.mock.calls[0]?.[0]);
+		expect(calledUrl).toContain('/users/me/messages/m%2F1/modify');
+		const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+		expect(body).toEqual({ addLabelIds: ['Label_1'], removeLabelIds: [] });
 	});
 
 	it('throws GmailApiError with parsed response body on non-2xx', async () => {
