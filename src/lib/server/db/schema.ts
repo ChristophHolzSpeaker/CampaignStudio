@@ -646,6 +646,27 @@ export const lead_messages = pgTable(
 	})
 );
 
+export const public_api_rate_limits = pgTable(
+	'public_api_rate_limits',
+	{
+		id: serial('id').primaryKey(),
+		token_fingerprint: text('token_fingerprint').notNull(),
+		window_name: text('window_name').notNull(),
+		window_start: timestamp('window_start').notNull(),
+		request_count: integer('request_count').notNull().default(0),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		windowUniqueIdx: uniqueIndex('public_api_rate_limits_window_unique_idx').on(
+			table.token_fingerprint,
+			table.window_name,
+			table.window_start
+		),
+		windowStartIdx: index('public_api_rate_limits_window_start_idx').on(table.window_start)
+	})
+);
+
 export const prompts = pgTable('prompts', {
 	id: serial('id').primaryKey(),
 	name: text('name').notNull(),
