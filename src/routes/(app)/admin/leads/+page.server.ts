@@ -168,12 +168,13 @@ function toDateOrNull(value: Date | string | null | undefined): Date | null {
 	return value instanceof Date ? value : new Date(value);
 }
 
-function latestDate(...values: Array<Date | null | undefined>): Date | null {
+function latestDate(...values: Array<Date | string | null | undefined>): Date | null {
 	let latest: Date | null = null;
 	for (const value of values) {
-		if (!value) continue;
-		if (!latest || value.getTime() > latest.getTime()) {
-			latest = value;
+		const date = toDateOrNull(value);
+		if (!date || Number.isNaN(date.getTime())) continue;
+		if (!latest || date.getTime() > latest.getTime()) {
+			latest = date;
 		}
 	}
 	return latest;
@@ -363,8 +364,8 @@ export const load: PageServerLoad = async ({ url }) => {
 		const enriched = enrichedById.get(row.id);
 		const messageStats = messageStatsById.get(row.id);
 		const eventStats = eventStatsById.get(row.id);
-		const lastMessageAt = messageStats?.lastMessageAt ?? null;
-		const lastEventAt = eventStats?.lastEventAt ?? null;
+		const lastMessageAt = toDateOrNull(messageStats?.lastMessageAt);
+		const lastEventAt = toDateOrNull(eventStats?.lastEventAt);
 		const latestActivityAt = latestDate(row.updatedAt, lastMessageAt, lastEventAt);
 
 		return {
@@ -481,17 +482,17 @@ export const load: PageServerLoad = async ({ url }) => {
 				.orderBy(desc(lead_events.occurred_at))
 		]);
 
-			selectedJourney = {
-				...base!,
-				messages: messageRows.map((row) => ({
-					...row,
-					timestamp: toDateOrNull(row.timestamp) ?? row.createdAt
-				})),
-				events: eventRows.map((row) => ({
-					...row,
-					eventPayload: row.eventPayload as Record<string, unknown>
-				}))
-			};
+		selectedJourney = {
+			...base!,
+			messages: messageRows.map((row) => ({
+				...row,
+				timestamp: toDateOrNull(row.timestamp) ?? row.createdAt
+			})),
+			events: eventRows.map((row) => ({
+				...row,
+				eventPayload: row.eventPayload as Record<string, unknown>
+			}))
+		};
 	}
 
 	return {
