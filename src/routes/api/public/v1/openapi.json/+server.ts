@@ -1,4 +1,5 @@
-import { publicApiJson, requirePublicApiRequest } from '$lib/server/public-api/http';
+import { publicApiJson, requirePublicApiReadOrWriteRequest } from '$lib/server/public-api/http';
+import { pageSectionTypes } from '$lib/page-builder/sections';
 import { eventSources, eventTypes } from '../../../../../../shared/event-types';
 import type { RequestHandler } from './$types';
 
@@ -22,6 +23,56 @@ const openApiDocument = {
 			'Read-only API for trusted agents to inspect lead journeys, lead messages, and lead events. Responses may contain PII and full email bodies.'
 	},
 	paths: {
+		'/api/public/v1/page-sections/schema': {
+			get: {
+				summary: 'Get landing page section schemas',
+				description:
+					'Returns the Campaign Studio landing page document JSON schema, available section types, section usage guidance, and each section props schema.',
+				security,
+				responses: {
+					'200': {
+						description: 'Landing page section schema catalog',
+						content: {
+							'application/json': {
+								schema: { $ref: '#/components/schemas/PageSectionsSchemaResponse' }
+							}
+						}
+					},
+					'401': errorResponse,
+					'429': errorResponse
+				}
+			}
+		},
+		'/api/public/v1/campaigns': {
+			post: {
+				summary: 'Create campaign with supplied landing page JSON',
+				description:
+					'Creates a draft campaign and campaign page directly from caller-supplied structured content. This skips the Campaign Studio generation pipeline and requires the campaign write bearer token.',
+				security,
+				requestBody: {
+					required: true,
+					content: {
+						'application/json': {
+							schema: { $ref: '#/components/schemas/CampaignCreateRequest' }
+						}
+					}
+				},
+				responses: {
+					'201': {
+						description: 'Created campaign and draft campaign page',
+						content: {
+							'application/json': {
+								schema: { $ref: '#/components/schemas/CampaignCreateResponse' }
+							}
+						}
+					},
+					'400': errorResponse,
+					'401': errorResponse,
+					'429': errorResponse,
+					'500': errorResponse
+				}
+			}
+		},
 		'/api/public/v1/lead-journeys': {
 			get: {
 				summary: 'List lead journeys',
@@ -197,6 +248,100 @@ const openApiDocument = {
 					error: { type: 'string' }
 				}
 			},
+			PageSectionsSchemaResponse: {
+				type: 'object',
+				required: ['ok', 'data'],
+				properties: {
+					ok: { type: 'boolean', const: true },
+					data: {
+						type: 'object',
+						required: ['contentJsonSchema', 'sectionTypes', 'sections'],
+						properties: {
+							contentJsonSchema: { type: 'object', additionalProperties: true },
+							sectionTypes: { type: 'array', items: { type: 'string', enum: pageSectionTypes } },
+							sections: { type: 'array', items: { $ref: '#/components/schemas/SectionSpec' } }
+						}
+					}
+				}
+			},
+			SectionSpec: {
+				type: 'object',
+				required: [
+					'type',
+					'label',
+					'description',
+					'whenToUse',
+					'whenNotToUse',
+					'contentGuidance',
+					'propsSchema'
+				],
+				properties: {
+					type: { type: 'string', enum: pageSectionTypes },
+					label: { type: 'string' },
+					description: { type: 'string' },
+					whenToUse: { type: 'array', items: { type: 'string' } },
+					whenNotToUse: { type: 'array', items: { type: 'string' } },
+					contentGuidance: { type: 'array', items: { type: 'string' } },
+					propsSchema: { type: 'object', additionalProperties: true }
+				}
+			},
+			CampaignCreateRequest: {
+				type: 'object',
+				required: ['campaign', 'content_json'],
+				properties: {
+					campaign: { $ref: '#/components/schemas/CampaignInput' },
+					content_json: { $ref: '#/components/schemas/LandingPageDocument' },
+					change_note: { type: 'string', maxLength: 500 }
+				},
+				additionalProperties: false
+			},
+			CampaignInput: {
+				type: 'object',
+				required: ['name', 'audience', 'format', 'topic', 'language', 'geography'],
+				properties: {
+					name: { type: 'string', minLength: 2, maxLength: 120 },
+					audience: { type: 'string', minLength: 2, maxLength: 120 },
+					format: { type: 'string', minLength: 2, maxLength: 120 },
+					topic: { type: 'string', minLength: 2, maxLength: 120 },
+					language: { type: 'string', minLength: 2, maxLength: 120 },
+					geography: { type: 'string', minLength: 2, maxLength: 120 },
+					notes: { type: 'string', maxLength: 2000 }
+				},
+				additionalProperties: false
+			},
+			LandingPageDocument: {
+				type: 'object',
+				required: ['version', 'title', 'sections'],
+				properties: {
+					version: { type: 'integer', const: 1 },
+					title: { type: 'string', minLength: 1 },
+					slug: { type: 'string', minLength: 1 },
+					sections: {
+						type: 'array',
+						minItems: 1,
+						items: { type: 'object', additionalProperties: true }
+					}
+				},
+				additionalProperties: false
+			},
+			CampaignCreateResponse: {
+				type: 'object',
+				required: ['ok', 'data'],
+				properties: {
+					ok: { type: 'boolean', const: true },
+					data: {
+						type: 'object',
+						required: ['campaignId', 'campaignPageId', 'pageSlug', 'campaignUrl', 'previewUrl'],
+						properties: {
+							campaignId: { type: 'integer', minimum: 1 },
+							campaignPageId: { type: 'integer', minimum: 1 },
+							pageSlug: { type: 'string' },
+							campaignUrl: { type: 'string' },
+							previewUrl: { type: 'string' }
+						}
+					}
+				}
+			},
 			Pagination: {
 				type: 'object',
 				properties: {
@@ -225,7 +370,7 @@ const openApiDocument = {
 };
 
 export const GET: RequestHandler = async ({ request }) => {
-	const guard = await requirePublicApiRequest(request);
+	const guard = await requirePublicApiReadOrWriteRequest(request);
 	if (!guard.ok) return guard.response;
 
 	return publicApiJson(openApiDocument, guard.context);
