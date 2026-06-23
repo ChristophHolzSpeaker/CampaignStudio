@@ -1,20 +1,25 @@
 import { json } from '@sveltejs/kit';
-import { authenticatePublicApiRequest } from './auth';
+import { authenticateAnyPublicApiRequest, authenticatePublicApiRequest } from './auth';
 import { enforcePublicApiRateLimit, rateLimitHeaders, rateLimitResponse } from './rate-limit';
+
+type PublicApiRequestScope = 'lead-read' | 'campaign-write';
 
 export type PublicApiContext = {
 	tokenFingerprint: string;
 	rateLimitHeaders: HeadersInit;
 };
 
-export async function requirePublicApiRequest(request: Request): Promise<
+async function requireScopedPublicApiRequest(
+	request: Request,
+	scope: PublicApiRequestScope
+): Promise<
 	| { ok: true; context: PublicApiContext }
 	| {
 			ok: false;
 			response: Response;
 	  }
 > {
-	const auth = authenticatePublicApiRequest(request);
+	const auth = authenticatePublicApiRequest(request, scope);
 	if (!auth.ok) {
 		return {
 			ok: false,
@@ -34,6 +39,41 @@ export async function requirePublicApiRequest(request: Request): Promise<
 			rateLimitHeaders: rateLimitHeaders(rateLimit)
 		}
 	};
+}
+
+async function requireAnyScopedPublicApiRequest(request: Request, scopes: PublicApiRequestScope[]) {
+	const auth = authenticateAnyPublicApiRequest(request, scopes);
+	if (!auth.ok) {
+		return {
+			ok: false as const,
+			response: json({ ok: false, error: auth.message }, { status: auth.status })
+		};
+	}
+
+	const rateLimit = await enforcePublicApiRateLimit(auth.tokenFingerprint);
+	if (!rateLimit.ok) {
+		return { ok: false as const, response: rateLimitResponse(rateLimit) };
+	}
+
+	return {
+		ok: true as const,
+		context: {
+			tokenFingerprint: auth.tokenFingerprint,
+			rateLimitHeaders: rateLimitHeaders(rateLimit)
+		}
+	};
+}
+
+export async function requirePublicApiRequest(request: Request) {
+	return requireScopedPublicApiRequest(request, 'lead-read');
+}
+
+export async function requirePublicApiWriteRequest(request: Request) {
+	return requireScopedPublicApiRequest(request, 'campaign-write');
+}
+
+export async function requirePublicApiReadOrWriteRequest(request: Request) {
+	return requireAnyScopedPublicApiRequest(request, ['lead-read', 'campaign-write']);
 }
 
 export function publicApiJson(data: unknown, context: PublicApiContext, init: ResponseInit = {}) {
