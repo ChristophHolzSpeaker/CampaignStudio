@@ -174,7 +174,11 @@
 		</button>
 	{/if}
 	<div class="absolute inset-0 -z-20">
-		<img class="h-full w-full object-cover grayscale" src={heroImageUrl} alt={heroImageAlt} />
+		<div
+			class="hero-background h-full w-full bg-cover bg-center grayscale"
+			style:--hero-image-url={heroImageUrl ? `url(${JSON.stringify(heroImageUrl)})` : undefined}
+			aria-hidden="true"
+		></div>
 	</div>
 	<div
 		class="absolute inset-0 -z-10 bg-linear-to-r from-surface via-surface/94 to-surface/82"
@@ -292,3 +296,15 @@
 		{/if}
 	</div>
 </section>
+
+<style>
+	.hero-background {
+		background-image: none;
+	}
+
+	@media (min-width: 1024px) {
+		.hero-background {
+			background-image: var(--hero-image-url, none);
+		}
+	}
+</style>

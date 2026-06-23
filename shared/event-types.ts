@@ -54,6 +54,24 @@ export type LegacyEventType = (typeof legacyEventTypes)[number];
 export const eventTypes = [...analyticsEventTypes, ...legacyEventTypes] as const;
 export type EventType = AnalyticsEventType | LegacyEventType;
 
+export const eventSources = [
+	'sveltekit.frictionless_funnel_form',
+	'sveltekit.hero_inline_lead_booking_sequence',
+	'sveltekit.frictionless_funnel_inline_lead_booking_sequence',
+	'sveltekit.inline_lead_booking_sequence',
+	'sveltekit.book_lead_page',
+	'sveltekit.book_l_new_check',
+	'sveltekit.book_l_new_page',
+	'sveltekit.webflow_lead_intake',
+	'worker.track_cta',
+	'worker.email_inbound',
+	'worker.booking_link',
+	'worker.autoresponse',
+	'worker.gmail_send',
+	'worker.gmail_sync'
+] as const;
+export type EventSource = (typeof eventSources)[number];
+
 export const attributionStatuses = [
 	'parsed',
 	'missing_plus_address',

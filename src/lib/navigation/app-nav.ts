@@ -35,6 +35,11 @@ const baseCategories: readonly AppNavCategory[] = [
 				match: 'prefix'
 			},
 			{
+				label: 'Leads',
+				href: '/admin/leads',
+				match: 'prefix'
+			},
+			{
 				label: 'Bookings settings',
 				href: '/admin/bookings',
 				match: 'prefix'
