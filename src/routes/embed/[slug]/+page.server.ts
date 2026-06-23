@@ -8,6 +8,7 @@ import {
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
+import { verifyEmbedPreviewToken } from '$lib/server/public-api/embed-token';
 
 export const load: PageServerLoad = async ({ params, url }) => {
 	const slug = params.slug?.trim();
@@ -31,10 +32,22 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		throw error(404, 'Page not found');
 	}
 
+	const token = url.searchParams.get('token')?.trim() || null;
+	if (
+		!verifyEmbedPreviewToken({
+			campaignPageId: pageRecord.campaignPageId,
+			slug,
+			token
+		})
+	) {
+		throw error(404, 'Page not found');
+	}
+
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
 
 	return {
 		page,
+		slug,
 		campaignId: pageRecord.campaignId,
 		campaignPageId: pageRecord.campaignPageId,
 		speakerMailtoHref: buildSpeakerMailtoHref({
