@@ -20,12 +20,14 @@ export type DateWindow = {
 export type FunnelDailyPoint = {
 	reportDate: string;
 	visits: number;
+	bouncedVisits: number;
 	uniqueVisitors: number;
 	journeysCreated: number;
 	identifiedLeads: number;
 	inboundMessages: number;
 	bookingLinkClicked: number;
 	bookingsCompleted: number;
+	bounceRate: number;
 	visitToLeadRate: number;
 	leadToBookingRate: number;
 	visitToBookingRate: number;
@@ -33,9 +35,11 @@ export type FunnelDailyPoint = {
 
 export type OverviewKpis = {
 	visits: number;
+	bouncedVisits: number;
 	uniqueVisitors: number;
 	identifiedLeads: number;
 	bookingsCompleted: number;
+	bounceRate: number;
 	visitToLeadRate: number;
 	leadToBookingRate: number;
 	visitToBookingRate: number;
@@ -145,12 +149,14 @@ export async function getFunnelDaily(window: DateWindow): Promise<FunnelDailyPoi
 	return rows.map((row) => ({
 		reportDate: toDateLabel(row.report_date, window.from),
 		visits: toNumber(row.visits),
+		bouncedVisits: 0,
 		uniqueVisitors: toNumber(row.unique_visitors),
 		journeysCreated: toNumber(row.journeys_created),
 		identifiedLeads: toNumber(row.identified_leads),
 		inboundMessages: toNumber(row.inbound_messages),
 		bookingLinkClicked: toNumber(row.booking_link_clicked),
 		bookingsCompleted: toNumber(row.bookings_completed),
+		bounceRate: 0,
 		visitToLeadRate: row.visit_to_lead_rate ?? 0,
 		leadToBookingRate: row.lead_to_booking_rate ?? 0,
 		visitToBookingRate: row.visit_to_booking_rate ?? 0
@@ -161,6 +167,7 @@ export function buildOverviewKpis(funnelDaily: readonly FunnelDailyPoint[]): Ove
 	const totals = funnelDaily.reduce(
 		(acc, point) => {
 			acc.visits += point.visits;
+			acc.bouncedVisits += point.bouncedVisits;
 			acc.uniqueVisitors += point.uniqueVisitors;
 			acc.identifiedLeads += point.identifiedLeads;
 			acc.bookingsCompleted += point.bookingsCompleted;
@@ -169,6 +176,7 @@ export function buildOverviewKpis(funnelDaily: readonly FunnelDailyPoint[]): Ove
 		},
 		{
 			visits: 0,
+			bouncedVisits: 0,
 			uniqueVisitors: 0,
 			identifiedLeads: 0,
 			bookingsCompleted: 0
@@ -177,6 +185,7 @@ export function buildOverviewKpis(funnelDaily: readonly FunnelDailyPoint[]): Ove
 
 	return {
 		...totals,
+		bounceRate: ratio(totals.bouncedVisits, totals.visits),
 		visitToLeadRate: ratio(totals.identifiedLeads, totals.visits),
 		leadToBookingRate: ratio(totals.bookingsCompleted, totals.identifiedLeads),
 		visitToBookingRate: ratio(totals.bookingsCompleted, totals.visits)
@@ -308,6 +317,7 @@ export async function getCtaPerformance(): Promise<CtaPerformanceRow[]> {
 
 type CampaignDailyAccumulator = {
 	visits: number;
+	bouncedVisits: number;
 	uniqueVisitors: number;
 	journeysCreated: number;
 	identifiedLeads: number;
@@ -359,6 +369,7 @@ const getCampaignDailyAccumulator = (
 
 	const created: CampaignDailyAccumulator = {
 		visits: 0,
+		bouncedVisits: 0,
 		uniqueVisitors: 0,
 		journeysCreated: 0,
 		identifiedLeads: 0,
@@ -400,7 +411,8 @@ export async function getFunnelDailyByCampaign(
 			db
 				.select({
 					visitedAt: vw_visit_enriched.visited_at,
-					visitorIdentifier: vw_visit_enriched.visitor_identifier
+					visitorIdentifier: vw_visit_enriched.visitor_identifier,
+					bounced: vw_visit_enriched.bounced
 				})
 				.from(vw_visit_enriched)
 				.where(
@@ -478,6 +490,9 @@ export async function getFunnelDailyByCampaign(
 		const reportDate = toDateLabel(row.visitedAt, window.from);
 		const acc = getCampaignDailyAccumulator(byDate, reportDate);
 		acc.visits += 1;
+		if (row.bounced) {
+			acc.bouncedVisits += 1;
+		}
 
 		if (row.visitorIdentifier) {
 			const existingVisitors = uniqueVisitorsByDate.get(reportDate);
@@ -544,12 +559,14 @@ export async function getFunnelDailyByCampaign(
 		.map(([reportDate, acc]) => ({
 			reportDate,
 			visits: acc.visits,
+			bouncedVisits: acc.bouncedVisits,
 			uniqueVisitors: acc.uniqueVisitors,
 			journeysCreated: acc.journeysCreated,
 			identifiedLeads: acc.identifiedLeads,
 			inboundMessages: acc.inboundMessages,
 			bookingLinkClicked: acc.bookingLinkClicked,
 			bookingsCompleted: acc.bookingsCompleted,
+			bounceRate: ratio(acc.bouncedVisits, acc.visits),
 			visitToLeadRate: ratio(acc.identifiedLeads, acc.visits),
 			leadToBookingRate: ratio(acc.bookingsCompleted, acc.identifiedLeads),
 			visitToBookingRate: ratio(acc.bookingsCompleted, acc.visits)
