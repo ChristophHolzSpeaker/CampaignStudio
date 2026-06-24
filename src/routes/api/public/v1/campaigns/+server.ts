@@ -3,7 +3,13 @@ import {
 	createCampaignFromPublicApi,
 	publicCampaignCreateRequestSchema
 } from '$lib/server/public-api/campaign-create';
-import { publicApiJson, requirePublicApiWriteRequest } from '$lib/server/public-api/http';
+import { listPublicCampaignNavItems } from '$lib/server/public-api/campaign-nav';
+import { buildEmbedPreviewUrl } from '$lib/server/public-api/embed-token';
+import {
+	publicApiJson,
+	requirePublicApiReadOrWriteRequest,
+	requirePublicApiWriteRequest
+} from '$lib/server/public-api/http';
 import type { RequestHandler } from './$types';
 
 function validationErrorResponse(error: ZodError, context: Parameters<typeof publicApiJson>[1]) {
@@ -21,7 +27,25 @@ function validationErrorResponse(error: ZodError, context: Parameters<typeof pub
 	);
 }
 
-export const POST: RequestHandler = async ({ request }) => {
+export const GET: RequestHandler = async ({ request, url }) => {
+	const guard = await requirePublicApiReadOrWriteRequest(request);
+	if (!guard.ok) return guard.response;
+
+	try {
+		return publicApiJson(
+			{
+				ok: true,
+				data: await listPublicCampaignNavItems(url.origin)
+			},
+			guard.context
+		);
+	} catch (error) {
+		const message = error instanceof Error ? error.message : 'Failed to list campaigns';
+		return publicApiJson({ ok: false, error: message }, guard.context, { status: 500 });
+	}
+};
+
+export const POST: RequestHandler = async ({ request, url }) => {
 	const guard = await requirePublicApiWriteRequest(request);
 	if (!guard.ok) return guard.response;
 
@@ -41,6 +65,10 @@ export const POST: RequestHandler = async ({ request }) => {
 
 	try {
 		const result = await createCampaignFromPublicApi(parsed.data);
+		const embedUrl = buildEmbedPreviewUrl(url.origin, {
+			campaignPageId: result.campaignPageId,
+			slug: result.pageSlug
+		});
 
 		return publicApiJson(
 			{
@@ -50,7 +78,8 @@ export const POST: RequestHandler = async ({ request }) => {
 					campaignPageId: result.campaignPageId,
 					pageSlug: result.pageSlug,
 					campaignUrl: `/campaigns/${result.campaignId}`,
-					previewUrl: `/campaigns/${result.campaignId}/landing-page`
+					previewUrl: `/campaigns/${result.campaignId}/landing-page`,
+					embedUrl
 				}
 			},
 			guard.context,
