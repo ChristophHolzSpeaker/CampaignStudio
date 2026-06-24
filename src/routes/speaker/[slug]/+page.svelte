@@ -8,7 +8,7 @@
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
 	import { getSpeakerBookingSlotPreview } from './speaker-booking-slots.remote';
-	import { logSpeakerVisit } from './speaker.remote';
+	import { logSpeakerVisit, markSpeakerVisitEngaged } from './speaker.remote';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
 
 	type BookingSlotGroups = Array<{
@@ -30,10 +30,16 @@
 
 	const modal = $derived((page.state as App.PageState).modal);
 	const VISITOR_IDENTIFIER_KEY = 'cs_vid';
+	const ENGAGEMENT_THRESHOLD_MS = 10_000;
 
 	let bookingSlotGroups = $state<BookingSlotGroups | undefined>(undefined);
 	let bookingSlotsRequestId = 0;
-	let visitLogged = $state(false);
+	let visitLogged = false;
+	let visitId: number | null = null;
+	let visitVisitorIdentifier: string | null = null;
+	let visitStartedAtMs: number | null = null;
+	let engagementTimer: ReturnType<typeof setTimeout> | null = null;
+	let engagementMarked = false;
 
 	function getVisitorIdentifier(): string {
 		try {
@@ -75,11 +81,51 @@
 		injectAnalytics();
 		void loadBookingSlots();
 		void logVisit();
-		return afterNavigate(() => {
+		afterNavigate(() => {
 			void loadBookingSlots();
 			void logVisit();
 		});
+
+		return () => {
+			clearEngagementTimer();
+		};
 	});
+
+	function clearEngagementTimer(): void {
+		if (engagementTimer === null) {
+			return;
+		}
+
+		clearTimeout(engagementTimer);
+		engagementTimer = null;
+	}
+
+	function scheduleEngagementTimer(): void {
+		clearEngagementTimer();
+		engagementTimer = setTimeout(() => {
+			engagementTimer = null;
+			void markVisitEngaged();
+		}, ENGAGEMENT_THRESHOLD_MS);
+	}
+
+	async function markVisitEngaged(): Promise<void> {
+		if (engagementMarked || visitId === null || visitVisitorIdentifier === null) {
+			return;
+		}
+
+		engagementMarked = true;
+
+		const durationMs = Math.max(
+			0,
+			Math.round(performance.now() - (visitStartedAtMs ?? performance.now()))
+		);
+
+		await markSpeakerVisitEngaged({
+			visitId,
+			visitorIdentifier: visitVisitorIdentifier,
+			durationMs
+		});
+	}
 
 	async function logVisit(): Promise<void> {
 		if (visitLogged) {
@@ -95,14 +141,21 @@
 		}
 
 		visitLogged = true;
+		visitVisitorIdentifier = getVisitorIdentifier();
+		visitStartedAtMs = performance.now();
 
-		void logSpeakerVisit({
+		const result = await logSpeakerVisit({
 			campaignId,
 			campaignPageId,
 			slug,
-			visitorIdentifier: getVisitorIdentifier(),
+			visitorIdentifier: visitVisitorIdentifier,
 			searchParams: Object.fromEntries(page.url.searchParams)
 		});
+
+		if (result.visitId !== null) {
+			visitId = result.visitId;
+			scheduleEngagementTimer();
+		}
 	}
 </script>
 

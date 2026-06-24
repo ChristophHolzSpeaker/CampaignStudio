@@ -143,7 +143,7 @@ export async function logCampaignVisit(input: {
 	searchParams: URLSearchParams;
 	headers: Headers;
 	visitorIdentifier: string;
-}): Promise<{ logged: boolean }> {
+}): Promise<{ logged: boolean; visitId: number | null }> {
 	// page_view source of truth: we intentionally model page views in campaign_visits
 	// (deduped by visitor and time window) instead of duplicating every view into lead_events.
 	const dedupeWindowStart = new Date(Date.now() - VISIT_DEDUPE_WINDOW_MINUTES * 60 * 1000);
@@ -162,25 +162,52 @@ export async function logCampaignVisit(input: {
 		.limit(1);
 
 	if (existingVisit) {
-		return { logged: false };
+		return { logged: false, visitId: existingVisit.id };
 	}
 
-	await db.insert(campaign_visits).values({
-		campaign_id: input.campaignId,
-		campaign_page_id: input.campaignPageId,
-		slug: input.slug,
-		referrer: input.headers.get('referer'),
-		utm_source: readUtm(input.searchParams, 'utm_source'),
-		utm_medium: readUtm(input.searchParams, 'utm_medium'),
-		utm_campaign: readUtm(input.searchParams, 'utm_campaign'),
-		utm_term: readUtm(input.searchParams, 'utm_term'),
-		utm_content: readUtm(input.searchParams, 'utm_content'),
-		user_agent: input.headers.get('user-agent'),
-		ip_address: truncateIpAddress(readFirstForwardedIp(input.headers)),
-		country: readVercelGeoHeader(input.headers, 'x-vercel-ip-country'),
-		city: readVercelGeoHeader(input.headers, 'x-vercel-ip-city'),
-		ip_hash_or_session_identifier: input.visitorIdentifier
-	});
+	const [createdVisit] = await db
+		.insert(campaign_visits)
+		.values({
+			campaign_id: input.campaignId,
+			campaign_page_id: input.campaignPageId,
+			slug: input.slug,
+			referrer: input.headers.get('referer'),
+			utm_source: readUtm(input.searchParams, 'utm_source'),
+			utm_medium: readUtm(input.searchParams, 'utm_medium'),
+			utm_campaign: readUtm(input.searchParams, 'utm_campaign'),
+			utm_term: readUtm(input.searchParams, 'utm_term'),
+			utm_content: readUtm(input.searchParams, 'utm_content'),
+			user_agent: input.headers.get('user-agent'),
+			ip_address: truncateIpAddress(readFirstForwardedIp(input.headers)),
+			country: readVercelGeoHeader(input.headers, 'x-vercel-ip-country'),
+			city: readVercelGeoHeader(input.headers, 'x-vercel-ip-city'),
+			ip_hash_or_session_identifier: input.visitorIdentifier
+		})
+		.returning({ id: campaign_visits.id });
 
-	return { logged: true };
+	return { logged: true, visitId: createdVisit?.id ?? null };
+}
+
+export async function markCampaignVisitEngaged(input: {
+	visitId: number;
+	visitorIdentifier: string;
+	durationMs: number;
+}): Promise<{ marked: boolean }> {
+	const durationMs = Math.max(0, Math.floor(input.durationMs));
+	const [updatedVisit] = await db
+		.update(campaign_visits)
+		.set({
+			bounced: false,
+			engaged_at: new Date(),
+			engagement_duration_ms: durationMs
+		})
+		.where(
+			and(
+				eq(campaign_visits.id, input.visitId),
+				eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier)
+			)
+		)
+		.returning({ id: campaign_visits.id });
+
+	return { marked: Boolean(updatedVisit) };
 }

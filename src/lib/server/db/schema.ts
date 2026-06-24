@@ -101,6 +101,9 @@ export const campaign_visits = pgTable('campaign_visits', {
 	ip_address: text('ip_address'),
 	country: text('country'),
 	city: text('city'),
+	bounced: boolean('bounced').notNull().default(true),
+	engaged_at: timestamp('engaged_at'),
+	engagement_duration_ms: integer('engagement_duration_ms'),
 	ip_hash_or_session_identifier: text('ip_hash_or_session_identifier')
 });
 
@@ -129,7 +132,10 @@ export const vw_visit_enriched = pgView('vw_visit_enriched', {
 	user_agent: text('user_agent'),
 	ip_address: text('ip_address'),
 	country: text('country'),
-	city: text('city')
+	city: text('city'),
+	bounced: boolean('bounced'),
+	engaged_at: timestamp('engaged_at'),
+	engagement_duration_ms: integer('engagement_duration_ms')
 }).existing();
 
 export const vw_lead_journey_enriched = pgView('vw_lead_journey_enriched', {

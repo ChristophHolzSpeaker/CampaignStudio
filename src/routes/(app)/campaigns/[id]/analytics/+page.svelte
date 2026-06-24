@@ -154,6 +154,7 @@
 		<div class="kpi-grid">
 			<KpiCard label="Visits" value={formatCount(data.overview.visits)} />
 			<KpiCard label="Unique visitors" value={formatCount(data.overview.uniqueVisitors)} />
+			<KpiCard label="Bounce rate" value={formatPercent(data.overview.bounceRate)} />
 			<KpiCard label="Inbound messages" value={formatCount(inboundMessagesTotal)} />
 			<KpiCard label="Identified leads" value={formatCount(data.overview.identifiedLeads)} />
 			<KpiCard label="Bookings completed" value={formatCount(data.overview.bookingsCompleted)} />

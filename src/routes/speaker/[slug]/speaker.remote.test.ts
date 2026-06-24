@@ -1,17 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/server/attribution/campaign-visits', () => ({
-	logCampaignVisit: vi.fn()
+	logCampaignVisit: vi.fn(),
+	markCampaignVisitEngaged: vi.fn()
 }));
 
-import { logCampaignVisit } from '$lib/server/attribution/campaign-visits';
-import { logSpeakerVisitFromRequest } from './speaker-visit';
+import {
+	logCampaignVisit,
+	markCampaignVisitEngaged
+} from '$lib/server/attribution/campaign-visits';
+import { logSpeakerVisitFromRequest, markSpeakerVisitEngagedFromRequest } from './speaker-visit';
 
 const mockedLogCampaignVisit = vi.mocked(logCampaignVisit);
+const mockedMarkCampaignVisitEngaged = vi.mocked(markCampaignVisitEngaged);
 
 describe('speaker visit request logging', () => {
 	beforeEach(() => {
 		mockedLogCampaignVisit.mockReset();
+		mockedMarkCampaignVisitEngaged.mockReset();
 	});
 
 	it('logs a speaker visit with browser visitor id and query params', async () => {
@@ -22,7 +28,7 @@ describe('speaker visit request logging', () => {
 			'x-vercel-ip-country': 'AT',
 			'x-vercel-ip-city': 'Vienna'
 		});
-		mockedLogCampaignVisit.mockResolvedValueOnce({ logged: true });
+		mockedLogCampaignVisit.mockResolvedValueOnce({ logged: true, visitId: 88 });
 
 		const result = await logSpeakerVisitFromRequest(
 			{
@@ -35,7 +41,7 @@ describe('speaker visit request logging', () => {
 			headers
 		);
 
-		expect(result).toEqual({ logged: true });
+		expect(result).toEqual({ logged: true, visitId: 88 });
 		expect(mockedLogCampaignVisit).toHaveBeenCalledWith(
 			expect.objectContaining({
 				campaignId: 44,
@@ -45,5 +51,22 @@ describe('speaker visit request logging', () => {
 				headers
 			})
 		);
+	});
+
+	it('marks a speaker visit engaged with the visit id and visitor id', async () => {
+		mockedMarkCampaignVisitEngaged.mockResolvedValueOnce({ marked: true });
+
+		const result = await markSpeakerVisitEngagedFromRequest({
+			visitId: 88,
+			visitorIdentifier: 'visitor-123',
+			durationMs: 10_250
+		});
+
+		expect(result).toEqual({ marked: true });
+		expect(mockedMarkCampaignVisitEngaged).toHaveBeenCalledWith({
+			visitId: 88,
+			visitorIdentifier: 'visitor-123',
+			durationMs: 10_250
+		});
 	});
 });
