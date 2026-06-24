@@ -98,6 +98,9 @@ export const campaign_visits = pgTable('campaign_visits', {
 	utm_term: text('utm_term'),
 	utm_content: text('utm_content'),
 	user_agent: text('user_agent'),
+	ip_address: text('ip_address'),
+	country: text('country'),
+	city: text('city'),
 	ip_hash_or_session_identifier: text('ip_hash_or_session_identifier')
 });
 
@@ -123,7 +126,10 @@ export const vw_visit_enriched = pgView('vw_visit_enriched', {
 	utm_term: text('utm_term'),
 	utm_content: text('utm_content'),
 	referrer: text('referrer'),
-	user_agent: text('user_agent')
+	user_agent: text('user_agent'),
+	ip_address: text('ip_address'),
+	country: text('country'),
+	city: text('city')
 }).existing();
 
 export const vw_lead_journey_enriched = pgView('vw_lead_journey_enriched', {

@@ -12,6 +12,105 @@ function readUtm(searchParams: URLSearchParams, key: string): string | null {
 	return value && value.trim().length > 0 ? value.trim() : null;
 }
 
+function readHeader(headers: Headers, key: string): string | null {
+	const value = headers.get(key)?.trim();
+	return value && value.length > 0 ? value : null;
+}
+
+function readFirstForwardedIp(headers: Headers): string | null {
+	const forwardedFor = readHeader(headers, 'x-forwarded-for');
+	if (forwardedFor) {
+		const [firstIp] = forwardedFor.split(',');
+		const trimmed = firstIp?.trim();
+		if (trimmed) {
+			return trimmed;
+		}
+	}
+
+	return readHeader(headers, 'x-real-ip');
+}
+
+function truncateIpv4Address(ipAddress: string): string | null {
+	const parts = ipAddress.split('.');
+	if (parts.length !== 4) {
+		return null;
+	}
+
+	const octets = parts.map((part) => Number(part));
+	if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+		return null;
+	}
+
+	return `${octets[0]}.${octets[1]}.${octets[2]}.0`;
+}
+
+function expandIpv6Address(ipAddress: string): string[] | null {
+	if (!ipAddress.includes(':')) {
+		return null;
+	}
+
+	const lowerIpAddress = ipAddress.toLowerCase();
+	if (lowerIpAddress.includes(':::')) {
+		return null;
+	}
+	if (lowerIpAddress.split('::').length > 2) {
+		return null;
+	}
+
+	const [left = '', right = ''] = lowerIpAddress.split('::');
+	const hasCompression = lowerIpAddress.includes('::');
+	const leftParts = left ? left.split(':') : [];
+	const rightParts = right ? right.split(':') : [];
+
+	if ([...leftParts, ...rightParts].some((part) => !/^[0-9a-f]{1,4}$/.test(part))) {
+		return null;
+	}
+
+	if (!hasCompression && leftParts.length !== 8) {
+		return null;
+	}
+
+	const missingPartCount = hasCompression ? 8 - leftParts.length - rightParts.length : 0;
+	if (missingPartCount < 0 || (!hasCompression && missingPartCount !== 0)) {
+		return null;
+	}
+
+	return [...leftParts, ...Array<string>(missingPartCount).fill('0'), ...rightParts].map((part) =>
+		Number.parseInt(part, 16).toString(16)
+	);
+}
+
+function truncateIpv6Address(ipAddress: string): string | null {
+	const parts = expandIpv6Address(ipAddress);
+	if (!parts) {
+		return null;
+	}
+
+	return [...parts.slice(0, 4), '0', '0', '0', '0'].join(':');
+}
+
+export function truncateIpAddress(ipAddress: string | null): string | null {
+	const trimmed = ipAddress?.trim();
+	if (!trimmed) {
+		return null;
+	}
+
+	return truncateIpv4Address(trimmed) ?? truncateIpv6Address(trimmed);
+}
+
+function readVercelGeoHeader(headers: Headers, key: string): string | null {
+	const value = readHeader(headers, key);
+	if (!value) {
+		return null;
+	}
+
+	try {
+		return decodeURIComponent(value.replaceAll('+', ' '));
+	} catch {
+		return value;
+	}
+}
+
 export function getOrCreateVisitorIdentifier(input: {
 	cookies: Cookies;
 	secureCookie: boolean;
@@ -77,6 +176,9 @@ export async function logCampaignVisit(input: {
 		utm_term: readUtm(input.searchParams, 'utm_term'),
 		utm_content: readUtm(input.searchParams, 'utm_content'),
 		user_agent: input.headers.get('user-agent'),
+		ip_address: truncateIpAddress(readFirstForwardedIp(input.headers)),
+		country: readVercelGeoHeader(input.headers, 'x-vercel-ip-country'),
+		city: readVercelGeoHeader(input.headers, 'x-vercel-ip-city'),
 		ip_hash_or_session_identifier: input.visitorIdentifier
 	});
 

@@ -8,7 +8,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 import { db } from '$lib/server/db';
-import { logCampaignVisit } from './campaign-visits';
+import { logCampaignVisit, truncateIpAddress } from './campaign-visits';
 
 const mockedDb = vi.mocked(db);
 
@@ -36,7 +36,10 @@ describe('logCampaignVisit', () => {
 			searchParams: new URLSearchParams('utm_source=newsletter'),
 			headers: new Headers({
 				referer: 'https://example.com/',
-				'user-agent': 'vitest'
+				'user-agent': 'vitest',
+				'x-forwarded-for': '203.0.113.42',
+				'x-vercel-ip-country': 'AT',
+				'x-vercel-ip-city': 'Vienna'
 			}),
 			visitorIdentifier: 'visitor-123'
 		});
@@ -45,7 +48,7 @@ describe('logCampaignVisit', () => {
 		expect(mockedDb.insert).not.toHaveBeenCalled();
 	});
 
-	it('writes attribution fields for a new visit', async () => {
+	it('writes attribution, truncated ip, and geo fields for a new visit', async () => {
 		const where = vi.fn().mockReturnThis();
 		const limit = vi.fn().mockResolvedValueOnce([]);
 		const values = vi.fn().mockResolvedValueOnce(undefined);
@@ -67,7 +70,10 @@ describe('logCampaignVisit', () => {
 			searchParams: new URLSearchParams('utm_source=newsletter&utm_medium=email'),
 			headers: new Headers({
 				referer: 'https://example.com/',
-				'user-agent': 'vitest'
+				'user-agent': 'vitest',
+				'x-forwarded-for': '203.0.113.42, 198.51.100.10',
+				'x-vercel-ip-country': 'AT',
+				'x-vercel-ip-city': 'Wien%20Neubau'
 			}),
 			visitorIdentifier: 'visitor-123'
 		});
@@ -82,8 +88,19 @@ describe('logCampaignVisit', () => {
 				utm_source: 'newsletter',
 				utm_medium: 'email',
 				user_agent: 'vitest',
+				ip_address: '203.0.113.0',
+				country: 'AT',
+				city: 'Wien Neubau',
 				ip_hash_or_session_identifier: 'visitor-123'
 			})
 		);
+	});
+
+	it('truncates IP addresses before storage', () => {
+		expect(truncateIpAddress('203.0.113.42')).toBe('203.0.113.0');
+		expect(truncateIpAddress('2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe(
+			'2001:db8:85a3:0:0:0:0:0'
+		);
+		expect(truncateIpAddress('not-an-ip')).toBeNull();
 	});
 });

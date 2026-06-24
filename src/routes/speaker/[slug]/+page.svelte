@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { injectAnalytics } from '@vercel/analytics/sveltekit';
 	import { onMount } from 'svelte';
 	import LandingNavigation from '$lib/components/blocks/LandingNavigation.svelte';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
@@ -71,6 +72,7 @@
 	}
 
 	onMount(() => {
+		injectAnalytics();
 		void loadBookingSlots();
 		void logVisit();
 		return afterNavigate(() => {

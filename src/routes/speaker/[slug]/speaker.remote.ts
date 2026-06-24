@@ -1,6 +1,6 @@
 import { command, getRequestEvent } from '$app/server';
-import { logCampaignVisit } from '$lib/server/attribution/campaign-visits';
 import { z } from 'zod';
+import { logSpeakerVisitFromRequest } from './speaker-visit';
 
 const speakerVisitSchema = z.object({
 	campaignId: z.number().int().positive(),
@@ -12,20 +12,5 @@ const speakerVisitSchema = z.object({
 
 export const logSpeakerVisit = command(speakerVisitSchema, async (input) => {
 	const requestEvent = getRequestEvent();
-
-	try {
-		const result = await logCampaignVisit({
-			campaignId: input.campaignId,
-			campaignPageId: input.campaignPageId,
-			slug: input.slug,
-			searchParams: new URLSearchParams(input.searchParams),
-			headers: requestEvent.request.headers,
-			visitorIdentifier: input.visitorIdentifier
-		});
-
-		return result;
-	} catch (error) {
-		console.error('Speaker visit logging failed', error);
-		return { logged: false };
-	}
+	return logSpeakerVisitFromRequest(input, requestEvent.request.headers);
 });
