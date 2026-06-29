@@ -53,12 +53,33 @@
 		padding: 0.75rem;
 		background: #ffffff;
 		font-size: 0.85rem;
-		color: #5d3f3f;
+		color: #6b7280;
+		border: 1px solid #e5e7eb;
+		border-radius: 14px;
+		font-family: var(
+			--analytics-font,
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif
+		);
 	}
 
 	.table-shell {
 		overflow-x: auto;
 		background: #ffffff;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+		font-family: var(
+			--analytics-font,
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif
+		);
 	}
 
 	table {
@@ -70,17 +91,18 @@
 	th,
 	td {
 		padding: 0.6rem 0.75rem;
-		font-size: 0.78rem;
+		font-size: 0.8rem;
 		text-align: left;
 		vertical-align: top;
 	}
 
 	th {
-		font-size: 0.66rem;
-		letter-spacing: 0.07em;
+		font-size: 0.68rem;
+		letter-spacing: 0.05em;
 		text-transform: uppercase;
-		color: #5d3f3f;
-		background: #f3f3f3;
+		color: #6b7280;
+		background: #f9fafb;
+		font-weight: 600;
 	}
 
 	tbody tr:nth-child(even) {
@@ -89,5 +111,6 @@
 
 	.align-right {
 		text-align: right;
+		font-variant-numeric: tabular-nums;
 	}
 </style>

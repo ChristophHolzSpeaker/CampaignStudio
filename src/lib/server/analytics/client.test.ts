@@ -1,10 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/server/db', () => ({
-	db: {}
+	db: {
+		select: vi.fn()
+	}
 }));
 
-import { buildOverviewKpis, type FunnelDailyPoint } from './client';
+import { db } from '$lib/server/db';
+import { buildOverviewKpis, getGeoPerformance, type FunnelDailyPoint } from './client';
+
+const mockedDb = vi.mocked(db);
 
 describe('analytics overview KPIs', () => {
 	it('calculates bounce rate from selected funnel days', () => {
@@ -16,6 +21,35 @@ describe('analytics overview KPIs', () => {
 		expect(overview.visits).toBe(5);
 		expect(overview.bouncedVisits).toBe(2);
 		expect(overview.bounceRate).toBe(0.4);
+	});
+
+	it('groups geo labels for countries and cities', async () => {
+		const where = vi.fn().mockResolvedValueOnce([
+			{ country: 'AT', city: 'Vienna' },
+			{ country: 'AT', city: 'Vienna' },
+			{ country: 'DE', city: 'Berlin' },
+			{ country: null, city: null }
+		]);
+
+		mockedDb.select.mockReturnValueOnce({
+			from: () => ({ where })
+		} as never);
+
+		const result = await getGeoPerformance({
+			from: new Date('2026-06-24T00:00:00.000Z'),
+			toExclusive: new Date('2026-06-25T00:00:00.000Z')
+		});
+
+		expect(result.countries).toEqual([
+			{ label: 'AT', visits: 2 },
+			{ label: 'DE', visits: 1 },
+			{ label: null, visits: 1 }
+		]);
+		expect(result.cities).toEqual([
+			{ label: 'Vienna', visits: 2 },
+			{ label: 'Berlin', visits: 1 },
+			{ label: null, visits: 1 }
+		]);
 	});
 });
 
