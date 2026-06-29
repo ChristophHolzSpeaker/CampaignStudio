@@ -102,6 +102,16 @@ export type CtaPerformanceRow = {
 	clickToFirstTouchBookingRate: number;
 };
 
+export type GeoPerformanceRow = {
+	label: string | null;
+	visits: number;
+};
+
+export type GeoPerformance = {
+	countries: GeoPerformanceRow[];
+	cities: GeoPerformanceRow[];
+};
+
 const toNumber = (value: number | null | undefined): number => value ?? 0;
 
 const isValidDate = (value: Date): boolean => !Number.isNaN(value.getTime());
@@ -315,6 +325,26 @@ export async function getCtaPerformance(): Promise<CtaPerformanceRow[]> {
 	}));
 }
 
+export async function getGeoPerformance(window: DateWindow): Promise<GeoPerformance> {
+	const rows = await db
+		.select({
+			country: vw_visit_enriched.country,
+			city: vw_visit_enriched.city
+		})
+		.from(vw_visit_enriched)
+		.where(
+			and(
+				gte(vw_visit_enriched.visited_at, window.from),
+				lt(vw_visit_enriched.visited_at, window.toExclusive)
+			)
+		);
+
+	return {
+		countries: buildGeoRows(rows.map((row) => row.country)),
+		cities: buildGeoRows(rows.map((row) => row.city))
+	};
+}
+
 type CampaignDailyAccumulator = {
 	visits: number;
 	bouncedVisits: number;
@@ -353,6 +383,48 @@ type CtaAccumulator = {
 
 const sourceMediumKey = (source: string | null, medium: string | null): string =>
 	`${source ?? ''}::${medium ?? ''}`;
+
+const normalizeGeoLabel = (value: string | null | undefined): string | null => {
+	const trimmed = value?.trim();
+	return trimmed && trimmed.length > 0 ? trimmed : null;
+};
+
+const buildGeoRows = (values: readonly (string | null)[]): GeoPerformanceRow[] => {
+	const byLabel = new Map<string, GeoPerformanceRow>();
+
+	for (const rawValue of values) {
+		const label = normalizeGeoLabel(rawValue);
+		const key = label ?? '__unknown__';
+		const existing = byLabel.get(key);
+
+		if (existing) {
+			existing.visits += 1;
+			continue;
+		}
+
+		byLabel.set(key, { label, visits: 1 });
+	}
+
+	return [...byLabel.values()]
+		.sort(
+			(left, right) => {
+				if (right.visits !== left.visits) {
+					return right.visits - left.visits;
+				}
+
+				if (left.label === null && right.label !== null) {
+					return 1;
+				}
+
+				if (left.label !== null && right.label === null) {
+					return -1;
+				}
+
+				return (left.label ?? '').localeCompare(right.label ?? '');
+			}
+		)
+		.slice(0, 10);
+};
 
 const toCampaignDailyMap = () => new Map<string, CampaignDailyAccumulator>();
 
