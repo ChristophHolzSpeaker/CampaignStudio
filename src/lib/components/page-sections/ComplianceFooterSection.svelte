@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import type { ComplianceTransparencyFooterProps } from '$lib/page-builder/sections/types';
+	import { appendCampaignParamsToChristophLink } from '$lib/url/christophholz-link';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
 
 	let {
@@ -33,6 +35,15 @@
 
 	const phoneHref = $derived(phone ? `tel:${phone.replace(/\s+/g, '')}` : undefined);
 	const emailHref = $derived(mailtoHref ?? `mailto:${contactEmail}`);
+
+	function buildChristophLink(href: string): string {
+		return appendCampaignParamsToChristophLink({
+			href,
+			searchParams: page.url.searchParams,
+			campaignId,
+			campaignPageId
+		});
+	}
 
 	function trackDirectEmailCta(): void {
 		if (campaignId == null || campaignPageId == null) {
@@ -266,7 +277,9 @@
 		<ul class="ml-4 flex">
 			{#each legalLinks as link (`compliance-link-${link.label}`)}
 				<li class="mr-2 border-r border-slate-400 pr-2">
-					<a class="transition-opacity hover:opacity-70" href={link.href}>{link.label}</a>
+					<a class="transition-opacity hover:opacity-70" href={buildChristophLink(link.href)}>
+						{link.label}
+					</a>
 				</li>
 			{/each}
 		</ul>

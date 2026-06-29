@@ -3,6 +3,7 @@ import {
 	buildDirectEmailSummary,
 	buildOverviewKpis,
 	getCampaignConversionSummary,
+	getGeoPerformance,
 	getCtaPerformance,
 	getDirectEmailFunnelDaily,
 	getFunnelDaily,
@@ -68,14 +69,21 @@ function resolveDateWindow(url: URL, defaultDays = 30): DateWindowMeta {
 export const load: PageServerLoad = async ({ url }) => {
 	const dateWindow = resolveDateWindow(url);
 
-	const [funnelDaily, directEmailDaily, campaignSummary, sourceMediumPerformance, ctaPerformance] =
-		await Promise.all([
-			getFunnelDaily({ from: dateWindow.from, toExclusive: dateWindow.toExclusive }),
-			getDirectEmailFunnelDaily({ from: dateWindow.from, toExclusive: dateWindow.toExclusive }),
-			getCampaignConversionSummary(),
-			getSourceMediumPerformance(),
-			getCtaPerformance()
-		]);
+	const [
+		funnelDaily,
+		directEmailDaily,
+		campaignSummary,
+		sourceMediumPerformance,
+		ctaPerformance,
+		geoPerformance
+	] = await Promise.all([
+		getFunnelDaily({ from: dateWindow.from, toExclusive: dateWindow.toExclusive }),
+		getDirectEmailFunnelDaily({ from: dateWindow.from, toExclusive: dateWindow.toExclusive }),
+		getCampaignConversionSummary(),
+		getSourceMediumPerformance(),
+		getCtaPerformance(),
+		getGeoPerformance({ from: dateWindow.from, toExclusive: dateWindow.toExclusive })
+	]);
 
 	const overview = buildOverviewKpis(funnelDaily);
 	const directEmailSummary = buildDirectEmailSummary(directEmailDaily);
@@ -91,6 +99,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		directEmailSummary,
 		campaignSummary,
 		sourceMediumPerformance,
-		ctaPerformance
+		ctaPerformance,
+		geoPerformance
 	};
 };

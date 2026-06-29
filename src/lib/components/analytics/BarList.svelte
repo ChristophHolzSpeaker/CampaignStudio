@@ -55,11 +55,24 @@
 		padding: 1rem;
 		display: grid;
 		gap: 0.9rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+		font-family: var(
+			--analytics-font,
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif
+		);
 	}
 
 	h3 {
 		margin: 0;
 		font-size: 1rem;
+		font-weight: 650;
+		color: #111827;
 	}
 
 	ul {
@@ -89,27 +102,32 @@
 	}
 
 	.label {
-		font-size: 0.78rem;
+		font-size: 0.82rem;
+		color: #111827;
 	}
 
 	.value {
-		font-size: 0.78rem;
-		color: #5d3f3f;
+		font-size: 0.82rem;
+		color: #6b7280;
+		font-variant-numeric: tabular-nums;
 	}
 
 	.help,
 	.empty {
 		font-size: 0.72rem;
-		color: #5d3f3f;
+		color: #6b7280;
 	}
 
 	.track {
 		height: 0.5rem;
-		background: #f3f3f3;
+		background: #f3f4f6;
+		border-radius: 999px;
+		overflow: hidden;
 	}
 
 	.fill {
 		height: 100%;
-		background: linear-gradient(135deg, #b8002a, #e2183b);
+		background: linear-gradient(135deg, #2563eb, #60a5fa);
+		border-radius: inherit;
 	}
 </style>
