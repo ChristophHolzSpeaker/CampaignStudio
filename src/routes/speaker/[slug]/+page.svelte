@@ -10,6 +10,7 @@
 	import { getSpeakerBookingSlotPreview } from './speaker-booking-slots.remote';
 	import { logSpeakerVisit, markSpeakerVisitEngaged } from './speaker.remote';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
+	import { browser } from '$app/environment';
 
 	type BookingSlotGroups = Array<{
 		dateKey: string;
@@ -78,6 +79,10 @@
 	}
 
 	onMount(() => {
+		if (browser) {
+			document.documentElement.lang = 'de';
+		}
+
 		injectAnalytics();
 		void loadBookingSlots();
 		void logVisit();
