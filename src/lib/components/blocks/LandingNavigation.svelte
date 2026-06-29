@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { page } from '$app/state';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import NavButton from '../elements/NavButton.svelte';
+	import { appendCampaignParamsToChristophLink } from '$lib/url/christophholz-link';
 	type LandingPageNavigationData = {
 		mailto?: string;
 		mailtoCta?: string;
@@ -50,6 +52,15 @@
 			document.addEventListener('click', handleClick, true);
 
 			return () => document.removeEventListener('click', handleClick, true);
+		});
+	}
+
+	function buildChristophLink(href: string): string {
+		return appendCampaignParamsToChristophLink({
+			href,
+			searchParams: page.url.searchParams,
+			campaignId,
+			campaignPageId
 		});
 	}
 
@@ -147,7 +158,7 @@
 	<div class="mx-auto w-full max-w-7xl">
 		<div class="hidden justify-between lg:flex">
 			<a
-				href="https://www.christophholz.com/"
+				href={buildChristophLink('https://www.christophholz.com/')}
 				aria-current="page"
 				class="mr-2 text-5xl whitespace-nowrap"
 				aria-label="home">Christoph Holz</a
@@ -220,7 +231,12 @@
 		</div>
 
 		<div class="flex items-center justify-between lg:hidden">
-			<a href="/" aria-current="page" class="mr-2 text-3xl" aria-label="home">Christoph Holz</a>
+			<a
+				href={buildChristophLink('https://www.christophholz.com/')}
+				aria-current="page"
+				class="mr-2 text-3xl"
+				aria-label="home">Christoph Holz</a
+			>
 			<button
 				bind:this={mobileMenuTrigger}
 				onclick={() => {
@@ -251,13 +267,19 @@
 			<div class="expand-align-center">
 				{#snippet categoryItem({ href, headline, subline, image }: CategoryItem)}
 					<div role="listitem" class="flex items-center gap-4 border-r border-stone-300">
-						<a title={headline} {href} class="flex h-16 w-16 shrink-0 items-center justify-center">
+						<a
+							title={headline}
+							href={buildChristophLink(href)}
+							class="flex h-16 w-16 shrink-0 items-center justify-center"
+						>
 							<img src={image} alt={headline} class="block h-16 w-16 rounded-full object-cover" />
 						</a>
 						<div class="expand-flex">
 							<div>
 								<div class="flex">
-									<a {href} class="category-medium-link" tabindex="0">{headline}</a>
+									<a href={buildChristophLink(href)} class="category-medium-link" tabindex="0">
+										{headline}
+									</a>
 								</div>
 								<div class="top-margin _3-pixels">
 									<p class="text-xs font-light">
