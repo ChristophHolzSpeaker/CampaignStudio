@@ -325,7 +325,10 @@ export async function getCtaPerformance(): Promise<CtaPerformanceRow[]> {
 	}));
 }
 
-export async function getGeoPerformance(window: DateWindow): Promise<GeoPerformance> {
+export async function getGeoPerformance(
+	window: DateWindow,
+	campaignId?: number | null
+): Promise<GeoPerformance> {
 	const rows = await db
 		.select({
 			country: vw_visit_enriched.country,
@@ -335,7 +338,8 @@ export async function getGeoPerformance(window: DateWindow): Promise<GeoPerforma
 		.where(
 			and(
 				gte(vw_visit_enriched.visited_at, window.from),
-				lt(vw_visit_enriched.visited_at, window.toExclusive)
+				lt(vw_visit_enriched.visited_at, window.toExclusive),
+				...(typeof campaignId === 'number' ? [eq(vw_visit_enriched.campaign_id, campaignId)] : [])
 			)
 		);
 

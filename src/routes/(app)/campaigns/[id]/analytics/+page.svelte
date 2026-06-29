@@ -12,6 +12,7 @@
 	type CampaignSummaryRow = PageData['campaignSummary'][number];
 	type SourceMediumRow = PageData['sourceMediumPerformance'][number];
 	type CtaRow = PageData['ctaPerformance'][number];
+	type GeoRow = PageData['geoPerformance']['countries'][number];
 
 	const integerFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
 	const percentFormatter = new Intl.NumberFormat('en-US', {
@@ -118,6 +119,24 @@
 				formatPercent(row.clickToFirstTouchLeadRate),
 				formatPercent(row.clickToFirstTouchBookingRate)
 			]
+		}))
+	);
+
+	const countryBarItems = $derived.by(() =>
+		data.geoPerformance.countries.slice(0, 6).map((row: GeoRow, index: number) => ({
+			id: `country-${index}`,
+			label: formatText(row.label, '(unknown)'),
+			value: row.visits,
+			helpText: 'Visits from this country'
+		}))
+	);
+
+	const cityBarItems = $derived.by(() =>
+		data.geoPerformance.cities.slice(0, 6).map((row: GeoRow, index: number) => ({
+			id: `city-${index}`,
+			label: formatText(row.label, '(unknown)'),
+			value: row.visits,
+			helpText: 'Visits from this city'
 		}))
 	);
 </script>
@@ -308,6 +327,17 @@
 			rightAlignedColumns={[4, 5, 6, 7, 8]}
 			emptyLabel="No CTA rollup rows yet"
 		/>
+	</SectionPanel>
+
+	<SectionPanel
+		title="Geo performance"
+		description="Visitor location breakdown for this campaign"
+		scopeLabel={`${data.dateRange.from} to ${data.dateRange.to}`}
+	>
+		<div class="section-grid">
+			<BarList title="Top countries" items={countryBarItems} emptyLabel="No country data yet" />
+			<BarList title="Top cities" items={cityBarItems} emptyLabel="No city data yet" />
+		</div>
 	</SectionPanel>
 </section>
 
