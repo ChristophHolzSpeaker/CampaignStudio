@@ -12,6 +12,12 @@
 	type CampaignSummaryRow = PageData['campaignSummary'][number];
 	type SourceMediumRow = PageData['sourceMediumPerformance'][number];
 	type CtaRow = PageData['ctaPerformance'][number];
+	type ExperimentGroup = PageData['experimentPerformance'][number];
+	type ExperimentVariantRow = ExperimentGroup['variants'][number];
+	type ExperimentTableRow = {
+		id: string;
+		values: string[];
+	};
 	type GeoRow = PageData['geoPerformance']['countries'][number];
 
 	const integerFormatter = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
@@ -23,6 +29,10 @@
 
 	const formatCount = (value: number): string => integerFormatter.format(value);
 	const formatPercent = (value: number): string => percentFormatter.format(value);
+	const formatPercentagePointDelta = (value: number): string => {
+		const formatted = percentFormatter.format(Math.abs(value));
+		return `${value >= 0 ? '+' : '-'}${formatted} pp`;
+	};
 	const formatText = (value: string | null | undefined, fallback = '—'): string =>
 		value?.trim() || fallback;
 	const formatDateLabel = (value: string | Date): string => {
@@ -120,6 +130,46 @@
 				formatPercent(row.clickToFirstTouchBookingRate)
 			]
 		}))
+	);
+
+	const experimentCards = $derived.by(() =>
+		data.experimentPerformance.map((experiment: ExperimentGroup) => {
+			const winner = experiment.variants.reduce<ExperimentVariantRow | null>((best, current) => {
+				if (!best) return current;
+				if (current.leadConversionRate > best.leadConversionRate) return current;
+				return best;
+			}, null);
+			const control =
+				experiment.variants.find((variant) => variant.isControl) ?? experiment.variants[0] ?? null;
+
+			const rows: ExperimentTableRow[] = experiment.variants.map((variant) => ({
+				id: `experiment-${experiment.experimentKey}-${variant.variantKey}`,
+				values: [
+					variant.variantKey,
+					variant.variantName,
+					variant.isControl
+						? 'Control'
+						: winner?.variantId === variant.variantId
+							? 'Leader'
+							: 'Test',
+					formatCount(variant.exposures),
+					formatCount(variant.clicks),
+					formatCount(variant.leads),
+					formatPercent(variant.clickThroughRate),
+					formatPercent(variant.leadConversionRate),
+					control && control.variantId !== variant.variantId
+						? formatPercentagePointDelta(variant.leadConversionRate - control.leadConversionRate)
+						: '—'
+				]
+			}));
+
+			return {
+				...experiment,
+				winner,
+				control,
+				rows
+			};
+		})
 	);
 
 	const countryBarItems = $derived.by(() =>
@@ -327,6 +377,57 @@
 			rightAlignedColumns={[4, 5, 6, 7, 8]}
 			emptyLabel="No CTA rollup rows yet"
 		/>
+	</SectionPanel>
+
+	<SectionPanel
+		title="Experiments"
+		description="Simple highest-conversion comparison for live experiments"
+		scopeLabel="All-time rollup"
+	>
+		{#if experimentCards.length === 0}
+			<p class="empty-state">No live experiments found for this campaign yet.</p>
+		{:else}
+			<div class="experiment-list">
+				{#each experimentCards as experiment (experiment.experimentId)}
+					<article class="experiment-card">
+						<div class="experiment-header">
+							<div>
+								<p class="experiment-eyebrow">{experiment.routePattern}</p>
+								<h3>{experiment.experimentName}</h3>
+							</div>
+							<div class="experiment-badges">
+								<span class="experiment-status">{experiment.status}</span>
+								{#if experiment.winner}
+									<span class="experiment-winner"
+										>Currently leading: {experiment.winner.variantKey}</span
+									>
+								{/if}
+							</div>
+						</div>
+						<p class="experiment-summary">
+							Goal: {experiment.goalEvent ?? 'cta_click'} · Winner is the highest tracked lead conversion
+							rate.
+						</p>
+						<DataTable
+							columns={[
+								'Variant',
+								'Name',
+								'Type',
+								'Exposures',
+								'Clicks',
+								'Leads',
+								'Click rate',
+								'Lead rate',
+								'Lift vs control'
+							]}
+							rows={experiment.rows}
+							rightAlignedColumns={[3, 4, 5, 6, 7, 8]}
+							emptyLabel="No experiment variant rows yet"
+						/>
+					</article>
+				{/each}
+			</div>
+		{/if}
 	</SectionPanel>
 
 	<SectionPanel

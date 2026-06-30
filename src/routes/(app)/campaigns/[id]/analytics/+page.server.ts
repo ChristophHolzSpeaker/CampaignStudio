@@ -3,6 +3,7 @@ import type { PageServerLoad } from './$types';
 import {
 	buildDirectEmailSummary,
 	buildOverviewKpis,
+	getExperimentPerformanceByCampaign,
 	getGeoPerformance,
 	getCampaignConversionSummaryByCampaignId,
 	getCtaPerformanceByCampaign,
@@ -91,6 +92,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		campaignSummaryRow,
 		sourceMediumPerformance,
 		ctaPerformance,
+		experimentPerformance,
 		geoPerformance
 	] = await Promise.all([
 		getFunnelDailyByCampaign(
@@ -104,6 +106,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		getCampaignConversionSummaryByCampaignId(campaignId),
 		getSourceMediumPerformanceByCampaign(campaignId),
 		getCtaPerformanceByCampaign(campaignId),
+		getExperimentPerformanceByCampaign(campaignId),
 		getGeoPerformance({ from: dateWindow.from, toExclusive: dateWindow.toExclusive }, campaignId)
 	]);
 
@@ -131,6 +134,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		campaignSummary: campaignSummaryRow ? [campaignSummaryRow] : [],
 		sourceMediumPerformance,
 		ctaPerformance,
+		experimentPerformance,
 		geoPerformance
 	};
 };
