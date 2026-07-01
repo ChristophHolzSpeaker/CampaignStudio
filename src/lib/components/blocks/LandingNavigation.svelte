@@ -8,12 +8,14 @@
 		mailtoCta?: string;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		onExternalNavigationClick?: () => void;
 	};
 	let {
 		mailto = 'mailto:speaker@christophholz.com?subject=Request%20a%20talk',
 		mailtoCta = 'Vortrag Anfragen',
 		campaignId = null,
-		campaignPageId = null
+		campaignPageId = null,
+		onExternalNavigationClick
 	}: LandingPageNavigationData = $props();
 
 	let categoriesDropdown = $state(false);
@@ -62,6 +64,64 @@
 			campaignId,
 			campaignPageId
 		});
+	}
+
+	function extractCategoryKeyFromHref(href: string): string {
+		const path = href.split('?')[0];
+		const parts = path.split('/').filter(Boolean);
+		const raw = parts[parts.length - 1] ?? 'category';
+		return raw.toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+	}
+
+	function trackNavigationCta(input: {
+		ctaKey: string;
+		ctaLabel: string;
+		ctaVariant: 'desktop' | 'mobile';
+	}): void {
+		if (campaignId == null || campaignPageId == null) {
+			return;
+		}
+
+		const payload = JSON.stringify({
+			type: 'navigation',
+			campaign_id: campaignId,
+			campaign_page_id: campaignPageId,
+			cta_key: input.ctaKey,
+			cta_label: input.ctaLabel,
+			cta_section: 'landing_navigation',
+			cta_variant: input.ctaVariant
+		});
+
+		if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+			const sent = navigator.sendBeacon(
+				'/api/attribution/cta',
+				new Blob([payload], { type: 'application/json' })
+			);
+
+			if (sent) {
+				return;
+			}
+		}
+
+		void fetch('/api/attribution/cta', {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: payload,
+			keepalive: true
+		}).catch(() => {
+			// fire-and-forget tracking
+		});
+	}
+
+	function trackExternalNavigation(input: {
+		ctaKey: string;
+		ctaLabel: string;
+		ctaVariant: 'desktop' | 'mobile';
+	}): void {
+		onExternalNavigationClick?.();
+		trackNavigationCta(input);
 	}
 
 	const categoryItems: CategoryItem[] = [
@@ -161,7 +221,14 @@
 				href={buildChristophLink('https://www.christophholz.com/')}
 				aria-current="page"
 				class="mr-2 text-5xl whitespace-nowrap"
-				aria-label="home">Christoph Holz</a
+				aria-label="home"
+				onclick={() => {
+					trackExternalNavigation({
+						ctaKey: 'landing_navigation_home',
+						ctaLabel: 'Home',
+						ctaVariant: 'desktop'
+					});
+				}}>Christoph Holz</a
 			>
 
 			<nav class="flex w-full items-stretch justify-end gap-4">
@@ -182,6 +249,13 @@
 					href="https://uploads-ssl.webflow.com/61263e0de406f497361dca55/6308862b5f040611761c02b5_Speaker.Christoph.Holz.Booklet.2022.pdf"
 					target="_blank"
 					id="booklet-link"
+					onclick={() => {
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_booklet',
+							ctaLabel: 'Booklet',
+							ctaVariant: 'desktop'
+						});
+					}}
 					class="nav-normal flex items-center border-b-2 border-transparent p-2 hover:border-black"
 					>Booklet
 				</a>
@@ -191,30 +265,62 @@
 					>Kontakt</a
 				>
 				<div class="flex h-full items-center gap-4">
-					{#snippet socialIcon({ href, icon }: { href: string; icon: string })}
-						<a {href} target="_blank" class="flex h-full items-center"
-							><img src={icon} loading="lazy" alt="" class="w-6" /></a
+					{#snippet socialIcon({
+						href,
+						icon,
+						ctaKey,
+						ctaLabel,
+						ctaVariant
+					}: {
+						href: string;
+						icon: string;
+						ctaKey: string;
+						ctaLabel: string;
+						ctaVariant: 'desktop' | 'mobile';
+					})}
+						<a
+							{href}
+							target="_blank"
+							class="flex h-full items-center"
+							onclick={() => {
+								trackExternalNavigation({ ctaKey, ctaLabel, ctaVariant });
+							}}><img src={icon} loading="lazy" alt="" class="w-6" /></a
 						>
 					{/snippet}
 					{@render socialIcon({
 						href: 'https://www.linkedin.com/in/christophholz/',
-						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175ea2fb4fe0912d74604_61263e0ee406f48d121dcaa7_linkedin.svg'
+						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175ea2fb4fe0912d74604_61263e0ee406f48d121dcaa7_linkedin.svg',
+						ctaKey: 'landing_navigation_social_linkedin',
+						ctaLabel: 'LinkedIn',
+						ctaVariant: 'desktop'
 					})}
 					{@render socialIcon({
 						href: 'https://www.instagram.com/christophholzofficial/',
-						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175ec3e125ed111071330_instagram-frame-black.svg'
+						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175ec3e125ed111071330_instagram-frame-black.svg',
+						ctaKey: 'landing_navigation_social_instagram',
+						ctaLabel: 'Instagram',
+						ctaVariant: 'desktop'
 					})}
 					{@render socialIcon({
 						href: 'https://open.spotify.com/show/3fFclUaDetP2pztpr158rk',
-						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175edc1af4f139378b2ad_spotify-fram-black.svg'
+						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175edc1af4f139378b2ad_spotify-fram-black.svg',
+						ctaKey: 'landing_navigation_social_spotify',
+						ctaLabel: 'Spotify',
+						ctaVariant: 'desktop'
 					})}
 					{@render socialIcon({
 						href: 'https://medium.com/@ChristophHolz/list/publications-e07f78389dc2',
-						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/626933dee08e863db54722fd_medium_logo-01.svg'
+						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/626933dee08e863db54722fd_medium_logo-01.svg',
+						ctaKey: 'landing_navigation_social_medium',
+						ctaLabel: 'Medium',
+						ctaVariant: 'desktop'
 					})}
 					{@render socialIcon({
 						href: 'https://www.pinterest.at/digitalsensemaker/',
-						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/632afc31e73564d8a103fa2f_sozial.png'
+						icon: 'https://cdn.prod.website-files.com/61263e0de406f497361dca55/632afc31e73564d8a103fa2f_sozial.png',
+						ctaKey: 'landing_navigation_social_pinterest',
+						ctaLabel: 'Pinterest',
+						ctaVariant: 'desktop'
 					})}
 				</div>
 
@@ -235,7 +341,14 @@
 				href={buildChristophLink('https://www.christophholz.com/')}
 				aria-current="page"
 				class="mr-2 text-3xl"
-				aria-label="home">Christoph Holz</a
+				aria-label="home"
+				onclick={() => {
+					trackExternalNavigation({
+						ctaKey: 'landing_navigation_home',
+						ctaLabel: 'Home',
+						ctaVariant: 'mobile'
+					});
+				}}>Christoph Holz</a
 			>
 			<button
 				bind:this={mobileMenuTrigger}
@@ -265,19 +378,43 @@
 				<h2 class="text-2xl">Categories</h2>
 			</div>
 			<div class="expand-align-center">
-				{#snippet categoryItem({ href, headline, subline, image }: CategoryItem)}
+				{#snippet categoryItem({
+					href,
+					headline,
+					subline,
+					image,
+					categoryKey
+				}: CategoryItem & { categoryKey: string })}
 					<div role="listitem" class="flex items-center gap-4 border-r border-stone-300">
 						<a
 							title={headline}
 							href={buildChristophLink(href)}
 							class="flex h-16 w-16 shrink-0 items-center justify-center"
+							onclick={() => {
+								trackExternalNavigation({
+									ctaKey: `landing_navigation_category_${categoryKey}_image`,
+									ctaLabel: headline,
+									ctaVariant: 'desktop'
+								});
+							}}
 						>
 							<img src={image} alt={headline} class="block h-16 w-16 rounded-full object-cover" />
 						</a>
 						<div class="expand-flex">
 							<div>
 								<div class="flex">
-									<a href={buildChristophLink(href)} class="category-medium-link" tabindex="0">
+									<a
+										href={buildChristophLink(href)}
+										class="category-medium-link"
+										tabindex="0"
+										onclick={() => {
+											trackExternalNavigation({
+												ctaKey: `landing_navigation_category_${categoryKey}_link`,
+												ctaLabel: headline,
+												ctaVariant: 'desktop'
+											});
+										}}
+									>
 										{headline}
 									</a>
 								</div>
@@ -293,7 +430,10 @@
 				<div class="intro-categories w-dyn-list">
 					<div role="list" class="grid grid-cols-4 gap-4">
 						{#each categoryItems as cat (cat.href)}
-							{@render categoryItem({ ...cat })}
+							{@render categoryItem({
+								...cat,
+								categoryKey: extractCategoryKeyFromHref(cat.href)
+							})}
 						{/each}
 					</div>
 				</div>
@@ -319,12 +459,18 @@
 			{#if mobileCategoriesOpen}
 				<div class="mt-3 space-y-3 border-b border-stone-200 pb-4">
 					{#each categoryItems as cat (cat.href)}
+						{@const categoryKey = extractCategoryKeyFromHref(cat.href)}
 						<a
 							href={cat.href}
 							class="block rounded-md px-2 py-1 hover:bg-stone-50"
 							onclick={() => {
 								mobileMenuOpen = false;
 								mobileCategoriesOpen = false;
+								trackExternalNavigation({
+									ctaKey: `landing_navigation_category_${categoryKey}_mobile`,
+									ctaLabel: cat.headline,
+									ctaVariant: 'mobile'
+								});
 							}}
 						>
 							<p class="text-sm font-medium">{cat.headline}</p>
@@ -338,7 +484,14 @@
 				<a
 					href="https://cdn.prod.website-files.com/61263e0de406f497361dca55/6308862c3f689acc1eee77e7_Speaker.Christoph.Holz.Booklet_EN.2022.pdf"
 					class="block text-sm font-medium"
-					onclick={() => (mobileMenuOpen = false)}>Booklet</a
+					onclick={() => {
+						mobileMenuOpen = false;
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_booklet',
+							ctaLabel: 'Booklet',
+							ctaVariant: 'mobile'
+						});
+					}}>Booklet</a
 				>
 				<a
 					href="#contact"
@@ -352,6 +505,13 @@
 					href="https://www.linkedin.com/in/christophholz/"
 					target="_blank"
 					class="flex items-center"
+					onclick={() => {
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_social_linkedin',
+							ctaLabel: 'LinkedIn',
+							ctaVariant: 'mobile'
+						});
+					}}
 					><img
 						src="https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175ea2fb4fe0912d74604_61263e0ee406f48d121dcaa7_linkedin.svg"
 						loading="lazy"
@@ -363,6 +523,13 @@
 					href="https://www.instagram.com/christophholzofficial/"
 					target="_blank"
 					class="flex items-center"
+					onclick={() => {
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_social_instagram',
+							ctaLabel: 'Instagram',
+							ctaVariant: 'mobile'
+						});
+					}}
 					><img
 						src="https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175ec3e125ed111071330_instagram-frame-black.svg"
 						loading="lazy"
@@ -374,6 +541,13 @@
 					href="https://open.spotify.com/show/3fFclUaDetP2pztpr158rk"
 					target="_blank"
 					class="flex items-center"
+					onclick={() => {
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_social_spotify',
+							ctaLabel: 'Spotify',
+							ctaVariant: 'mobile'
+						});
+					}}
 					><img
 						src="https://cdn.prod.website-files.com/61263e0de406f497361dca55/614175edc1af4f139378b2ad_spotify-fram-black.svg"
 						loading="lazy"
@@ -385,6 +559,13 @@
 					href="https://medium.com/@ChristophHolz/list/publications-e07f78389dc2"
 					target="_blank"
 					class="flex items-center"
+					onclick={() => {
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_social_medium',
+							ctaLabel: 'Medium',
+							ctaVariant: 'mobile'
+						});
+					}}
 					><img
 						src="https://cdn.prod.website-files.com/61263e0de406f497361dca55/626933dee08e863db54722fd_medium_logo-01.svg"
 						loading="lazy"
@@ -396,6 +577,13 @@
 					href="https://www.pinterest.at/digitalsensemaker/"
 					target="_blank"
 					class="flex items-center"
+					onclick={() => {
+						trackExternalNavigation({
+							ctaKey: 'landing_navigation_social_pinterest',
+							ctaLabel: 'Pinterest',
+							ctaVariant: 'mobile'
+						});
+					}}
 					><img
 						src="https://cdn.prod.website-files.com/61263e0de406f497361dca55/632afc31e73564d8a103fa2f_sozial.png"
 						loading="lazy"

@@ -43,6 +43,7 @@
 	let visitStartedAtMs: number | null = null;
 	let engagementTimer: ReturnType<typeof setTimeout> | null = null;
 	let engagementMarked = false;
+	let isNavigationEngagementRequested = false;
 
 	function getVisitorIdentifier(): string {
 		try {
@@ -134,6 +135,12 @@
 		});
 	}
 
+	function markVisitEngagedFromNavigation(): void {
+		clearEngagementTimer();
+		isNavigationEngagementRequested = true;
+		void markVisitEngaged();
+	}
+
 	async function logVisit(): Promise<void> {
 		if (visitLogged) {
 			return;
@@ -161,7 +168,11 @@
 
 		if (result.visitId !== null) {
 			visitId = result.visitId;
-			scheduleEngagementTimer();
+			if (isNavigationEngagementRequested) {
+				void markVisitEngaged();
+			} else {
+				scheduleEngagementTimer();
+			}
 		}
 	}
 </script>
@@ -203,6 +214,7 @@
 	mailto={data.speakerMailtoHref}
 	campaignId={data.campaignId}
 	campaignPageId={data.campaignPageId}
+	onExternalNavigationClick={markVisitEngagedFromNavigation}
 ></LandingNavigation>
 <PageRenderer
 	page={data.page}
