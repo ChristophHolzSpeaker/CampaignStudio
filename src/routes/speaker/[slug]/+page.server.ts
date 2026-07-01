@@ -5,6 +5,7 @@ import {
 	buildSpeakerMailtoHref,
 	DEFAULT_SPEAKER_EMAIL_SUBJECT
 } from '$lib/server/attribution/mailto';
+import { resolveSpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -94,7 +95,7 @@ function buildSpeakerJsonLd({
 	return JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 }
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async ({ params, url, cookies, request }) => {
 	const slug = params.slug?.trim();
 
 	if (!slug) {
@@ -124,12 +125,21 @@ export const load: PageServerLoad = async ({ params, url }) => {
 
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
 	const jsonLd = buildSpeakerJsonLd({ page, origin: url.origin, slug });
+	const abTest = await resolveSpeakerPrimaryCtaAbTest({
+		cookies,
+		secureCookie: import.meta.env.PROD,
+		route: '/speaker/[slug]',
+		slug,
+		searchParams: url.searchParams,
+		referrer: request.headers.get('referer')
+	});
 
 	return {
 		page,
 		campaignId: pageRecord.campaignId,
 		campaignPageId: pageRecord.campaignPageId,
 		jsonLd,
+		abTest,
 		speakerMailtoHref: buildSpeakerMailtoHref({
 			campaignId: pageRecord.campaignId,
 			campaignPageId: pageRecord.campaignPageId,
