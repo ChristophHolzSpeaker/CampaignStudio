@@ -9,7 +9,7 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 import { db } from '$lib/server/db';
-import { logCampaignVisit, markCampaignVisitEngaged, truncateIpAddress } from './campaign-visits';
+import { logCampaignVisit, markCampaignVisitEngaged } from './campaign-visits';
 
 const mockedDb = vi.mocked(db);
 
@@ -50,7 +50,7 @@ describe('logCampaignVisit', () => {
 		expect(mockedDb.insert).not.toHaveBeenCalled();
 	});
 
-	it('writes attribution, truncated ip, and geo fields for a new visit', async () => {
+	it('writes attribution, full ip, and geo fields for a new visit', async () => {
 		const where = vi.fn().mockReturnThis();
 		const limit = vi.fn().mockResolvedValueOnce([]);
 		const returning = vi.fn().mockResolvedValueOnce([{ id: 88 }]);
@@ -91,7 +91,7 @@ describe('logCampaignVisit', () => {
 				utm_source: 'newsletter',
 				utm_medium: 'email',
 				user_agent: 'vitest',
-				ip_address: '203.0.113.0',
+				ip_address: '203.0.113.42',
 				country: 'AT',
 				city: 'Wien Neubau',
 				ip_hash_or_session_identifier: 'visitor-123'
@@ -123,11 +123,41 @@ describe('logCampaignVisit', () => {
 		expect(where).toHaveBeenCalled();
 	});
 
-	it('truncates IP addresses before storage', () => {
-		expect(truncateIpAddress('203.0.113.42')).toBe('203.0.113.0');
-		expect(truncateIpAddress('2001:0db8:85a3:0000:0000:8a2e:0370:7334')).toBe(
-			'2001:db8:85a3:0:0:0:0:0'
+	it('writes the first x-forwarded-for IP for full storage', async () => {
+		const where = vi.fn().mockReturnThis();
+		const limit = vi.fn().mockResolvedValueOnce([]);
+		const returning = vi.fn().mockResolvedValueOnce([{ id: 88 }]);
+		const values = vi.fn().mockReturnValueOnce({ returning });
+
+		mockedDb.select.mockReturnValueOnce({
+			from: () => ({
+				where,
+				limit
+			})
+		} as never);
+		mockedDb.insert.mockReturnValueOnce({
+			values
+		} as never);
+
+		await logCampaignVisit({
+			campaignId: 44,
+			campaignPageId: 55,
+			slug: 'christoph-holz',
+			searchParams: new URLSearchParams('utm_source=newsletter'),
+			headers: new Headers({
+				referer: 'https://example.com/',
+				'user-agent': 'vitest',
+				'x-forwarded-for': '198.51.100.77, 203.0.113.42',
+				'x-vercel-ip-country': 'DE',
+				'x-vercel-ip-city': 'Berlin'
+			}),
+			visitorIdentifier: 'visitor-123'
+		});
+
+		expect(values).toHaveBeenCalledWith(
+			expect.objectContaining({
+				ip_address: '198.51.100.77'
+			})
 		);
-		expect(truncateIpAddress('not-an-ip')).toBeNull();
 	});
 });
