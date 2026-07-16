@@ -33,6 +33,7 @@
 		ctaKey?: string;
 		ctaSection?: string;
 		ctaVariant?: string | null;
+		displayTimeZone?: string | null;
 		initialValues?: {
 			email?: string | null;
 			name?: string | null;
@@ -54,6 +55,7 @@
 		ctaKey = 'inline_booking_sequence',
 		ctaSection = 'booking',
 		ctaVariant = null,
+		displayTimeZone = null,
 		initialValues = {}
 	}: Props = $props();
 
@@ -116,7 +118,7 @@
 			const evening: SlotPresentation[] = [];
 
 			for (const slot of selectedDaySlots) {
-				const hour = new Date(slot.startsAtIso).getHours();
+				const hour = getSlotHour(slot.startsAtIso);
 
 				if (hour < 12) {
 					morning.push(slot);
@@ -179,8 +181,27 @@
 		return date.toLocaleDateString('en-US', {
 			weekday: 'short',
 			month: 'short',
-			day: 'numeric'
+			day: 'numeric',
+			timeZone: displayTimeZone ? 'UTC' : undefined
 		});
+	}
+
+	function getSlotHour(startsAtIso: string): number {
+		const startsAt = new Date(startsAtIso);
+
+		if (!displayTimeZone) {
+			return startsAt.getHours();
+		}
+
+		const hourPart = new Intl.DateTimeFormat('en-US', {
+			timeZone: displayTimeZone,
+			hour: '2-digit',
+			hourCycle: 'h23'
+		})
+			.formatToParts(startsAt)
+			.find((part) => part.type === 'hour');
+
+		return Number(hourPart?.value ?? '0');
 	}
 
 	function formatSlotRange(startsAtIso: string, endsAtIso: string): string {
@@ -189,11 +210,13 @@
 
 		const startTime = startsAt.toLocaleTimeString('en-US', {
 			hour: 'numeric',
-			minute: '2-digit'
+			minute: '2-digit',
+			timeZone: displayTimeZone ?? undefined
 		});
 		const endTime = endsAt.toLocaleTimeString('en-US', {
 			hour: 'numeric',
-			minute: '2-digit'
+			minute: '2-digit',
+			timeZone: displayTimeZone ?? undefined
 		});
 
 		return `${startTime} - ${endTime}`;
