@@ -52,4 +52,23 @@ describe('notifyBookingFormSubmission', () => {
 			})
 		);
 	});
+
+	it('preserves the independent special booking notification identity', async () => {
+		await notifyBookingFormSubmission({
+			flow: 'book_s',
+			email: 'special@example.com',
+			scope: 'Special briefing request',
+			pagePath: '/book/s'
+		});
+
+		expect(mockedSendFormSubmissionNotificationViaWorker).toHaveBeenCalledWith(
+			expect.objectContaining({
+				subject: expect.stringContaining('book_s'),
+				metadata: expect.objectContaining({
+					flow: 'book_s',
+					page_path: '/book/s'
+				})
+			})
+		);
+	});
 });
