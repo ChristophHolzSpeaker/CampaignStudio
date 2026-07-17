@@ -1,5 +1,8 @@
 import { form, getRequestEvent } from '$app/server';
-import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
+import {
+	readVisitorIdentifier,
+	resolveCampaignVisitId
+} from '$lib/server/attribution/campaign-visits';
 import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-context';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
@@ -188,6 +191,12 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 
 	const visitorIdentifier = readVisitorIdentifier(requestEvent.cookies);
 	const now = new Date();
+	const campaignVisitId = await resolveCampaignVisitId({
+		campaignId: campaignContext.campaignId,
+		campaignPageId: campaignContext.campaignPageId,
+		visitorIdentifier,
+		observedAt: now
+	});
 	const { journey, created } = await findOrCreateLeadJourneyFromInquiry({
 		campaignId: campaignContext.campaignId,
 		campaignPageId: campaignContext.campaignPageId,
@@ -242,10 +251,12 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 
 	await logLeadEvent({
 		leadJourneyId: journey.id,
+		campaignVisitId,
 		campaignId: campaignContext.campaignId,
 		campaignPageId: campaignContext.campaignPageId,
 		eventType: 'form_submitted',
 		eventSource: attributionSurface.eventSource,
+		anonymousId: visitorIdentifier,
 		cta: {
 			key: ctaKey,
 			section: ctaSection,
@@ -289,6 +300,35 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 				'Die Buchung konnte nicht bestaetigt werden. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.',
 			confirmationState: confirmation.state
 		};
+	}
+
+	try {
+		await logLeadEvent({
+			leadJourneyId: journey.id,
+			campaignVisitId,
+			campaignId: campaignContext.campaignId,
+			campaignPageId: campaignContext.campaignPageId,
+			eventType: 'booking_completed',
+			eventSource: attributionSurface.eventSource,
+			anonymousId: visitorIdentifier,
+			cta: {
+				key: ctaKey,
+				section: ctaSection,
+				variant: ctaVariant
+			},
+			eventPayload: {
+				booking_id: confirmation.booking.id,
+				booking_type: 'lead',
+				booking_surface: bookingSurface,
+				starts_at: confirmation.booking.starts_at.toISOString(),
+				ends_at: confirmation.booking.ends_at.toISOString()
+			}
+		});
+	} catch (error) {
+		console.error('booking_completed_attribution_failed', {
+			bookingId: confirmation.booking.id,
+			error: error instanceof Error ? error.message : 'unknown_error'
+		});
 	}
 
 	const bookingFlow = await resolvePublicBookingSlots({

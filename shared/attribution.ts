@@ -20,11 +20,13 @@ export type CTAEventInput = AttributionIdentity &
 		type: CTAType;
 		campaign_id: number;
 		campaign_page_id: number;
+		campaign_visit_id?: number;
 		lead_journey_id?: string;
 	};
 
 export type LeadEventInput = AttributionIdentity & {
 	lead_journey_id?: string;
+	campaign_visit_id?: number;
 	campaign_id?: number;
 	campaign_page_id?: number;
 	occurred_at?: string;

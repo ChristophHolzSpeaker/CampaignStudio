@@ -67,6 +67,17 @@
 		});
 	}
 
+	function trackDirectMailtoCta(): void {
+		trackMailtoClick({
+			campaignId,
+			campaignPageId,
+			ctaKey: 'direct_access_mailto',
+			ctaLabel: emailAddress,
+			ctaSection: 'direct_access',
+			ctaVariant: 'mailto'
+		});
+	}
+
 	async function copyEmail() {
 		if (!emailAddress) return;
 
@@ -107,7 +118,7 @@
 				<div class="flex flex-row items-center justify-between gap-8 text-black">
 					<a
 						href={props?.mailtoHref ?? 'mailto:speaker@christophholz.com'}
-						onclick={trackMailtoClick}
+						onclick={trackDirectMailtoCta}
 						class="text-xl leading-tight break-all hover:text-primary md:text-7xl"
 					>
 						{copied ? 'Copied!' : 'speaker@christophholz.com'}

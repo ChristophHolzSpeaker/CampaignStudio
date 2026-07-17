@@ -1,5 +1,10 @@
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
+import {
+	readVisitorIdentifier,
+	resolveCampaignVisitId
+} from '$lib/server/attribution/campaign-visits';
 import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { z } from 'zod';
 
 const formStartedSchema = z.object({
@@ -9,7 +14,7 @@ const formStartedSchema = z.object({
 	form_key: z.string().trim().min(1).max(255)
 });
 
-export async function POST({ request }: { request: Request }): Promise<Response> {
+export const POST: RequestHandler = async ({ request, cookies }) => {
 	let payload: unknown;
 
 	try {
@@ -23,9 +28,18 @@ export async function POST({ request }: { request: Request }): Promise<Response>
 		return json({ ok: false, error: 'Invalid request payload' }, { status: 400 });
 	}
 
-	await logLeadEvent({
+	const visitorIdentifier = readVisitorIdentifier(cookies);
+	const campaignVisitId = await resolveCampaignVisitId({
 		campaignId: parsed.data.campaign_id,
 		campaignPageId: parsed.data.campaign_page_id,
+		visitorIdentifier
+	});
+
+	await logLeadEvent({
+		campaignVisitId,
+		campaignId: parsed.data.campaign_id,
+		campaignPageId: parsed.data.campaign_page_id,
+		anonymousId: visitorIdentifier,
 		eventType: 'form_started',
 		eventSource: 'sveltekit.frictionless_funnel_form',
 		eventPayload: {
@@ -35,4 +49,4 @@ export async function POST({ request }: { request: Request }): Promise<Response>
 	});
 
 	return json({ ok: true });
-}
+};

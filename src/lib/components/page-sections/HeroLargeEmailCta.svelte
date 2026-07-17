@@ -5,10 +5,14 @@
 
 	let {
 		props,
-		mailtoHref
+		mailtoHref,
+		campaignId = null,
+		campaignPageId = null
 	}: {
 		props?: HeroLargeEmailCtaProps;
 		mailtoHref?: string;
+		campaignId?: number | null;
+		campaignPageId?: number | null;
 	} = $props();
 
 	let headingSplit = $derived(props?.heading.trim().split(/\s+/));
@@ -18,6 +22,17 @@
 	let emailHref = $derived(
 		mailtoHref ?? 'mailto:speaker@christophholz.com?subject=Request%20a%20talk'
 	);
+
+	function trackEmailCta(): void {
+		trackMailtoClick({
+			campaignId,
+			campaignPageId,
+			ctaKey: 'hero_large_email_cta',
+			ctaLabel: 'speaker@christophholz.com',
+			ctaSection: 'hero_large_email_cta',
+			ctaVariant: 'default'
+		});
+	}
 </script>
 
 <section class="relative flex min-h-screen items-center justify-center overflow-hidden bg-black">
@@ -52,7 +67,7 @@
 			<a
 				class="block border-l-8 border-primary bg-white p-8 transition-colors duration-300 group-hover:border-white md:border-l-16 md:p-12"
 				href={emailHref}
-				onclick={trackMailtoClick}
+				onclick={trackEmailCta}
 			>
 				<div class="flex flex-col items-center justify-between gap-8 md:flex-row">
 					<span

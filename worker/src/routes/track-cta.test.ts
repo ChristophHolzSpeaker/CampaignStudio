@@ -41,11 +41,12 @@ describe('handleTrackCTA', () => {
 			id: 5,
 			campaign_id: 10
 		});
+		mockedSelectOne.mockResolvedValueOnce({ id: 77 });
 		mockedLogLeadEvent.mockResolvedValue(undefined as unknown as void);
 
 		const response = await handleTrackCTA(
 			makeRequest(
-				'https://worker.test/track/cta?type=navigation&campaign_id=10&campaign_page_id=5&cta_key=landing_navigation_category_keynote-speaker_link&cta_label=Keynote%20Speaker&cta_section=landing_navigation&cta_variant=desktop'
+				'https://worker.test/track/cta?type=navigation&campaign_id=10&campaign_page_id=5&campaign_visit_id=77&anonymous_id=visitor-123&cta_key=landing_navigation_category_keynote-speaker_link&cta_label=Keynote%20Speaker&cta_section=landing_navigation&cta_variant=desktop'
 			),
 			makeTestEnv()
 		);
@@ -56,6 +57,8 @@ describe('handleTrackCTA', () => {
 			expect.any(Object),
 			expect.objectContaining({
 				event_type: 'cta_click',
+				campaign_visit_id: 77,
+				anonymous_id: 'visitor-123',
 				cta_key: 'landing_navigation_category_keynote-speaker_link',
 				cta_label: 'Keynote Speaker',
 				cta_section: 'landing_navigation',
@@ -66,5 +69,23 @@ describe('handleTrackCTA', () => {
 				})
 			})
 		);
+	});
+
+	it('rejects a campaign visit that is not owned by the supplied browser identifier', async () => {
+		mockedSelectOne.mockResolvedValueOnce({
+			id: 5,
+			campaign_id: 10
+		});
+		mockedSelectOne.mockResolvedValueOnce(null);
+
+		const response = await handleTrackCTA(
+			makeRequest(
+				'https://worker.test/track/cta?type=email&campaign_id=10&campaign_page_id=5&campaign_visit_id=77&anonymous_id=other-visitor'
+			),
+			makeTestEnv()
+		);
+
+		expect(response.status).toBe(400);
+		expect(mockedLogLeadEvent).not.toHaveBeenCalled();
 	});
 });

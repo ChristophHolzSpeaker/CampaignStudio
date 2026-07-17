@@ -8,6 +8,8 @@
 		mailtoCta?: string;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
+		campaignVisitId?: number | null;
+		anonymousId?: string | null;
 		onExternalNavigationClick?: () => void;
 	};
 	let {
@@ -15,6 +17,8 @@
 		mailtoCta = 'Vortrag Anfragen',
 		campaignId = null,
 		campaignPageId = null,
+		campaignVisitId = null,
+		anonymousId = null,
 		onExternalNavigationClick
 	}: LandingPageNavigationData = $props();
 
@@ -86,6 +90,8 @@
 			type: 'navigation',
 			campaign_id: campaignId,
 			campaign_page_id: campaignPageId,
+			...(campaignVisitId ? { campaign_visit_id: campaignVisitId } : {}),
+			...(anonymousId ? { anonymous_id: anonymousId } : {}),
 			cta_key: input.ctaKey,
 			cta_label: input.ctaLabel,
 			cta_section: 'landing_navigation',
@@ -184,6 +190,8 @@
 			type: 'email',
 			campaign_id: campaignId,
 			campaign_page_id: campaignPageId,
+			...(campaignVisitId ? { campaign_visit_id: campaignVisitId } : {}),
+			...(anonymousId ? { anonymous_id: anonymousId } : {}),
 			cta_key: 'landing_navigation_email',
 			cta_label: mailtoCta,
 			cta_section: 'landing_navigation',

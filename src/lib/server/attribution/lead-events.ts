@@ -7,6 +7,7 @@ export type LeadEventPayload = Record<string, unknown>;
 
 type LeadEventInput = {
 	leadJourneyId?: string | null;
+	campaignVisitId?: number | null;
 	campaignId?: number | null;
 	campaignPageId?: number | null;
 	eventType: EventType;
@@ -26,6 +27,7 @@ type LeadEventInput = {
 export async function logLeadEvent(input: LeadEventInput): Promise<void> {
 	await db.insert(lead_events).values({
 		lead_journey_id: input.leadJourneyId ?? null,
+		campaign_visit_id: input.campaignVisitId ?? null,
 		campaign_id: input.campaignId ?? null,
 		campaign_page_id: input.campaignPageId ?? null,
 		event_type: input.eventType,

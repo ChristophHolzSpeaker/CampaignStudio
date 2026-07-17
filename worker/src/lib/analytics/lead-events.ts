@@ -4,6 +4,7 @@ import type { WorkerEnv } from '../env';
 
 export type WorkerLeadEventInput = {
 	lead_journey_id?: string | null;
+	campaign_visit_id?: number | null;
 	campaign_id?: number | null;
 	campaign_page_id?: number | null;
 	event_type: EventType;
@@ -21,6 +22,7 @@ export type WorkerLeadEventInput = {
 export async function logLeadEvent(env: WorkerEnv, input: WorkerLeadEventInput): Promise<void> {
 	await insertOne(env, 'lead_events', {
 		lead_journey_id: input.lead_journey_id ?? null,
+		campaign_visit_id: input.campaign_visit_id ?? null,
 		campaign_id: input.campaign_id ?? null,
 		campaign_page_id: input.campaign_page_id ?? null,
 		event_type: input.event_type,

@@ -4,10 +4,21 @@ vi.mock('$lib/server/attribution/client', () => ({
 	trackCTA: vi.fn()
 }));
 
+vi.mock('$lib/server/attribution/campaign-visits', () => ({
+	readVisitorIdentifier: vi.fn(),
+	resolveCampaignVisitId: vi.fn()
+}));
+
 import { trackCTA } from '$lib/server/attribution/client';
+import {
+	readVisitorIdentifier,
+	resolveCampaignVisitId
+} from '$lib/server/attribution/campaign-visits';
 import { POST } from './+server';
 
 const mockedTrackCTA = vi.mocked(trackCTA);
+const mockedReadVisitorIdentifier = vi.mocked(readVisitorIdentifier);
+const mockedResolveCampaignVisitId = vi.mocked(resolveCampaignVisitId);
 
 function requestWithBody(body: unknown): Request {
 	return new Request('http://localhost/api/attribution/cta', {
@@ -20,6 +31,10 @@ function requestWithBody(body: unknown): Request {
 describe('POST /api/attribution/cta', () => {
 	beforeEach(() => {
 		mockedTrackCTA.mockReset();
+		mockedReadVisitorIdentifier.mockReset();
+		mockedResolveCampaignVisitId.mockReset();
+		mockedReadVisitorIdentifier.mockReturnValue('visitor-123');
+		mockedResolveCampaignVisitId.mockResolvedValue(77);
 	});
 
 	it('returns 400 for invalid CTA type', async () => {
@@ -41,7 +56,8 @@ describe('POST /api/attribution/cta', () => {
 				cta_label: 'Home',
 				cta_section: 'landing_navigation',
 				cta_variant: 'desktop'
-			})
+			}),
+			cookies: {} as never
 		} as never);
 
 		expect(response.status).toBe(204);
@@ -51,9 +67,17 @@ describe('POST /api/attribution/cta', () => {
 				type: 'navigation',
 				campaign_id: 10,
 				campaign_page_id: 3,
+				campaign_visit_id: 77,
+				anonymous_id: 'visitor-123',
 				cta_key: 'landing_navigation_home',
 				cta_section: 'landing_navigation'
 			})
 		);
+		expect(mockedResolveCampaignVisitId).toHaveBeenCalledWith({
+			campaignId: 10,
+			campaignPageId: 3,
+			visitorIdentifier: 'visitor-123',
+			requestedVisitId: undefined
+		});
 	});
 });

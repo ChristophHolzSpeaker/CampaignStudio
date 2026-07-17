@@ -83,6 +83,17 @@
 		});
 	}
 
+	function trackHeroMailto(variant: 'dual_primary' | 'calendar_fallback'): void {
+		trackMailtoClick({
+			campaignId,
+			campaignPageId,
+			ctaKey: variant === 'dual_primary' ? 'hero_primary_mailto' : 'hero_calendar_fallback_mailto',
+			ctaLabel: variant === 'dual_primary' ? (abTest?.primaryLabel ?? 'Vortrag anfragen') : 'Email',
+			ctaSection: 'immediate_authority_hero',
+			ctaVariant: variant
+		});
+	}
+
 	function handleHeroBookingWidgetKeydown(event: KeyboardEvent): void {
 		if (event.key !== 'Enter' && event.key !== ' ') {
 			return;
@@ -272,7 +283,10 @@
 							<a
 								href={mailtoHref}
 								class="btn-primary inline-flex items-center gap-2"
-								onclick={() => trackHeroCtaClick('primary')}
+								onclick={() => {
+									trackHeroCtaClick('primary');
+									trackHeroMailto('dual_primary');
+								}}
 							>
 								{abTest?.primaryLabel ?? 'Vortrag anfragen'}
 							</a>
@@ -307,7 +321,7 @@
 						<a
 							href={mailtoHref}
 							type="button"
-							onclick={trackMailtoClick}
+							onclick={() => trackHeroMailto('calendar_fallback')}
 							class={[
 								'inline-block border border-slate-300  bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50'
 							]}

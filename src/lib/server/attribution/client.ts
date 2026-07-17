@@ -21,6 +21,9 @@ export async function trackCTA(input: CTAEventInput): Promise<void> {
 	url.searchParams.set('type', input.type);
 	url.searchParams.set('campaign_id', String(input.campaign_id));
 	url.searchParams.set('campaign_page_id', String(input.campaign_page_id));
+	if (input.campaign_visit_id) {
+		url.searchParams.set('campaign_visit_id', String(input.campaign_visit_id));
+	}
 
 	if (input.lead_journey_id) {
 		url.searchParams.set('lead_journey_id', input.lead_journey_id);

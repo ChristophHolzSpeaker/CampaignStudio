@@ -5,6 +5,9 @@ import {
 	getPublicBookingUnavailableMessage,
 	resolveLeadBookingToken
 } from '$lib/server/bookings';
+import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
+import { getLeadJourneyById } from '$lib/server/attribution/lead-journeys';
+import { logLeadEvent } from '$lib/server/attribution/lead-events';
 import {
 	bookingConfirmationSchema,
 	getBookingConfirmationSubmission
@@ -90,6 +93,34 @@ export const submitLeadTokenBooking = form('unchecked', async (rawData) => {
 	});
 
 	if (confirmation.state === 'confirmed') {
+		try {
+			const leadJourneyId = tokenResolution.context.leadJourneyId;
+			if (leadJourneyId) {
+				const journey = await getLeadJourneyById(leadJourneyId);
+				await logLeadEvent({
+					leadJourneyId,
+					campaignVisitId: journey?.last_visit_id ?? journey?.first_visit_id ?? null,
+					campaignId: tokenResolution.context.campaignId,
+					campaignPageId: journey?.last_page_id ?? journey?.first_page_id ?? null,
+					eventType: 'booking_completed',
+					eventSource: 'sveltekit.book_lead_page',
+					anonymousId: readVisitorIdentifier(requestEvent.cookies),
+					eventPayload: {
+						booking_id: confirmation.booking.id,
+						booking_link_id: tokenResolution.context.bookingLinkId,
+						booking_type: 'lead',
+						starts_at: confirmation.booking.starts_at.toISOString(),
+						ends_at: confirmation.booking.ends_at.toISOString()
+					}
+				});
+			}
+		} catch (error) {
+			console.error('booking_completed_attribution_failed', {
+				bookingId: confirmation.booking.id,
+				error: error instanceof Error ? error.message : 'unknown_error'
+			});
+		}
+
 		return {
 			success: true,
 			confirmationState: 'confirmed',

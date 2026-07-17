@@ -14,6 +14,11 @@ vi.mock('$lib/server/attribution/lead-events', () => ({
 	logLeadEvent: vi.fn()
 }));
 
+vi.mock('$lib/server/attribution/lead-journeys', () => ({
+	findOrCreateLeadJourneyFromInquiry: vi.fn(),
+	getLeadJourneyById: vi.fn()
+}));
+
 import {
 	confirmBookingSelection,
 	getBookingPolicy,
@@ -24,6 +29,7 @@ import {
 	resolvePublicBookingSlots
 } from '$lib/server/bookings';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
+import { getLeadJourneyById } from '$lib/server/attribution/lead-journeys';
 import { actions, load } from './+page.server';
 
 const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
@@ -34,6 +40,7 @@ const mockedResolveLeadBookingToken = vi.mocked(resolveLeadBookingToken);
 const mockedResolvePublicBookingSlots = vi.mocked(resolvePublicBookingSlots);
 const mockedConfirmBookingSelection = vi.mocked(confirmBookingSelection);
 const mockedLogLeadEvent = vi.mocked(logLeadEvent);
+const mockedGetLeadJourneyById = vi.mocked(getLeadJourneyById);
 
 describe('/book/l/[token] +page.server', () => {
 	beforeEach(() => {
@@ -45,6 +52,7 @@ describe('/book/l/[token] +page.server', () => {
 		mockedResolveLeadBookingToken.mockReset();
 		mockedResolvePublicBookingSlots.mockReset();
 		mockedLogLeadEvent.mockReset();
+		mockedGetLeadJourneyById.mockReset();
 	});
 
 	it('load returns invalid token state', async () => {
@@ -823,9 +831,18 @@ describe('/book/l/[token] +page.server', () => {
 			calendarEventId: 'evt_222',
 			calendarEventUrl: null,
 			booking: {
-				id: 'booking-2'
+				id: 'booking-2',
+				starts_at: new Date('2026-06-01T10:00:00.000Z'),
+				ends_at: new Date('2026-06-01T10:30:00.000Z')
 			} as never
 		});
+		mockedGetLeadJourneyById.mockResolvedValueOnce({
+			id: 'journey-4',
+			last_visit_id: 77,
+			last_page_id: 3,
+			first_visit_id: 70,
+			first_page_id: 3
+		} as never);
 
 		const formData = new FormData();
 		formData.set('email', 'lead@example.com');
@@ -838,7 +855,10 @@ describe('/book/l/[token] +page.server', () => {
 			request: new Request('http://test.local/book/l/usable-token', {
 				method: 'POST',
 				body: formData
-			})
+			}),
+			cookies: {
+				get: vi.fn().mockReturnValue('visitor-123')
+			}
 		} as never)) as any;
 
 		expect(mockedConfirmBookingSelection).toHaveBeenCalledWith(
@@ -851,6 +871,13 @@ describe('/book/l/[token] +page.server', () => {
 		);
 		expect(response.confirmationState).toBe('confirmed');
 		expect(response.confirmedBookingId).toBe('booking-2');
+		expect(mockedLogLeadEvent).toHaveBeenCalledWith(
+			expect.objectContaining({
+				eventType: 'booking_completed',
+				campaignVisitId: 77,
+				anonymousId: 'visitor-123'
+			})
+		);
 	});
 
 	it('confirm action rejects when token is invalid during submit', async () => {

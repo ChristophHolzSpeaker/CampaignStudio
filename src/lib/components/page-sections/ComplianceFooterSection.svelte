@@ -68,6 +68,17 @@
 			// fire-and-forget tracking
 		});
 	}
+
+	function trackPressEmailCta(): void {
+		trackMailtoClick({
+			campaignId,
+			campaignPageId,
+			ctaKey: 'compliance_footer_press_email',
+			ctaLabel: 'presse@christophholz.com',
+			ctaSection: 'compliance_transparency_footer',
+			ctaVariant: 'press'
+		});
+	}
 </script>
 
 <footer
@@ -85,6 +96,7 @@
 					Dipl.-Informatiker Christoph Holz<br />Achenallee 16A<br />6380 St. Johann in Tirol<br
 					/><br />Medienanfragen:<br /><a
 						href="mailto:presse@christophholz.com?subject=Medienanfragen"
+						onclick={trackPressEmailCta}
 						class="footer-link">presse@christophholz.com<br /><br /></a
 					>Keynote-Anfragen:<br /><a
 						href={emailHref}

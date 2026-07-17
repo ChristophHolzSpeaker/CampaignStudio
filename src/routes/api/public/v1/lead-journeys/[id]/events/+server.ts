@@ -39,6 +39,7 @@ export const GET: RequestHandler = async ({ request, params, url }) => {
 		.select({
 			id: lead_events.id,
 			leadJourneyId: lead_events.lead_journey_id,
+			campaignVisitId: lead_events.campaign_visit_id,
 			campaignId: lead_events.campaign_id,
 			campaignPageId: lead_events.campaign_page_id,
 			eventType: lead_events.event_type,

@@ -1,7 +1,7 @@
 import { db } from '$lib/server/db';
 import { campaign_visits } from '$lib/server/db/schema';
 import type { Cookies } from '@sveltejs/kit';
-import { and, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, lte } from 'drizzle-orm';
 
 const VISITOR_COOKIE_NAME = 'cs_vid';
 const VISITOR_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
@@ -66,6 +66,37 @@ export function getOrCreateVisitorIdentifier(input: {
 
 export function readVisitorIdentifier(cookies: Cookies): string | null {
 	return cookies.get(VISITOR_COOKIE_NAME) ?? null;
+}
+
+export async function resolveCampaignVisitId(input: {
+	campaignId: number;
+	campaignPageId: number;
+	visitorIdentifier: string | null;
+	requestedVisitId?: number | null;
+	observedAt?: Date;
+}): Promise<number | null> {
+	if (!input.visitorIdentifier) {
+		return null;
+	}
+
+	const ownershipWhere = and(
+		eq(campaign_visits.campaign_id, input.campaignId),
+		eq(campaign_visits.campaign_page_id, input.campaignPageId),
+		eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier),
+		lte(campaign_visits.visited_at, input.observedAt ?? new Date())
+	);
+	const where = input.requestedVisitId
+		? and(ownershipWhere, eq(campaign_visits.id, input.requestedVisitId))
+		: ownershipWhere;
+
+	const [visit] = await db
+		.select({ id: campaign_visits.id })
+		.from(campaign_visits)
+		.where(where)
+		.orderBy(desc(campaign_visits.visited_at), desc(campaign_visits.id))
+		.limit(1);
+
+	return visit?.id ?? null;
 }
 
 export async function logCampaignVisit(input: {
