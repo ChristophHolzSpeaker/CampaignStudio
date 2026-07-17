@@ -3,6 +3,7 @@
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import { submitInlineLeadBooking } from '$lib/components/booking/LeadInlineBookingSequence.remote';
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 
 	type SlotPresentation = {
 		startsAtIso: string;
@@ -80,6 +81,17 @@
 	const effectiveIntakeCompany = $derived(
 		showIntakeStep ? intakeCompany : (initialValues.company ?? '')
 	);
+
+	function trackUnavailableMailto(): void {
+		trackMailtoClick({
+			campaignId,
+			campaignPageId,
+			ctaKey: `${ctaKey}_unavailable_mailto`,
+			ctaLabel: 'Contact us to request a custom time',
+			ctaSection,
+			ctaVariant: ctaVariant ?? 'unavailable'
+		});
+	}
 	const effectiveIntakeScope = $derived(showIntakeStep ? intakeScope : (initialValues.scope ?? ''));
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
@@ -515,6 +527,7 @@ Veranstaltungsort:`;
 					<p>No slots are currently available from this page context.</p>
 					<a
 						href="mailto:speaker@christophholz.com"
+						onclick={trackUnavailableMailto}
 						class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
 					>
 						Contact us to request a custom time

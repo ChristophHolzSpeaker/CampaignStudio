@@ -3,6 +3,7 @@
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import { submitInlineLeadBooking } from '$lib/components/booking/LeadInlineBookingSequence.remote';
+	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 
 	type SlotPresentation = {
 		startsAtIso: string;
@@ -78,6 +79,17 @@
 	const effectiveIntakeCompany = $derived(
 		showIntakeStep ? intakeCompany : (initialValues.company ?? '')
 	);
+
+	function trackUnavailableMailto(): void {
+		trackMailtoClick({
+			campaignId,
+			campaignPageId,
+			ctaKey: `${ctaKey}_unavailable_mailto`,
+			ctaLabel: 'Kontaktieren Sie uns fuer einen individuellen Termin',
+			ctaSection,
+			ctaVariant: ctaVariant ?? 'unavailable'
+		});
+	}
 	const effectiveIntakeScope = $derived(showIntakeStep ? intakeScope : (initialValues.scope ?? ''));
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
@@ -484,6 +496,7 @@ Veranstaltungsort:`;
 						<p>Derzeit sind ueber diese Seite keine Termine verfuegbar.</p>
 						<a
 							href="mailto:speaker@christophholz.com"
+							onclick={trackUnavailableMailto}
 							class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
 						>
 							Kontaktieren Sie uns fuer einen individuellen Termin

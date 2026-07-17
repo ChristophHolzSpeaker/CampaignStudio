@@ -210,7 +210,16 @@ export const vw_lead_event_enriched = pgView('vw_lead_event_enriched', {
 	journey_last_utm_campaign: text('journey_last_utm_campaign'),
 	journey_first_seen_at: timestamp('journey_first_seen_at'),
 	journey_last_seen_at: timestamp('journey_last_seen_at'),
-	journey_attribution_model_version: text('journey_attribution_model_version')
+	journey_attribution_model_version: text('journey_attribution_model_version'),
+	campaign_visit_id: integer('campaign_visit_id'),
+	action_visit_at: timestamp('action_visit_at'),
+	action_visitor_identifier: text('action_visitor_identifier'),
+	action_utm_source: text('action_utm_source'),
+	action_utm_medium: text('action_utm_medium'),
+	action_utm_campaign: text('action_utm_campaign'),
+	action_utm_term: text('action_utm_term'),
+	action_utm_content: text('action_utm_content'),
+	action_referrer: text('action_referrer')
 }).existing();
 
 export const vw_booking_enriched = pgView('vw_booking_enriched', {
@@ -467,6 +476,9 @@ export const lead_events = pgTable(
 		lead_journey_id: uuid('lead_journey_id').references(() => lead_journeys.id, {
 			onDelete: 'set null'
 		}),
+		campaign_visit_id: integer('campaign_visit_id').references(() => campaign_visits.id, {
+			onDelete: 'set null'
+		}),
 		campaign_id: integer('campaign_id').references(() => campaigns.id, { onDelete: 'set null' }),
 		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id, {
 			onDelete: 'set null'
@@ -492,6 +504,7 @@ export const lead_events = pgTable(
 			table.campaign_page_id,
 			table.occurred_at
 		),
+		eventCampaignVisitIdx: index('lead_events_campaign_visit_id_idx').on(table.campaign_visit_id),
 		eventSessionIdx: index('lead_events_session_idx').on(table.session_id),
 		eventAnonymousIdx: index('lead_events_anonymous_idx').on(table.anonymous_id)
 	})

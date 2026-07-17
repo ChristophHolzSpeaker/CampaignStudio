@@ -25,8 +25,10 @@ Legacy event names are still accepted through the broader `EventType` union.
 Analytics events are persisted in `lead_events` with these attribution keys:
 
 - `lead_journey_id`
+- `campaign_visit_id` (exact landing visit for same-visit actions)
 - `campaign_id`
 - `campaign_page_id`
+- `anonymous_id` (the server-issued `cs_vid` browser identifier)
 - `event_source`
 - `occurred_at`
 - `event_payload` (jsonb)
@@ -40,6 +42,11 @@ Phase 1 adds stable CTA dimensions as first-class nullable columns:
 
 The CTA columns are additive and nullable for historical compatibility.
 
+`campaign_visit_id` is also nullable because background, inbound, and historical events may not have
+a landing-page visit. Speaker-page CTA writes resolve this relationship from the trusted `cs_vid`
+cookie and validate campaign/page ownership before persistence. `vw_lead_event_enriched` exposes the
+linked visit's UTM source, medium, campaign, term, content, and referrer as `action_*` columns.
+
 ## Event writing paths
 
 - App server helper: `src/lib/server/attribution/lead-events.ts`
@@ -52,7 +59,7 @@ Both helpers enforce a consistent write shape and keep event payloads extensible
 `page_view` is sourced from `campaign_visits` in Phase 1/1.5.
 
 - Insert path: `src/lib/server/attribution/campaign-visits.ts` (`logCampaignVisit`)
-- Route usage: `src/routes/speaker/[slug]/+page.server.ts`
+- Route usage: `src/routes/speaker/[slug]/+page.svelte` via `speaker.remote.ts`
 - Reason: `campaign_visits` already provides visit dedupe and UTM/referrer context, so we avoid duplicating page-view rows into `lead_events`.
 
 When building funnel reporting, treat `campaign_visits` as the authoritative page-view dataset and `lead_events` as the canonical interaction/journey stream.

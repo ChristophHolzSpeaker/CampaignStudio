@@ -12,7 +12,10 @@ import {
 	type PublicBookingSlotDayGroup
 } from '$lib/server/bookings';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
-import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
+import {
+	findOrCreateLeadJourneyFromInquiry,
+	getLeadJourneyById
+} from '$lib/server/attribution/lead-journeys';
 import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
 import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
 import {
@@ -508,7 +511,7 @@ export const actions: Actions = {
 					: undefined
 		};
 	},
-	confirm: async ({ request, params }: RequestEvent) => {
+	confirm: async ({ request, params, cookies }: RequestEvent) => {
 		const token = params.token?.trim() ?? '';
 		const tokenResolution = await resolveLeadBookingToken(token);
 
@@ -566,6 +569,34 @@ export const actions: Actions = {
 		});
 
 		if (confirmation.state === 'confirmed') {
+			try {
+				const leadJourneyId = tokenResolution.context.leadJourneyId;
+				if (leadJourneyId) {
+					const journey = await getLeadJourneyById(leadJourneyId);
+					await logLeadEvent({
+						leadJourneyId,
+						campaignVisitId: journey?.last_visit_id ?? journey?.first_visit_id ?? null,
+						campaignId: tokenResolution.context.campaignId,
+						campaignPageId: journey?.last_page_id ?? journey?.first_page_id ?? null,
+						eventType: 'booking_completed',
+						eventSource: 'sveltekit.book_lead_page',
+						anonymousId: readVisitorIdentifier(cookies),
+						eventPayload: {
+							booking_id: confirmation.booking.id,
+							booking_link_id: tokenResolution.context.bookingLinkId,
+							booking_type: 'lead',
+							starts_at: confirmation.booking.starts_at.toISOString(),
+							ends_at: confirmation.booking.ends_at.toISOString()
+						}
+					});
+				}
+			} catch (error) {
+				console.error('booking_completed_attribution_failed', {
+					bookingId: confirmation.booking.id,
+					error: error instanceof Error ? error.message : 'unknown_error'
+				});
+			}
+
 			return {
 				values,
 				confirmationValues,

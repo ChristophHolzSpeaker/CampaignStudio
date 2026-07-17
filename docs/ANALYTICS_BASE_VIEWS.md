@@ -33,10 +33,11 @@ This is the primary attribution spine for downstream rollups.
 Purpose: event stream normalized with journey context.
 
 - Base table: `lead_events`
-- Joins: `lead_journeys`, `campaigns`, `campaign_pages`
-- Key output: event metadata (including CTA fields), event campaign/page context, journey campaign/page context, resolved campaign/page fallback fields
+- Joins: `lead_journeys`, `campaigns`, `campaign_pages`, and the action's linked `campaign_visits` row
+- Key output: event metadata (including CTA fields), event campaign/page context, journey campaign/page context, resolved campaign/page fallback fields, and exact action-visit UTM/referrer fields
 
 `resolved_campaign_id` / `resolved_page_id` are deterministic fallbacks using event-level values first, then journey values.
+`campaign_visit_id` and the `action_*` fields provide same-visit action attribution without time-based inference.
 
 ## `vw_booking_enriched`
 

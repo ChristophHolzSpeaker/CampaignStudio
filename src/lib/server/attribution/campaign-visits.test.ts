@@ -9,7 +9,11 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 import { db } from '$lib/server/db';
-import { logCampaignVisit, markCampaignVisitEngaged } from './campaign-visits';
+import {
+	logCampaignVisit,
+	markCampaignVisitEngaged,
+	resolveCampaignVisitId
+} from './campaign-visits';
 
 const mockedDb = vi.mocked(db);
 
@@ -121,6 +125,39 @@ describe('logCampaignVisit', () => {
 			})
 		);
 		expect(where).toHaveBeenCalled();
+	});
+
+	it('resolves the latest campaign visit owned by the browser identifier', async () => {
+		const limit = vi.fn().mockResolvedValueOnce([{ id: 88 }]);
+		const orderBy = vi.fn().mockReturnValueOnce({ limit });
+		const where = vi.fn().mockReturnValueOnce({ orderBy });
+
+		mockedDb.select.mockReturnValueOnce({
+			from: () => ({ where })
+		} as never);
+
+		const visitId = await resolveCampaignVisitId({
+			campaignId: 44,
+			campaignPageId: 55,
+			visitorIdentifier: 'visitor-123',
+			requestedVisitId: 88,
+			observedAt: new Date('2026-07-17T10:00:00.000Z')
+		});
+
+		expect(visitId).toBe(88);
+		expect(where).toHaveBeenCalled();
+		expect(orderBy).toHaveBeenCalled();
+	});
+
+	it('does not resolve a campaign visit without a browser identifier', async () => {
+		await expect(
+			resolveCampaignVisitId({
+				campaignId: 44,
+				campaignPageId: 55,
+				visitorIdentifier: null
+			})
+		).resolves.toBeNull();
+		expect(mockedDb.select).not.toHaveBeenCalled();
 	});
 
 	it('writes the first x-forwarded-for IP for full storage', async () => {

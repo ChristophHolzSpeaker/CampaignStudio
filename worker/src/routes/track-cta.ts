@@ -9,6 +9,7 @@ const trackCTASchema = z.object({
 	type: z.enum(ctaTypes),
 	campaign_id: z.coerce.number().int().positive(),
 	campaign_page_id: z.coerce.number().int().positive(),
+	campaign_visit_id: z.coerce.number().int().positive().optional(),
 	lead_journey_id: z.string().uuid().optional(),
 	session_id: z.string().trim().min(1).max(255).optional(),
 	anonymous_id: z.string().trim().min(1).max(255).optional(),
@@ -21,6 +22,10 @@ const trackCTASchema = z.object({
 type CampaignPageRow = {
 	id: number;
 	campaign_id: number;
+};
+
+type CampaignVisitRow = {
+	id: number;
 };
 
 export async function handleTrackCTA(request: Request, env: WorkerEnv): Promise<Response> {
@@ -43,8 +48,38 @@ export async function handleTrackCTA(request: Request, env: WorkerEnv): Promise<
 		return json({ ok: false, error: 'Invalid campaign_id/campaign_page_id pair' }, 400);
 	}
 
+	let campaignVisitId: number | null = null;
+	if (input.campaign_visit_id || input.anonymous_id) {
+		const campaignVisitQuery = new URLSearchParams({
+			select: 'id',
+			campaign_id: `eq.${input.campaign_id}`,
+			campaign_page_id: `eq.${input.campaign_page_id}`,
+			limit: '1'
+		});
+
+		if (input.campaign_visit_id) {
+			campaignVisitQuery.set('id', `eq.${input.campaign_visit_id}`);
+		} else {
+			campaignVisitQuery.set('order', 'visited_at.desc,id.desc');
+		}
+		if (input.anonymous_id) {
+			campaignVisitQuery.set('ip_hash_or_session_identifier', `eq.${input.anonymous_id}`);
+		}
+
+		const campaignVisit = await selectOne<CampaignVisitRow>(
+			env,
+			'campaign_visits',
+			campaignVisitQuery
+		);
+		if (input.campaign_visit_id && !campaignVisit) {
+			return json({ ok: false, error: 'Invalid campaign visit attribution' }, 400);
+		}
+		campaignVisitId = campaignVisit?.id ?? null;
+	}
+
 	await logLeadEvent(env, {
 		lead_journey_id: input.lead_journey_id ?? null,
+		campaign_visit_id: campaignVisitId,
 		campaign_id: input.campaign_id,
 		campaign_page_id: input.campaign_page_id,
 		event_type: CTA_EVENT_TYPE[input.type],

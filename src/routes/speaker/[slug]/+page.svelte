@@ -32,33 +32,17 @@
 	} = $props();
 
 	const modal = $derived((page.state as App.PageState).modal);
-	const VISITOR_IDENTIFIER_KEY = 'cs_vid';
 	const ENGAGEMENT_THRESHOLD_MS = 10_000;
 
 	let bookingSlotGroups = $state<BookingSlotGroups | undefined>(undefined);
 	let bookingSlotsRequestId = 0;
 	let visitLogged = false;
-	let visitId: number | null = null;
-	let visitVisitorIdentifier: string | null = null;
+	let visitId = $state<number | null>(null);
+	let visitVisitorIdentifier = $state<string | null>(null);
 	let visitStartedAtMs: number | null = null;
 	let engagementTimer: ReturnType<typeof setTimeout> | null = null;
 	let engagementMarked = false;
 	let isNavigationEngagementRequested = false;
-
-	function getVisitorIdentifier(): string {
-		try {
-			const existing = localStorage.getItem(VISITOR_IDENTIFIER_KEY);
-			if (existing) {
-				return existing;
-			}
-
-			const created = crypto.randomUUID();
-			localStorage.setItem(VISITOR_IDENTIFIER_KEY, created);
-			return created;
-		} catch {
-			return crypto.randomUUID();
-		}
-	}
 
 	async function loadBookingSlots(): Promise<void> {
 		const requestId = ++bookingSlotsRequestId;
@@ -155,7 +139,7 @@
 		}
 
 		visitLogged = true;
-		visitVisitorIdentifier = getVisitorIdentifier();
+		visitVisitorIdentifier = data.abTest.visitorId;
 		visitStartedAtMs = performance.now();
 
 		const result = await logSpeakerVisit({
@@ -214,6 +198,8 @@
 	mailto={data.speakerMailtoHref}
 	campaignId={data.campaignId}
 	campaignPageId={data.campaignPageId}
+	campaignVisitId={visitId}
+	anonymousId={visitVisitorIdentifier}
 	onExternalNavigationClick={markVisitEngagedFromNavigation}
 ></LandingNavigation>
 <PageRenderer
