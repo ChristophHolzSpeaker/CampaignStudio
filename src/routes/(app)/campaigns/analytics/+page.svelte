@@ -63,6 +63,38 @@
 		}))
 	);
 
+	const geoCountryBarItems = $derived.by(() =>
+		data.geoPerformance.countries.slice(0, 6).map((row, index) => ({
+			id: `geo-country-${index}`,
+			label: formatText(row.label, '(unknown)'),
+			value: row.visits,
+			helpText: `${formatPercent(row.visits / Math.max(data.overview.visits, 1))} of visits`
+		}))
+	);
+
+	const geoCityBarItems = $derived.by(() =>
+		data.geoPerformance.cities.slice(0, 6).map((row, index) => ({
+			id: `geo-city-${index}`,
+			label: formatText(row.label, '(unknown)'),
+			value: row.visits,
+			helpText: `${formatPercent(row.visits / Math.max(data.overview.visits, 1))} of visits`
+		}))
+	);
+
+	const geoCountryRows = $derived.by(() =>
+		data.geoPerformance.countries.map((row, index) => ({
+			id: `geo-country-table-${index}`,
+			values: [formatText(row.label, '(unknown)'), formatCount(row.visits)]
+		}))
+	);
+
+	const geoCityRows = $derived.by(() =>
+		data.geoPerformance.cities.map((row, index) => ({
+			id: `geo-city-table-${index}`,
+			values: [formatText(row.label, '(unknown)'), formatCount(row.visits)]
+		}))
+	);
+
 	const campaignRows = $derived.by(() =>
 		data.campaignSummary.map((row, index) => ({
 			id: `campaign-table-${row.campaignId ?? index}`,
@@ -281,6 +313,33 @@
 	</SectionPanel>
 
 	<SectionPanel
+		title="Geo"
+		description="Top countries and cities from campaign visits"
+		scopeLabel={`${data.dateRange.from} to ${data.dateRange.to}`}
+	>
+		<div class="geo-grid">
+			<div class="geo-column">
+				<BarList title="Top countries by visits" items={geoCountryBarItems} />
+				<DataTable
+					columns={['Country', 'Visits']}
+					rows={geoCountryRows}
+					rightAlignedColumns={[1]}
+					emptyLabel="No country rows yet"
+				/>
+			</div>
+			<div class="geo-column">
+				<BarList title="Top cities by visits" items={geoCityBarItems} />
+				<DataTable
+					columns={['City', 'Visits']}
+					rows={geoCityRows}
+					rightAlignedColumns={[1]}
+					emptyLabel="No city rows yet"
+				/>
+			</div>
+		</div>
+	</SectionPanel>
+
+	<SectionPanel
 		title="CTA performance"
 		description="CTA comparison from vw_cta_performance"
 		scopeLabel="All-time rollup"
@@ -307,40 +366,46 @@
 <style>
 	.analytics-page {
 		display: grid;
-		gap: 1.25rem;
-		padding: 1.5rem;
+		gap: 1rem;
+		padding: 1.25rem;
+		background: #f8fafc;
+		--analytics-font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+		font-family: var(--analytics-font);
+		color: #111827;
 	}
 
 	.hero {
 		display: flex;
 		justify-content: space-between;
 		gap: 1.5rem;
-		align-items: end;
+		align-items: flex-end;
 		flex-wrap: wrap;
+		padding: 0.25rem 0;
 	}
 
 	.eyebrow {
 		margin: 0;
 		font-size: 0.7rem;
-		letter-spacing: 0.14em;
+		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		color: #5d3f3f;
+		color: #6b7280;
 	}
 
 	h1 {
 		margin: 0.2rem 0 0;
-		font-size: clamp(2.1rem, 4.6vw, 3.4rem);
-		letter-spacing: -0.03em;
+		font-size: clamp(2rem, 4vw, 3.2rem);
+		letter-spacing: -0.04em;
+		font-weight: 700;
 	}
 
 	.dot {
-		color: var(--accent);
+		color: #2563eb;
 	}
 
 	.intro {
 		margin: 0.4rem 0 0;
 		font-size: 0.9rem;
-		color: #5d3f3f;
+		color: #6b7280;
 		max-width: 38rem;
 	}
 
@@ -349,8 +414,12 @@
 		gap: 0.7rem;
 		align-items: end;
 		flex-wrap: wrap;
-		background: #f3f3f3;
-		padding: 0.7rem;
+		background: #ffffff;
+		padding: 0.75rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+		font-family: var(--analytics-font);
 	}
 
 	.date-filter label {
@@ -359,21 +428,24 @@
 	}
 
 	.date-filter span {
-		font-size: 0.65rem;
+		font-size: 0.68rem;
 		text-transform: uppercase;
-		letter-spacing: 0.08em;
-		color: #5d3f3f;
+		letter-spacing: 0.06em;
+		color: #6b7280;
+		font-weight: 600;
 	}
 
 	.date-filter input {
 		background: #ffffff;
 		padding: 0.45rem 0.55rem;
-		border: 0;
+		border: 1px solid #d1d5db;
+		border-radius: 10px;
+		color: #111827;
 	}
 
 	.kpi-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 		gap: 0.75rem;
 	}
 
@@ -383,20 +455,36 @@
 		gap: 0.75rem;
 	}
 
+	.geo-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem;
+	}
+
+	.geo-column {
+		display: grid;
+		gap: 0.75rem;
+	}
+
 	.funnel-summary {
 		background: #ffffff;
 		padding: 1rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 	}
 
 	.funnel-summary h3 {
 		margin: 0 0 0.75rem;
 		font-size: 1rem;
+		font-weight: 650;
+		color: #111827;
 	}
 
 	.funnel-meta {
 		margin: 0 0 0.75rem;
 		font-size: 0.71rem;
-		color: #5d3f3f;
+		color: #6b7280;
 	}
 
 	.funnel-summary ul {
@@ -415,7 +503,7 @@
 	}
 
 	.funnel-summary li span {
-		color: #5d3f3f;
+		color: #6b7280;
 	}
 
 	@media (min-width: 1300px) {
@@ -426,6 +514,16 @@
 		.section-grid {
 			grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.5fr);
 			align-items: start;
+		}
+
+		.geo-grid {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+	}
+
+	@media (max-width: 900px) {
+		.geo-grid {
+			grid-template-columns: 1fr;
 		}
 	}
 </style>

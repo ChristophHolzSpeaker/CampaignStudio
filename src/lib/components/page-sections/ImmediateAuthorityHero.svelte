@@ -3,8 +3,10 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
+	import { trackAbEvent } from '$lib/analytics/track-ab-event';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
+	import type { SpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
 	import {
 		saveImmediateAuthorityHeroField,
 		toggleImmediateAuthorityHeroLayout
@@ -20,7 +22,8 @@
 		sectionIndex = -1,
 		onInlineEditSaved,
 		bookingSlotGroups = [],
-		mailtoHref = 'mailto:speaker@christophholz.com'
+		mailtoHref = 'mailto:speaker@christophholz.com',
+		abTest = null
 	}: {
 		props?: ImmediateAuthorityHeroProps;
 		campaignId?: number | null;
@@ -30,6 +33,7 @@
 		onInlineEditSaved?: (() => Promise<void>) | undefined;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
 		mailtoHref?: string;
+		abTest?: SpeakerPrimaryCtaAbTest | null;
 	} = $props();
 
 	const ctaLabel = $derived(props?.primaryCtaLabel ?? 'Request Speaking Availability');
@@ -52,6 +56,41 @@
 		props?.heroImageAlt ?? props?.videoThumbnailAlt ?? 'Christoph Holz on stage'
 	);
 	const supportingBullets = $derived(props?.supportingBullets ?? []);
+	const isDualButtons = $derived(abTest?.ctaMode === 'dual_buttons');
+
+	function trackHeroCtaClick(button: 'primary' | 'secondary'): void {
+		if (!abTest?.experimentId || !abTest.variantId) {
+			return;
+		}
+
+		trackAbEvent({
+			eventType: 'cta_click',
+			experimentId: abTest.experimentId,
+			variantId: abTest.variantId,
+			visitorId: abTest.visitorId,
+			route: page.url.pathname,
+			slug: page.params.slug ?? '',
+			metadata: {
+				button,
+				label:
+					button === 'primary'
+						? (abTest.primaryLabel ?? ctaLabel)
+						: (abTest.secondaryLabel ?? 'Verfügbarkeit prüfen'),
+				cta_mode: abTest.ctaMode,
+				variant_key: abTest.variantKey,
+				experiment_key: abTest.experimentKey
+			}
+		});
+	}
+
+	function handleHeroBookingWidgetKeydown(event: KeyboardEvent): void {
+		if (event.key !== 'Enter' && event.key !== ' ') {
+			return;
+		}
+
+		event.preventDefault();
+		trackHeroCtaClick('primary');
+	}
 
 	function trackCta(variant: 'primary' | 'showreel_modal' | 'showreel_external'): void {
 		if (campaignId == null || campaignPageId == null) {
@@ -228,28 +267,54 @@
 					class="flex flex-col items-start gap-3 sm:gap-6"
 					data-cta-action={props?.primaryCtaAction}
 				>
-					<div class="w-full">
-						<LeadInlineHeroBookingSequence
-							{campaignId}
-							{campaignPageId}
-							pageSlug={pageSlug ?? null}
-							slotGroups={bookingSlotGroups}
-							formActionKey={`hero-inline-booking:${campaignPageId ?? 'none'}`}
-							bookingSurface="hero"
-							ctaKey="hero_inline_booking"
-							ctaSection="hero"
-						></LeadInlineHeroBookingSequence>
-					</div>
-					<a
-						href={mailtoHref}
-						type="button"
-						onclick={trackMailtoClick}
-						class={[
-							'inline-block border border-slate-300  bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50'
-						]}
-					>
-						Schreib eine email: speaker@christophholz.com
-					</a>
+					{#if isDualButtons}
+						<div class="flex flex-wrap items-center gap-3">
+							<a
+								href={mailtoHref}
+								class="btn-primary inline-flex items-center gap-2"
+								onclick={() => trackHeroCtaClick('primary')}
+							>
+								{abTest?.primaryLabel ?? 'Vortrag anfragen'}
+							</a>
+							<a
+								href="#booking"
+								class="btn inline-flex items-center gap-2 border border-slate-300 bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50"
+								onclick={() => trackHeroCtaClick('secondary')}
+							>
+								{abTest?.secondaryLabel ?? 'Verfügbarkeit prüfen'}
+							</a>
+						</div>
+					{:else}
+						<div
+							class="w-full"
+							role="button"
+							tabindex="0"
+							onclick={() => trackHeroCtaClick('primary')}
+							onkeydown={handleHeroBookingWidgetKeydown}
+						>
+							<LeadInlineHeroBookingSequence
+								{campaignId}
+								{campaignPageId}
+								pageSlug={pageSlug ?? null}
+								slotGroups={bookingSlotGroups}
+								formActionKey={`hero-inline-booking:${campaignPageId ?? 'none'}`}
+								bookingSurface="hero"
+								ctaKey="hero_inline_booking"
+								ctaSection="hero"
+								ctaVariant={abTest?.variantKey ?? null}
+							></LeadInlineHeroBookingSequence>
+						</div>
+						<a
+							href={mailtoHref}
+							type="button"
+							onclick={trackMailtoClick}
+							class={[
+								'inline-block border border-slate-300  bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50'
+							]}
+						>
+							Schreib eine email: speaker@christophholz.com
+						</a>
+					{/if}
 				</div>
 			</div>
 		{/snippet}

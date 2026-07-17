@@ -19,28 +19,41 @@
 <style>
 	.kpi-card {
 		background: #ffffff;
-		padding: 1rem;
+		padding: 1rem 1.05rem;
 		display: grid;
 		gap: 0.4rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 14px;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+		font-family: var(
+			--analytics-font,
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif
+		);
 	}
 
 	.kpi-label {
 		margin: 0;
-		font-size: 0.65rem;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		color: #5d3f3f;
+		font-size: 0.75rem;
+		font-weight: 600;
+		letter-spacing: 0;
+		color: #6b7280;
 	}
 
 	.kpi-value {
 		margin: 0;
-		font-size: 2rem;
+		font-size: 1.9rem;
 		line-height: 1;
+		font-weight: 650;
+		color: #111827;
 	}
 
 	.kpi-helper {
 		margin: 0;
 		font-size: 0.75rem;
-		color: #5d3f3f;
+		color: #6b7280;
 	}
 </style>

@@ -7,6 +7,7 @@ type BookingFormSubmissionInput = {
 		| 'book_l_new'
 		| 'book_l_existing'
 		| 'book_g'
+		| 'book_s'
 		| 'webflow_lead_intake';
 	email: string;
 	name?: string | null;

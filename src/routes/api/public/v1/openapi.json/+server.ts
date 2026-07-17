@@ -44,6 +44,25 @@ const openApiDocument = {
 			}
 		},
 		'/api/public/v1/campaigns': {
+			get: {
+				summary: 'List campaigns for external navigation',
+				description:
+					'Returns campaign navigation items with all landing page versions and tokenized iframe embed URLs for trusted external editing interfaces.',
+				security,
+				responses: {
+					'200': {
+						description: 'Campaign navigation items grouped with landing pages',
+						content: {
+							'application/json': {
+								schema: { $ref: '#/components/schemas/CampaignListResponse' }
+							}
+						}
+					},
+					'401': errorResponse,
+					'429': errorResponse,
+					'500': errorResponse
+				}
+			},
 			post: {
 				summary: 'Create campaign with supplied landing page JSON',
 				description:
@@ -285,6 +304,61 @@ const openApiDocument = {
 					propsSchema: { type: 'object', additionalProperties: true }
 				}
 			},
+			CampaignListResponse: {
+				type: 'object',
+				required: ['ok', 'data'],
+				properties: {
+					ok: { type: 'boolean', const: true },
+					data: { type: 'array', items: { $ref: '#/components/schemas/CampaignNavItem' } }
+				}
+			},
+			CampaignNavItem: {
+				type: 'object',
+				required: ['campaignId', 'name', 'status', 'createdAt', 'updatedAt', 'pages'],
+				properties: {
+					campaignId: { type: 'integer', minimum: 1 },
+					name: { type: 'string' },
+					status: { type: 'string' },
+					createdAt: { type: 'string', format: 'date-time' },
+					updatedAt: { type: 'string', format: 'date-time' },
+					pages: { type: 'array', items: { $ref: '#/components/schemas/CampaignPageNavItem' } }
+				}
+			},
+			CampaignPageNavItem: {
+				type: 'object',
+				required: [
+					'campaignPageId',
+					'versionNumber',
+					'title',
+					'slug',
+					'isPublished',
+					'publishedAt',
+					'createdAt',
+					'updatedAt',
+					'heroImageUrl',
+					'embedUrl',
+					'liveUrl'
+				],
+				properties: {
+					campaignPageId: { type: 'integer', minimum: 1 },
+					versionNumber: { type: 'integer', minimum: 1 },
+					title: { type: 'string' },
+					slug: { type: 'string' },
+					isPublished: { type: 'boolean' },
+					publishedAt: { type: ['string', 'null'], format: 'date-time' },
+					createdAt: { type: 'string', format: 'date-time' },
+					updatedAt: { type: 'string', format: 'date-time' },
+					heroImageUrl: { type: ['string', 'null'] },
+					embedUrl: {
+						type: 'string',
+						description: 'Absolute /embed/{slug}?token=... iframe URL for draft preview rendering.'
+					},
+					liveUrl: {
+						type: ['string', 'null'],
+						description: 'Absolute public speaker URL when the page is published, otherwise null.'
+					}
+				}
+			},
 			CampaignCreateRequest: {
 				type: 'object',
 				required: ['campaign', 'content_json'],
@@ -331,13 +405,25 @@ const openApiDocument = {
 					ok: { type: 'boolean', const: true },
 					data: {
 						type: 'object',
-						required: ['campaignId', 'campaignPageId', 'pageSlug', 'campaignUrl', 'previewUrl'],
+						required: [
+							'campaignId',
+							'campaignPageId',
+							'pageSlug',
+							'campaignUrl',
+							'previewUrl',
+							'embedUrl'
+						],
 						properties: {
 							campaignId: { type: 'integer', minimum: 1 },
 							campaignPageId: { type: 'integer', minimum: 1 },
 							pageSlug: { type: 'string' },
 							campaignUrl: { type: 'string' },
-							previewUrl: { type: 'string' }
+							previewUrl: { type: 'string' },
+							embedUrl: {
+								type: 'string',
+								description:
+									'Absolute /embed/{slug}?token=... iframe URL for draft preview rendering.'
+							}
 						}
 					}
 				}

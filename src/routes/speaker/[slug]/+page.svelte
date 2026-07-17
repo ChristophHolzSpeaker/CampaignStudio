@@ -1,14 +1,17 @@
 <script lang="ts">
 	import { afterNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { injectAnalytics } from '@vercel/analytics/sveltekit';
 	import { onMount } from 'svelte';
 	import LandingNavigation from '$lib/components/blocks/LandingNavigation.svelte';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
 	import PageRenderer from '$lib/components/page-renderer/PageRenderer.svelte';
 	import { getSpeakerBookingSlotPreview } from './speaker-booking-slots.remote';
-	import { logSpeakerVisit } from './speaker.remote';
+	import { logSpeakerVisit, markSpeakerVisitEngaged } from './speaker.remote';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
+	import { browser } from '$app/environment';
+	import type { SpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
 
 	type BookingSlotGroups = Array<{
 		dateKey: string;
@@ -23,16 +26,24 @@
 			campaignId: number | null;
 			campaignPageId: number | null;
 			jsonLd: string;
+			abTest: SpeakerPrimaryCtaAbTest;
 			speakerMailtoHref: string;
 		};
 	} = $props();
 
 	const modal = $derived((page.state as App.PageState).modal);
 	const VISITOR_IDENTIFIER_KEY = 'cs_vid';
+	const ENGAGEMENT_THRESHOLD_MS = 10_000;
 
 	let bookingSlotGroups = $state<BookingSlotGroups | undefined>(undefined);
 	let bookingSlotsRequestId = 0;
-	let visitLogged = $state(false);
+	let visitLogged = false;
+	let visitId: number | null = null;
+	let visitVisitorIdentifier: string | null = null;
+	let visitStartedAtMs: number | null = null;
+	let engagementTimer: ReturnType<typeof setTimeout> | null = null;
+	let engagementMarked = false;
+	let isNavigationEngagementRequested = false;
 
 	function getVisitorIdentifier(): string {
 		try {
@@ -71,13 +82,64 @@
 	}
 
 	onMount(() => {
+		if (browser) {
+			document.documentElement.lang = 'de';
+		}
+
+		injectAnalytics();
 		void loadBookingSlots();
 		void logVisit();
-		return afterNavigate(() => {
+		afterNavigate(() => {
 			void loadBookingSlots();
 			void logVisit();
 		});
+
+		return () => {
+			clearEngagementTimer();
+		};
 	});
+
+	function clearEngagementTimer(): void {
+		if (engagementTimer === null) {
+			return;
+		}
+
+		clearTimeout(engagementTimer);
+		engagementTimer = null;
+	}
+
+	function scheduleEngagementTimer(): void {
+		clearEngagementTimer();
+		engagementTimer = setTimeout(() => {
+			engagementTimer = null;
+			void markVisitEngaged();
+		}, ENGAGEMENT_THRESHOLD_MS);
+	}
+
+	async function markVisitEngaged(): Promise<void> {
+		if (engagementMarked || visitId === null || visitVisitorIdentifier === null) {
+			return;
+		}
+
+		engagementMarked = true;
+
+		const durationMs = Math.max(
+			0,
+			Math.round(performance.now() - (visitStartedAtMs ?? performance.now()))
+		);
+
+		await markSpeakerVisitEngaged({
+			visitId,
+			visitorIdentifier: visitVisitorIdentifier,
+			durationMs
+		});
+	}
+
+	function markVisitEngagedFromNavigation(): void {
+		clearEngagementTimer();
+		isNavigationEngagementRequested = true;
+		void markVisitEngaged();
+	}
 
 	async function logVisit(): Promise<void> {
 		if (visitLogged) {
@@ -93,14 +155,25 @@
 		}
 
 		visitLogged = true;
+		visitVisitorIdentifier = getVisitorIdentifier();
+		visitStartedAtMs = performance.now();
 
-		void logSpeakerVisit({
+		const result = await logSpeakerVisit({
 			campaignId,
 			campaignPageId,
 			slug,
-			visitorIdentifier: getVisitorIdentifier(),
+			visitorIdentifier: visitVisitorIdentifier,
 			searchParams: Object.fromEntries(page.url.searchParams)
 		});
+
+		if (result.visitId !== null) {
+			visitId = result.visitId;
+			if (isNavigationEngagementRequested) {
+				void markVisitEngaged();
+			} else {
+				scheduleEngagementTimer();
+			}
+		}
 	}
 </script>
 
@@ -141,12 +214,14 @@
 	mailto={data.speakerMailtoHref}
 	campaignId={data.campaignId}
 	campaignPageId={data.campaignPageId}
+	onExternalNavigationClick={markVisitEngagedFromNavigation}
 ></LandingNavigation>
 <PageRenderer
 	page={data.page}
 	campaignId={data.campaignId}
 	campaignPageId={data.campaignPageId}
 	mailtoHref={data.speakerMailtoHref}
+	abTest={data.abTest}
 	{bookingSlotGroups}
 />
 

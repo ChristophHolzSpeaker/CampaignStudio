@@ -55,6 +55,17 @@
 	const bookingLine = $derived(toLine((point) => point.bookings));
 	const inboundLine = $derived(toLine((point) => point.inboundMessages ?? 0));
 	const hasInboundSeries = $derived(data.some((point) => (point.inboundMessages ?? 0) > 0));
+
+	const visitArea = $derived.by(() => {
+		if (data.length === 0) {
+			return '';
+		}
+
+		const baseline = height - padding;
+		const points = data.map((point, index) => `${toX(index)},${toY(point.visits)}`);
+
+		return [`${padding},${baseline}`, ...points, `${width - padding},${baseline}`].join(' ');
+	});
 </script>
 
 {#if data.length === 0}
@@ -70,6 +81,7 @@
 				y2={height - padding}
 				class="axis"
 			/>
+			<polygon points={visitArea} class="area visits" />
 			<polyline points={visitLine} class="line visits" />
 			<polyline points={leadLine} class="line leads" />
 			<polyline points={bookingLine} class="line bookings" />
@@ -102,6 +114,17 @@
 		padding: 0.75rem;
 		display: grid;
 		gap: 0.75rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 16px;
+		box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+		font-family: var(
+			--analytics-font,
+			system-ui,
+			-apple-system,
+			BlinkMacSystemFont,
+			'Segoe UI',
+			sans-serif
+		);
 	}
 
 	svg {
@@ -112,39 +135,46 @@
 	}
 
 	.axis {
-		stroke: #e2e2e2;
+		stroke: #e5e7eb;
 		stroke-width: 1;
+	}
+
+	.area {
+		fill: rgba(37, 99, 235, 0.12);
+		stroke: none;
 	}
 
 	.line {
 		fill: none;
-		stroke-width: 3;
-		stroke-linecap: square;
+		stroke-width: 2.5;
+		stroke-linecap: round;
 	}
 
 	.visits {
-		stroke: #1f2937;
+		stroke: #2563eb;
 	}
 
 	.leads {
-		stroke: #b8002a;
+		stroke: #0f172a;
+		stroke-dasharray: 7 5;
 	}
 
 	.bookings {
-		stroke: #0ea5e9;
+		stroke: #10b981;
+		stroke-dasharray: 3 5;
 	}
 
 	.inbound {
-		stroke: #ea580c;
+		stroke: #f59e0b;
 	}
 
 	.legend {
 		display: flex;
 		flex-wrap: wrap;
 		gap: 0.75rem;
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
+		font-size: 0.74rem;
+		letter-spacing: 0.02em;
+		color: #374151;
 	}
 
 	.legend span {
@@ -160,18 +190,18 @@
 	}
 
 	.swatch.visits {
-		background: #1f2937;
+		background: #2563eb;
 	}
 
 	.swatch.leads {
-		background: #b8002a;
+		background: #0f172a;
 	}
 
 	.swatch.bookings {
-		background: #0ea5e9;
+		background: #10b981;
 	}
 
 	.swatch.inbound {
-		background: #ea580c;
+		background: #f59e0b;
 	}
 </style>

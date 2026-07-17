@@ -98,6 +98,12 @@ export const campaign_visits = pgTable('campaign_visits', {
 	utm_term: text('utm_term'),
 	utm_content: text('utm_content'),
 	user_agent: text('user_agent'),
+	ip_address: text('ip_address'),
+	country: text('country'),
+	city: text('city'),
+	bounced: boolean('bounced').notNull().default(true),
+	engaged_at: timestamp('engaged_at'),
+	engagement_duration_ms: integer('engagement_duration_ms'),
 	ip_hash_or_session_identifier: text('ip_hash_or_session_identifier')
 });
 
@@ -123,7 +129,13 @@ export const vw_visit_enriched = pgView('vw_visit_enriched', {
 	utm_term: text('utm_term'),
 	utm_content: text('utm_content'),
 	referrer: text('referrer'),
-	user_agent: text('user_agent')
+	user_agent: text('user_agent'),
+	ip_address: text('ip_address'),
+	country: text('country'),
+	city: text('city'),
+	bounced: boolean('bounced'),
+	engaged_at: timestamp('engaged_at'),
+	engagement_duration_ms: integer('engagement_duration_ms')
 }).existing();
 
 export const vw_lead_journey_enriched = pgView('vw_lead_journey_enriched', {
@@ -482,6 +494,99 @@ export const lead_events = pgTable(
 		),
 		eventSessionIdx: index('lead_events_session_idx').on(table.session_id),
 		eventAnonymousIdx: index('lead_events_anonymous_idx').on(table.anonymous_id)
+	})
+);
+
+export const ab_experiments = pgTable(
+	'ab_experiments',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		key: text('key').notNull(),
+		name: text('name').notNull(),
+		route_pattern: text('route_pattern').notNull(),
+		status: text('status').notNull().default('draft'),
+		goal_event: text('goal_event'),
+		traffic_allocation: integer('traffic_allocation').notNull().default(100),
+		created_at: timestamp('created_at').notNull().defaultNow(),
+		updated_at: timestamp('updated_at').notNull().defaultNow()
+	},
+	(table) => ({
+		keyUniqueIdx: uniqueIndex('ab_experiments_key_key').on(table.key),
+		statusIdx: index('ab_experiments_status_idx').on(table.status)
+	})
+);
+
+export const ab_variants = pgTable(
+	'ab_variants',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		experiment_id: uuid('experiment_id')
+			.notNull()
+			.references(() => ab_experiments.id, { onDelete: 'cascade' }),
+		key: text('key').notNull(),
+		name: text('name').notNull(),
+		weight: integer('weight').notNull().default(50),
+		config: jsonb('config').notNull().default({}),
+		is_control: boolean('is_control').notNull().default(false),
+		created_at: timestamp('created_at').notNull().defaultNow()
+	},
+	(table) => ({
+		experimentKeyUniqueIdx: uniqueIndex('ab_variants_experiment_id_key_key').on(
+			table.experiment_id,
+			table.key
+		),
+		experimentIdx: index('ab_variants_experiment_id_idx').on(table.experiment_id)
+	})
+);
+
+export const ab_visitor_assignments = pgTable(
+	'ab_visitor_assignments',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		experiment_id: uuid('experiment_id')
+			.notNull()
+			.references(() => ab_experiments.id, { onDelete: 'cascade' }),
+		variant_id: uuid('variant_id')
+			.notNull()
+			.references(() => ab_variants.id, { onDelete: 'cascade' }),
+		visitor_id: text('visitor_id').notNull(),
+		assigned_at: timestamp('assigned_at').notNull().defaultNow()
+	},
+	(table) => ({
+		experimentVisitorUniqueIdx: uniqueIndex('ab_visitor_assignments_experiment_visitor_key').on(
+			table.experiment_id,
+			table.visitor_id
+		),
+		experimentIdx: index('ab_visitor_assignments_experiment_idx').on(table.experiment_id),
+		variantIdx: index('ab_visitor_assignments_variant_idx').on(table.variant_id)
+	})
+);
+
+export const ab_events = pgTable(
+	'ab_events',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		experiment_id: uuid('experiment_id').references(() => ab_experiments.id, {
+			onDelete: 'set null'
+		}),
+		variant_id: uuid('variant_id').references(() => ab_variants.id, { onDelete: 'set null' }),
+		visitor_id: text('visitor_id'),
+		session_id: text('session_id'),
+		event_type: text('event_type').notNull(),
+		route: text('route'),
+		slug: text('slug'),
+		metadata: jsonb('metadata').notNull().default({}),
+		created_at: timestamp('created_at').notNull().defaultNow()
+	},
+	(table) => ({
+		experimentVariantEventCreatedIdx: index('ab_events_experiment_variant_event_created_idx').on(
+			table.experiment_id,
+			table.variant_id,
+			table.event_type,
+			table.created_at
+		),
+		slugCreatedIdx: index('ab_events_slug_created_idx').on(table.slug, table.created_at),
+		visitorIdx: index('ab_events_visitor_idx').on(table.visitor_id)
 	})
 );
 

@@ -1,5 +1,10 @@
 import { db } from '$lib/server/db';
 import {
+	ab_events,
+	ab_experiments,
+	ab_variants,
+	campaign_pages,
+	lead_events,
 	vw_booking_enriched,
 	vw_campaign_conversion_summary,
 	vw_cta_performance,
@@ -10,7 +15,7 @@ import {
 	vw_visit_enriched,
 	vw_source_medium_performance
 } from '$lib/server/db/schema';
-import { and, asc, desc, eq, gte, lt } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, lt } from 'drizzle-orm';
 
 export type DateWindow = {
 	from: Date;
@@ -20,12 +25,14 @@ export type DateWindow = {
 export type FunnelDailyPoint = {
 	reportDate: string;
 	visits: number;
+	bouncedVisits: number;
 	uniqueVisitors: number;
 	journeysCreated: number;
 	identifiedLeads: number;
 	inboundMessages: number;
 	bookingLinkClicked: number;
 	bookingsCompleted: number;
+	bounceRate: number;
 	visitToLeadRate: number;
 	leadToBookingRate: number;
 	visitToBookingRate: number;
@@ -33,9 +40,11 @@ export type FunnelDailyPoint = {
 
 export type OverviewKpis = {
 	visits: number;
+	bouncedVisits: number;
 	uniqueVisitors: number;
 	identifiedLeads: number;
 	bookingsCompleted: number;
+	bounceRate: number;
 	visitToLeadRate: number;
 	leadToBookingRate: number;
 	visitToBookingRate: number;
@@ -98,6 +107,44 @@ export type CtaPerformanceRow = {
 	clickToFirstTouchBookingRate: number;
 };
 
+export type ExperimentVariantPerformanceRow = {
+	experimentId: string;
+	experimentKey: string;
+	experimentName: string;
+	routePattern: string;
+	status: string;
+	goalEvent: string | null;
+	variantId: string;
+	variantKey: string;
+	variantName: string;
+	isControl: boolean;
+	exposures: number;
+	clicks: number;
+	leads: number;
+	clickThroughRate: number;
+	leadConversionRate: number;
+};
+
+export type ExperimentPerformanceRow = {
+	experimentId: string;
+	experimentKey: string;
+	experimentName: string;
+	routePattern: string;
+	status: string;
+	goalEvent: string | null;
+	variants: ExperimentVariantPerformanceRow[];
+};
+
+export type GeoPerformanceRow = {
+	label: string | null;
+	visits: number;
+};
+
+export type GeoPerformance = {
+	countries: GeoPerformanceRow[];
+	cities: GeoPerformanceRow[];
+};
+
 const toNumber = (value: number | null | undefined): number => value ?? 0;
 
 const isValidDate = (value: Date): boolean => !Number.isNaN(value.getTime());
@@ -145,12 +192,14 @@ export async function getFunnelDaily(window: DateWindow): Promise<FunnelDailyPoi
 	return rows.map((row) => ({
 		reportDate: toDateLabel(row.report_date, window.from),
 		visits: toNumber(row.visits),
+		bouncedVisits: 0,
 		uniqueVisitors: toNumber(row.unique_visitors),
 		journeysCreated: toNumber(row.journeys_created),
 		identifiedLeads: toNumber(row.identified_leads),
 		inboundMessages: toNumber(row.inbound_messages),
 		bookingLinkClicked: toNumber(row.booking_link_clicked),
 		bookingsCompleted: toNumber(row.bookings_completed),
+		bounceRate: 0,
 		visitToLeadRate: row.visit_to_lead_rate ?? 0,
 		leadToBookingRate: row.lead_to_booking_rate ?? 0,
 		visitToBookingRate: row.visit_to_booking_rate ?? 0
@@ -161,6 +210,7 @@ export function buildOverviewKpis(funnelDaily: readonly FunnelDailyPoint[]): Ove
 	const totals = funnelDaily.reduce(
 		(acc, point) => {
 			acc.visits += point.visits;
+			acc.bouncedVisits += point.bouncedVisits;
 			acc.uniqueVisitors += point.uniqueVisitors;
 			acc.identifiedLeads += point.identifiedLeads;
 			acc.bookingsCompleted += point.bookingsCompleted;
@@ -169,6 +219,7 @@ export function buildOverviewKpis(funnelDaily: readonly FunnelDailyPoint[]): Ove
 		},
 		{
 			visits: 0,
+			bouncedVisits: 0,
 			uniqueVisitors: 0,
 			identifiedLeads: 0,
 			bookingsCompleted: 0
@@ -177,6 +228,7 @@ export function buildOverviewKpis(funnelDaily: readonly FunnelDailyPoint[]): Ove
 
 	return {
 		...totals,
+		bounceRate: ratio(totals.bouncedVisits, totals.visits),
 		visitToLeadRate: ratio(totals.identifiedLeads, totals.visits),
 		leadToBookingRate: ratio(totals.bookingsCompleted, totals.identifiedLeads),
 		visitToBookingRate: ratio(totals.bookingsCompleted, totals.visits)
@@ -306,8 +358,195 @@ export async function getCtaPerformance(): Promise<CtaPerformanceRow[]> {
 	}));
 }
 
+export async function getGeoPerformance(
+	window: DateWindow,
+	campaignId?: number | null
+): Promise<GeoPerformance> {
+	const rows = await db
+		.select({
+			country: vw_visit_enriched.country,
+			city: vw_visit_enriched.city
+		})
+		.from(vw_visit_enriched)
+		.where(
+			and(
+				gte(vw_visit_enriched.visited_at, window.from),
+				lt(vw_visit_enriched.visited_at, window.toExclusive),
+				...(typeof campaignId === 'number' ? [eq(vw_visit_enriched.campaign_id, campaignId)] : [])
+			)
+		);
+
+	return {
+		countries: buildGeoRows(rows.map((row) => row.country)),
+		cities: buildGeoRows(rows.map((row) => row.city))
+	};
+}
+
+export async function getExperimentPerformanceByCampaign(
+	campaignId: number
+): Promise<ExperimentPerformanceRow[]> {
+	const pageRows = await db
+		.select({ id: campaign_pages.id, slug: campaign_pages.slug })
+		.from(campaign_pages)
+		.where(and(eq(campaign_pages.campaign_id, campaignId), eq(campaign_pages.is_published, true)));
+
+	const [variantRows, exposureRows, leadRows] = await Promise.all([
+		db
+			.select({
+				experimentId: ab_experiments.id,
+				experimentKey: ab_experiments.key,
+				experimentName: ab_experiments.name,
+				routePattern: ab_experiments.route_pattern,
+				status: ab_experiments.status,
+				goalEvent: ab_experiments.goal_event,
+				variantId: ab_variants.id,
+				variantKey: ab_variants.key,
+				variantName: ab_variants.name,
+				isControl: ab_variants.is_control
+			})
+			.from(ab_experiments)
+			.innerJoin(ab_variants, eq(ab_variants.experiment_id, ab_experiments.id))
+			.where(
+				and(
+					eq(ab_experiments.route_pattern, '/speaker/[slug]'),
+					inArray(ab_experiments.status, ['running', 'paused', 'completed'])
+				)
+			)
+			.orderBy(asc(ab_experiments.created_at), asc(ab_variants.created_at)),
+		pageRows.length === 0
+			? Promise.resolve([])
+			: db
+				.select({
+					experimentId: ab_events.experiment_id,
+					variantId: ab_events.variant_id,
+					eventType: ab_events.event_type
+				})
+				.from(ab_events)
+				.where(
+					and(
+						eq(ab_events.route, '/speaker/[slug]'),
+						inArray(
+							ab_events.slug,
+							pageRows.map((row: { slug: string | null }) => row.slug).filter(
+								(slug: string | null): slug is string => Boolean(slug)
+							)
+						),
+						inArray(ab_events.event_type, ['page_view', 'cta_click'])
+					)
+				),
+		pageRows.length === 0
+			? Promise.resolve([])
+			: db
+				.select({
+					ctaVariant: lead_events.cta_variant,
+					ctaKey: lead_events.cta_key,
+					campaignPageId: lead_events.campaign_page_id
+				})
+				.from(lead_events)
+				.where(
+					and(
+						eq(lead_events.event_type, 'form_submitted'),
+						eq(lead_events.cta_key, 'hero_inline_booking'),
+						inArray(
+							lead_events.campaign_page_id,
+							pageRows
+								.map((row: { id: number | null }) => row.id)
+								.filter((id: number | null): id is number => typeof id === 'number')
+						)
+					)
+				)
+	]);
+
+	const experimentMap = new Map<string, ExperimentPerformanceRow>();
+
+	for (const row of variantRows) {
+		const existingExperiment = experimentMap.get(row.experimentId);
+		const variant = {
+			experimentId: row.experimentId,
+			experimentKey: row.experimentKey,
+			experimentName: row.experimentName,
+			routePattern: row.routePattern,
+			status: row.status,
+			goalEvent: row.goalEvent,
+			variantId: row.variantId,
+			variantKey: row.variantKey,
+			variantName: row.variantName,
+			isControl: row.isControl,
+			exposures: 0,
+			clicks: 0,
+			leads: 0,
+			clickThroughRate: 0,
+			leadConversionRate: 0
+		};
+
+		if (existingExperiment) {
+			existingExperiment.variants.push(variant);
+			continue;
+		}
+
+		experimentMap.set(row.experimentId, {
+			experimentId: row.experimentId,
+			experimentKey: row.experimentKey,
+			experimentName: row.experimentName,
+			routePattern: row.routePattern,
+			status: row.status,
+			goalEvent: row.goalEvent,
+			variants: [variant]
+		});
+	}
+
+	for (const row of exposureRows) {
+		if (!row.experimentId || !row.variantId) {
+			continue;
+		}
+
+		const experiment = experimentMap.get(row.experimentId);
+		if (!experiment) {
+			continue;
+		}
+
+		const variant = experiment.variants.find((item) => item.variantId === row.variantId);
+		if (!variant) {
+			continue;
+		}
+
+		if (row.eventType === 'page_view') {
+			variant.exposures += 1;
+		}
+
+		if (row.eventType === 'cta_click') {
+			variant.clicks += 1;
+		}
+	}
+
+	for (const row of leadRows) {
+		if (!row.ctaVariant) {
+			continue;
+		}
+
+		for (const experiment of experimentMap.values()) {
+			const variant = experiment.variants.find((item) => item.variantKey === row.ctaVariant);
+			if (variant) {
+				variant.leads += 1;
+			}
+		}
+	}
+
+	return [...experimentMap.values()]
+		.map((experiment) => ({
+			...experiment,
+			variants: experiment.variants.map((variant) => ({
+				...variant,
+				clickThroughRate: ratio(variant.clicks, variant.exposures),
+				leadConversionRate: ratio(variant.leads, variant.exposures)
+			}))
+		}))
+		.sort((left, right) => left.experimentName.localeCompare(right.experimentName));
+}
+
 type CampaignDailyAccumulator = {
 	visits: number;
+	bouncedVisits: number;
 	uniqueVisitors: number;
 	journeysCreated: number;
 	identifiedLeads: number;
@@ -344,6 +583,46 @@ type CtaAccumulator = {
 const sourceMediumKey = (source: string | null, medium: string | null): string =>
 	`${source ?? ''}::${medium ?? ''}`;
 
+const normalizeGeoLabel = (value: string | null | undefined): string | null => {
+	const trimmed = value?.trim();
+	return trimmed && trimmed.length > 0 ? trimmed : null;
+};
+
+const buildGeoRows = (values: readonly (string | null)[]): GeoPerformanceRow[] => {
+	const byLabel = new Map<string, GeoPerformanceRow>();
+
+	for (const rawValue of values) {
+		const label = normalizeGeoLabel(rawValue);
+		const key = label ?? '__unknown__';
+		const existing = byLabel.get(key);
+
+		if (existing) {
+			existing.visits += 1;
+			continue;
+		}
+
+		byLabel.set(key, { label, visits: 1 });
+	}
+
+	return [...byLabel.values()]
+		.sort((left, right) => {
+			if (right.visits !== left.visits) {
+				return right.visits - left.visits;
+			}
+
+			if (left.label === null && right.label !== null) {
+				return 1;
+			}
+
+			if (left.label !== null && right.label === null) {
+				return -1;
+			}
+
+			return (left.label ?? '').localeCompare(right.label ?? '');
+		})
+		.slice(0, 10);
+};
+
 const toCampaignDailyMap = () => new Map<string, CampaignDailyAccumulator>();
 
 const toDirectEmailDailyMap = () => new Map<string, CampaignDirectEmailDailyAccumulator>();
@@ -359,6 +638,7 @@ const getCampaignDailyAccumulator = (
 
 	const created: CampaignDailyAccumulator = {
 		visits: 0,
+		bouncedVisits: 0,
 		uniqueVisitors: 0,
 		journeysCreated: 0,
 		identifiedLeads: 0,
@@ -400,7 +680,8 @@ export async function getFunnelDailyByCampaign(
 			db
 				.select({
 					visitedAt: vw_visit_enriched.visited_at,
-					visitorIdentifier: vw_visit_enriched.visitor_identifier
+					visitorIdentifier: vw_visit_enriched.visitor_identifier,
+					bounced: vw_visit_enriched.bounced
 				})
 				.from(vw_visit_enriched)
 				.where(
@@ -478,6 +759,9 @@ export async function getFunnelDailyByCampaign(
 		const reportDate = toDateLabel(row.visitedAt, window.from);
 		const acc = getCampaignDailyAccumulator(byDate, reportDate);
 		acc.visits += 1;
+		if (row.bounced) {
+			acc.bouncedVisits += 1;
+		}
 
 		if (row.visitorIdentifier) {
 			const existingVisitors = uniqueVisitorsByDate.get(reportDate);
@@ -544,12 +828,14 @@ export async function getFunnelDailyByCampaign(
 		.map(([reportDate, acc]) => ({
 			reportDate,
 			visits: acc.visits,
+			bouncedVisits: acc.bouncedVisits,
 			uniqueVisitors: acc.uniqueVisitors,
 			journeysCreated: acc.journeysCreated,
 			identifiedLeads: acc.identifiedLeads,
 			inboundMessages: acc.inboundMessages,
 			bookingLinkClicked: acc.bookingLinkClicked,
 			bookingsCompleted: acc.bookingsCompleted,
+			bounceRate: ratio(acc.bouncedVisits, acc.visits),
 			visitToLeadRate: ratio(acc.identifiedLeads, acc.visits),
 			leadToBookingRate: ratio(acc.bookingsCompleted, acc.identifiedLeads),
 			visitToBookingRate: ratio(acc.bookingsCompleted, acc.visits)
