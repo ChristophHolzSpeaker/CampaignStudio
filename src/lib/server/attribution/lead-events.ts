@@ -22,6 +22,10 @@ type LeadEventInput = {
 		section?: string | null;
 		variant?: string | null;
 	};
+	experiment?: {
+		experimentId: string;
+		variantId: string;
+	} | null;
 };
 
 export async function logLeadEvent(input: LeadEventInput): Promise<void> {
@@ -37,6 +41,8 @@ export async function logLeadEvent(input: LeadEventInput): Promise<void> {
 		cta_label: input.cta?.label ?? null,
 		cta_section: input.cta?.section ?? null,
 		cta_variant: input.cta?.variant ?? null,
+		experiment_id: input.experiment?.experimentId ?? null,
+		variant_id: input.experiment?.variantId ?? null,
 		session_id: input.sessionId ?? null,
 		anonymous_id: input.anonymousId ?? null,
 		occurred_at: input.occurredAt ?? new Date()

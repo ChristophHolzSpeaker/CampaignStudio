@@ -1,7 +1,7 @@
 import { browser } from '$app/environment';
 
 export type TrackAbEventInput = {
-	eventType: 'cta_click';
+	eventType: 'cta_click' | 'video_ready' | 'video_error';
 	experimentId: string;
 	variantId: string;
 	visitorId: string;

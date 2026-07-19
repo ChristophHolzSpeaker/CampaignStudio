@@ -405,8 +405,7 @@
 							</div>
 						</div>
 						<p class="experiment-summary">
-							Goal: {experiment.goalEvent ?? 'cta_click'} · Winner is the highest tracked lead conversion
-							rate.
+							Goal: {experiment.goalEvent ?? 'cta_click'} · Comparison uses tracked lead conversion rate.
 						</p>
 						<DataTable
 							columns={[

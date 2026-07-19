@@ -399,6 +399,7 @@ export async function getExperimentPerformanceByCampaign(
 				routePattern: ab_experiments.route_pattern,
 				status: ab_experiments.status,
 				goalEvent: ab_experiments.goal_event,
+				endedAt: ab_experiments.ended_at,
 				variantId: ab_variants.id,
 				variantKey: ab_variants.key,
 				variantName: ab_variants.name,
@@ -438,15 +439,17 @@ export async function getExperimentPerformanceByCampaign(
 			? Promise.resolve([])
 			: db
 					.select({
+						experimentId: lead_events.experiment_id,
+						variantId: lead_events.variant_id,
 						ctaVariant: lead_events.cta_variant,
 						ctaKey: lead_events.cta_key,
-						campaignPageId: lead_events.campaign_page_id
+						campaignPageId: lead_events.campaign_page_id,
+						occurredAt: lead_events.occurred_at
 					})
 					.from(lead_events)
 					.where(
 						and(
 							eq(lead_events.event_type, 'form_submitted'),
-							eq(lead_events.cta_key, 'hero_inline_booking'),
 							inArray(
 								lead_events.campaign_page_id,
 								pageRows
@@ -458,8 +461,17 @@ export async function getExperimentPerformanceByCampaign(
 	]);
 
 	const experimentMap = new Map<string, ExperimentPerformanceRow>();
+	const legacyExperimentCutoffs = new Map<string, Date>();
 
 	for (const row of variantRows) {
+		if (
+			row.experimentKey === 'speaker_primary_cta_v1' &&
+			row.status === 'completed' &&
+			row.endedAt
+		) {
+			legacyExperimentCutoffs.set(row.experimentId, row.endedAt);
+		}
+
 		const existingExperiment = experimentMap.get(row.experimentId);
 		const variant = {
 			experimentId: row.experimentId,
@@ -520,11 +532,25 @@ export async function getExperimentPerformanceByCampaign(
 	}
 
 	for (const row of leadRows) {
-		if (!row.ctaVariant) {
+		if (row.experimentId && row.variantId) {
+			const experiment = experimentMap.get(row.experimentId);
+			const variant = experiment?.variants.find((item) => item.variantId === row.variantId);
+			if (variant) {
+				variant.leads += 1;
+			}
+			continue;
+		}
+
+		if (!row.ctaVariant || row.ctaKey !== 'hero_inline_booking') {
 			continue;
 		}
 
 		for (const experiment of experimentMap.values()) {
+			const legacyCutoff = legacyExperimentCutoffs.get(experiment.experimentId);
+			if (!legacyCutoff || row.occurredAt > legacyCutoff) {
+				continue;
+			}
+
 			const variant = experiment.variants.find((item) => item.variantKey === row.ctaVariant);
 			if (variant) {
 				variant.leads += 1;

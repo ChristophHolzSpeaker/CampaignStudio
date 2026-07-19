@@ -490,6 +490,12 @@ export const lead_events = pgTable(
 		cta_label: text('cta_label'),
 		cta_section: text('cta_section'),
 		cta_variant: text('cta_variant'),
+		experiment_id: uuid('experiment_id').references((): AnyPgColumn => ab_experiments.id, {
+			onDelete: 'set null'
+		}),
+		variant_id: uuid('variant_id').references((): AnyPgColumn => ab_variants.id, {
+			onDelete: 'set null'
+		}),
 		session_id: text('session_id'),
 		anonymous_id: text('anonymous_id'),
 		occurred_at: timestamp('occurred_at').notNull().defaultNow()
@@ -506,7 +512,13 @@ export const lead_events = pgTable(
 		),
 		eventCampaignVisitIdx: index('lead_events_campaign_visit_id_idx').on(table.campaign_visit_id),
 		eventSessionIdx: index('lead_events_session_idx').on(table.session_id),
-		eventAnonymousIdx: index('lead_events_anonymous_idx').on(table.anonymous_id)
+		eventAnonymousIdx: index('lead_events_anonymous_idx').on(table.anonymous_id),
+		experimentVariantEventIdx: index('lead_events_experiment_variant_event_idx').on(
+			table.experiment_id,
+			table.variant_id,
+			table.event_type,
+			table.occurred_at
+		)
 	})
 );
 
@@ -520,6 +532,8 @@ export const ab_experiments = pgTable(
 		status: text('status').notNull().default('draft'),
 		goal_event: text('goal_event'),
 		traffic_allocation: integer('traffic_allocation').notNull().default(100),
+		started_at: timestamp('started_at'),
+		ended_at: timestamp('ended_at'),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
 	},

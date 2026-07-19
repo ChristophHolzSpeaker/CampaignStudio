@@ -8,22 +8,21 @@ import {
 } from '$lib/server/db/schema';
 import type { Cookies } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
+import { isEligibleHeroVideoUrl } from '$lib/experiments/hero-video';
 
-const SPEAKER_PRIMARY_CTA_EXPERIMENT_KEY = 'speaker_primary_cta_v1';
-const SPEAKER_PRIMARY_CTA_COOKIE_NAME = 'cs_ab_speaker_primary_cta_v1';
-const SPEAKER_PRIMARY_CTA_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 60;
+export const SPEAKER_HERO_MEDIA_EXPERIMENT_KEY = 'speaker_hero_autoplay_video_v1';
+const SPEAKER_HERO_MEDIA_COOKIE_NAME = 'cs_ab_speaker_hero_autoplay_video_v1';
+const SPEAKER_HERO_MEDIA_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 60;
 
-export type SpeakerPrimaryCtaMode = 'booking_calendar' | 'dual_buttons';
+export type SpeakerHeroMediaMode = 'static_image' | 'autoplay_video';
 
-export type SpeakerPrimaryCtaAbTest = {
+export type SpeakerHeroMediaExperiment = {
 	experimentId: string | null;
 	experimentKey: string;
 	variantId: string | null;
 	variantKey: string;
 	visitorId: string;
-	ctaMode: SpeakerPrimaryCtaMode;
-	primaryLabel?: string;
-	secondaryLabel?: string;
+	heroMediaMode: SpeakerHeroMediaMode;
 };
 
 type AbVariantRow = {
@@ -36,43 +35,43 @@ type AbVariantRow = {
 	isControl: boolean;
 };
 
-type ResolveSpeakerPrimaryCtaInput = {
+export type ExperimentAttribution = {
+	experimentId: string;
+	variantId: string;
+};
+
+type ResolveSpeakerHeroMediaInput = {
 	cookies: Cookies;
 	secureCookie: boolean;
 	route: string;
 	slug: string;
+	videoEmbedUrl: string;
 	searchParams: URLSearchParams;
 	referrer: string | null;
 };
 
 function readAssignmentCookie(cookies: Cookies): string | null {
-	return cookies.get(SPEAKER_PRIMARY_CTA_COOKIE_NAME) ?? null;
+	return cookies.get(SPEAKER_HERO_MEDIA_COOKIE_NAME) ?? null;
 }
 
 function writeAssignmentCookie(cookies: Cookies, variantKey: string, secureCookie: boolean): void {
-	cookies.set(SPEAKER_PRIMARY_CTA_COOKIE_NAME, variantKey, {
+	cookies.set(SPEAKER_HERO_MEDIA_COOKIE_NAME, variantKey, {
 		path: '/',
 		httpOnly: true,
 		sameSite: 'lax',
 		secure: secureCookie,
-		maxAge: SPEAKER_PRIMARY_CTA_COOKIE_MAX_AGE_SECONDS
+		maxAge: SPEAKER_HERO_MEDIA_COOKIE_MAX_AGE_SECONDS
 	});
 }
 
-function normalizeConfig(config: unknown): {
-	cta_mode?: SpeakerPrimaryCtaMode;
-	primary_label?: string;
-	secondary_label?: string;
-} {
+function normalizeConfig(config: unknown): { hero_media_mode?: SpeakerHeroMediaMode } {
 	if (typeof config !== 'object' || config === null || Array.isArray(config)) {
 		return {};
 	}
 
 	const record = config as Record<string, unknown>;
 	return {
-		cta_mode: record.cta_mode === 'dual_buttons' ? 'dual_buttons' : 'booking_calendar',
-		primary_label: typeof record.primary_label === 'string' ? record.primary_label : undefined,
-		secondary_label: typeof record.secondary_label === 'string' ? record.secondary_label : undefined
+		hero_media_mode: record.hero_media_mode === 'autoplay_video' ? 'autoplay_video' : 'static_image'
 	};
 }
 
@@ -95,6 +94,40 @@ function pickWeightedVariant(variants: AbVariantRow[]): AbVariantRow | null {
 	}
 
 	return variants.at(-1) ?? null;
+}
+
+export async function getSpeakerHeroMediaAttribution(
+	visitorId: string | null
+): Promise<ExperimentAttribution | null> {
+	if (!visitorId) {
+		return null;
+	}
+
+	const [assignment] = await db
+		.select({
+			experimentId: ab_visitor_assignments.experiment_id,
+			variantId: ab_visitor_assignments.variant_id
+		})
+		.from(ab_visitor_assignments)
+		.innerJoin(
+			ab_experiments,
+			and(
+				eq(ab_experiments.id, ab_visitor_assignments.experiment_id),
+				eq(ab_experiments.key, SPEAKER_HERO_MEDIA_EXPERIMENT_KEY),
+				eq(ab_experiments.status, 'running')
+			)
+		)
+		.innerJoin(
+			ab_variants,
+			and(
+				eq(ab_variants.id, ab_visitor_assignments.variant_id),
+				eq(ab_variants.experiment_id, ab_experiments.id)
+			)
+		)
+		.where(eq(ab_visitor_assignments.visitor_id, visitorId))
+		.limit(1);
+
+	return assignment ?? null;
 }
 
 async function persistAssignment(input: {
@@ -151,14 +184,26 @@ async function persistExposure(input: {
 	});
 }
 
-export async function resolveSpeakerPrimaryCtaAbTest(
-	input: ResolveSpeakerPrimaryCtaInput
-): Promise<SpeakerPrimaryCtaAbTest> {
+export async function resolveSpeakerHeroMediaExperiment(
+	input: ResolveSpeakerHeroMediaInput
+): Promise<SpeakerHeroMediaExperiment> {
 	const visitorId = getOrCreateVisitorIdentifier({
 		cookies: input.cookies,
 		secureCookie: input.secureCookie
 	});
 	const assignmentCookieVariantKey = readAssignmentCookie(input.cookies);
+	const fallback: SpeakerHeroMediaExperiment = {
+		experimentId: null,
+		experimentKey: SPEAKER_HERO_MEDIA_EXPERIMENT_KEY,
+		variantId: null,
+		variantKey: 'A',
+		visitorId,
+		heroMediaMode: 'static_image'
+	};
+
+	if (!isEligibleHeroVideoUrl(input.videoEmbedUrl)) {
+		return fallback;
+	}
 
 	try {
 		const [experiment] = await db
@@ -169,21 +214,14 @@ export async function resolveSpeakerPrimaryCtaAbTest(
 			.from(ab_experiments)
 			.where(
 				and(
-					eq(ab_experiments.key, SPEAKER_PRIMARY_CTA_EXPERIMENT_KEY),
+					eq(ab_experiments.key, SPEAKER_HERO_MEDIA_EXPERIMENT_KEY),
 					eq(ab_experiments.status, 'running')
 				)
 			)
 			.limit(1);
 
 		if (!experiment) {
-			return {
-				experimentId: null,
-				experimentKey: SPEAKER_PRIMARY_CTA_EXPERIMENT_KEY,
-				variantId: null,
-				variantKey: 'A',
-				visitorId,
-				ctaMode: 'booking_calendar'
-			};
+			return fallback;
 		}
 
 		const variantRows = await db
@@ -220,7 +258,7 @@ export async function resolveSpeakerPrimaryCtaAbTest(
 		const storedVariant = assignmentRow[0]
 			? (variantRows.find((variant) => variant.id === assignmentRow[0].variantId) ?? null)
 			: null;
-		const assignedVariant = cookieVariant ?? storedVariant ?? pickWeightedVariant(variantRows);
+		const assignedVariant = storedVariant ?? cookieVariant ?? pickWeightedVariant(variantRows);
 
 		if (!assignedVariant) {
 			return {
@@ -229,7 +267,7 @@ export async function resolveSpeakerPrimaryCtaAbTest(
 				variantId: null,
 				variantKey: 'A',
 				visitorId,
-				ctaMode: 'booking_calendar'
+				heroMediaMode: 'static_image'
 			};
 		}
 
@@ -265,21 +303,10 @@ export async function resolveSpeakerPrimaryCtaAbTest(
 			variantId: assignedVariant.id,
 			variantKey: assignedVariant.key,
 			visitorId,
-			ctaMode: normalizedConfig.cta_mode ?? 'booking_calendar',
-			...(normalizedConfig.primary_label ? { primaryLabel: normalizedConfig.primary_label } : {}),
-			...(normalizedConfig.secondary_label
-				? { secondaryLabel: normalizedConfig.secondary_label }
-				: {})
+			heroMediaMode: normalizedConfig.hero_media_mode ?? 'static_image'
 		};
 	} catch (error) {
 		console.error('AB test resolution failed', error);
-		return {
-			experimentId: null,
-			experimentKey: SPEAKER_PRIMARY_CTA_EXPERIMENT_KEY,
-			variantId: null,
-			variantKey: 'A',
-			visitorId,
-			ctaMode: 'booking_calendar'
-		};
+		return fallback;
 	}
 }

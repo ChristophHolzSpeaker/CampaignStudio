@@ -5,7 +5,7 @@ import {
 	buildSpeakerMailtoHref,
 	DEFAULT_SPEAKER_EMAIL_SUBJECT
 } from '$lib/server/attribution/mailto';
-import { resolveSpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
+import { resolveSpeakerHeroMediaExperiment } from '$lib/server/ab-testing';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
@@ -125,11 +125,13 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
 	const jsonLd = buildSpeakerJsonLd({ page, origin: url.origin, slug });
-	const abTest = await resolveSpeakerPrimaryCtaAbTest({
+	const hero = getHeroSection(page);
+	const abTest = await resolveSpeakerHeroMediaExperiment({
 		cookies,
 		secureCookie: import.meta.env.PROD,
 		route: '/speaker/[slug]',
 		slug,
+		videoEmbedUrl: hero?.props.videoEmbedUrl ?? '',
 		searchParams: url.searchParams,
 		referrer: request.headers.get('referer')
 	});

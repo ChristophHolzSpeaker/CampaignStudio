@@ -7,7 +7,12 @@ vi.mock('$lib/server/db', () => ({
 }));
 
 import { db } from '$lib/server/db';
-import { buildOverviewKpis, getGeoPerformance, type FunnelDailyPoint } from './client';
+import {
+	buildOverviewKpis,
+	getExperimentPerformanceByCampaign,
+	getGeoPerformance,
+	type FunnelDailyPoint
+} from './client';
 
 const mockedDb = vi.mocked(db);
 
@@ -50,6 +55,93 @@ describe('analytics overview KPIs', () => {
 			{ label: 'Berlin', visits: 1 },
 			{ label: null, visits: 1 }
 		]);
+	});
+});
+
+describe('experiment conversion attribution', () => {
+	it('keeps legacy conversions before retirement isolated from ID-attributed conversions', async () => {
+		mockedDb.select
+			.mockReturnValueOnce({
+				from: () => ({
+					where: async () => [{ id: 10, slug: 'christoph-holz' }]
+				})
+			} as never)
+			.mockReturnValueOnce({
+				from: () => ({
+					innerJoin: () => ({
+						where: () => ({
+							orderBy: async () => [
+								{
+									experimentId: 'old-experiment',
+									experimentKey: 'speaker_primary_cta_v1',
+									experimentName: 'Old CTA',
+									routePattern: '/speaker/[slug]',
+									status: 'completed',
+									goalEvent: 'lead_created',
+									endedAt: new Date('2026-07-01T00:00:00.000Z'),
+									variantId: 'old-b',
+									variantKey: 'B',
+									variantName: 'Dual buttons',
+									isControl: false
+								},
+								{
+									experimentId: 'new-experiment',
+									experimentKey: 'speaker_hero_autoplay_video_v1',
+									experimentName: 'Hero video',
+									routePattern: '/speaker/[slug]',
+									status: 'running',
+									goalEvent: 'lead_created',
+									endedAt: null,
+									variantId: 'new-b',
+									variantKey: 'B',
+									variantName: 'Autoplay video',
+									isControl: false
+								}
+							]
+						})
+					})
+				})
+			} as never)
+			.mockReturnValueOnce({ from: () => ({ where: async () => [] }) } as never)
+			.mockReturnValueOnce({
+				from: () => ({
+					where: async () => [
+						{
+							experimentId: null,
+							variantId: null,
+							ctaVariant: 'B',
+							ctaKey: 'hero_inline_booking',
+							campaignPageId: 10,
+							occurredAt: new Date('2026-06-30T00:00:00.000Z')
+						},
+						{
+							experimentId: 'new-experiment',
+							variantId: 'new-b',
+							ctaVariant: null,
+							ctaKey: 'frictionless_funnel_inline_booking',
+							campaignPageId: 10,
+							occurredAt: new Date('2026-07-20T00:00:00.000Z')
+						},
+						{
+							experimentId: null,
+							variantId: null,
+							ctaVariant: 'B',
+							ctaKey: 'hero_inline_booking',
+							campaignPageId: 10,
+							occurredAt: new Date('2026-07-21T00:00:00.000Z')
+						}
+					]
+				})
+			} as never);
+
+		const result = await getExperimentPerformanceByCampaign(7);
+
+		expect(result.find((item) => item.experimentId === 'old-experiment')?.variants[0]?.leads).toBe(
+			1
+		);
+		expect(result.find((item) => item.experimentId === 'new-experiment')?.variants[0]?.leads).toBe(
+			1
+		);
 	});
 });
 

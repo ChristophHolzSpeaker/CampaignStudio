@@ -6,6 +6,7 @@ import {
 import { resolveCampaignPageContext } from '$lib/server/attribution/campaign-context';
 import { normalizeEmailAddress } from '$lib/server/attribution/email';
 import { logLeadEvent } from '$lib/server/attribution/lead-events';
+import { getSpeakerHeroMediaAttribution } from '$lib/server/ab-testing';
 import { findOrCreateLeadJourneyFromInquiry } from '$lib/server/attribution/lead-journeys';
 import { persistJourneyAttributionSnapshot } from '$lib/server/attribution/journey-attribution';
 import { notifyBookingFormSubmission } from '$lib/server/notifications/booking-form-submission';
@@ -190,6 +191,9 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 	}
 
 	const visitorIdentifier = readVisitorIdentifier(requestEvent.cookies);
+	const experimentAttribution = requestEvent.url.pathname.startsWith('/speaker/')
+		? await getSpeakerHeroMediaAttribution(visitorIdentifier)
+		: null;
 	const now = new Date();
 	const campaignVisitId = await resolveCampaignVisitId({
 		campaignId: campaignContext.campaignId,
@@ -257,6 +261,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		eventType: 'form_submitted',
 		eventSource: attributionSurface.eventSource,
 		anonymousId: visitorIdentifier,
+		experiment: experimentAttribution,
 		cta: {
 			key: ctaKey,
 			section: ctaSection,
@@ -311,6 +316,7 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 			eventType: 'booking_completed',
 			eventSource: attributionSurface.eventSource,
 			anonymousId: visitorIdentifier,
+			experiment: experimentAttribution,
 			cta: {
 				key: ctaKey,
 				section: ctaSection,
