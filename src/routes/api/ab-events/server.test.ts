@@ -16,8 +16,8 @@ describe('POST /api/ab-events', () => {
 		mockedDb.insert.mockReset();
 	});
 
-	it.each(['video_ready', 'video_error'] as const)(
-		'accepts the %s treatment diagnostic',
+	it.each(['experiment_exposure', 'video_ready', 'video_error', 'page_performance'] as const)(
+		'accepts the %s experiment event',
 		async (eventType) => {
 			const values = vi.fn().mockResolvedValue(undefined);
 			mockedDb.insert.mockReturnValueOnce({ values } as never);

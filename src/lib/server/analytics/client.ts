@@ -123,6 +123,7 @@ export type ExperimentVariantPerformanceRow = {
 	leads: number;
 	clickThroughRate: number;
 	leadConversionRate: number;
+	averagePageLoadMs: number | null;
 };
 
 export type ExperimentPerformanceRow = {
@@ -420,7 +421,8 @@ export async function getExperimentPerformanceByCampaign(
 					.select({
 						experimentId: ab_events.experiment_id,
 						variantId: ab_events.variant_id,
-						eventType: ab_events.event_type
+						eventType: ab_events.event_type,
+						metadata: ab_events.metadata
 					})
 					.from(ab_events)
 					.where(
@@ -432,7 +434,12 @@ export async function getExperimentPerformanceByCampaign(
 									.map((row: { slug: string | null }) => row.slug)
 									.filter((slug: string | null): slug is string => Boolean(slug))
 							),
-							inArray(ab_events.event_type, ['page_view', 'cta_click'])
+							inArray(ab_events.event_type, [
+								'page_view',
+								'experiment_exposure',
+								'cta_click',
+								'page_performance'
+							])
 						)
 					),
 		pageRows.length === 0
@@ -441,6 +448,7 @@ export async function getExperimentPerformanceByCampaign(
 					.select({
 						experimentId: lead_events.experiment_id,
 						variantId: lead_events.variant_id,
+						eventType: lead_events.event_type,
 						ctaVariant: lead_events.cta_variant,
 						ctaKey: lead_events.cta_key,
 						campaignPageId: lead_events.campaign_page_id,
@@ -449,7 +457,7 @@ export async function getExperimentPerformanceByCampaign(
 					.from(lead_events)
 					.where(
 						and(
-							eq(lead_events.event_type, 'form_submitted'),
+							inArray(lead_events.event_type, ['form_submitted', 'journey_created']),
 							inArray(
 								lead_events.campaign_page_id,
 								pageRows
@@ -462,8 +470,14 @@ export async function getExperimentPerformanceByCampaign(
 
 	const experimentMap = new Map<string, ExperimentPerformanceRow>();
 	const legacyExperimentCutoffs = new Map<string, Date>();
+	const completedExperimentCutoffs = new Map<string, Date>();
+	const performanceByVariant = new Map<string, { totalMs: number; samples: number }>();
 
 	for (const row of variantRows) {
+		if (row.status === 'completed' && row.endedAt) {
+			completedExperimentCutoffs.set(row.experimentId, row.endedAt);
+		}
+
 		if (
 			row.experimentKey === 'speaker_primary_cta_v1' &&
 			row.status === 'completed' &&
@@ -488,7 +502,8 @@ export async function getExperimentPerformanceByCampaign(
 			clicks: 0,
 			leads: 0,
 			clickThroughRate: 0,
-			leadConversionRate: 0
+			leadConversionRate: 0,
+			averagePageLoadMs: null
 		};
 
 		if (existingExperiment) {
@@ -522,18 +537,36 @@ export async function getExperimentPerformanceByCampaign(
 			continue;
 		}
 
-		if (row.eventType === 'page_view') {
+		if (row.eventType === 'page_view' || row.eventType === 'experiment_exposure') {
 			variant.exposures += 1;
 		}
 
 		if (row.eventType === 'cta_click') {
 			variant.clicks += 1;
 		}
+
+		if (row.eventType === 'page_performance') {
+			const metadata =
+				typeof row.metadata === 'object' && row.metadata !== null
+					? (row.metadata as Record<string, unknown>)
+					: {};
+			const loadMs = metadata.load_ms;
+			if (typeof loadMs === 'number' && Number.isFinite(loadMs) && loadMs >= 0) {
+				const current = performanceByVariant.get(variant.variantId) ?? { totalMs: 0, samples: 0 };
+				current.totalMs += loadMs;
+				current.samples += 1;
+				performanceByVariant.set(variant.variantId, current);
+			}
+		}
 	}
 
 	for (const row of leadRows) {
-		if (row.experimentId && row.variantId) {
+		if (row.eventType === 'journey_created' && row.experimentId && row.variantId) {
 			const experiment = experimentMap.get(row.experimentId);
+			const completedCutoff = completedExperimentCutoffs.get(row.experimentId);
+			if (completedCutoff && row.occurredAt > completedCutoff) {
+				continue;
+			}
 			const variant = experiment?.variants.find((item) => item.variantId === row.variantId);
 			if (variant) {
 				variant.leads += 1;
@@ -541,7 +574,11 @@ export async function getExperimentPerformanceByCampaign(
 			continue;
 		}
 
-		if (!row.ctaVariant || row.ctaKey !== 'hero_inline_booking') {
+		if (
+			row.eventType !== 'form_submitted' ||
+			!row.ctaVariant ||
+			row.ctaKey !== 'hero_inline_booking'
+		) {
 			continue;
 		}
 
@@ -564,7 +601,11 @@ export async function getExperimentPerformanceByCampaign(
 			variants: experiment.variants.map((variant) => ({
 				...variant,
 				clickThroughRate: ratio(variant.clicks, variant.exposures),
-				leadConversionRate: ratio(variant.leads, variant.exposures)
+				leadConversionRate: ratio(variant.leads, variant.exposures),
+				averagePageLoadMs: (() => {
+					const performance = performanceByVariant.get(variant.variantId);
+					return performance ? performance.totalMs / performance.samples : null;
+				})()
 			}))
 		}))
 		.sort((left, right) => left.experimentName.localeCompare(right.experimentName));

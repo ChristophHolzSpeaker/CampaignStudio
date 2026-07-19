@@ -139,5 +139,10 @@ describe('/speaker/[slug] +page.server', () => {
 		expect(mockedResolveSpeakerHeroMediaExperiment).toHaveBeenCalledWith(
 			expect.objectContaining({ videoEmbedUrl: 'https://youtu.be/mpbtCg2NSUs' })
 		);
+		expect(mockedBuildSpeakerMailtoHref).toHaveBeenCalledWith(
+			expect.objectContaining({
+				experiment: { alias: 'hero1', variantKey: 'B' }
+			})
+		);
 	});
 });

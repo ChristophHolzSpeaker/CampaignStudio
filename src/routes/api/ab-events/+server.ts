@@ -5,7 +5,13 @@ import { ab_events } from '$lib/server/db/schema';
 import type { RequestHandler } from './$types';
 
 const abEventSchema = z.object({
-	eventType: z.enum(['cta_click', 'video_ready', 'video_error']),
+	eventType: z.enum([
+		'experiment_exposure',
+		'cta_click',
+		'video_ready',
+		'video_error',
+		'page_performance'
+	]),
 	experimentId: z.string().uuid(),
 	variantId: z.string().uuid(),
 	visitorId: z.string().trim().min(1).max(255),

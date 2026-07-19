@@ -2,6 +2,7 @@ import { db } from '$lib/server/db';
 import { lead_events } from '$lib/server/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import type { EventType } from '../../../../shared/event-types';
+import type { ExperimentAttribution } from '$lib/experiments/types';
 
 export type LeadEventPayload = Record<string, unknown>;
 
@@ -22,10 +23,7 @@ type LeadEventInput = {
 		section?: string | null;
 		variant?: string | null;
 	};
-	experiment?: {
-		experimentId: string;
-		variantId: string;
-	} | null;
+	experiment?: ExperimentAttribution | null;
 };
 
 export async function logLeadEvent(input: LeadEventInput): Promise<void> {

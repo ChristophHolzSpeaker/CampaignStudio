@@ -567,6 +567,22 @@ export async function processInboundGmailMessage(
 		}
 	});
 
+	if (journeyResolution.created_new_journey) {
+		await logLeadEvent(env, {
+			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_id: journeyResolution.campaign_id,
+			campaign_page_id: journeyResolution.campaign_page_id,
+			experiment_id: journeyResolution.experiment_id,
+			variant_id: journeyResolution.variant_id,
+			event_type: 'journey_created',
+			event_source: 'worker.gmail_sync',
+			event_payload: {
+				creation_source: 'inbound_email',
+				matched_by: journeyResolution.matched_by
+			}
+		});
+	}
+
 	if (classification) {
 		await logLeadEvent(env, {
 			lead_journey_id: journeyResolution.lead_journey_id,

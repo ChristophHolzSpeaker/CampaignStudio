@@ -2,6 +2,7 @@
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import { trackAbEvent } from '$lib/analytics/track-ab-event';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
@@ -88,7 +89,10 @@
 		});
 	}
 
-	function trackHeroVideoEvent(eventType: 'video_ready' | 'video_error'): void {
+	function trackHeroExperimentEvent(
+		eventType: 'experiment_exposure' | 'video_ready' | 'video_error' | 'page_performance',
+		metadata: Record<string, unknown> = {}
+	): void {
 		if (!abTest?.experimentId || !abTest.variantId) {
 			return;
 		}
@@ -102,10 +106,39 @@
 			slug: page.params.slug ?? '',
 			metadata: {
 				variant_key: abTest.variantKey,
-				experiment_key: abTest.experimentKey
+				experiment_key: abTest.experimentKey,
+				...metadata
 			}
 		});
 	}
+
+	onMount(() => {
+		trackHeroExperimentEvent('experiment_exposure', {
+			hero_media_mode: abTest?.heroMediaMode ?? 'static_image'
+		});
+
+		let reportedPerformance = false;
+		const reportPerformance = () => {
+			if (reportedPerformance) return;
+			reportedPerformance = true;
+			const [navigation] = performance.getEntriesByType(
+				'navigation'
+			) as PerformanceNavigationTiming[];
+			trackHeroExperimentEvent('page_performance', {
+				load_ms: navigation?.duration ?? performance.now(),
+				dom_content_loaded_ms: navigation?.domContentLoadedEventEnd ?? null,
+				transfer_size: navigation?.transferSize ?? null
+			});
+		};
+
+		if (document.readyState === 'complete') {
+			reportPerformance();
+		} else {
+			window.addEventListener('load', reportPerformance, { once: true });
+		}
+
+		return () => window.removeEventListener('load', reportPerformance);
+	});
 
 	function openHeroImagePicker(): void {
 		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
@@ -287,8 +320,8 @@
 							url={props.videoEmbedUrl}
 							posterUrl={heroImageUrl}
 							posterAlt={heroImageAlt}
-							onReady={() => trackHeroVideoEvent('video_ready')}
-							onError={() => trackHeroVideoEvent('video_error')}
+							onReady={() => trackHeroExperimentEvent('video_ready')}
+							onError={() => trackHeroExperimentEvent('video_error')}
 						/>
 					{:else}
 						<img

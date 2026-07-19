@@ -109,6 +109,7 @@ describe('experiment conversion attribution', () => {
 						{
 							experimentId: null,
 							variantId: null,
+							eventType: 'form_submitted',
 							ctaVariant: 'B',
 							ctaKey: 'hero_inline_booking',
 							campaignPageId: 10,
@@ -117,6 +118,7 @@ describe('experiment conversion attribution', () => {
 						{
 							experimentId: 'new-experiment',
 							variantId: 'new-b',
+							eventType: 'journey_created',
 							ctaVariant: null,
 							ctaKey: 'frictionless_funnel_inline_booking',
 							campaignPageId: 10,
@@ -125,6 +127,7 @@ describe('experiment conversion attribution', () => {
 						{
 							experimentId: null,
 							variantId: null,
+							eventType: 'form_submitted',
 							ctaVariant: 'B',
 							ctaKey: 'hero_inline_booking',
 							campaignPageId: 10,

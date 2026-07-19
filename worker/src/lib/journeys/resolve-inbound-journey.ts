@@ -3,6 +3,10 @@ import { insertOne, selectOne } from '../db';
 import type { WorkerEnv } from '../env';
 import { parsePlusAddressFromRecipients } from '../attribution/plus-address';
 import { persistWorkerJourneyAttributionSnapshot } from './attribution-persistence';
+import {
+	SPEAKER_HERO_MEDIA_EMAIL_ALIAS,
+	SPEAKER_HERO_MEDIA_EXPERIMENT_KEY
+} from '../../../../shared/experiments';
 
 const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'archived'] as const;
 const JOURNEY_MATCH_WINDOW_DAYS = 30;
@@ -24,12 +28,17 @@ type LeadMessageThreadRow = {
 	lead_journey_id: string;
 };
 
+type ExperimentRow = { id: string };
+type ExperimentVariantRow = { id: string };
+
 type MatchedBy = 'thread' | 'plus_address_email_campaign' | 'new_journey';
 
 export type InboundJourneyResolutionResult = {
 	lead_journey_id: string;
 	campaign_id: number | null;
 	campaign_page_id: number | null;
+	experiment_id: string | null;
+	variant_id: string | null;
 	attribution_status: AttributionStatus | null;
 	created_new_journey: boolean;
 	matched_by: MatchedBy;
@@ -76,13 +85,17 @@ async function resolveCampaignFromPlusAddress(
 	attribution_status: AttributionStatus;
 	campaign_id: number | null;
 	campaign_page_id: number | null;
+	experiment_id: string | null;
+	variant_id: string | null;
 }> {
 	const parsed = parsePlusAddressFromRecipients(toRecipients);
 	if (parsed.status !== 'parsed' || !parsed.campaign_id || !parsed.campaign_page_id) {
 		return {
 			attribution_status: parsed.status,
 			campaign_id: null,
-			campaign_page_id: null
+			campaign_page_id: null,
+			experiment_id: null,
+			variant_id: null
 		};
 	}
 
@@ -98,14 +111,47 @@ async function resolveCampaignFromPlusAddress(
 		return {
 			attribution_status: 'unresolved_campaign_page',
 			campaign_id: null,
-			campaign_page_id: null
+			campaign_page_id: null,
+			experiment_id: null,
+			variant_id: null
 		};
+	}
+
+	let experimentId: string | null = null;
+	let variantId: string | null = null;
+	if (parsed.experiment_alias === SPEAKER_HERO_MEDIA_EMAIL_ALIAS && parsed.variant_key) {
+		const experiment = await selectOne<ExperimentRow>(
+			env,
+			'ab_experiments',
+			new URLSearchParams({
+				select: 'id',
+				key: `eq.${SPEAKER_HERO_MEDIA_EXPERIMENT_KEY}`,
+				limit: '1'
+			})
+		);
+
+		if (experiment) {
+			const variant = await selectOne<ExperimentVariantRow>(
+				env,
+				'ab_variants',
+				new URLSearchParams({
+					select: 'id',
+					experiment_id: `eq.${experiment.id}`,
+					key: `eq.${parsed.variant_key}`,
+					limit: '1'
+				})
+			);
+			experimentId = variant ? experiment.id : null;
+			variantId = variant?.id ?? null;
+		}
 	}
 
 	return {
 		attribution_status: 'parsed',
 		campaign_id: campaignPage.campaign_id,
-		campaign_page_id: campaignPage.id
+		campaign_page_id: campaignPage.id,
+		experiment_id: experimentId,
+		variant_id: variantId
 	};
 }
 
@@ -175,6 +221,8 @@ export async function resolveInboundJourney(
 			lead_journey_id: threadJourney.id,
 			campaign_id: threadJourney.campaign_id,
 			campaign_page_id: threadJourney.campaign_page_id,
+			experiment_id: null,
+			variant_id: null,
 			attribution_status: null,
 			created_new_journey: false,
 			matched_by: 'thread'
@@ -200,6 +248,8 @@ export async function resolveInboundJourney(
 				lead_journey_id: existingJourney.id,
 				campaign_id: existingJourney.campaign_id,
 				campaign_page_id: existingJourney.campaign_page_id,
+				experiment_id: plusResolution.experiment_id,
+				variant_id: plusResolution.variant_id,
 				attribution_status: plusResolution.attribution_status,
 				created_new_journey: false,
 				matched_by: 'plus_address_email_campaign'
@@ -224,6 +274,8 @@ export async function resolveInboundJourney(
 		lead_journey_id: createdJourney.id,
 		campaign_id: createdJourney.campaign_id,
 		campaign_page_id: createdJourney.campaign_page_id,
+		experiment_id: plusResolution.experiment_id,
+		variant_id: plusResolution.variant_id,
 		attribution_status: plusResolution.attribution_status,
 		created_new_journey: true,
 		matched_by: 'new_journey'

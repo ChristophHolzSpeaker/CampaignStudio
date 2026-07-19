@@ -9,8 +9,9 @@ import {
 import type { Cookies } from '@sveltejs/kit';
 import { and, eq } from 'drizzle-orm';
 import { isEligibleHeroVideoUrl } from '$lib/experiments/hero-video';
+import type { ExperimentAttribution } from '$lib/experiments/types';
+import { SPEAKER_HERO_MEDIA_EXPERIMENT_KEY } from '../../../shared/experiments';
 
-export const SPEAKER_HERO_MEDIA_EXPERIMENT_KEY = 'speaker_hero_autoplay_video_v1';
 const SPEAKER_HERO_MEDIA_COOKIE_NAME = 'cs_ab_speaker_hero_autoplay_video_v1';
 const SPEAKER_HERO_MEDIA_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 60;
 
@@ -35,19 +36,10 @@ type AbVariantRow = {
 	isControl: boolean;
 };
 
-export type ExperimentAttribution = {
-	experimentId: string;
-	variantId: string;
-};
-
 type ResolveSpeakerHeroMediaInput = {
 	cookies: Cookies;
 	secureCookie: boolean;
-	route: string;
-	slug: string;
 	videoEmbedUrl: string;
-	searchParams: URLSearchParams;
-	referrer: string | null;
 };
 
 function readAssignmentCookie(cookies: Cookies): string | null {
@@ -113,8 +105,7 @@ export async function getSpeakerHeroMediaAttribution(
 			ab_experiments,
 			and(
 				eq(ab_experiments.id, ab_visitor_assignments.experiment_id),
-				eq(ab_experiments.key, SPEAKER_HERO_MEDIA_EXPERIMENT_KEY),
-				eq(ab_experiments.status, 'running')
+				eq(ab_experiments.key, SPEAKER_HERO_MEDIA_EXPERIMENT_KEY)
 			)
 		)
 		.innerJoin(
@@ -142,46 +133,10 @@ async function persistAssignment(input: {
 			variant_id: input.variantId,
 			visitor_id: input.visitorId
 		})
-		.onConflictDoNothing();
-}
-
-async function persistExposure(input: {
-	experimentId: string | null;
-	variantId: string | null;
-	visitorId: string;
-	route: string;
-	slug: string;
-	searchParams: URLSearchParams;
-	referrer: string | null;
-}): Promise<void> {
-	const attribution: Record<string, string> = {};
-	for (const key of [
-		'gclid',
-		'utm_source',
-		'utm_medium',
-		'utm_campaign',
-		'utm_content',
-		'utm_term'
-	]) {
-		const value = input.searchParams.get(key)?.trim();
-		if (value) {
-			attribution[key] = value;
-		}
-	}
-
-	if (input.referrer) {
-		attribution.referrer = input.referrer;
-	}
-
-	await db.insert(ab_events).values({
-		experiment_id: input.experimentId,
-		variant_id: input.variantId,
-		visitor_id: input.visitorId,
-		event_type: 'page_view',
-		route: input.route,
-		slug: input.slug,
-		metadata: attribution
-	});
+		.onConflictDoUpdate({
+			target: [ab_visitor_assignments.experiment_id, ab_visitor_assignments.visitor_id],
+			set: { variant_id: input.variantId }
+		});
 }
 
 export async function resolveSpeakerHeroMediaExperiment(
@@ -258,7 +213,7 @@ export async function resolveSpeakerHeroMediaExperiment(
 		const storedVariant = assignmentRow[0]
 			? (variantRows.find((variant) => variant.id === assignmentRow[0].variantId) ?? null)
 			: null;
-		const assignedVariant = storedVariant ?? cookieVariant ?? pickWeightedVariant(variantRows);
+		const assignedVariant = cookieVariant ?? storedVariant ?? pickWeightedVariant(variantRows);
 
 		if (!assignedVariant) {
 			return {
@@ -282,18 +237,6 @@ export async function resolveSpeakerHeroMediaExperiment(
 		} catch (error) {
 			console.error('AB assignment persistence failed', error);
 		}
-
-		void persistExposure({
-			experimentId: experiment.id,
-			variantId: assignedVariant.id,
-			visitorId,
-			route: input.route,
-			slug: input.slug,
-			searchParams: input.searchParams,
-			referrer: input.referrer
-		}).catch((error) => {
-			console.error('AB exposure logging failed', error);
-		});
 
 		const normalizedConfig = normalizeConfig(assignedVariant.config);
 

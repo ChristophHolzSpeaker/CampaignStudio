@@ -532,8 +532,8 @@ export const ab_experiments = pgTable(
 		status: text('status').notNull().default('draft'),
 		goal_event: text('goal_event'),
 		traffic_allocation: integer('traffic_allocation').notNull().default(100),
-		started_at: timestamp('started_at'),
-		ended_at: timestamp('ended_at'),
+		started_at: timestamp('started_at', { withTimezone: true }),
+		ended_at: timestamp('ended_at', { withTimezone: true }),
 		created_at: timestamp('created_at').notNull().defaultNow(),
 		updated_at: timestamp('updated_at').notNull().defaultNow()
 	},
