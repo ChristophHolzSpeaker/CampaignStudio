@@ -416,45 +416,45 @@ export async function getExperimentPerformanceByCampaign(
 		pageRows.length === 0
 			? Promise.resolve([])
 			: db
-				.select({
-					experimentId: ab_events.experiment_id,
-					variantId: ab_events.variant_id,
-					eventType: ab_events.event_type
-				})
-				.from(ab_events)
-				.where(
-					and(
-						eq(ab_events.route, '/speaker/[slug]'),
-						inArray(
-							ab_events.slug,
-							pageRows.map((row: { slug: string | null }) => row.slug).filter(
-								(slug: string | null): slug is string => Boolean(slug)
-							)
-						),
-						inArray(ab_events.event_type, ['page_view', 'cta_click'])
-					)
-				),
+					.select({
+						experimentId: ab_events.experiment_id,
+						variantId: ab_events.variant_id,
+						eventType: ab_events.event_type
+					})
+					.from(ab_events)
+					.where(
+						and(
+							eq(ab_events.route, '/speaker/[slug]'),
+							inArray(
+								ab_events.slug,
+								pageRows
+									.map((row: { slug: string | null }) => row.slug)
+									.filter((slug: string | null): slug is string => Boolean(slug))
+							),
+							inArray(ab_events.event_type, ['page_view', 'cta_click'])
+						)
+					),
 		pageRows.length === 0
 			? Promise.resolve([])
 			: db
-				.select({
-					ctaVariant: lead_events.cta_variant,
-					ctaKey: lead_events.cta_key,
-					campaignPageId: lead_events.campaign_page_id
-				})
-				.from(lead_events)
-				.where(
-					and(
-						eq(lead_events.event_type, 'form_submitted'),
-						eq(lead_events.cta_key, 'hero_inline_booking'),
-						inArray(
-							lead_events.campaign_page_id,
-							pageRows
-								.map((row: { id: number | null }) => row.id)
-								.filter((id: number | null): id is number => typeof id === 'number')
+					.select({
+						ctaVariant: lead_events.cta_variant,
+						ctaKey: lead_events.cta_key,
+						campaignPageId: lead_events.campaign_page_id
+					})
+					.from(lead_events)
+					.where(
+						and(
+							eq(lead_events.event_type, 'form_submitted'),
+							eq(lead_events.cta_key, 'hero_inline_booking'),
+							inArray(
+								lead_events.campaign_page_id,
+								pageRows
+									.map((row: { id: number | null }) => row.id)
+									.filter((id: number | null): id is number => typeof id === 'number')
+							)
 						)
 					)
-				)
 	]);
 
 	const experimentMap = new Map<string, ExperimentPerformanceRow>();
