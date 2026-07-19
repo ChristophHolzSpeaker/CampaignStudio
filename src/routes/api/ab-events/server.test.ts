@@ -31,6 +31,7 @@ describe('POST /api/ab-events', () => {
 						experimentId: '11111111-1111-4111-8111-111111111111',
 						variantId: '22222222-2222-4222-8222-222222222222',
 						visitorId: 'visitor-123',
+						campaignPageId: 42,
 						route: '/speaker/christoph-holz',
 						slug: 'christoph-holz'
 					})
@@ -38,7 +39,9 @@ describe('POST /api/ab-events', () => {
 			} as never);
 
 			expect(response.status).toBe(204);
-			expect(values).toHaveBeenCalledWith(expect.objectContaining({ event_type: eventType }));
+			expect(values).toHaveBeenCalledWith(
+				expect.objectContaining({ event_type: eventType, campaign_page_id: 42 })
+			);
 		}
 	);
 });

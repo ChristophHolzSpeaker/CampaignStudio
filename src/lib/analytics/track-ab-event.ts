@@ -10,6 +10,7 @@ export type TrackAbEventInput = {
 	experimentId: string;
 	variantId: string;
 	visitorId: string;
+	campaignPageId: number;
 	route: string;
 	slug: string;
 	metadata?: Record<string, unknown>;

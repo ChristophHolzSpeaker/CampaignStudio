@@ -389,7 +389,7 @@ export async function getExperimentPerformanceByCampaign(
 	campaignId: number
 ): Promise<ExperimentPerformanceRow[]> {
 	const pageRows = await db
-		.select({ id: campaign_pages.id, slug: campaign_pages.slug })
+		.select({ id: campaign_pages.id })
 		.from(campaign_pages)
 		.where(eq(campaign_pages.campaign_id, campaignId));
 
@@ -430,12 +430,11 @@ export async function getExperimentPerformanceByCampaign(
 					.from(ab_events)
 					.where(
 						and(
-							eq(ab_events.route, '/speaker/[slug]'),
 							inArray(
-								ab_events.slug,
+								ab_events.campaign_page_id,
 								pageRows
-									.map((row: { slug: string | null }) => row.slug)
-									.filter((slug: string | null): slug is string => Boolean(slug))
+									.map((row: { id: number | null }) => row.id)
+									.filter((id: number | null): id is number => typeof id === 'number')
 							),
 							inArray(ab_events.event_type, [
 								'page_view',

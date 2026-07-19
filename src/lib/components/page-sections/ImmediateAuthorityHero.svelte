@@ -57,7 +57,7 @@
 	const showAutoplayVideo = $derived(abTest?.heroMediaMode === 'autoplay_video');
 
 	function trackHeroCtaClick(button: 'primary' | 'secondary'): void {
-		if (!abTest?.experimentId || !abTest.variantId) {
+		if (!abTest?.experimentId || !abTest.variantId || campaignPageId == null) {
 			return;
 		}
 
@@ -66,6 +66,7 @@
 			experimentId: abTest.experimentId,
 			variantId: abTest.variantId,
 			visitorId: abTest.visitorId,
+			campaignPageId,
 			route: page.url.pathname,
 			slug: page.params.slug ?? '',
 			metadata: {
@@ -93,7 +94,7 @@
 		eventType: 'experiment_exposure' | 'video_ready' | 'video_error' | 'page_performance',
 		metadata: Record<string, unknown> = {}
 	): void {
-		if (!abTest?.experimentId || !abTest.variantId) {
+		if (!abTest?.experimentId || !abTest.variantId || campaignPageId == null) {
 			return;
 		}
 
@@ -102,6 +103,7 @@
 			experimentId: abTest.experimentId,
 			variantId: abTest.variantId,
 			visitorId: abTest.visitorId,
+			campaignPageId,
 			route: page.url.pathname,
 			slug: page.params.slug ?? '',
 			metadata: {

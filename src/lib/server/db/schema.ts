@@ -597,6 +597,9 @@ export const ab_events = pgTable(
 			onDelete: 'set null'
 		}),
 		variant_id: uuid('variant_id').references(() => ab_variants.id, { onDelete: 'set null' }),
+		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id, {
+			onDelete: 'set null'
+		}),
 		visitor_id: text('visitor_id'),
 		session_id: text('session_id'),
 		event_type: text('event_type').notNull(),
@@ -613,6 +616,10 @@ export const ab_events = pgTable(
 			table.created_at
 		),
 		slugCreatedIdx: index('ab_events_slug_created_idx').on(table.slug, table.created_at),
+		campaignPageCreatedIdx: index('ab_events_campaign_page_created_idx').on(
+			table.campaign_page_id,
+			table.created_at
+		),
 		visitorIdx: index('ab_events_visitor_idx').on(table.visitor_id)
 	})
 );

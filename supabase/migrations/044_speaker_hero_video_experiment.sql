@@ -39,6 +39,21 @@ create index lead_events_experiment_variant_event_idx on lead_events (
 	occurred_at
 );
 
+alter table ab_events
+add column campaign_page_id integer references campaign_pages(id) on delete set null;
+
+update ab_events
+set campaign_page_id = (
+	select campaign_pages.id
+	from campaign_pages
+	where campaign_pages.slug = ab_events.slug
+	order by campaign_pages.is_published desc, campaign_pages.created_at desc
+	limit 1
+)
+where campaign_page_id is null and slug is not null;
+
+create index ab_events_campaign_page_created_idx on ab_events (campaign_page_id, created_at);
+
 update ab_experiments
 set
 	status = 'completed',
