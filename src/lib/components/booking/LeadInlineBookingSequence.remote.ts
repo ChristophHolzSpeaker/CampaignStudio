@@ -210,6 +210,23 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 		now
 	});
 
+	if (created) {
+		await logLeadEvent({
+			leadJourneyId: journey.id,
+			campaignVisitId,
+			campaignId: campaignContext.campaignId,
+			campaignPageId: campaignContext.campaignPageId,
+			eventType: 'journey_created',
+			eventSource: attributionSurface.eventSource,
+			anonymousId: visitorIdentifier,
+			experiment: experimentAttribution,
+			eventPayload: {
+				creation_source: 'form_submission',
+				booking_surface: bookingSurface
+			}
+		});
+	}
+
 	const bookingLink = await createBookingLinkForJourney({
 		leadJourneyId: journey.id,
 		campaignId: campaignContext.campaignId,
@@ -289,23 +306,6 @@ export const submitInlineLeadBooking = form('unchecked', async (rawData) => {
 			booking_confirmation_state: confirmation.state
 		}
 	});
-
-	if (created) {
-		await logLeadEvent({
-			leadJourneyId: journey.id,
-			campaignVisitId,
-			campaignId: campaignContext.campaignId,
-			campaignPageId: campaignContext.campaignPageId,
-			eventType: 'journey_created',
-			eventSource: attributionSurface.eventSource,
-			anonymousId: visitorIdentifier,
-			experiment: experimentAttribution,
-			eventPayload: {
-				creation_source: 'form_submission',
-				booking_surface: bookingSurface
-			}
-		});
-	}
 
 	await persistJourneyAttributionSnapshot({
 		journeyId: journey.id,

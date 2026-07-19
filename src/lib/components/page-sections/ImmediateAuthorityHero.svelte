@@ -316,13 +316,15 @@
 			<div class="group relative lg:col-span-5">
 				<div class="aspect-4/5 overflow-hidden bg-surface-container-lowest">
 					{#if showAutoplayVideo && props?.videoEmbedUrl}
-						<HeroAutoplayVideo
-							url={props.videoEmbedUrl}
-							posterUrl={heroImageUrl}
-							posterAlt={heroImageAlt}
-							onReady={() => trackHeroExperimentEvent('video_ready')}
-							onError={() => trackHeroExperimentEvent('video_error')}
-						/>
+						{#key props.videoEmbedUrl}
+							<HeroAutoplayVideo
+								url={props.videoEmbedUrl}
+								posterUrl={heroImageUrl}
+								posterAlt={heroImageAlt}
+								onReady={() => trackHeroExperimentEvent('video_ready')}
+								onError={() => trackHeroExperimentEvent('video_error')}
+							/>
+						{/key}
 					{:else}
 						<img
 							src={heroImageUrl}

@@ -33,7 +33,7 @@
 </script>
 
 <main class={['col-span-2', appPage.route?.id?.startsWith('/(app)') ? '' : 'pt-10 lg:pt-20']}>
-	{#each renderedSections as section, index (`${section.type}-${index}`)}
+	{#each renderedSections as section, index (`${section.type}-${index}-${campaignPageId ?? 'none'}-${abTest?.variantId ?? 'none'}`)}
 		{@const entry = sectionRegistry[section.type]}
 		{@const SectionComponent = entry?.component}
 

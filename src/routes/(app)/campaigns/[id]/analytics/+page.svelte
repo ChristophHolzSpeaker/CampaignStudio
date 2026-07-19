@@ -154,6 +154,8 @@
 							: 'Test',
 					formatCount(variant.exposures),
 					formatCount(variant.clicks),
+					formatCount(variant.videoReady),
+					formatCount(variant.videoErrors),
 					variant.averagePageLoadMs === null
 						? '—'
 						: `${Math.round(variant.averagePageLoadMs).toLocaleString()} ms`,
@@ -417,6 +419,8 @@
 								'Type',
 								'Exposures',
 								'Clicks',
+								'Video ready',
+								'Video errors',
 								'Avg page load',
 								'Leads',
 								'Click rate',
@@ -424,7 +428,7 @@
 								'Lift vs control'
 							]}
 							rows={experiment.rows}
-							rightAlignedColumns={[3, 4, 5, 6, 7, 8, 9]}
+							rightAlignedColumns={[3, 4, 5, 6, 7, 8, 9, 10, 11]}
 							emptyLabel="No experiment variant rows yet"
 						/>
 					</article>

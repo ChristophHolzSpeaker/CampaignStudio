@@ -120,6 +120,8 @@ export type ExperimentVariantPerformanceRow = {
 	isControl: boolean;
 	exposures: number;
 	clicks: number;
+	videoReady: number;
+	videoErrors: number;
 	leads: number;
 	clickThroughRate: number;
 	leadConversionRate: number;
@@ -389,7 +391,7 @@ export async function getExperimentPerformanceByCampaign(
 	const pageRows = await db
 		.select({ id: campaign_pages.id, slug: campaign_pages.slug })
 		.from(campaign_pages)
-		.where(and(eq(campaign_pages.campaign_id, campaignId), eq(campaign_pages.is_published, true)));
+		.where(eq(campaign_pages.campaign_id, campaignId));
 
 	const [variantRows, exposureRows, leadRows] = await Promise.all([
 		db
@@ -422,7 +424,8 @@ export async function getExperimentPerformanceByCampaign(
 						experimentId: ab_events.experiment_id,
 						variantId: ab_events.variant_id,
 						eventType: ab_events.event_type,
-						metadata: ab_events.metadata
+						metadata: ab_events.metadata,
+						createdAt: ab_events.created_at
 					})
 					.from(ab_events)
 					.where(
@@ -438,6 +441,8 @@ export async function getExperimentPerformanceByCampaign(
 								'page_view',
 								'experiment_exposure',
 								'cta_click',
+								'video_ready',
+								'video_error',
 								'page_performance'
 							])
 						)
@@ -500,6 +505,8 @@ export async function getExperimentPerformanceByCampaign(
 			isControl: row.isControl,
 			exposures: 0,
 			clicks: 0,
+			videoReady: 0,
+			videoErrors: 0,
 			leads: 0,
 			clickThroughRate: 0,
 			leadConversionRate: 0,
@@ -531,6 +538,10 @@ export async function getExperimentPerformanceByCampaign(
 		if (!experiment) {
 			continue;
 		}
+		const completedCutoff = completedExperimentCutoffs.get(row.experimentId);
+		if (completedCutoff && row.createdAt > completedCutoff) {
+			continue;
+		}
 
 		const variant = experiment.variants.find((item) => item.variantId === row.variantId);
 		if (!variant) {
@@ -543,6 +554,14 @@ export async function getExperimentPerformanceByCampaign(
 
 		if (row.eventType === 'cta_click') {
 			variant.clicks += 1;
+		}
+
+		if (row.eventType === 'video_ready') {
+			variant.videoReady += 1;
+		}
+
+		if (row.eventType === 'video_error') {
+			variant.videoErrors += 1;
 		}
 
 		if (row.eventType === 'page_performance') {

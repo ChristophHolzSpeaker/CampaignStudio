@@ -102,7 +102,33 @@ describe('experiment conversion attribution', () => {
 					})
 				})
 			} as never)
-			.mockReturnValueOnce({ from: () => ({ where: async () => [] }) } as never)
+			.mockReturnValueOnce({
+				from: () => ({
+					where: async () => [
+						{
+							experimentId: 'old-experiment',
+							variantId: 'old-b',
+							eventType: 'experiment_exposure',
+							metadata: {},
+							createdAt: new Date('2026-07-02T00:00:00.000Z')
+						},
+						{
+							experimentId: 'new-experiment',
+							variantId: 'new-b',
+							eventType: 'video_ready',
+							metadata: {},
+							createdAt: new Date('2026-07-20T00:00:00.000Z')
+						},
+						{
+							experimentId: 'new-experiment',
+							variantId: 'new-b',
+							eventType: 'video_error',
+							metadata: {},
+							createdAt: new Date('2026-07-20T00:00:01.000Z')
+						}
+					]
+				})
+			} as never)
 			.mockReturnValueOnce({
 				from: () => ({
 					where: async () => [
@@ -145,6 +171,15 @@ describe('experiment conversion attribution', () => {
 		expect(result.find((item) => item.experimentId === 'new-experiment')?.variants[0]?.leads).toBe(
 			1
 		);
+		expect(
+			result.find((item) => item.experimentId === 'old-experiment')?.variants[0]?.exposures
+		).toBe(0);
+		expect(
+			result.find((item) => item.experimentId === 'new-experiment')?.variants[0]?.videoReady
+		).toBe(1);
+		expect(
+			result.find((item) => item.experimentId === 'new-experiment')?.variants[0]?.videoErrors
+		).toBe(1);
 	});
 });
 
