@@ -47,7 +47,7 @@ set campaign_page_id = (
 	select campaign_pages.id
 	from campaign_pages
 	where campaign_pages.slug = ab_events.slug
-	order by campaign_pages.is_published desc, campaign_pages.created_at desc
+		and campaign_pages.is_published = true
 	limit 1
 )
 where campaign_page_id is null and slug is not null;
