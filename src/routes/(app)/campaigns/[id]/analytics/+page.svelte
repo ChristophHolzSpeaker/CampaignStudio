@@ -154,6 +154,11 @@
 							: 'Test',
 					formatCount(variant.exposures),
 					formatCount(variant.clicks),
+					formatCount(variant.videoReady),
+					formatCount(variant.videoErrors),
+					variant.averagePageLoadMs === null
+						? '—'
+						: `${Math.round(variant.averagePageLoadMs).toLocaleString()} ms`,
 					formatCount(variant.leads),
 					formatPercent(variant.clickThroughRate),
 					formatPercent(variant.leadConversionRate),
@@ -405,8 +410,7 @@
 							</div>
 						</div>
 						<p class="experiment-summary">
-							Goal: {experiment.goalEvent ?? 'cta_click'} · Winner is the highest tracked lead conversion
-							rate.
+							Goal: {experiment.goalEvent ?? 'cta_click'} · Comparison uses tracked lead conversion rate.
 						</p>
 						<DataTable
 							columns={[
@@ -415,13 +419,16 @@
 								'Type',
 								'Exposures',
 								'Clicks',
+								'Video ready',
+								'Video errors',
+								'Avg page load',
 								'Leads',
 								'Click rate',
 								'Lead rate',
 								'Lift vs control'
 							]}
 							rows={experiment.rows}
-							rightAlignedColumns={[3, 4, 5, 6, 7, 8]}
+							rightAlignedColumns={[3, 4, 5, 6, 7, 8, 9, 10, 11]}
 							emptyLabel="No experiment variant rows yet"
 						/>
 					</article>

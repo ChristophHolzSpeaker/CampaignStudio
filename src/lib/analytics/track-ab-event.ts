@@ -1,10 +1,16 @@
 import { browser } from '$app/environment';
 
 export type TrackAbEventInput = {
-	eventType: 'cta_click';
+	eventType:
+		| 'experiment_exposure'
+		| 'cta_click'
+		| 'video_ready'
+		| 'video_error'
+		| 'page_performance';
 	experimentId: string;
 	variantId: string;
 	visitorId: string;
+	campaignPageId: number;
 	route: string;
 	slug: string;
 	metadata?: Record<string, unknown>;

@@ -17,6 +17,8 @@ export type WorkerLeadEventInput = {
 	cta_label?: string | null;
 	cta_section?: string | null;
 	cta_variant?: string | null;
+	experiment_id?: string | null;
+	variant_id?: string | null;
 };
 
 export async function logLeadEvent(env: WorkerEnv, input: WorkerLeadEventInput): Promise<void> {
@@ -34,6 +36,8 @@ export async function logLeadEvent(env: WorkerEnv, input: WorkerLeadEventInput):
 		cta_key: input.cta_key ?? null,
 		cta_label: input.cta_label ?? null,
 		cta_section: input.cta_section ?? null,
-		cta_variant: input.cta_variant ?? null
+		cta_variant: input.cta_variant ?? null,
+		experiment_id: input.experiment_id ?? null,
+		variant_id: input.variant_id ?? null
 	});
 }

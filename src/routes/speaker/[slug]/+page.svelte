@@ -11,7 +11,7 @@
 	import { logSpeakerVisit, markSpeakerVisitEngaged } from './speaker.remote';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
 	import { browser } from '$app/environment';
-	import type { SpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
+	import type { SpeakerHeroMediaExperiment } from '$lib/server/ab-testing';
 
 	type BookingSlotGroups = Array<{
 		dateKey: string;
@@ -26,7 +26,7 @@
 			campaignId: number | null;
 			campaignPageId: number | null;
 			jsonLd: string;
-			abTest: SpeakerPrimaryCtaAbTest;
+			abTest: SpeakerHeroMediaExperiment;
 			speakerMailtoHref: string;
 		};
 	} = $props();

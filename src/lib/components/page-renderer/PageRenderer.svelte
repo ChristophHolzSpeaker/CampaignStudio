@@ -2,7 +2,7 @@
 	import { sectionRegistry } from '$lib/page-builder/sections';
 	import type { PageSection } from '$lib/page-builder/sections';
 	import type { LandingPageDocument } from '$lib/page-builder/page';
-	import type { SpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
+	import type { SpeakerHeroMediaExperiment } from '$lib/server/ab-testing';
 	import { page as appPage } from '$app/state';
 
 	let {
@@ -25,7 +25,7 @@
 		onInlineEditSaved?: (() => Promise<void>) | undefined;
 		mailtoHref?: string;
 		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
-		abTest?: SpeakerPrimaryCtaAbTest | null;
+		abTest?: SpeakerHeroMediaExperiment | null;
 		disableScrollReveal?: boolean;
 	} = $props();
 
@@ -33,7 +33,7 @@
 </script>
 
 <main class={['col-span-2', appPage.route?.id?.startsWith('/(app)') ? '' : 'pt-10 lg:pt-20']}>
-	{#each renderedSections as section, index (`${section.type}-${index}`)}
+	{#each renderedSections as section, index (`${section.type}-${index}-${campaignPageId ?? 'none'}-${abTest?.variantId ?? 'none'}`)}
 		{@const entry = sectionRegistry[section.type]}
 		{@const SectionComponent = entry?.component}
 
@@ -47,7 +47,6 @@
 					{onInlineEditSaved}
 					sectionIndex={index}
 					{mailtoHref}
-					{bookingSlotGroups}
 					{abTest}
 				/>
 			{:else if section.type === 'hybrid_content_section' || section.type === 'keynote_speeches'}

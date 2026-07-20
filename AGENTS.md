@@ -311,3 +311,19 @@ Always prioritize:
 - Keep changes minimal
 - Keep AI controlled
 - Follow SvelteKit + Supabase best practices
+
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues and PRDs are tracked with GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the default Matt Pocock triage-label vocabulary. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+This repository uses a multi-context layout for the SvelteKit application and Cloudflare Worker. See `docs/agents/domain.md`.

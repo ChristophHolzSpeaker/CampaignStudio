@@ -189,6 +189,8 @@ describe('processInboundGmailMessage', () => {
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
+			experiment_id: null,
+			variant_id: null,
 			attribution_status: 'parsed',
 			created_new_journey: false,
 			matched_by: 'thread'
@@ -223,6 +225,8 @@ describe('processInboundGmailMessage', () => {
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
+			experiment_id: null,
+			variant_id: null,
 			attribution_status: 'parsed',
 			created_new_journey: false,
 			matched_by: 'thread'
@@ -288,9 +292,11 @@ describe('processInboundGmailMessage', () => {
 		mockedSelectOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
 		mockedResolveInboundJourney.mockResolvedValue({
 			lead_journey_id: 'journey_1',
-			campaign_id: null,
-			campaign_page_id: null,
-			attribution_status: 'new_lead',
+			campaign_id: 12,
+			campaign_page_id: 3,
+			experiment_id: 'experiment-1',
+			variant_id: 'variant-b',
+			attribution_status: 'parsed',
 			created_new_journey: true,
 			matched_by: 'new_journey'
 		});
@@ -320,6 +326,15 @@ describe('processInboundGmailMessage', () => {
 			expect.any(Object),
 			expect.objectContaining({ response_language: 'French' })
 		);
+		expect(mockedInsertOne).toHaveBeenCalledWith(
+			expect.any(Object),
+			'lead_events',
+			expect.objectContaining({
+				event_type: 'journey_created',
+				experiment_id: 'experiment-1',
+				variant_id: 'variant-b'
+			})
+		);
 	});
 
 	it('prioritizes inbound language over campaign language', async () => {
@@ -336,7 +351,9 @@ describe('processInboundGmailMessage', () => {
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
-			attribution_status: 'new_lead',
+			experiment_id: null,
+			variant_id: null,
+			attribution_status: 'parsed',
 			created_new_journey: true,
 			matched_by: 'new_journey'
 		});
@@ -375,6 +392,8 @@ describe('processInboundGmailMessage', () => {
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
+			experiment_id: null,
+			variant_id: null,
 			attribution_status: 'parsed',
 			created_new_journey: false,
 			matched_by: 'thread'
