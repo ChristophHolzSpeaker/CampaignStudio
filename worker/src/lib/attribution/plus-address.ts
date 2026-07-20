@@ -1,12 +1,15 @@
 import type { AttributionStatus } from '../../../../shared/event-types';
 import { normalizeEmailAddress } from '../email/normalize';
 
-const PLUS_PATTERN = /^cmp(?<campaign_id>\d+)_cp(?<campaign_page_id>\d+)$/i;
+const PLUS_PATTERN =
+	/^cmp(?<campaign_id>\d+)_cp(?<campaign_page_id>\d+)(?:_ab(?<experiment_alias>[a-z0-9]+)_(?<variant_key>[a-z0-9_-]+))?$/i;
 
 export type ParsedPlusAddress = {
 	status: AttributionStatus;
 	campaign_id: number | null;
 	campaign_page_id: number | null;
+	experiment_alias: string | null;
+	variant_key: string | null;
 	address: string | null;
 };
 
@@ -17,6 +20,8 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 			status: 'malformed_plus_address',
 			campaign_id: null,
 			campaign_page_id: null,
+			experiment_alias: null,
+			variant_key: null,
 			address: null
 		};
 	}
@@ -27,6 +32,8 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 			status: 'malformed_plus_address',
 			campaign_id: null,
 			campaign_page_id: null,
+			experiment_alias: null,
+			variant_key: null,
 			address: normalizedTo
 		};
 	}
@@ -37,6 +44,8 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 			status: 'missing_plus_address',
 			campaign_id: null,
 			campaign_page_id: null,
+			experiment_alias: null,
+			variant_key: null,
 			address: normalizedTo
 		};
 	}
@@ -48,6 +57,8 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 			status: 'malformed_plus_address',
 			campaign_id: null,
 			campaign_page_id: null,
+			experiment_alias: null,
+			variant_key: null,
 			address: normalizedTo
 		};
 	}
@@ -56,6 +67,8 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 		status: 'parsed',
 		campaign_id: Number(match.groups.campaign_id),
 		campaign_page_id: Number(match.groups.campaign_page_id),
+		experiment_alias: match.groups.experiment_alias?.toLowerCase() ?? null,
+		variant_key: match.groups.variant_key?.toUpperCase() ?? null,
 		address: normalizedTo
 	};
 }
@@ -82,6 +95,8 @@ export function parsePlusAddressFromRecipients(toRecipients: string[]): ParsedPl
 			status: 'malformed_plus_address',
 			campaign_id: null,
 			campaign_page_id: null,
+			experiment_alias: null,
+			variant_key: null,
 			address: null
 		};
 	}
@@ -91,6 +106,8 @@ export function parsePlusAddressFromRecipients(toRecipients: string[]): ParsedPl
 			status: 'missing_plus_address',
 			campaign_id: null,
 			campaign_page_id: null,
+			experiment_alias: null,
+			variant_key: null,
 			address: null
 		};
 	}
@@ -99,6 +116,8 @@ export function parsePlusAddressFromRecipients(toRecipients: string[]): ParsedPl
 		status: 'malformed_plus_address',
 		campaign_id: null,
 		campaign_page_id: null,
+		experiment_alias: null,
+		variant_key: null,
 		address: null
 	};
 }

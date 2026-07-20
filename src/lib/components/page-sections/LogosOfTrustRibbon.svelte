@@ -24,6 +24,11 @@
 			name: 'BMW Group',
 			imageUrl: '/68231e4f2fdb78ace3f120ee_BMW_Group.svg',
 			alt: 'BMW Group'
+		},
+		{
+			name: 'BMW Group',
+			imageUrl: '/68231e4f2fdb78ace3f120ee_BMW_Group.svg',
+			alt: 'BMW Group'
 		}
 	] as const;
 
@@ -32,10 +37,7 @@
 	const logos = $derived(props?.logos?.length ? props.logos : fallbackLogos);
 </script>
 
-<section
-	class="relative bg-[#435a9f] px-6 py-12 sm:px-8"
-	aria-label="Logos of Trust Ribbon section"
->
+<section class="relative bg-surface px-6 py-12 sm:px-8" aria-label="Logos of Trust Ribbon section">
 	<SectionIdentifier props={{ id: 'logos_of_trust_ribbon' }}></SectionIdentifier>
 	<div class="mx-auto max-w-7xl">
 		<div
@@ -47,7 +49,7 @@
 						<img
 							src={logo.imageUrl}
 							alt={logo.alt}
-							class="h-auto max-h-8 w-auto object-contain brightness-0 grayscale invert sm:max-h-10"
+							class="h-auto max-h-8 w-auto object-contain sm:max-h-10"
 						/>
 					{:else}
 						<span class="text-center text-base tracking-tight text-on-surface">{logo.name}</span>

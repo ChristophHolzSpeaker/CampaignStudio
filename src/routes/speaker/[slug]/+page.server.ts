@@ -5,12 +5,13 @@ import {
 	buildSpeakerMailtoHref,
 	DEFAULT_SPEAKER_EMAIL_SUBJECT
 } from '$lib/server/attribution/mailto';
-import { resolveSpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
+import { resolveSpeakerHeroMediaExperiment } from '$lib/server/ab-testing';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import type { LandingPageDocument } from '$lib/page-builder/page';
 import type { SeoProps } from '$lib/page-builder/sections';
+import { SPEAKER_HERO_MEDIA_EMAIL_ALIAS } from '../../../../shared/experiments';
 
 type SpeakerJsonLd = {
 	'@context': 'https://schema.org';
@@ -95,7 +96,7 @@ function buildSpeakerJsonLd({
 	return JSON.stringify(jsonLd).replace(/</g, '\\u003c');
 }
 
-export const load: PageServerLoad = async ({ params, url, cookies, request }) => {
+export const load: PageServerLoad = async ({ params, url, cookies }) => {
 	const slug = params.slug?.trim();
 
 	if (!slug) {
@@ -125,13 +126,11 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 
 	const page = parseLandingPageDocument(pageRecord.structuredContentJson);
 	const jsonLd = buildSpeakerJsonLd({ page, origin: url.origin, slug });
-	const abTest = await resolveSpeakerPrimaryCtaAbTest({
+	const hero = getHeroSection(page);
+	const abTest = await resolveSpeakerHeroMediaExperiment({
 		cookies,
 		secureCookie: import.meta.env.PROD,
-		route: '/speaker/[slug]',
-		slug,
-		searchParams: url.searchParams,
-		referrer: request.headers.get('referer')
+		videoEmbedUrl: hero?.props.videoEmbedUrl ?? ''
 	});
 
 	return {
@@ -143,6 +142,13 @@ export const load: PageServerLoad = async ({ params, url, cookies, request }) =>
 		speakerMailtoHref: buildSpeakerMailtoHref({
 			campaignId: pageRecord.campaignId,
 			campaignPageId: pageRecord.campaignPageId,
+			experiment:
+				abTest.experimentId && abTest.variantId
+					? {
+							alias: SPEAKER_HERO_MEDIA_EMAIL_ALIAS,
+							variantKey: abTest.variantKey
+						}
+					: null,
 			subject: DEFAULT_SPEAKER_EMAIL_SUBJECT
 		})
 	};

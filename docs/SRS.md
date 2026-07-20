@@ -50,12 +50,13 @@ Success for the MVP means this loop works reliably for real campaigns.
 - Basic attribution capture
 - Basic visit logging
 - Basic campaign reporting
+- One curated speaker-page A/B experiment at a time
 - Internal authenticated access
 
 ### Out of Scope
 
 - Multi-variant generation
-- A/B testing
+- General-purpose experiment authoring and multi-experiment orchestration
 - Advanced AI conversational editing UI
 - Full production-grade SEO engine
 - Full 100 percent attribution across all channels
@@ -581,7 +582,7 @@ Deferred to later phases:
 - multi-page campaigns
 - full programmatic SEO rule engine
 - structured schema library at large scale
-- split testing
+- general-purpose split-testing platform
 - advanced source-to-conversion reporting
 - CRM and deal sync
 - booking platform integration depth

@@ -16,6 +16,18 @@ describe('plus-address parsing', () => {
 		);
 	});
 
+	it('parses experiment attribution from the plus token', () => {
+		expect(
+			parsePlusAddressAttribution('speaker+cmp12_cp3_abhero1_B@christophholz.com')
+		).toMatchObject({
+			status: 'parsed',
+			campaign_id: 12,
+			campaign_page_id: 3,
+			experiment_alias: 'hero1',
+			variant_key: 'B'
+		});
+	});
+
 	it('returns malformed_plus_address when token is invalid', () => {
 		expect(parsePlusAddressAttribution('speaker+badtoken@christophholz.com').status).toBe(
 			'malformed_plus_address'

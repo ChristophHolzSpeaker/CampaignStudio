@@ -2,17 +2,18 @@
 	import { pushState } from '$app/navigation';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { onMount } from 'svelte';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
 	import { trackAbEvent } from '$lib/analytics/track-ab-event';
 	import ContentEditableText from '$lib/components/inline-edit/ContentEditableText.svelte';
 	import type { ImmediateAuthorityHeroProps } from '$lib/page-builder/sections/types';
-	import type { SpeakerPrimaryCtaAbTest } from '$lib/server/ab-testing';
+	import type { SpeakerHeroMediaExperiment } from '$lib/server/ab-testing';
 	import {
 		saveImmediateAuthorityHeroField,
 		toggleImmediateAuthorityHeroLayout
 	} from './ImmediateAuthorityHeroInlineEdit.remote';
-	import LeadInlineHeroBookingSequence from '../booking/LeadInlineHeroBookingSequence.svelte';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import HeroAutoplayVideo from './HeroAutoplayVideo.svelte';
 
 	let {
 		props,
@@ -21,7 +22,6 @@
 		editable = false,
 		sectionIndex = -1,
 		onInlineEditSaved,
-		bookingSlotGroups = [],
 		mailtoHref = 'mailto:speaker@christophholz.com',
 		abTest = null
 	}: {
@@ -31,12 +31,10 @@
 		editable?: boolean;
 		sectionIndex?: number;
 		onInlineEditSaved?: (() => Promise<void>) | undefined;
-		bookingSlotGroups?: { dateKey: string; slots: { startsAtIso: string; endsAtIso: string }[] }[];
 		mailtoHref?: string;
-		abTest?: SpeakerPrimaryCtaAbTest | null;
+		abTest?: SpeakerHeroMediaExperiment | null;
 	} = $props();
 
-	const ctaLabel = $derived(props?.primaryCtaLabel ?? 'Request Speaking Availability');
 	const eyebrow = $derived(props?.eyebrow ?? 'The Digital Future Authority');
 	const headline = $derived(
 		props?.headline ?? 'AI Keynote Speaker for Your Next Industry Association Conference.'
@@ -56,10 +54,10 @@
 		props?.heroImageAlt ?? props?.videoThumbnailAlt ?? 'Christoph Holz on stage'
 	);
 	const supportingBullets = $derived(props?.supportingBullets ?? []);
-	const isDualButtons = $derived(abTest?.ctaMode === 'dual_buttons');
+	const showAutoplayVideo = $derived(abTest?.heroMediaMode === 'autoplay_video');
 
 	function trackHeroCtaClick(button: 'primary' | 'secondary'): void {
-		if (!abTest?.experimentId || !abTest.variantId) {
+		if (!abTest?.experimentId || !abTest.variantId || campaignPageId == null) {
 			return;
 		}
 
@@ -68,64 +66,81 @@
 			experimentId: abTest.experimentId,
 			variantId: abTest.variantId,
 			visitorId: abTest.visitorId,
+			campaignPageId,
 			route: page.url.pathname,
 			slug: page.params.slug ?? '',
 			metadata: {
 				button,
-				label:
-					button === 'primary'
-						? (abTest.primaryLabel ?? ctaLabel)
-						: (abTest.secondaryLabel ?? 'Verfügbarkeit prüfen'),
-				cta_mode: abTest.ctaMode,
+				label: button === 'primary' ? 'Vortrag anfragen' : 'Verfügbarkeit prüfen',
+				hero_media_mode: abTest.heroMediaMode,
 				variant_key: abTest.variantKey,
 				experiment_key: abTest.experimentKey
 			}
 		});
 	}
 
-	function trackHeroMailto(variant: 'dual_primary' | 'calendar_fallback'): void {
+	function trackHeroMailto(): void {
 		trackMailtoClick({
 			campaignId,
 			campaignPageId,
-			ctaKey: variant === 'dual_primary' ? 'hero_primary_mailto' : 'hero_calendar_fallback_mailto',
-			ctaLabel: variant === 'dual_primary' ? (abTest?.primaryLabel ?? 'Vortrag anfragen') : 'Email',
+			ctaKey: 'hero_primary_mailto',
+			ctaLabel: 'Vortrag anfragen',
 			ctaSection: 'immediate_authority_hero',
-			ctaVariant: variant
+			ctaVariant: 'dual_primary'
 		});
 	}
 
-	function handleHeroBookingWidgetKeydown(event: KeyboardEvent): void {
-		if (event.key !== 'Enter' && event.key !== ' ') {
+	function trackHeroExperimentEvent(
+		eventType: 'experiment_exposure' | 'video_ready' | 'video_error' | 'page_performance',
+		metadata: Record<string, unknown> = {}
+	): void {
+		if (!abTest?.experimentId || !abTest.variantId || campaignPageId == null) {
 			return;
 		}
 
-		event.preventDefault();
-		trackHeroCtaClick('primary');
-	}
-
-	function trackCta(variant: 'primary' | 'showreel_modal' | 'showreel_external'): void {
-		if (campaignId == null || campaignPageId == null) {
-			return;
-		}
-
-		void fetch('/api/attribution/cta', {
-			method: 'POST',
-			headers: {
-				'content-type': 'application/json'
-			},
-			body: JSON.stringify({
-				type: 'booking',
-				campaign_id: campaignId,
-				campaign_page_id: campaignPageId,
-				cta_key: variant === 'primary' ? 'hero_primary_cta' : 'hero_showreel_cta',
-				cta_label: variant === 'primary' ? ctaLabel : 'View Showreel',
-				cta_section: 'immediate_authority_hero',
-				cta_variant: variant
-			})
-		}).catch(() => {
-			// fire-and-forget tracking
+		trackAbEvent({
+			eventType,
+			experimentId: abTest.experimentId,
+			variantId: abTest.variantId,
+			visitorId: abTest.visitorId,
+			campaignPageId,
+			route: page.url.pathname,
+			slug: page.params.slug ?? '',
+			metadata: {
+				variant_key: abTest.variantKey,
+				experiment_key: abTest.experimentKey,
+				...metadata
+			}
 		});
 	}
+
+	onMount(() => {
+		trackHeroExperimentEvent('experiment_exposure', {
+			hero_media_mode: abTest?.heroMediaMode ?? 'static_image'
+		});
+
+		let reportedPerformance = false;
+		const reportPerformance = () => {
+			if (reportedPerformance) return;
+			reportedPerformance = true;
+			const [navigation] = performance.getEntriesByType(
+				'navigation'
+			) as PerformanceNavigationTiming[];
+			trackHeroExperimentEvent('page_performance', {
+				load_ms: navigation?.duration ?? performance.now(),
+				dom_content_loaded_ms: navigation?.domContentLoadedEventEnd ?? null,
+				transfer_size: navigation?.transferSize ?? null
+			});
+		};
+
+		if (document.readyState === 'complete') {
+			reportPerformance();
+		} else {
+			window.addEventListener('load', reportPerformance, { once: true });
+		}
+
+		return () => window.removeEventListener('load', reportPerformance);
+	});
 
 	function openHeroImagePicker(): void {
 		if (!canInlineEdit || campaignId == null || campaignPageId == null || sectionIndex < 0) {
@@ -142,8 +157,6 @@
 			}
 		});
 	}
-
-	const pageSlug = $derived(page.url.pathname);
 
 	const canInlineEdit = $derived(
 		editable && campaignId != null && campaignPageId != null && sectionIndex >= 0
@@ -235,7 +248,7 @@
 	></div>
 	<div class="absolute inset-x-0 top-0 h-32 bg-linear-to-b from-surface to-transparent"></div>
 
-	<div class="mx-auto grid max-w-7xl items-start gap-10 lg:grid-cols-12 lg:gap-12">
+	<div class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-12 lg:gap-12">
 		{#snippet content()}
 			<div class="space-y-7 lg:col-span-7">
 				<ContentEditableText
@@ -278,57 +291,25 @@
 					class="flex flex-col items-start gap-3 sm:gap-6"
 					data-cta-action={props?.primaryCtaAction}
 				>
-					{#if isDualButtons}
-						<div class="flex flex-wrap items-center gap-3">
-							<a
-								href={mailtoHref}
-								class="btn-primary inline-flex items-center gap-2"
-								onclick={() => {
-									trackHeroCtaClick('primary');
-									trackHeroMailto('dual_primary');
-								}}
-							>
-								{abTest?.primaryLabel ?? 'Vortrag anfragen'}
-							</a>
-							<a
-								href="#booking"
-								class="btn inline-flex items-center gap-2 border border-slate-300 bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50"
-								onclick={() => trackHeroCtaClick('secondary')}
-							>
-								{abTest?.secondaryLabel ?? 'Verfügbarkeit prüfen'}
-							</a>
-						</div>
-					{:else}
-						<div
-							class="w-full"
-							role="button"
-							tabindex="0"
-							onclick={() => trackHeroCtaClick('primary')}
-							onkeydown={handleHeroBookingWidgetKeydown}
-						>
-							<LeadInlineHeroBookingSequence
-								{campaignId}
-								{campaignPageId}
-								pageSlug={pageSlug ?? null}
-								slotGroups={bookingSlotGroups}
-								formActionKey={`hero-inline-booking:${campaignPageId ?? 'none'}`}
-								bookingSurface="hero"
-								ctaKey="hero_inline_booking"
-								ctaSection="hero"
-								ctaVariant={abTest?.variantKey ?? null}
-							></LeadInlineHeroBookingSequence>
-						</div>
+					<div class="flex flex-wrap items-center gap-3">
 						<a
 							href={mailtoHref}
-							type="button"
-							onclick={() => trackHeroMailto('calendar_fallback')}
-							class={[
-								'inline-block border border-slate-300  bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50'
-							]}
+							class="btn-primary inline-flex items-center gap-2"
+							onclick={() => {
+								trackHeroCtaClick('primary');
+								trackHeroMailto();
+							}}
 						>
-							Schreib eine email: speaker@christophholz.com
+							Vortrag anfragen
 						</a>
-					{/if}
+						<a
+							href="#booking"
+							class="btn inline-flex items-center gap-2 border border-slate-300 bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50"
+							onclick={() => trackHeroCtaClick('secondary')}
+						>
+							Verfügbarkeit prüfen
+						</a>
+					</div>
 				</div>
 			</div>
 		{/snippet}
@@ -336,11 +317,23 @@
 		{#snippet image()}
 			<div class="group relative lg:col-span-5">
 				<div class="aspect-4/5 overflow-hidden bg-surface-container-lowest">
-					<img
-						src={heroImageUrl}
-						alt={heroImageAlt}
-						class="h-full w-full object-cover transition-all duration-500"
-					/>
+					{#if showAutoplayVideo && props?.videoEmbedUrl}
+						{#key props.videoEmbedUrl}
+							<HeroAutoplayVideo
+								url={props.videoEmbedUrl}
+								posterUrl={heroImageUrl}
+								posterAlt={heroImageAlt}
+								onReady={() => trackHeroExperimentEvent('video_ready')}
+								onError={() => trackHeroExperimentEvent('video_error')}
+							/>
+						{/key}
+					{:else}
+						<img
+							src={heroImageUrl}
+							alt={heroImageAlt}
+							class="h-full w-full object-cover transition-all duration-500"
+						/>
+					{/if}
 				</div>
 				{#if canInlineEdit}
 					<button

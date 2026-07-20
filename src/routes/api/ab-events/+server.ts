@@ -5,10 +5,17 @@ import { ab_events } from '$lib/server/db/schema';
 import type { RequestHandler } from './$types';
 
 const abEventSchema = z.object({
-	eventType: z.enum(['cta_click']),
+	eventType: z.enum([
+		'experiment_exposure',
+		'cta_click',
+		'video_ready',
+		'video_error',
+		'page_performance'
+	]),
 	experimentId: z.string().uuid(),
 	variantId: z.string().uuid(),
 	visitorId: z.string().trim().min(1).max(255),
+	campaignPageId: z.number().int().positive(),
 	route: z.string().trim().min(1).max(255),
 	slug: z.string().trim().min(1).max(255),
 	sessionId: z.string().trim().min(1).max(255).optional(),
@@ -41,6 +48,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			experiment_id: parsed.data.experimentId,
 			variant_id: parsed.data.variantId,
 			visitor_id: parsed.data.visitorId,
+			campaign_page_id: parsed.data.campaignPageId,
 			session_id: parsed.data.sessionId ?? null,
 			event_type: parsed.data.eventType,
 			route: parsed.data.route,

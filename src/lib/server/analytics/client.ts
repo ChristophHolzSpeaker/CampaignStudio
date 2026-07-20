@@ -120,9 +120,12 @@ export type ExperimentVariantPerformanceRow = {
 	isControl: boolean;
 	exposures: number;
 	clicks: number;
+	videoReady: number;
+	videoErrors: number;
 	leads: number;
 	clickThroughRate: number;
 	leadConversionRate: number;
+	averagePageLoadMs: number | null;
 };
 
 export type ExperimentPerformanceRow = {
@@ -386,9 +389,9 @@ export async function getExperimentPerformanceByCampaign(
 	campaignId: number
 ): Promise<ExperimentPerformanceRow[]> {
 	const pageRows = await db
-		.select({ id: campaign_pages.id, slug: campaign_pages.slug })
+		.select({ id: campaign_pages.id })
 		.from(campaign_pages)
-		.where(and(eq(campaign_pages.campaign_id, campaignId), eq(campaign_pages.is_published, true)));
+		.where(eq(campaign_pages.campaign_id, campaignId));
 
 	const [variantRows, exposureRows, leadRows] = await Promise.all([
 		db
@@ -399,6 +402,7 @@ export async function getExperimentPerformanceByCampaign(
 				routePattern: ab_experiments.route_pattern,
 				status: ab_experiments.status,
 				goalEvent: ab_experiments.goal_event,
+				endedAt: ab_experiments.ended_at,
 				variantId: ab_variants.id,
 				variantKey: ab_variants.key,
 				variantName: ab_variants.name,
@@ -416,50 +420,76 @@ export async function getExperimentPerformanceByCampaign(
 		pageRows.length === 0
 			? Promise.resolve([])
 			: db
-				.select({
-					experimentId: ab_events.experiment_id,
-					variantId: ab_events.variant_id,
-					eventType: ab_events.event_type
-				})
-				.from(ab_events)
-				.where(
-					and(
-						eq(ab_events.route, '/speaker/[slug]'),
-						inArray(
-							ab_events.slug,
-							pageRows.map((row: { slug: string | null }) => row.slug).filter(
-								(slug: string | null): slug is string => Boolean(slug)
-							)
-						),
-						inArray(ab_events.event_type, ['page_view', 'cta_click'])
-					)
-				),
+					.select({
+						experimentId: ab_events.experiment_id,
+						variantId: ab_events.variant_id,
+						eventType: ab_events.event_type,
+						metadata: ab_events.metadata,
+						createdAt: ab_events.created_at
+					})
+					.from(ab_events)
+					.where(
+						and(
+							inArray(
+								ab_events.campaign_page_id,
+								pageRows
+									.map((row: { id: number | null }) => row.id)
+									.filter((id: number | null): id is number => typeof id === 'number')
+							),
+							inArray(ab_events.event_type, [
+								'page_view',
+								'experiment_exposure',
+								'cta_click',
+								'video_ready',
+								'video_error',
+								'page_performance'
+							])
+						)
+					),
 		pageRows.length === 0
 			? Promise.resolve([])
 			: db
-				.select({
-					ctaVariant: lead_events.cta_variant,
-					ctaKey: lead_events.cta_key,
-					campaignPageId: lead_events.campaign_page_id
-				})
-				.from(lead_events)
-				.where(
-					and(
-						eq(lead_events.event_type, 'form_submitted'),
-						eq(lead_events.cta_key, 'hero_inline_booking'),
-						inArray(
-							lead_events.campaign_page_id,
-							pageRows
-								.map((row: { id: number | null }) => row.id)
-								.filter((id: number | null): id is number => typeof id === 'number')
+					.select({
+						experimentId: lead_events.experiment_id,
+						variantId: lead_events.variant_id,
+						eventType: lead_events.event_type,
+						ctaVariant: lead_events.cta_variant,
+						ctaKey: lead_events.cta_key,
+						campaignPageId: lead_events.campaign_page_id,
+						occurredAt: lead_events.occurred_at
+					})
+					.from(lead_events)
+					.where(
+						and(
+							inArray(lead_events.event_type, ['form_submitted', 'journey_created']),
+							inArray(
+								lead_events.campaign_page_id,
+								pageRows
+									.map((row: { id: number | null }) => row.id)
+									.filter((id: number | null): id is number => typeof id === 'number')
+							)
 						)
 					)
-				)
 	]);
 
 	const experimentMap = new Map<string, ExperimentPerformanceRow>();
+	const legacyExperimentCutoffs = new Map<string, Date>();
+	const completedExperimentCutoffs = new Map<string, Date>();
+	const performanceByVariant = new Map<string, { totalMs: number; samples: number }>();
 
 	for (const row of variantRows) {
+		if (row.status === 'completed' && row.endedAt) {
+			completedExperimentCutoffs.set(row.experimentId, row.endedAt);
+		}
+
+		if (
+			row.experimentKey === 'speaker_primary_cta_v1' &&
+			row.status === 'completed' &&
+			row.endedAt
+		) {
+			legacyExperimentCutoffs.set(row.experimentId, row.endedAt);
+		}
+
 		const existingExperiment = experimentMap.get(row.experimentId);
 		const variant = {
 			experimentId: row.experimentId,
@@ -474,9 +504,12 @@ export async function getExperimentPerformanceByCampaign(
 			isControl: row.isControl,
 			exposures: 0,
 			clicks: 0,
+			videoReady: 0,
+			videoErrors: 0,
 			leads: 0,
 			clickThroughRate: 0,
-			leadConversionRate: 0
+			leadConversionRate: 0,
+			averagePageLoadMs: null
 		};
 
 		if (existingExperiment) {
@@ -504,27 +537,75 @@ export async function getExperimentPerformanceByCampaign(
 		if (!experiment) {
 			continue;
 		}
+		const completedCutoff = completedExperimentCutoffs.get(row.experimentId);
+		if (completedCutoff && row.createdAt > completedCutoff) {
+			continue;
+		}
 
 		const variant = experiment.variants.find((item) => item.variantId === row.variantId);
 		if (!variant) {
 			continue;
 		}
 
-		if (row.eventType === 'page_view') {
+		if (row.eventType === 'page_view' || row.eventType === 'experiment_exposure') {
 			variant.exposures += 1;
 		}
 
 		if (row.eventType === 'cta_click') {
 			variant.clicks += 1;
 		}
+
+		if (row.eventType === 'video_ready') {
+			variant.videoReady += 1;
+		}
+
+		if (row.eventType === 'video_error') {
+			variant.videoErrors += 1;
+		}
+
+		if (row.eventType === 'page_performance') {
+			const metadata =
+				typeof row.metadata === 'object' && row.metadata !== null
+					? (row.metadata as Record<string, unknown>)
+					: {};
+			const loadMs = metadata.load_ms;
+			if (typeof loadMs === 'number' && Number.isFinite(loadMs) && loadMs >= 0) {
+				const current = performanceByVariant.get(variant.variantId) ?? { totalMs: 0, samples: 0 };
+				current.totalMs += loadMs;
+				current.samples += 1;
+				performanceByVariant.set(variant.variantId, current);
+			}
+		}
 	}
 
 	for (const row of leadRows) {
-		if (!row.ctaVariant) {
+		if (row.eventType === 'journey_created' && row.experimentId && row.variantId) {
+			const experiment = experimentMap.get(row.experimentId);
+			const completedCutoff = completedExperimentCutoffs.get(row.experimentId);
+			if (completedCutoff && row.occurredAt > completedCutoff) {
+				continue;
+			}
+			const variant = experiment?.variants.find((item) => item.variantId === row.variantId);
+			if (variant) {
+				variant.leads += 1;
+			}
+			continue;
+		}
+
+		if (
+			row.eventType !== 'form_submitted' ||
+			!row.ctaVariant ||
+			row.ctaKey !== 'hero_inline_booking'
+		) {
 			continue;
 		}
 
 		for (const experiment of experimentMap.values()) {
+			const legacyCutoff = legacyExperimentCutoffs.get(experiment.experimentId);
+			if (!legacyCutoff || row.occurredAt > legacyCutoff) {
+				continue;
+			}
+
 			const variant = experiment.variants.find((item) => item.variantKey === row.ctaVariant);
 			if (variant) {
 				variant.leads += 1;
@@ -538,7 +619,11 @@ export async function getExperimentPerformanceByCampaign(
 			variants: experiment.variants.map((variant) => ({
 				...variant,
 				clickThroughRate: ratio(variant.clicks, variant.exposures),
-				leadConversionRate: ratio(variant.leads, variant.exposures)
+				leadConversionRate: ratio(variant.leads, variant.exposures),
+				averagePageLoadMs: (() => {
+					const performance = performanceByVariant.get(variant.variantId);
+					return performance ? performance.totalMs / performance.samples : null;
+				})()
 			}))
 		}))
 		.sort((left, right) => left.experimentName.localeCompare(right.experimentName));

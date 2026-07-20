@@ -13,7 +13,7 @@
 </script>
 
 <section
-	class="relative isolate overflow-hidden bg-surface bg-surface-container-low px-6 py-16 sm:px-8 lg:px-12 lg:py-24"
+	class="relative isolate overflow-hidden bg-surface-container-low px-6 py-16 sm:px-8 lg:px-12 lg:py-24"
 >
 	<SectionIdentifier props={{ id: 'youtube_grid' }}></SectionIdentifier>
 

@@ -14,6 +14,7 @@ Bitte um Kontaktaufnahme.`;
 export function buildSpeakerMailtoHref(input: {
 	campaignId: number | null;
 	campaignPageId: number | null;
+	experiment?: { alias: string; variantKey: string } | null;
 	subject?: string;
 	body?: string;
 }): string {
@@ -23,7 +24,13 @@ export function buildSpeakerMailtoHref(input: {
 		typeof input.campaignPageId === 'number' &&
 		input.campaignPageId > 0;
 
-	const aliasToken = hasCampaignContext ? `+cmp${input.campaignId}_cp${input.campaignPageId}` : '';
+	const experimentToken =
+		input.experiment?.alias && input.experiment.variantKey
+			? `_ab${input.experiment.alias}_${input.experiment.variantKey}`
+			: '';
+	const aliasToken = hasCampaignContext
+		? `+cmp${input.campaignId}_cp${input.campaignPageId}${experimentToken}`
+		: '';
 	const emailAddress = `${SPEAKER_EMAIL_LOCAL_PART}${aliasToken}@${SPEAKER_EMAIL_DOMAIN}`;
 
 	const searchParams = new URLSearchParams();
