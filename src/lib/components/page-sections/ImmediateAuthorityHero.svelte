@@ -248,7 +248,7 @@
 	></div>
 	<div class="absolute inset-x-0 top-0 h-32 bg-linear-to-b from-surface to-transparent"></div>
 
-	<div class="mx-auto grid max-w-7xl items-start gap-10 lg:grid-cols-12 lg:gap-12">
+	<div class="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-12 lg:gap-12">
 		{#snippet content()}
 			<div class="space-y-7 lg:col-span-7">
 				<ContentEditableText
