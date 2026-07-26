@@ -66,8 +66,8 @@ function sampleNormalizedInbound() {
 		provider_thread_id: 'thread_456',
 		from_email: 'jane@example.com',
 		from_name: 'Jane',
-		to_email: 'speaker+cmp12_cp3@christophholz.com',
-		to_recipients: ['speaker+cmp12_cp3@christophholz.com'],
+		to_email: 'speakerlp+3@christophholz.com',
+		to_recipients: ['speakerlp+3@christophholz.com'],
 		subject: 'Speaking inquiry',
 		body_text: 'Can Christoph speak at our conference?',
 		body_html: '<p>Can Christoph speak at our conference?</p>',
@@ -112,6 +112,27 @@ describe('processInboundGmailMessage', () => {
 			return { id: 'label_processed', name: params.name } as never;
 		});
 		mockedGmailModifyMessage.mockResolvedValue({ id: 'msg_123', threadId: 'thread_456' } as never);
+	});
+
+	it('ignores CRM alias messages before creating a journey or classifying them', async () => {
+		mockedNormalizeGmailMessage.mockReturnValue({
+			...sampleNormalizedInbound(),
+			to_email: 'speakercr@christophholz.com',
+			to_recipients: ['speakercr@christophholz.com']
+		});
+
+		const result = await processInboundGmailMessage(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			gmailMessage: { id: 'msg_1', threadId: 'thread_1' }
+		} as never);
+
+		expect(result.status).toBe('recipient_ignored');
+		expect(result.skipped_reason).toBe('recipient_speakercr');
+		expect(mockedResolveInboundJourney).not.toHaveBeenCalled();
+		expect(mockedClassifyInboundMessage).not.toHaveBeenCalled();
+		expect(mockedRunAutoresponsePipeline).not.toHaveBeenCalled();
+		expect(mockedUpsertOne).not.toHaveBeenCalled();
+		expect(mockedGmailModifyMessage).not.toHaveBeenCalled();
 	});
 
 	it('returns invalid_message when normalization fails', async () => {
@@ -258,7 +279,10 @@ describe('processInboundGmailMessage', () => {
 		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledTimes(1);
 		expect(mockedRunAutoresponsePipeline).toHaveBeenCalledWith(
 			expect.any(Object),
-			expect.objectContaining({ response_language: 'German' })
+			expect.objectContaining({
+				reply_from_email: 'speakerlp@christophholz.com',
+				response_language: 'German'
+			})
 		);
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
 		expect(mockedInsertOne).toHaveBeenCalledTimes(4);

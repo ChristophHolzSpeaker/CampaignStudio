@@ -33,6 +33,7 @@ Cloudflare Worker for attribution, Gmail ingest/sync, booking workflows, and int
 - `POST /notifications/woody-email`
 - `POST /gmail/watch/activate`
   - Calls Gmail `users.watch` and upserts `mailbox_cursors`.
+  - When a cursor already exists, backfills recent inbox messages before advancing its history ID.
 - `POST /gmail/watch/stop`
   - Calls Gmail `users.stop` for the given mailbox.
 
@@ -79,6 +80,8 @@ Notes:
 
 If Gmail push arrives for a mailbox that has no local cursor row, `/gmail/push` acknowledges the message and logs a cursor-missing path.
 
+When Gmail rejects a history cursor as stale, scheduled reconciliation automatically creates a fresh watch, backfills recent inbox messages through the idempotent inbound processor, and advances the cursor only after that backfill succeeds. `GMAIL_RECOVERY_LOOKBACK_DAYS` controls the recovery window and defaults to 30 days.
+
 ## Gmail push setup order
 
 1. Create Pub/Sub topic: `projects/<project-id>/topics/<topic-id>`.
@@ -95,14 +98,17 @@ If Gmail push arrives for a mailbox that has no local cursor row, `/gmail/push` 
 
 ## Environment policy
 
-For staging and production, operate with a single mailbox identity:
+For staging and production, operate with a single delegated mailbox identity:
 
 - `GOOGLE_IMPERSONATED_USER=speaker@christophholz.com`
 
 Operational guidance:
 
 - Activate watch only for `speaker@christophholz.com`.
-- Send outbound/autoresponse from `speaker@christophholz.com`.
+- Configure `speakerlp@christophholz.com`, `speakerwp@christophholz.com`, and `speakercr@christophholz.com` as Gmail aliases of the delegated mailbox.
+- Reply to qualifying messages from the address they reached: `speaker@`, `speakerlp@`, or `speakerwp@`.
+- Ignore messages delivered to `speakercr@`, even when another managed address is also present.
+- Gmail routing considers `To`, `Cc`, `Delivered-To`, `X-Original-To`, and `Envelope-To` so CC and BCC delivery is handled consistently.
 - Stop watches for non-operational mailboxes and remove their cursor rows.
 
 ## Local development

@@ -7,6 +7,7 @@ import { gmailSendMessage } from './client';
 type SendOutboundEmailInput = {
 	leadJourneyId?: string | null;
 	gmailUser: string;
+	fromEmail?: string;
 	to: string[];
 	subject: string;
 	bodyText: string;
@@ -45,7 +46,7 @@ function sanitizeHeader(value: string): string {
 
 function buildMimeMessage(input: SendOutboundEmailInput): string {
 	const toHeader = input.to.join(', ');
-	const fromHeader = input.gmailUser;
+	const fromHeader = input.fromEmail ?? input.gmailUser;
 	const subject = sanitizeHeader(input.subject);
 	const dateHeader = new Date().toUTCString();
 
@@ -95,9 +96,14 @@ export async function sendOutboundEmail(
 	if (recipients.length === 0) {
 		throw new Error('Outbound email requires at least one valid recipient');
 	}
+	const fromEmail = normalizeEmailAddress(input.fromEmail ?? input.gmailUser);
+	if (!fromEmail) {
+		throw new Error('Outbound email requires a valid sender');
+	}
 
 	const mime = buildMimeMessage({
 		...input,
+		fromEmail,
 		to: recipients
 	});
 
@@ -120,7 +126,7 @@ export async function sendOutboundEmail(
 				provider: 'gmail',
 				provider_message_id: sent.id,
 				provider_thread_id: sent.threadId,
-				from_email: input.gmailUser,
+				from_email: fromEmail,
 				to_email: recipients.join(','),
 				subject: input.subject,
 				body_text: input.bodyText,
@@ -175,6 +181,7 @@ export async function sendOutboundEmail(
 			provider_message_id: sent.id,
 			provider_thread_id: sent.threadId,
 			recipients,
+			from_email: fromEmail,
 			auto_response_decision: input.autoResponseDecision ?? null
 		}
 	});

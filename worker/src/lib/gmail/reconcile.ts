@@ -1,5 +1,6 @@
 import type { WorkerEnv } from '../env';
 import { listMailboxCursors, syncMailboxHistory, type MailboxCursorRow } from './history-sync';
+import { activateMailboxWatch } from './watch';
 
 const DEFAULT_PUSH_STALE_SECONDS = 60 * 60 * 6;
 const DEFAULT_SYNC_STALE_SECONDS = 60 * 60 * 2;
@@ -7,7 +8,13 @@ const DEFAULT_RETRY_COOLDOWN_SECONDS = 60 * 15;
 
 export type MailboxReconcileOutcome = {
 	gmail_user: string;
-	status: 'healthy' | 'sync_attempted' | 'sync_failed' | 'resync_required' | 'retry_scheduled';
+	status:
+		| 'healthy'
+		| 'sync_attempted'
+		| 'sync_failed'
+		| 'resync_required'
+		| 'recovered'
+		| 'retry_scheduled';
 	reason: string;
 	sync_status: string;
 	processed_messages?: number;
@@ -74,13 +81,7 @@ async function attemptSync(
 	}
 
 	if (result.status === 'resync_required') {
-		return {
-			gmail_user: cursor.gmail_user,
-			status: 'resync_required',
-			reason: 'history_cursor_invalid_or_stale',
-			sync_status: result.status,
-			processed_messages: result.processed_messages
-		};
+		return recoverStaleCursor(env, cursor);
 	}
 
 	return {
@@ -89,6 +90,30 @@ async function attemptSync(
 		reason: 'sync_execution_failed',
 		sync_status: result.status,
 		processed_messages: result.processed_messages
+	};
+}
+
+async function recoverStaleCursor(
+	env: WorkerEnv,
+	cursor: MailboxCursorRow
+): Promise<MailboxReconcileOutcome> {
+	const recovery = await activateMailboxWatch(env, { gmailUser: cursor.gmail_user });
+	if (!recovery.ok) {
+		return {
+			gmail_user: cursor.gmail_user,
+			status: 'resync_required',
+			reason: 'stale_cursor_recovery_failed',
+			sync_status: 'resync_required',
+			error: recovery.error
+		};
+	}
+
+	return {
+		gmail_user: cursor.gmail_user,
+		status: 'recovered',
+		reason: 'stale_cursor_backfilled',
+		sync_status: 'active',
+		processed_messages: recovery.processed_messages ?? 0
 	};
 }
 
@@ -113,12 +138,17 @@ export async function reconcileMailboxHealth(env: WorkerEnv): Promise<MailboxRec
 		const syncStale = lastSyncMs === null || nowMs - lastSyncMs >= syncStaleMs;
 
 		if (cursor.sync_status === 'resync_required') {
-			outcomes.push({
-				gmail_user: cursor.gmail_user,
-				status: 'resync_required',
-				reason: 'cursor_marked_resync_required',
-				sync_status: cursor.sync_status
-			});
+			try {
+				outcomes.push(await recoverStaleCursor(env, cursor));
+			} catch (error) {
+				outcomes.push({
+					gmail_user: cursor.gmail_user,
+					status: 'resync_required',
+					reason: 'stale_cursor_recovery_unhandled_error',
+					sync_status: cursor.sync_status,
+					error: error instanceof Error ? error.message : 'unknown'
+				});
+			}
 			continue;
 		}
 

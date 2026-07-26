@@ -11,25 +11,33 @@ vi.mock('./client', () => ({
 }));
 
 vi.mock('./history-sync', () => ({
-	listMailboxCursors: vi.fn()
+	getMailboxCursor: vi.fn(),
+	listMailboxCursors: vi.fn(),
+	recoverMailboxMessages: vi.fn()
 }));
 
 import { updateMany, upsertOne } from '../db';
 import { gmailWatch } from './client';
-import { listMailboxCursors } from './history-sync';
+import { getMailboxCursor, listMailboxCursors, recoverMailboxMessages } from './history-sync';
 import { activateMailboxWatch, renewGmailWatches } from './watch';
 
 const mockedUpdateMany = vi.mocked(updateMany);
 const mockedUpsertOne = vi.mocked(upsertOne);
 const mockedGmailWatch = vi.mocked(gmailWatch);
+const mockedGetMailboxCursor = vi.mocked(getMailboxCursor);
 const mockedListMailboxCursors = vi.mocked(listMailboxCursors);
+const mockedRecoverMailboxMessages = vi.mocked(recoverMailboxMessages);
 
 describe('renewGmailWatches', () => {
 	beforeEach(() => {
 		mockedUpdateMany.mockReset();
 		mockedUpsertOne.mockReset();
 		mockedGmailWatch.mockReset();
+		mockedGetMailboxCursor.mockReset();
 		mockedListMailboxCursors.mockReset();
+		mockedRecoverMailboxMessages.mockReset();
+		mockedGetMailboxCursor.mockResolvedValue(null);
+		mockedRecoverMailboxMessages.mockResolvedValue(0);
 	});
 
 	it('renews only due mailboxes and marks active on success', async () => {
@@ -40,6 +48,7 @@ describe('renewGmailWatches', () => {
 				gmail_user: 'due@christophholz.com',
 				last_processed_history_id: '100',
 				watch_expiration: new Date(now + 10 * 60 * 1000).toISOString(),
+				last_watch_renewed_at: new Date(now).toISOString(),
 				last_push_received_at: null,
 				last_sync_at: null,
 				sync_status: 'active'
@@ -48,7 +57,8 @@ describe('renewGmailWatches', () => {
 				id: 'c2',
 				gmail_user: 'future@christophholz.com',
 				last_processed_history_id: '200',
-				watch_expiration: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+				watch_expiration: new Date(now + 6 * 24 * 60 * 60 * 1000).toISOString(),
+				last_watch_renewed_at: new Date(now).toISOString(),
 				last_push_received_at: null,
 				last_sync_at: null,
 				sync_status: 'active'
@@ -75,6 +85,33 @@ describe('renewGmailWatches', () => {
 			labelFilterBehavior: 'INCLUDE'
 		});
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
+		expect(mockedUpdateMany.mock.calls[0]?.[3]).not.toHaveProperty('sync_status');
+	});
+
+	it('renews daily even when the watch expiration is still several days away', async () => {
+		const now = Date.now();
+		mockedListMailboxCursors.mockResolvedValue([
+			{
+				id: 'c1',
+				gmail_user: 'daily@christophholz.com',
+				last_processed_history_id: '100',
+				watch_expiration: new Date(now + 6 * 24 * 60 * 60 * 1000).toISOString(),
+				last_watch_renewed_at: new Date(now - 25 * 60 * 60 * 1000).toISOString(),
+				last_push_received_at: null,
+				last_sync_at: null,
+				sync_status: 'active'
+			}
+		]);
+		mockedGmailWatch.mockResolvedValue({
+			expiration: String(now + 7 * 24 * 60 * 60 * 1000)
+		});
+
+		const result = await renewGmailWatches(
+			makeTestEnv({ GMAIL_PUBSUB_TOPIC_NAME: 'projects/foo/topics/gmail-push' })
+		);
+
+		expect(result).toHaveLength(1);
+		expect(mockedGmailWatch).toHaveBeenCalledTimes(1);
 	});
 
 	it('falls back to GMAIL_PUBSUB_TOPIC_NAME when GOOGLE_WATCH_TOPIC is not set', async () => {
@@ -127,7 +164,7 @@ describe('renewGmailWatches', () => {
 			ok: false,
 			status: 'renewal_failed'
 		});
-		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
+		expect(mockedUpdateMany).not.toHaveBeenCalled();
 	});
 
 	it('activates mailbox watch and stores historyId and expiration', async () => {
@@ -159,6 +196,68 @@ describe('renewGmailWatches', () => {
 			topicName: 'projects/new/topics/gmail-push',
 			labelIds: ['INBOX']
 		});
+		expect(mockedRecoverMailboxMessages).not.toHaveBeenCalled();
+	});
+
+	it('backfills an existing stale cursor before replacing its history id', async () => {
+		const now = Date.now();
+		mockedGetMailboxCursor.mockResolvedValue({
+			id: 'cursor_1',
+			gmail_user: 'speaker@christophholz.com',
+			last_processed_history_id: '100',
+			watch_expiration: new Date(now - 1000).toISOString(),
+			last_push_received_at: null,
+			last_sync_at: new Date(now).toISOString(),
+			sync_status: 'resync_required'
+		});
+		mockedGmailWatch.mockResolvedValue({
+			historyId: '321',
+			expiration: String(now + 24 * 60 * 60 * 1000)
+		});
+		mockedRecoverMailboxMessages.mockResolvedValue(4);
+
+		const result = await activateMailboxWatch(
+			makeTestEnv({ GOOGLE_WATCH_TOPIC: 'projects/new/topics/gmail-push' }),
+			{ gmailUser: 'speaker@christophholz.com' }
+		);
+
+		expect(result).toMatchObject({
+			ok: true,
+			status: 'active',
+			history_id: '321',
+			processed_messages: 4
+		});
+		expect(mockedRecoverMailboxMessages).toHaveBeenCalledWith(expect.any(Object), {
+			gmailUser: 'speaker@christophholz.com'
+		});
+		expect(mockedRecoverMailboxMessages.mock.invocationCallOrder[0]).toBeLessThan(
+			mockedUpsertOne.mock.invocationCallOrder[0] ?? Number.POSITIVE_INFINITY
+		);
+	});
+
+	it('does not advance a stale cursor when recovery fails', async () => {
+		mockedGetMailboxCursor.mockResolvedValue({
+			id: 'cursor_1',
+			gmail_user: 'speaker@christophholz.com',
+			last_processed_history_id: '100',
+			watch_expiration: new Date(Date.now() - 1000).toISOString(),
+			last_push_received_at: null,
+			last_sync_at: new Date().toISOString(),
+			sync_status: 'resync_required'
+		});
+		mockedGmailWatch.mockResolvedValue({
+			historyId: '321',
+			expiration: String(Date.now() + 24 * 60 * 60 * 1000)
+		});
+		mockedRecoverMailboxMessages.mockRejectedValue(new Error('backfill failed'));
+
+		const result = await activateMailboxWatch(
+			makeTestEnv({ GOOGLE_WATCH_TOPIC: 'projects/new/topics/gmail-push' }),
+			{ gmailUser: 'speaker@christophholz.com' }
+		);
+
+		expect(result).toMatchObject({ ok: false, status: 'activation_failed' });
+		expect(mockedUpsertOne).not.toHaveBeenCalled();
 	});
 
 	it('returns activation_failed when watch response has no historyId', async () => {

@@ -40,6 +40,7 @@ function baseInput() {
 		inbound_provider_thread_id: 'thread_1',
 		sender_name: 'Jane',
 		sender_email: 'jane@example.com',
+		reply_from_email: 'speakerlp@christophholz.com',
 		inbound_subject: 'Speaking inquiry',
 		inbound_body: 'Can Christoph speak at our conference?',
 		raw_metadata: {
@@ -345,6 +346,7 @@ describe('runAutoresponsePipeline', () => {
 		expect(mockedSendOutboundEmail).toHaveBeenCalledWith(
 			expect.any(Object),
 			expect.objectContaining({
+				fromEmail: 'speakerlp@christophholz.com',
 				threadId: 'thread_1',
 				inReplyTo: '<m1@id>',
 				references: ['<r1@id>', '<r2@id>']

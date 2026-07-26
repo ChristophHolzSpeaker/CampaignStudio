@@ -141,8 +141,11 @@ describe('/speaker/[slug] +page.server', () => {
 		);
 		expect(mockedBuildSpeakerMailtoHref).toHaveBeenCalledWith(
 			expect.objectContaining({
-				experiment: { alias: 'hero1', variantKey: 'B' }
+				campaignPageId: 55
 			})
+		);
+		expect(mockedBuildSpeakerMailtoHref).not.toHaveBeenCalledWith(
+			expect.objectContaining({ experiment: expect.anything() })
 		);
 	});
 });

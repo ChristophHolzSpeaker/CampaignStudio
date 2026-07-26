@@ -52,6 +52,32 @@ describe('normalizeGmailMessage', () => {
 		expect(normalized?.contact_email).toBe('jane@example.com');
 	});
 
+	it('includes CC and delivery headers when resolving inbound mailbox aliases', () => {
+		const message = {
+			id: 'msg_routed_alias',
+			threadId: 'thread_routed_alias',
+			payload: {
+				headers: [
+					{ name: 'From', value: 'Jane Doe <jane@example.com>' },
+					{ name: 'To', value: 'events@example.com' },
+					{ name: 'Cc', value: 'speakerwp@christophholz.com' },
+					{ name: 'Delivered-To', value: 'speakercr@christophholz.com' },
+					{ name: 'X-Original-To', value: 'speakerlp+55@christophholz.com' }
+				]
+			}
+		};
+
+		const normalized = normalizeGmailMessage(message as never, 'speaker@christophholz.com');
+
+		expect(normalized?.to_email).toBe('events@example.com');
+		expect(normalized?.to_recipients).toEqual([
+			'events@example.com',
+			'speakerwp@christophholz.com',
+			'speakercr@christophholz.com',
+			'speakerlp+55@christophholz.com'
+		]);
+	});
+
 	it('marks outbound when sender matches gmail user and derives contact recipient', () => {
 		const message = {
 			id: 'msg_2',
@@ -70,6 +96,27 @@ describe('normalizeGmailMessage', () => {
 		const normalized = normalizeGmailMessage(message as never, 'speaker@christophholz.com');
 		expect(normalized?.direction).toBe('outbound');
 		expect(normalized?.sent_at).toBe('2024-04-16T12:00:00.000Z');
+		expect(normalized?.contact_email).toBe('client@example.com');
+	});
+
+	it('marks outbound when the sender is a managed speaker alias', () => {
+		const message = {
+			id: 'msg_alias',
+			threadId: 'thread_alias',
+			internalDate: '1713268800000',
+			payload: {
+				headers: [
+					{ name: 'From', value: 'Campaign Studio <speakerlp@christophholz.com>' },
+					{ name: 'To', value: 'client@example.com' },
+					{ name: 'Subject', value: 'Re: Inquiry' }
+				],
+				parts: [{ mimeType: 'text/plain', body: { data: toBase64Url('Thanks') } }]
+			}
+		};
+
+		const normalized = normalizeGmailMessage(message as never, 'speaker@christophholz.com');
+		expect(normalized?.direction).toBe('outbound');
+		expect(normalized?.from_email).toBe('speakerlp@christophholz.com');
 		expect(normalized?.contact_email).toBe('client@example.com');
 	});
 
