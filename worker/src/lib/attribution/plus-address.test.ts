@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { parsePlusAddressAttribution, parsePlusAddressFromRecipients } from './plus-address';
 
 describe('plus-address parsing', () => {
+	it('parses the Campaign Studio alias with a campaign page id', () => {
+		expect(parsePlusAddressAttribution('speakerlp+55@christophholz.com')).toMatchObject({
+			status: 'parsed',
+			campaign_id: null,
+			campaign_page_id: 55
+		});
+	});
+
 	it('parses valid cmp/cp token', () => {
 		expect(parsePlusAddressAttribution('speaker+cmp12_cp3@christophholz.com')).toMatchObject({
 			status: 'parsed',
@@ -30,6 +38,12 @@ describe('plus-address parsing', () => {
 
 	it('returns malformed_plus_address when token is invalid', () => {
 		expect(parsePlusAddressAttribution('speaker+badtoken@christophholz.com').status).toBe(
+			'malformed_plus_address'
+		);
+	});
+
+	it('does not accept a numeric page token on another mailbox', () => {
+		expect(parsePlusAddressAttribution('speaker+55@christophholz.com').status).toBe(
 			'malformed_plus_address'
 		);
 	});

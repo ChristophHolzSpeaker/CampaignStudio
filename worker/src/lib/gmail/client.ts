@@ -65,6 +65,12 @@ export type GmailHistoryListResponse = {
 	nextPageToken?: string;
 };
 
+export type GmailMessageListResponse = {
+	messages?: Array<Pick<GmailMessage, 'id' | 'threadId'>>;
+	nextPageToken?: string;
+	resultSizeEstimate?: number;
+};
+
 export type GmailLabel = {
 	id: string;
 	name: string;
@@ -219,6 +225,32 @@ export async function gmailGetMessage(
 			query
 		}
 	);
+}
+
+export async function gmailListMessages(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+		query: string;
+		labelIds?: string[];
+		pageToken?: string;
+	}
+): Promise<GmailMessageListResponse> {
+	const query = new URLSearchParams({
+		q: params.query,
+		maxResults: '100'
+	});
+	for (const labelId of params.labelIds ?? []) {
+		query.append('labelIds', labelId);
+	}
+	if (params.pageToken) {
+		query.set('pageToken', params.pageToken);
+	}
+
+	return gmailRequest<GmailMessageListResponse>(env, params.gmailUser, '/users/me/messages', {
+		method: 'GET',
+		query
+	});
 }
 
 export async function gmailListLabels(

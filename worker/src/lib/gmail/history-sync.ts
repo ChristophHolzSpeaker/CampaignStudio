@@ -4,6 +4,7 @@ import { GoogleAuthError } from '../google-auth/errors';
 import {
 	gmailGetMessage,
 	gmailListHistory,
+	gmailListMessages,
 	isGmailMessageMissing,
 	isHistoryCursorStale,
 	type GmailMessage
@@ -28,6 +29,8 @@ type SyncOutcome = {
 	processed_messages: number;
 	last_history_id: string;
 };
+
+const DEFAULT_RECOVERY_LOOKBACK_DAYS = 30;
 
 function compareHistoryIds(left: string, right: string): number {
 	try {
@@ -61,7 +64,7 @@ async function updateCursor(
 	await updateMany(env, 'mailbox_cursors', query, values);
 }
 
-async function getMailboxCursor(
+export async function getMailboxCursor(
 	env: WorkerEnv,
 	gmailUser: string
 ): Promise<MailboxCursorRow | null> {
@@ -72,6 +75,14 @@ async function getMailboxCursor(
 		limit: '1'
 	});
 	return selectOne<MailboxCursorRow>(env, 'mailbox_cursors', query);
+}
+
+function resolveRecoveryLookbackDays(env: WorkerEnv): number {
+	const parsed = Number(env.GMAIL_RECOVERY_LOOKBACK_DAYS);
+	if (!Number.isFinite(parsed) || parsed <= 0) {
+		return DEFAULT_RECOVERY_LOOKBACK_DAYS;
+	}
+	return Math.floor(parsed);
 }
 
 async function persistFetchedMessage(
@@ -137,6 +148,62 @@ async function collectHistoryMessageIds(
 		messageIds: [...collected],
 		lastHistoryId: latestHistoryId
 	};
+}
+
+export async function recoverMailboxMessages(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+	}
+): Promise<number> {
+	const lookbackDays = resolveRecoveryLookbackDays(env);
+	let nextPageToken: string | undefined;
+	let processed = 0;
+
+	do {
+		const response = await gmailListMessages(env, {
+			gmailUser: params.gmailUser,
+			query: `newer_than:${lookbackDays}d`,
+			labelIds: ['INBOX'],
+			pageToken: nextPageToken
+		});
+
+		for (const message of response.messages ?? []) {
+			if (!message.id) {
+				continue;
+			}
+
+			try {
+				const gmailMessage = await gmailGetMessage(env, {
+					gmailUser: params.gmailUser,
+					messageId: message.id
+				});
+				if (await persistFetchedMessage(env, params.gmailUser, gmailMessage)) {
+					processed += 1;
+				}
+			} catch (error) {
+				if (!isGmailMessageMissing(error)) {
+					throw error;
+				}
+
+				console.warn('gmail_recovery_message_missing', {
+					gmail_user: params.gmailUser,
+					message_id: message.id,
+					action: 'skipped'
+				});
+			}
+		}
+
+		nextPageToken = response.nextPageToken;
+	} while (nextPageToken);
+
+	console.log('gmail_recovery_backfill_completed', {
+		gmail_user: params.gmailUser,
+		lookback_days: lookbackDays,
+		processed_messages: processed
+	});
+
+	return processed;
 }
 
 export async function syncMailboxHistory(

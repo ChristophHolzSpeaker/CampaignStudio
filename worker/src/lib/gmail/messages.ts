@@ -1,4 +1,5 @@
 import { normalizeEmailAddress, normalizeEmailIdentity } from '../email';
+import { isManagedSpeakerSender } from '../inbound/recipient-routing';
 import type { GmailHeader, GmailMessage, GmailMessagePart } from './client';
 
 export type NormalizedGmailMessage = {
@@ -34,6 +35,14 @@ function getHeader(headers: GmailHeader[] | undefined, name: string): string | n
 	const header = headers?.find((candidate) => candidate.name?.toLowerCase() === name.toLowerCase());
 	const value = header?.value?.trim();
 	return value ? value : null;
+}
+
+function getHeaders(headers: GmailHeader[] | undefined, names: string[]): string[] {
+	const normalizedNames = new Set(names.map((name) => name.toLowerCase()));
+	return (headers ?? [])
+		.filter((header) => normalizedNames.has(header.name?.toLowerCase() ?? ''))
+		.map((header) => header.value?.trim() ?? '')
+		.filter((value) => value.length > 0);
 }
 
 function extractEmails(value: string | null): string[] {
@@ -136,14 +145,6 @@ function parseMessageTimestamp(message: GmailMessage): string | null {
 	return new Date(ms).toISOString();
 }
 
-function includesEmail(emails: string[], target: string): boolean {
-	const normalizedTarget = normalizeEmailAddress(target);
-	if (!normalizedTarget) {
-		return false;
-	}
-	return emails.includes(normalizedTarget);
-}
-
 export function normalizeGmailMessage(
 	message: GmailMessage,
 	gmailUser: string
@@ -155,17 +156,27 @@ export function normalizeGmailMessage(
 	const headers = message.payload?.headers;
 	const fromRaw = getHeader(headers, 'From');
 	const toRaw = getHeader(headers, 'To');
+	const routingRecipientHeaders = getHeaders(headers, [
+		'To',
+		'Cc',
+		'Delivered-To',
+		'X-Original-To',
+		'Envelope-To'
+	]);
 	const subject = getHeader(headers, 'Subject') ?? '(no subject)';
 	const timestamp = parseMessageTimestamp(message);
 	const { bodyText, bodyHtml } = extractBodyParts(message.payload);
 
 	const fromEmails = extractEmails(fromRaw);
 	const toEmails = extractEmails(toRaw);
+	const routingRecipients = [
+		...new Set(routingRecipientHeaders.flatMap((value) => extractEmails(value)))
+	];
 	const sender = extractSenderIdentity(fromRaw);
 	const fromEmail = sender.email || fromEmails[0] || '';
 	const toEmail = toEmails.join(',');
 
-	const outbound = includesEmail(fromEmails, gmailUser);
+	const outbound = fromEmails.some((email) => isManagedSpeakerSender(email, gmailUser));
 	const direction: 'inbound' | 'outbound' = outbound ? 'outbound' : 'inbound';
 	const contactEmail = outbound ? (toEmails[0] ?? null) : (fromEmails[0] ?? null);
 
@@ -175,7 +186,7 @@ export function normalizeGmailMessage(
 		from_email: fromEmail,
 		from_name: sender.display_name,
 		to_email: toEmail,
-		to_recipients: toEmails,
+		to_recipients: routingRecipients,
 		subject,
 		body_text: bodyText,
 		body_html: bodyHtml,

@@ -6,11 +6,17 @@ vi.mock('./history-sync', () => ({
 	syncMailboxHistory: vi.fn()
 }));
 
+vi.mock('./watch', () => ({
+	activateMailboxWatch: vi.fn()
+}));
+
 import { listMailboxCursors, syncMailboxHistory } from './history-sync';
 import { reconcileMailboxHealth } from './reconcile';
+import { activateMailboxWatch } from './watch';
 
 const mockedListMailboxCursors = vi.mocked(listMailboxCursors);
 const mockedSyncMailboxHistory = vi.mocked(syncMailboxHistory);
+const mockedActivateMailboxWatch = vi.mocked(activateMailboxWatch);
 
 function cursor(overrides?: Record<string, string | null>): {
 	id: string;
@@ -38,6 +44,7 @@ describe('reconcileMailboxHealth', () => {
 	beforeEach(() => {
 		mockedListMailboxCursors.mockReset();
 		mockedSyncMailboxHistory.mockReset();
+		mockedActivateMailboxWatch.mockReset();
 	});
 
 	it('marks healthy mailbox with recent push and sync', async () => {
@@ -79,7 +86,7 @@ describe('reconcileMailboxHealth', () => {
 		expect(mockedSyncMailboxHistory).not.toHaveBeenCalled();
 	});
 
-	it('retries sync_failed mailbox after cooldown and returns resync_required', async () => {
+	it('recovers a mailbox immediately when a retry discovers a stale cursor', async () => {
 		mockedListMailboxCursors.mockResolvedValue([
 			cursor({
 				sync_status: 'sync_failed',
@@ -92,19 +99,39 @@ describe('reconcileMailboxHealth', () => {
 			processed_messages: 0,
 			last_history_id: '100'
 		});
+		mockedActivateMailboxWatch.mockResolvedValue({
+			gmail_user: 'speaker@christophholz.com',
+			ok: true,
+			status: 'active',
+			history_id: '150',
+			processed_messages: 3
+		});
 
 		const result = await reconcileMailboxHealth(makeTestEnv());
-		expect(result[0]?.status).toBe('resync_required');
+		expect(result[0]?.status).toBe('recovered');
+		expect(result[0]?.processed_messages).toBe(3);
 		expect(mockedSyncMailboxHistory).toHaveBeenCalledTimes(1);
+		expect(mockedActivateMailboxWatch).toHaveBeenCalledTimes(1);
 	});
 
-	it('honors existing resync_required without retrying sync', async () => {
+	it('recovers an existing resync_required cursor instead of leaving it stalled', async () => {
 		mockedListMailboxCursors.mockResolvedValue([cursor({ sync_status: 'resync_required' })]);
+		mockedActivateMailboxWatch.mockResolvedValue({
+			gmail_user: 'speaker@christophholz.com',
+			ok: true,
+			status: 'active',
+			history_id: '150',
+			processed_messages: 2
+		});
 
 		const result = await reconcileMailboxHealth(makeTestEnv());
-		expect(result[0]?.status).toBe('resync_required');
-		expect(result[0]?.reason).toBe('cursor_marked_resync_required');
+		expect(result[0]?.status).toBe('recovered');
+		expect(result[0]?.reason).toBe('stale_cursor_backfilled');
+		expect(result[0]?.processed_messages).toBe(2);
 		expect(mockedSyncMailboxHistory).not.toHaveBeenCalled();
+		expect(mockedActivateMailboxWatch).toHaveBeenCalledWith(expect.any(Object), {
+			gmailUser: 'speaker@christophholz.com'
+		});
 	});
 
 	it('returns sync_failed when reconciliation sync throws', async () => {

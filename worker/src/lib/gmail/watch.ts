@@ -1,7 +1,7 @@
 import { requireEnv, type WorkerEnv } from '../env';
 import { updateMany, upsertOne } from '../db';
 import { gmailWatch } from './client';
-import { listMailboxCursors } from './history-sync';
+import { getMailboxCursor, listMailboxCursors, recoverMailboxMessages } from './history-sync';
 
 const DEFAULT_RENEWAL_BUFFER_SECONDS = 60 * 60 * 48;
 const DEFAULT_RENEWAL_INTERVAL_SECONDS = 60 * 60 * 24;
@@ -19,6 +19,7 @@ export type WatchActivationOutcome = {
 	status: 'active' | 'activation_failed';
 	history_id?: string;
 	watch_expiration?: string;
+	processed_messages?: number;
 	error?: string;
 };
 
@@ -182,6 +183,7 @@ export async function activateMailboxWatch(
 	const labelFilterBehavior = resolveLabelFilterBehavior(env);
 
 	try {
+		const existingCursor = await getMailboxCursor(env, params.gmailUser);
 		const watchResponse = await gmailWatch(env, {
 			gmailUser: params.gmailUser,
 			topicName,
@@ -198,6 +200,9 @@ export async function activateMailboxWatch(
 			renewalBufferMs,
 			now
 		);
+		const processedMessages = existingCursor
+			? await recoverMailboxMessages(env, { gmailUser: params.gmailUser })
+			: 0;
 
 		await upsertOne(
 			env,
@@ -227,7 +232,8 @@ export async function activateMailboxWatch(
 			ok: true,
 			status: 'active',
 			history_id: watchResponse.historyId,
-			watch_expiration: watchExpiration
+			watch_expiration: watchExpiration,
+			processed_messages: processedMessages
 		};
 	} catch (error) {
 		const message = error instanceof Error ? error.message : 'unknown watch activation error';

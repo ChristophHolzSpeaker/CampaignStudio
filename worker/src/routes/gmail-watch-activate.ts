@@ -42,6 +42,7 @@ export async function handleGmailWatchActivate(
 		ok: true,
 		gmail_user: activation.gmail_user,
 		history_id: activation.history_id,
-		watch_expiration: activation.watch_expiration
+		watch_expiration: activation.watch_expiration,
+		processed_messages: activation.processed_messages ?? 0
 	});
 }

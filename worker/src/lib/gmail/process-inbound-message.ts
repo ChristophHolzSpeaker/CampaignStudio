@@ -8,6 +8,7 @@ import {
 	classifyInboundMessage,
 	type InboundClassificationResult
 } from '../inbound/classify-message';
+import { resolveInboundRecipientRoute } from '../inbound/recipient-routing';
 import { resolveInboundJourney } from '../journeys/resolve-inbound-journey';
 import { runAutoresponsePipeline, type RunAutoresponseStatus } from '../inbound/run-autoresponse';
 import type { GmailMessage } from './client';
@@ -41,6 +42,7 @@ type AutoResponseDecision =
 export type InboundProcessingStatus =
 	| 'processed'
 	| 'duplicate_ignored'
+	| 'recipient_ignored'
 	| 'invalid_sender_email'
 	| 'not_inbound'
 	| 'invalid_message';
@@ -378,6 +380,31 @@ export async function processInboundGmailMessage(
 		};
 	}
 
+	const recipientRoute = resolveInboundRecipientRoute(normalized.to_recipients);
+	if (recipientRoute.action === 'ignore') {
+		return {
+			status: 'recipient_ignored',
+			lead_journey_id: null,
+			lead_message_id: null,
+			provider_message_id: normalized.provider_message_id,
+			provider_thread_id: normalized.provider_thread_id,
+			attribution_status: null,
+			campaign_id: null,
+			campaign_page_id: null,
+			created_new_journey: false,
+			matched_by: null,
+			classification: null,
+			classification_confidence: null,
+			auto_response_decision: null,
+			eligible_for_autoresponse: false,
+			skipped_reason: 'recipient_speakercr',
+			autoresponse_status: null,
+			autoresponse_outbound_lead_message_id: null,
+			autoresponse_provider_message_id: null,
+			autoresponse_provider_thread_id: null
+		};
+	}
+
 	const existing = await findMessageByProviderId(env, normalized.provider_message_id);
 	if (existing) {
 		await applyInboundProcessingLabelsSafely(env, {
@@ -660,6 +687,7 @@ export async function processInboundGmailMessage(
 		inbound_provider_thread_id: normalized.provider_thread_id,
 		sender_name: normalized.from_name,
 		sender_email: normalized.from_email,
+		reply_from_email: recipientRoute.reply_from_email,
 		inbound_subject: normalized.subject,
 		inbound_body: normalized.body_text,
 		raw_metadata: normalized.raw_metadata,

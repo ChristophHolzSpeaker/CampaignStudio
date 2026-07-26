@@ -51,7 +51,6 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		campaignId: pageRecord.campaignId,
 		campaignPageId: pageRecord.campaignPageId,
 		speakerMailtoHref: buildSpeakerMailtoHref({
-			campaignId: pageRecord.campaignId,
 			campaignPageId: pageRecord.campaignPageId,
 			subject: DEFAULT_SPEAKER_EMAIL_SUBJECT
 		})

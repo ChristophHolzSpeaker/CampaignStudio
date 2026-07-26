@@ -11,7 +11,6 @@ import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import type { LandingPageDocument } from '$lib/page-builder/page';
 import type { SeoProps } from '$lib/page-builder/sections';
-import { SPEAKER_HERO_MEDIA_EMAIL_ALIAS } from '../../../../shared/experiments';
 
 type SpeakerJsonLd = {
 	'@context': 'https://schema.org';
@@ -140,15 +139,7 @@ export const load: PageServerLoad = async ({ params, url, cookies }) => {
 		jsonLd,
 		abTest,
 		speakerMailtoHref: buildSpeakerMailtoHref({
-			campaignId: pageRecord.campaignId,
 			campaignPageId: pageRecord.campaignPageId,
-			experiment:
-				abTest.experimentId && abTest.variantId
-					? {
-							alias: SPEAKER_HERO_MEDIA_EMAIL_ALIAS,
-							variantKey: abTest.variantKey
-						}
-					: null,
 			subject: DEFAULT_SPEAKER_EMAIL_SUBJECT
 		})
 	};

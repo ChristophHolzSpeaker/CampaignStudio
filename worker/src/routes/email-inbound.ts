@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { insertOne, selectOne, updateMany } from '../lib/db';
 import type { WorkerEnv } from '../lib/env';
-import { normalizeEmailAddress, parsePlusAddressAttribution } from '../lib/email';
+import { normalizeEmailAddress } from '../lib/email';
 import { badRequestFromZod, json } from '../lib/http';
 import { logLeadEvent } from '../lib/analytics/lead-events';
+import { resolveCampaignEmailAttribution } from '../lib/attribution/campaign-page';
 import { persistWorkerJourneyAttributionSnapshot } from '../lib/journeys/attribution-persistence';
 
 const INBOUND_WINDOW_DAYS = 30;
@@ -27,11 +28,6 @@ type LeadJourneyRow = {
 	updated_at: string;
 };
 
-type CampaignPageRow = {
-	id: number;
-	campaign_id: number;
-};
-
 export async function handleEmailInbound(request: Request, env: WorkerEnv): Promise<Response> {
 	let payload: unknown;
 	try {
@@ -51,26 +47,10 @@ export async function handleEmailInbound(request: Request, env: WorkerEnv): Prom
 		return json({ ok: false, error: 'Invalid from email address' }, 400);
 	}
 
-	const parsedAttribution = parsePlusAddressAttribution(input.to);
-	let resolvedCampaignId: number | null = null;
-	let resolvedCampaignPageId: number | null = null;
-	let attributionStatus = parsedAttribution.status;
-
-	if (parsedAttribution.status === 'parsed') {
-		const campaignPageQuery = new URLSearchParams({
-			select: 'id,campaign_id',
-			id: `eq.${parsedAttribution.campaign_page_id}`,
-			campaign_id: `eq.${parsedAttribution.campaign_id}`,
-			limit: '1'
-		});
-		const campaignPage = await selectOne<CampaignPageRow>(env, 'campaign_pages', campaignPageQuery);
-		if (!campaignPage) {
-			attributionStatus = 'unresolved_campaign_page';
-		} else {
-			resolvedCampaignId = campaignPage.campaign_id;
-			resolvedCampaignPageId = campaignPage.id;
-		}
-	}
+	const parsedAttribution = await resolveCampaignEmailAttribution(env, [input.to]);
+	const resolvedCampaignId = parsedAttribution.campaign_id;
+	const resolvedCampaignPageId = parsedAttribution.campaign_page_id;
+	const attributionStatus = parsedAttribution.attribution_status;
 
 	let journey: LeadJourneyRow | null = null;
 	if (resolvedCampaignId !== null) {
@@ -133,7 +113,9 @@ export async function handleEmailInbound(request: Request, env: WorkerEnv): Prom
 			body: input.body,
 			attribution_status: attributionStatus,
 			parsed_campaign_id: parsedAttribution.campaign_id,
-			parsed_campaign_page_id: parsedAttribution.campaign_page_id
+			parsed_campaign_page_id: parsedAttribution.campaign_page_id,
+			experiment_id: parsedAttribution.experiment_id,
+			variant_id: parsedAttribution.variant_id
 		},
 		session_id: input.session_id ?? null,
 		anonymous_id: input.anonymous_id ?? null
