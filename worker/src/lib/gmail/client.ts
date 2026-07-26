@@ -80,16 +80,22 @@ export type GmailLabelListResponse = {
 export class GmailApiError extends Error {
 	status: number;
 	body: unknown;
+	requestPath: string;
 
-	constructor(status: number, message: string, body: unknown) {
+	constructor(status: number, message: string, body: unknown, requestPath: string) {
 		super(message);
 		this.status = status;
 		this.body = body;
+		this.requestPath = requestPath;
 	}
 }
 
 export function isHistoryCursorStale(error: unknown): boolean {
 	if (!(error instanceof GmailApiError)) {
+		return false;
+	}
+
+	if (error.requestPath !== '/users/me/history') {
 		return false;
 	}
 
@@ -103,6 +109,14 @@ export function isHistoryCursorStale(error: unknown): boolean {
 
 	const details = JSON.stringify(error.body).toLowerCase();
 	return details.includes('stale') || details.includes('invalid') || details.includes('history');
+}
+
+export function isGmailMessageMissing(error: unknown): boolean {
+	if (!(error instanceof GmailApiError) || error.status !== 404) {
+		return false;
+	}
+
+	return /^\/users\/me\/messages\/[^/]+$/.test(error.requestPath);
 }
 
 async function gmailRequest<T>(
@@ -152,7 +166,8 @@ async function gmailRequest<T>(
 		throw new GmailApiError(
 			response.status,
 			`Gmail API request failed (${response.status}) ${options.method ?? 'GET'} ${path}`,
-			body
+			body,
+			path
 		);
 	}
 

@@ -40,6 +40,7 @@ describe('renewGmailWatches', () => {
 				gmail_user: 'due@christophholz.com',
 				last_processed_history_id: '100',
 				watch_expiration: new Date(now + 10 * 60 * 1000).toISOString(),
+				last_watch_renewed_at: new Date(now).toISOString(),
 				last_push_received_at: null,
 				last_sync_at: null,
 				sync_status: 'active'
@@ -48,7 +49,8 @@ describe('renewGmailWatches', () => {
 				id: 'c2',
 				gmail_user: 'future@christophholz.com',
 				last_processed_history_id: '200',
-				watch_expiration: new Date(now + 24 * 60 * 60 * 1000).toISOString(),
+				watch_expiration: new Date(now + 6 * 24 * 60 * 60 * 1000).toISOString(),
+				last_watch_renewed_at: new Date(now).toISOString(),
 				last_push_received_at: null,
 				last_sync_at: null,
 				sync_status: 'active'
@@ -75,6 +77,33 @@ describe('renewGmailWatches', () => {
 			labelFilterBehavior: 'INCLUDE'
 		});
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
+		expect(mockedUpdateMany.mock.calls[0]?.[3]).not.toHaveProperty('sync_status');
+	});
+
+	it('renews daily even when the watch expiration is still several days away', async () => {
+		const now = Date.now();
+		mockedListMailboxCursors.mockResolvedValue([
+			{
+				id: 'c1',
+				gmail_user: 'daily@christophholz.com',
+				last_processed_history_id: '100',
+				watch_expiration: new Date(now + 6 * 24 * 60 * 60 * 1000).toISOString(),
+				last_watch_renewed_at: new Date(now - 25 * 60 * 60 * 1000).toISOString(),
+				last_push_received_at: null,
+				last_sync_at: null,
+				sync_status: 'active'
+			}
+		]);
+		mockedGmailWatch.mockResolvedValue({
+			expiration: String(now + 7 * 24 * 60 * 60 * 1000)
+		});
+
+		const result = await renewGmailWatches(
+			makeTestEnv({ GMAIL_PUBSUB_TOPIC_NAME: 'projects/foo/topics/gmail-push' })
+		);
+
+		expect(result).toHaveLength(1);
+		expect(mockedGmailWatch).toHaveBeenCalledTimes(1);
 	});
 
 	it('falls back to GMAIL_PUBSUB_TOPIC_NAME when GOOGLE_WATCH_TOPIC is not set', async () => {
@@ -127,7 +156,7 @@ describe('renewGmailWatches', () => {
 			ok: false,
 			status: 'renewal_failed'
 		});
-		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
+		expect(mockedUpdateMany).not.toHaveBeenCalled();
 	});
 
 	it('activates mailbox watch and stores historyId and expiration', async () => {

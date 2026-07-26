@@ -4,6 +4,7 @@ import { GoogleAuthError } from '../google-auth/errors';
 import {
 	gmailGetMessage,
 	gmailListHistory,
+	isGmailMessageMissing,
 	isHistoryCursorStale,
 	type GmailMessage
 } from './client';
@@ -15,6 +16,7 @@ export type MailboxCursorRow = {
 	gmail_user: string;
 	last_processed_history_id: string;
 	watch_expiration: string;
+	last_watch_renewed_at?: string | null;
 	last_push_received_at: string | null;
 	last_sync_at: string | null;
 	sync_status: string;
@@ -65,7 +67,7 @@ async function getMailboxCursor(
 ): Promise<MailboxCursorRow | null> {
 	const query = new URLSearchParams({
 		select:
-			'id,gmail_user,last_processed_history_id,watch_expiration,last_push_received_at,last_sync_at,sync_status',
+			'id,gmail_user,last_processed_history_id,watch_expiration,last_watch_renewed_at,last_push_received_at,last_sync_at,sync_status',
 		gmail_user: `eq.${gmailUser}`,
 		limit: '1'
 	});
@@ -157,13 +159,25 @@ export async function syncMailboxHistory(
 		let processed = 0;
 
 		for (const messageId of historyResult.messageIds) {
-			const gmailMessage = await gmailGetMessage(env, {
-				gmailUser: params.gmailUser,
-				messageId
-			});
-			const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
-			if (inserted) {
-				processed += 1;
+			try {
+				const gmailMessage = await gmailGetMessage(env, {
+					gmailUser: params.gmailUser,
+					messageId
+				});
+				const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
+				if (inserted) {
+					processed += 1;
+				}
+			} catch (error) {
+				if (!isGmailMessageMissing(error)) {
+					throw error;
+				}
+
+				console.warn('gmail_history_message_missing', {
+					gmail_user: params.gmailUser,
+					message_id: messageId,
+					action: 'skipped'
+				});
 			}
 		}
 
@@ -267,7 +281,7 @@ export async function touchMailboxPush(
 export async function listMailboxCursors(env: WorkerEnv): Promise<MailboxCursorRow[]> {
 	const query = new URLSearchParams({
 		select:
-			'id,gmail_user,last_processed_history_id,watch_expiration,last_push_received_at,last_sync_at,sync_status',
+			'id,gmail_user,last_processed_history_id,watch_expiration,last_watch_renewed_at,last_push_received_at,last_sync_at,sync_status',
 		order: 'gmail_user.asc'
 	});
 	return selectMany<MailboxCursorRow>(env, 'mailbox_cursors', query);

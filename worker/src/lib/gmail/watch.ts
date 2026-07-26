@@ -3,7 +3,8 @@ import { updateMany, upsertOne } from '../db';
 import { gmailWatch } from './client';
 import { listMailboxCursors } from './history-sync';
 
-const DEFAULT_RENEWAL_BUFFER_SECONDS = 60 * 60 * 12;
+const DEFAULT_RENEWAL_BUFFER_SECONDS = 60 * 60 * 48;
+const DEFAULT_RENEWAL_INTERVAL_SECONDS = 60 * 60 * 24;
 
 type WatchRenewalOutcome = {
 	gmail_user: string;
@@ -36,6 +37,18 @@ function resolveRenewalBufferSeconds(env: WorkerEnv): number {
 	const parsed = Number(raw);
 	if (!Number.isFinite(parsed) || parsed <= 0) {
 		return DEFAULT_RENEWAL_BUFFER_SECONDS;
+	}
+	return Math.floor(parsed);
+}
+
+function resolveRenewalIntervalSeconds(env: WorkerEnv): number {
+	const raw = env.GMAIL_WATCH_RENEWAL_INTERVAL_SECONDS;
+	if (!raw) {
+		return DEFAULT_RENEWAL_INTERVAL_SECONDS;
+	}
+	const parsed = Number(raw);
+	if (!Number.isFinite(parsed) || parsed <= 0) {
+		return DEFAULT_RENEWAL_INTERVAL_SECONDS;
 	}
 	return Math.floor(parsed);
 }
@@ -88,6 +101,7 @@ export async function renewGmailWatches(env: WorkerEnv): Promise<WatchRenewalOut
 	const now = Date.now();
 	const nowIso = new Date(now).toISOString();
 	const renewalBufferMs = resolveRenewalBufferSeconds(env) * 1000;
+	const renewalIntervalMs = resolveRenewalIntervalSeconds(env) * 1000;
 	const renewBeforeMs = now + renewalBufferMs;
 	const topicName = resolveWatchTopicName(env);
 	const labelIds = parseOptionalLabelIds(env.GMAIL_WATCH_LABEL_IDS);
@@ -99,7 +113,12 @@ export async function renewGmailWatches(env: WorkerEnv): Promise<WatchRenewalOut
 		if (!Number.isFinite(expirationMs) || expirationMs <= 0) {
 			return true;
 		}
-		return expirationMs <= renewBeforeMs;
+		const lastRenewedMs = cursor.last_watch_renewed_at
+			? new Date(cursor.last_watch_renewed_at).getTime()
+			: Number.NaN;
+		const dailyRenewalDue =
+			!Number.isFinite(lastRenewedMs) || now - lastRenewedMs >= renewalIntervalMs;
+		return expirationMs <= renewBeforeMs || dailyRenewalDue;
 	});
 
 	const outcomes: WatchRenewalOutcome[] = [];
@@ -122,7 +141,6 @@ export async function renewGmailWatches(env: WorkerEnv): Promise<WatchRenewalOut
 			await markRenewalStatus(env, cursor.gmail_user, {
 				watch_expiration: watchExpiration,
 				last_watch_renewed_at: nowIso,
-				sync_status: 'active',
 				updated_at: nowIso
 			});
 
@@ -133,12 +151,6 @@ export async function renewGmailWatches(env: WorkerEnv): Promise<WatchRenewalOut
 			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'unknown watch renewal error';
-			await markRenewalStatus(env, cursor.gmail_user, {
-				last_watch_renewed_at: nowIso,
-				sync_status: 'renewal_failed',
-				updated_at: nowIso
-			});
-
 			console.error('gmail_watch_renewal_failed', {
 				gmail_user: cursor.gmail_user,
 				error: message
