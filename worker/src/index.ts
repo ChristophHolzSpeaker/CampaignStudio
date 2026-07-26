@@ -119,25 +119,24 @@ export default {
 		ctx: WorkerExecutionContext
 	): Promise<void> {
 		ctx.waitUntil(
-			Promise.allSettled([renewGmailWatches(env), reconcileMailboxHealth(env)]).then((results) => {
-				const watchResult = results[0];
-				if (watchResult?.status === 'fulfilled') {
+			(async () => {
+				try {
+					const watchResult = await renewGmailWatches(env);
 					console.log('gmail_watch_renewal_complete', {
 						cron: event.cron,
 						scheduled_time: event.scheduledTime,
-						renewed_count: watchResult.value.filter((entry) => entry.ok).length,
-						failed_count: watchResult.value.filter((entry) => !entry.ok).length
+						renewed_count: watchResult.filter((entry) => entry.ok).length,
+						failed_count: watchResult.filter((entry) => !entry.ok).length
 					});
-				} else {
+				} catch (error) {
 					console.error('gmail_watch_renewal_unhandled_error', {
 						cron: event.cron,
-						error: watchResult?.reason instanceof Error ? watchResult.reason.message : 'unknown'
+						error: error instanceof Error ? error.message : 'unknown'
 					});
 				}
 
-				const reconcileResult = results[1];
-				if (reconcileResult?.status === 'fulfilled') {
-					const outcomes = reconcileResult.value;
+				try {
+					const outcomes = await reconcileMailboxHealth(env);
 					console.log('gmail_mailbox_reconcile_complete', {
 						cron: event.cron,
 						scheduled_time: event.scheduledTime,
@@ -148,14 +147,13 @@ export default {
 							(item) => item.status === 'sync_failed' || item.status === 'resync_required'
 						).length
 					});
-				} else {
+				} catch (error) {
 					console.error('gmail_mailbox_reconcile_unhandled_error', {
 						cron: event.cron,
-						error:
-							reconcileResult?.reason instanceof Error ? reconcileResult.reason.message : 'unknown'
+						error: error instanceof Error ? error.message : 'unknown'
 					});
 				}
-			})
+			})()
 		);
 	}
 };

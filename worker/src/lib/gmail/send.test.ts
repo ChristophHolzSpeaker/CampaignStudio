@@ -50,6 +50,7 @@ describe('sendOutboundEmail', () => {
 		const result = await sendOutboundEmail(makeTestEnv(), {
 			leadJourneyId: 'journey_1',
 			gmailUser: 'speaker@christophholz.com',
+			fromEmail: 'speakerlp@christophholz.com',
 			to: ['Client@Example.com', 'client@example.com'],
 			subject: 'Hello\nInjected',
 			bodyText: 'Plain body',
@@ -70,6 +71,7 @@ describe('sendOutboundEmail', () => {
 
 		const rawArg = mockedGmailSendMessage.mock.calls[0]?.[1]?.raw;
 		const decodedMime = decodeBase64Url(String(rawArg));
+		expect(decodedMime).toContain('From: speakerlp@christophholz.com');
 		expect(decodedMime).toContain('Subject: Hello Injected');
 		expect(decodedMime).toContain('To: client@example.com');
 		expect(decodedMime).toContain(
@@ -77,6 +79,12 @@ describe('sendOutboundEmail', () => {
 		);
 		expect(decodedMime).toContain('In-Reply-To: <message@id>');
 		expect(decodedMime).toContain('References: <ref-1@id> <ref-2@id>');
+		expect(mockedUpsertOne).toHaveBeenCalledWith(
+			expect.any(Object),
+			'lead_messages',
+			expect.objectContaining({ from_email: 'speakerlp@christophholz.com' }),
+			expect.any(Object)
+		);
 	});
 
 	it('sends email without lead journey and skips lead_messages persistence', async () => {

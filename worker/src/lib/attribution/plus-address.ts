@@ -1,8 +1,10 @@
 import type { AttributionStatus } from '../../../../shared/event-types';
+import { SPEAKER_EMAIL } from '../../../../shared/speaker-email';
 import { normalizeEmailAddress } from '../email/normalize';
 
-const PLUS_PATTERN =
+const LEGACY_PLUS_PATTERN =
 	/^cmp(?<campaign_id>\d+)_cp(?<campaign_page_id>\d+)(?:_ab(?<experiment_alias>[a-z0-9]+)_(?<variant_key>[a-z0-9_-]+))?$/i;
+const CAMPAIGN_PAGE_PATTERN = /^(?<campaign_page_id>\d+)$/;
 
 export type ParsedPlusAddress = {
 	status: AttributionStatus;
@@ -26,8 +28,8 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 		};
 	}
 
-	const [localPart] = normalizedTo.split('@');
-	if (!localPart) {
+	const [localPart, domain] = normalizedTo.split('@');
+	if (!localPart || !domain) {
 		return {
 			status: 'malformed_plus_address',
 			campaign_id: null,
@@ -51,7 +53,25 @@ export function parsePlusAddressAttribution(toEmail: string): ParsedPlusAddress 
 	}
 
 	const plusToken = localPart.slice(plusIndex + 1);
-	const match = plusToken.match(PLUS_PATTERN);
+	const [campaignStudioLocalPart, campaignStudioDomain] = SPEAKER_EMAIL.campaignStudio.split('@');
+	if (
+		localPart.slice(0, plusIndex) === campaignStudioLocalPart &&
+		domain === campaignStudioDomain
+	) {
+		const campaignPageMatch = plusToken.match(CAMPAIGN_PAGE_PATTERN);
+		if (campaignPageMatch?.groups?.campaign_page_id) {
+			return {
+				status: 'parsed',
+				campaign_id: null,
+				campaign_page_id: Number(campaignPageMatch.groups.campaign_page_id),
+				experiment_alias: null,
+				variant_key: null,
+				address: normalizedTo
+			};
+		}
+	}
+
+	const match = plusToken.match(LEGACY_PLUS_PATTERN);
 	if (!match?.groups?.campaign_id || !match.groups.campaign_page_id) {
 		return {
 			status: 'malformed_plus_address',

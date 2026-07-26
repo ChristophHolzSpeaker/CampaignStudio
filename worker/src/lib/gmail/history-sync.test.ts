@@ -8,11 +8,15 @@ vi.mock('../db', () => ({
 	updateMany: vi.fn()
 }));
 
-vi.mock('./client', () => ({
-	gmailGetMessage: vi.fn(),
-	gmailListHistory: vi.fn(),
-	isHistoryCursorStale: vi.fn()
-}));
+vi.mock('./client', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('./client')>();
+	return {
+		...actual,
+		gmailGetMessage: vi.fn(),
+		gmailListHistory: vi.fn(),
+		gmailListMessages: vi.fn()
+	};
+});
 
 vi.mock('./messages', () => ({
 	normalizeGmailMessage: vi.fn()
@@ -23,10 +27,15 @@ vi.mock('./process-inbound-message', () => ({
 }));
 
 import { insertOne, selectMany, selectOne, updateMany } from '../db';
-import { gmailGetMessage, gmailListHistory, isHistoryCursorStale } from './client';
+import { GmailApiError, gmailGetMessage, gmailListHistory, gmailListMessages } from './client';
 import { normalizeGmailMessage } from './messages';
 import { processInboundGmailMessage } from './process-inbound-message';
-import { listMailboxCursors, syncMailboxHistory, touchMailboxPush } from './history-sync';
+import {
+	listMailboxCursors,
+	recoverMailboxMessages,
+	syncMailboxHistory,
+	touchMailboxPush
+} from './history-sync';
 
 const mockedInsertOne = vi.mocked(insertOne);
 const mockedSelectMany = vi.mocked(selectMany);
@@ -34,7 +43,7 @@ const mockedSelectOne = vi.mocked(selectOne);
 const mockedUpdateMany = vi.mocked(updateMany);
 const mockedGmailGetMessage = vi.mocked(gmailGetMessage);
 const mockedGmailListHistory = vi.mocked(gmailListHistory);
-const mockedIsHistoryCursorStale = vi.mocked(isHistoryCursorStale);
+const mockedGmailListMessages = vi.mocked(gmailListMessages);
 const mockedNormalizeGmailMessage = vi.mocked(normalizeGmailMessage);
 const mockedProcessInboundGmailMessage = vi.mocked(processInboundGmailMessage);
 
@@ -56,10 +65,9 @@ describe('history sync', () => {
 		mockedUpdateMany.mockReset();
 		mockedGmailGetMessage.mockReset();
 		mockedGmailListHistory.mockReset();
-		mockedIsHistoryCursorStale.mockReset();
+		mockedGmailListMessages.mockReset();
 		mockedNormalizeGmailMessage.mockReset();
 		mockedProcessInboundGmailMessage.mockReset();
-		mockedIsHistoryCursorStale.mockReturnValue(false);
 	});
 
 	it('throws when mailbox cursor is missing', async () => {
@@ -111,8 +119,9 @@ describe('history sync', () => {
 
 	it('marks resync_required when history cursor is stale', async () => {
 		mockedSelectOne.mockResolvedValue(cursorRow);
-		mockedGmailListHistory.mockRejectedValue(new Error('stale history'));
-		mockedIsHistoryCursorStale.mockReturnValue(true);
+		mockedGmailListHistory.mockRejectedValue(
+			new GmailApiError(404, 'stale history', {}, '/users/me/history')
+		);
 
 		const result = await syncMailboxHistory(makeTestEnv(), {
 			gmailUser: 'speaker@christophholz.com'
@@ -125,7 +134,6 @@ describe('history sync', () => {
 	it('marks sync_failed on non-stale sync failures', async () => {
 		mockedSelectOne.mockResolvedValue(cursorRow);
 		mockedGmailListHistory.mockRejectedValue(new Error('network error'));
-		mockedIsHistoryCursorStale.mockReturnValue(false);
 
 		const result = await syncMailboxHistory(makeTestEnv(), {
 			gmailUser: 'speaker@christophholz.com'
@@ -133,6 +141,74 @@ describe('history sync', () => {
 
 		expect(result.status).toBe('sync_failed');
 		expect(result.ok).toBe(false);
+	});
+
+	it('skips a history message that was deleted before fetch and advances the cursor', async () => {
+		mockedSelectOne.mockResolvedValue(cursorRow);
+		mockedGmailListHistory.mockResolvedValue({
+			historyId: '110',
+			history: [{ id: '105', messagesAdded: [{ message: { id: 'deleted-message' } }] }]
+		});
+		mockedGmailGetMessage.mockRejectedValue(
+			new GmailApiError(404, 'message not found', {}, '/users/me/messages/deleted-message')
+		);
+
+		const result = await syncMailboxHistory(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com'
+		});
+
+		expect(result).toMatchObject({
+			ok: true,
+			status: 'active',
+			processed_messages: 0,
+			last_history_id: '110'
+		});
+		expect(mockedUpdateMany).toHaveBeenLastCalledWith(
+			expect.any(Object),
+			'mailbox_cursors',
+			expect.any(URLSearchParams),
+			expect.objectContaining({
+				last_processed_history_id: '110',
+				sync_status: 'active'
+			})
+		);
+	});
+
+	it('backfills recent inbox messages across pages through the idempotent inbound processor', async () => {
+		mockedGmailListMessages
+			.mockResolvedValueOnce({
+				messages: [{ id: 'm1', threadId: 't1' }],
+				nextPageToken: 'page-2'
+			})
+			.mockResolvedValueOnce({
+				messages: [{ id: 'm2', threadId: 't2' }]
+			});
+		mockedGmailGetMessage
+			.mockResolvedValueOnce({ id: 'm1', threadId: 't1' } as never)
+			.mockResolvedValueOnce({ id: 'm2', threadId: 't2' } as never);
+		mockedNormalizeGmailMessage.mockReturnValue({ direction: 'inbound' } as never);
+		mockedProcessInboundGmailMessage
+			.mockResolvedValueOnce({ status: 'processed' } as never)
+			.mockResolvedValueOnce({ status: 'duplicate_ignored' } as never);
+
+		const processed = await recoverMailboxMessages(
+			makeTestEnv({ GMAIL_RECOVERY_LOOKBACK_DAYS: '14' }),
+			{ gmailUser: 'speaker@christophholz.com' }
+		);
+
+		expect(processed).toBe(1);
+		expect(mockedGmailListMessages).toHaveBeenNthCalledWith(1, expect.any(Object), {
+			gmailUser: 'speaker@christophholz.com',
+			query: 'newer_than:14d',
+			labelIds: ['INBOX'],
+			pageToken: undefined
+		});
+		expect(mockedGmailListMessages).toHaveBeenNthCalledWith(2, expect.any(Object), {
+			gmailUser: 'speaker@christophholz.com',
+			query: 'newer_than:14d',
+			labelIds: ['INBOX'],
+			pageToken: 'page-2'
+		});
 	});
 
 	it('touchMailboxPush returns null when cursor missing and no history id', async () => {

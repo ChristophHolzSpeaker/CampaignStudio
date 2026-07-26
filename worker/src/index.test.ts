@@ -66,6 +66,11 @@ const mockedHandleTelegramNotification = vi.mocked(handleTelegramNotification);
 const mockedHandleWoodyEmailNotification = vi.mocked(handleWoodyEmailNotification);
 
 describe('worker scheduled handler', () => {
+	beforeEach(() => {
+		mockedRenewGmailWatches.mockReset();
+		mockedReconcileMailboxHealth.mockReset();
+	});
+
 	it('runs watch renewal and mailbox reconciliation in waitUntil', async () => {
 		mockedRenewGmailWatches.mockResolvedValue([]);
 		mockedReconcileMailboxHealth.mockResolvedValue([]);
@@ -83,6 +88,33 @@ describe('worker scheduled handler', () => {
 		await task;
 
 		expect(mockedRenewGmailWatches).toHaveBeenCalledTimes(1);
+		expect(mockedReconcileMailboxHealth).toHaveBeenCalledTimes(1);
+	});
+
+	it('finishes watch renewal before mailbox reconciliation starts', async () => {
+		let resolveRenewal: ((value: []) => void) | undefined;
+		mockedRenewGmailWatches.mockReturnValue(
+			new Promise<[]>((resolve) => {
+				resolveRenewal = resolve;
+			})
+		);
+		mockedReconcileMailboxHealth.mockResolvedValue([]);
+
+		const { ctx, waitUntilMock } = makeTestExecutionContext();
+		const event: WorkerScheduledEvent = {
+			cron: '*/15 * * * *',
+			scheduledTime: Date.now()
+		};
+
+		await worker.scheduled(event, makeTestEnv(), ctx);
+		const task = waitUntilMock.mock.calls[0]?.[0];
+		await Promise.resolve();
+
+		expect(mockedReconcileMailboxHealth).not.toHaveBeenCalled();
+
+		resolveRenewal?.([]);
+		await task;
+
 		expect(mockedReconcileMailboxHealth).toHaveBeenCalledTimes(1);
 	});
 });

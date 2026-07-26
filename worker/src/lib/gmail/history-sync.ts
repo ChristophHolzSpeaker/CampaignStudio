@@ -4,6 +4,8 @@ import { GoogleAuthError } from '../google-auth/errors';
 import {
 	gmailGetMessage,
 	gmailListHistory,
+	gmailListMessages,
+	isGmailMessageMissing,
 	isHistoryCursorStale,
 	type GmailMessage
 } from './client';
@@ -15,6 +17,7 @@ export type MailboxCursorRow = {
 	gmail_user: string;
 	last_processed_history_id: string;
 	watch_expiration: string;
+	last_watch_renewed_at?: string | null;
 	last_push_received_at: string | null;
 	last_sync_at: string | null;
 	sync_status: string;
@@ -26,6 +29,8 @@ type SyncOutcome = {
 	processed_messages: number;
 	last_history_id: string;
 };
+
+const DEFAULT_RECOVERY_LOOKBACK_DAYS = 30;
 
 function compareHistoryIds(left: string, right: string): number {
 	try {
@@ -59,17 +64,25 @@ async function updateCursor(
 	await updateMany(env, 'mailbox_cursors', query, values);
 }
 
-async function getMailboxCursor(
+export async function getMailboxCursor(
 	env: WorkerEnv,
 	gmailUser: string
 ): Promise<MailboxCursorRow | null> {
 	const query = new URLSearchParams({
 		select:
-			'id,gmail_user,last_processed_history_id,watch_expiration,last_push_received_at,last_sync_at,sync_status',
+			'id,gmail_user,last_processed_history_id,watch_expiration,last_watch_renewed_at,last_push_received_at,last_sync_at,sync_status',
 		gmail_user: `eq.${gmailUser}`,
 		limit: '1'
 	});
 	return selectOne<MailboxCursorRow>(env, 'mailbox_cursors', query);
+}
+
+function resolveRecoveryLookbackDays(env: WorkerEnv): number {
+	const parsed = Number(env.GMAIL_RECOVERY_LOOKBACK_DAYS);
+	if (!Number.isFinite(parsed) || parsed <= 0) {
+		return DEFAULT_RECOVERY_LOOKBACK_DAYS;
+	}
+	return Math.floor(parsed);
 }
 
 async function persistFetchedMessage(
@@ -137,6 +150,62 @@ async function collectHistoryMessageIds(
 	};
 }
 
+export async function recoverMailboxMessages(
+	env: WorkerEnv,
+	params: {
+		gmailUser: string;
+	}
+): Promise<number> {
+	const lookbackDays = resolveRecoveryLookbackDays(env);
+	let nextPageToken: string | undefined;
+	let processed = 0;
+
+	do {
+		const response = await gmailListMessages(env, {
+			gmailUser: params.gmailUser,
+			query: `newer_than:${lookbackDays}d`,
+			labelIds: ['INBOX'],
+			pageToken: nextPageToken
+		});
+
+		for (const message of response.messages ?? []) {
+			if (!message.id) {
+				continue;
+			}
+
+			try {
+				const gmailMessage = await gmailGetMessage(env, {
+					gmailUser: params.gmailUser,
+					messageId: message.id
+				});
+				if (await persistFetchedMessage(env, params.gmailUser, gmailMessage)) {
+					processed += 1;
+				}
+			} catch (error) {
+				if (!isGmailMessageMissing(error)) {
+					throw error;
+				}
+
+				console.warn('gmail_recovery_message_missing', {
+					gmail_user: params.gmailUser,
+					message_id: message.id,
+					action: 'skipped'
+				});
+			}
+		}
+
+		nextPageToken = response.nextPageToken;
+	} while (nextPageToken);
+
+	console.log('gmail_recovery_backfill_completed', {
+		gmail_user: params.gmailUser,
+		lookback_days: lookbackDays,
+		processed_messages: processed
+	});
+
+	return processed;
+}
+
 export async function syncMailboxHistory(
 	env: WorkerEnv,
 	params: {
@@ -157,13 +226,25 @@ export async function syncMailboxHistory(
 		let processed = 0;
 
 		for (const messageId of historyResult.messageIds) {
-			const gmailMessage = await gmailGetMessage(env, {
-				gmailUser: params.gmailUser,
-				messageId
-			});
-			const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
-			if (inserted) {
-				processed += 1;
+			try {
+				const gmailMessage = await gmailGetMessage(env, {
+					gmailUser: params.gmailUser,
+					messageId
+				});
+				const inserted = await persistFetchedMessage(env, params.gmailUser, gmailMessage);
+				if (inserted) {
+					processed += 1;
+				}
+			} catch (error) {
+				if (!isGmailMessageMissing(error)) {
+					throw error;
+				}
+
+				console.warn('gmail_history_message_missing', {
+					gmail_user: params.gmailUser,
+					message_id: messageId,
+					action: 'skipped'
+				});
 			}
 		}
 
@@ -267,7 +348,7 @@ export async function touchMailboxPush(
 export async function listMailboxCursors(env: WorkerEnv): Promise<MailboxCursorRow[]> {
 	const query = new URLSearchParams({
 		select:
-			'id,gmail_user,last_processed_history_id,watch_expiration,last_push_received_at,last_sync_at,sync_status',
+			'id,gmail_user,last_processed_history_id,watch_expiration,last_watch_renewed_at,last_push_received_at,last_sync_at,sync_status',
 		order: 'gmail_user.asc'
 	});
 	return selectMany<MailboxCursorRow>(env, 'mailbox_cursors', query);

@@ -58,6 +58,7 @@ type RunAutoresponseInput = {
 	inbound_provider_thread_id: string;
 	sender_name: string | null;
 	sender_email: string;
+	reply_from_email: string;
 	inbound_subject: string;
 	inbound_body: string;
 	raw_metadata: Record<string, unknown>;
@@ -399,6 +400,7 @@ export async function runAutoresponsePipeline(
 		const sendResult = await sendOutboundEmail(env, {
 			leadJourneyId: input.lead_journey_id,
 			gmailUser: requireEnv(env, 'GOOGLE_IMPERSONATED_USER'),
+			fromEmail: input.reply_from_email,
 			to: [input.sender_email],
 			subject: woodyResult.subject,
 			bodyText: woodyResult.body_text,

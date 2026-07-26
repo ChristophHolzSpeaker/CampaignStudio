@@ -17,6 +17,7 @@ import {
 	gmailSendMessage,
 	gmailStop,
 	gmailWatch,
+	isGmailMessageMissing,
 	isHistoryCursorStale
 } from './client';
 
@@ -238,13 +239,40 @@ describe('gmail client', () => {
 	});
 
 	it('detects stale history cursor correctly', () => {
-		expect(isHistoryCursorStale(new GmailApiError(404, 'not found', {}))).toBe(true);
-		expect(
-			isHistoryCursorStale(new GmailApiError(400, 'bad request', { error: 'historyId is stale' }))
-		).toBe(true);
-		expect(isHistoryCursorStale(new GmailApiError(400, 'bad request', { error: 'other' }))).toBe(
-			false
+		expect(isHistoryCursorStale(new GmailApiError(404, 'not found', {}, '/users/me/history'))).toBe(
+			true
 		);
+		expect(
+			isHistoryCursorStale(
+				new GmailApiError(400, 'bad request', { error: 'historyId is stale' }, '/users/me/history')
+			)
+		).toBe(true);
+		expect(
+			isHistoryCursorStale(
+				new GmailApiError(404, 'message not found', {}, '/users/me/messages/message_1')
+			)
+		).toBe(false);
+		expect(
+			isHistoryCursorStale(
+				new GmailApiError(400, 'bad request', { error: 'other' }, '/users/me/history')
+			)
+		).toBe(false);
 		expect(isHistoryCursorStale(new Error('plain'))).toBe(false);
+	});
+
+	it('detects a message that disappeared after history listing', () => {
+		expect(
+			isGmailMessageMissing(
+				new GmailApiError(404, 'message not found', {}, '/users/me/messages/message_1')
+			)
+		).toBe(true);
+		expect(
+			isGmailMessageMissing(new GmailApiError(404, 'history not found', {}, '/users/me/history'))
+		).toBe(false);
+		expect(
+			isGmailMessageMissing(
+				new GmailApiError(500, 'message request failed', {}, '/users/me/messages/message_1')
+			)
+		).toBe(false);
 	});
 });
