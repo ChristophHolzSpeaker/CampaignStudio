@@ -397,7 +397,7 @@ export async function processInboundGmailMessage(
 			classification_confidence: null,
 			auto_response_decision: null,
 			eligible_for_autoresponse: false,
-			skipped_reason: 'recipient_speakercr',
+			skipped_reason: recipientRoute.skipped_reason,
 			autoresponse_status: null,
 			autoresponse_outbound_lead_message_id: null,
 			autoresponse_provider_message_id: null,

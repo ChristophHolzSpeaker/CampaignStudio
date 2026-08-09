@@ -3,7 +3,8 @@ export const SPEAKER_EMAIL = {
 	primary: 'speaker@christophholz.com',
 	campaignStudio: 'speakerlp@christophholz.com',
 	webflow: 'speakerwp@christophholz.com',
-	crm: 'speakercr@christophholz.com'
+	crm: 'speakercr@christophholz.com',
+	keynote: 'keynote@christophholz.com'
 } as const;
 
 export const MANAGED_SPEAKER_SENDERS = [

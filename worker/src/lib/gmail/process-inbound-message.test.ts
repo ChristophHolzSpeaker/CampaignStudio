@@ -135,6 +135,27 @@ describe('processInboundGmailMessage', () => {
 		expect(mockedGmailModifyMessage).not.toHaveBeenCalled();
 	});
 
+	it('ignores primary speaker mailbox messages before Woody can respond', async () => {
+		mockedNormalizeGmailMessage.mockReturnValue({
+			...sampleNormalizedInbound(),
+			to_email: 'speaker@christophholz.com',
+			to_recipients: ['speaker@christophholz.com']
+		});
+
+		const result = await processInboundGmailMessage(makeTestEnv(), {
+			gmailUser: 'speaker@christophholz.com',
+			gmailMessage: { id: 'msg_1', threadId: 'thread_1' }
+		} as never);
+
+		expect(result.status).toBe('recipient_ignored');
+		expect(result.skipped_reason).toBe('recipient_speaker');
+		expect(mockedResolveInboundJourney).not.toHaveBeenCalled();
+		expect(mockedClassifyInboundMessage).not.toHaveBeenCalled();
+		expect(mockedRunAutoresponsePipeline).not.toHaveBeenCalled();
+		expect(mockedUpsertOne).not.toHaveBeenCalled();
+		expect(mockedGmailModifyMessage).not.toHaveBeenCalled();
+	});
+
 	it('returns invalid_message when normalization fails', async () => {
 		mockedNormalizeGmailMessage.mockReturnValue(null);
 

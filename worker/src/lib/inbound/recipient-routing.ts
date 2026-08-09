@@ -13,6 +13,7 @@ export type InboundRecipientRoute =
 	| {
 			action: 'ignore';
 			reply_from_email: null;
+			skipped_reason: 'recipient_speaker' | 'recipient_speakercr' | 'recipient_keynote';
 	  };
 
 function withoutPlusToken(email: string): string {
@@ -38,15 +39,32 @@ export function isManagedSpeakerSender(email: string, gmailUser: string): boolea
 }
 
 export function resolveInboundRecipientRoute(toRecipients: string[]): InboundRecipientRoute {
-	const baseRecipients = toRecipients
+	const normalizedRecipients = toRecipients
 		.map((recipient) => normalizeEmailAddress(recipient))
-		.filter((recipient): recipient is string => recipient !== null)
-		.map(withoutPlusToken);
+		.filter((recipient): recipient is string => recipient !== null);
+	const baseRecipients = normalizedRecipients.map(withoutPlusToken);
+
+	if (normalizedRecipients.includes(SPEAKER_EMAIL.primary)) {
+		return {
+			action: 'ignore',
+			reply_from_email: null,
+			skipped_reason: 'recipient_speaker'
+		};
+	}
 
 	if (baseRecipients.includes(SPEAKER_EMAIL.crm)) {
 		return {
 			action: 'ignore',
-			reply_from_email: null
+			reply_from_email: null,
+			skipped_reason: 'recipient_speakercr'
+		};
+	}
+
+	if (baseRecipients.includes(SPEAKER_EMAIL.keynote)) {
+		return {
+			action: 'ignore',
+			reply_from_email: null,
+			skipped_reason: 'recipient_keynote'
 		};
 	}
 

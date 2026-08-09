@@ -3,7 +3,7 @@ import { isManagedSpeakerSender, resolveInboundRecipientRoute } from './recipien
 
 describe('resolveInboundRecipientRoute', () => {
 	it.each([
-		['speaker@christophholz.com', 'speaker@christophholz.com'],
+		['speaker+55@christophholz.com', 'speaker@christophholz.com'],
 		['speakerwp@christophholz.com', 'speakerwp@christophholz.com'],
 		['speakerlp@christophholz.com', 'speakerlp@christophholz.com'],
 		['speakerlp+55@christophholz.com', 'speakerlp@christophholz.com']
@@ -14,21 +14,30 @@ describe('resolveInboundRecipientRoute', () => {
 		});
 	});
 
-	it('ignores messages addressed to the CRM alias', () => {
-		expect(resolveInboundRecipientRoute(['speakercr@christophholz.com'])).toEqual({
+	it('temporarily ignores messages addressed directly to the primary speaker mailbox', () => {
+		expect(resolveInboundRecipientRoute(['speaker@christophholz.com'])).toEqual({
 			action: 'ignore',
-			reply_from_email: null
+			reply_from_email: null,
+			skipped_reason: 'recipient_speaker'
 		});
 	});
 
-	it('gives the CRM ignore rule precedence over other recipients', () => {
-		expect(
-			resolveInboundRecipientRoute(['speaker@christophholz.com', 'speakercr@christophholz.com'])
-		).toEqual({
+	it('ignores messages addressed to the CRM alias', () => {
+		expect(resolveInboundRecipientRoute(['speakercr@christophholz.com'])).toEqual({
 			action: 'ignore',
-			reply_from_email: null
+			reply_from_email: null,
+			skipped_reason: 'recipient_speakercr'
 		});
 	});
+
+	it.each(['speaker@christophholz.com', 'speakercr@christophholz.com'])(
+		'gives the %s ignore rule precedence over allowed recipients',
+		(ignoredRecipient) => {
+			expect(
+				resolveInboundRecipientRoute(['speakerlp@christophholz.com', ignoredRecipient])
+			).toMatchObject({ action: 'ignore', reply_from_email: null });
+		}
+	);
 
 	it('recognizes configured aliases as senders from the watched mailbox', () => {
 		expect(isManagedSpeakerSender('speakerwp@christophholz.com', 'speaker@christophholz.com')).toBe(
