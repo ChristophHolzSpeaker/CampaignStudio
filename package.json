@@ -38,6 +38,7 @@
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^22",
+		"@types/sanitize-html": "^2.16.1",
 		"better-auth": "~1.4.21",
 		"drizzle-kit": "^0.31.8",
 		"drizzle-orm": "^0.45.1",
@@ -48,7 +49,6 @@
 		"supabase": "^2.109.1",
 		"svelte": "^5.54.0",
 		"svelte-check": "^4.4.2",
-		"tailwindcss": "^4.1.18",
 		"typescript": "^5.9.3",
 		"vite": "^7.3.1",
 		"vitest": "^4.1.4"
@@ -57,6 +57,8 @@
 		"@supabase/ssr": "^0.10.0",
 		"@supabase/supabase-js": "^2.101.0",
 		"@vercel/analytics": "^2.0.1",
+		"sanitize-html": "^2.17.7",
+		"tailwindcss": "^4.1.18",
 		"zod": "^4.3.6"
 	}
 }

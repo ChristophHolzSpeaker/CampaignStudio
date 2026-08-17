@@ -8,6 +8,7 @@ import ImmediateAuthorityHero from '$lib/components/page-sections/ImmediateAutho
 import KeynoteSpeeches from '$lib/components/page-sections/KeynoteSpeeches.svelte';
 import LogosOfTrustRibbon from '$lib/components/page-sections/LogosOfTrustRibbon.svelte';
 import ProofOfPerformanceSection from '$lib/components/page-sections/ProofOfPerformanceSection.svelte';
+import Raw from '$lib/components/page-sections/Raw.svelte';
 import SEO from '$lib/components/page-sections/SEO.svelte';
 import SpeakerInAction from '$lib/components/page-sections/SpeakerInAction.svelte';
 import YoutubeGrid from '$lib/components/page-sections/YoutubeGrid.svelte';
@@ -27,6 +28,7 @@ export type SectionRegistry = {
 };
 
 export const sectionComponentRegistry: SectionComponentRegistry = {
+	raw: Raw,
 	seo: SEO,
 	immediate_authority_hero: ImmediateAuthorityHero,
 	hero_large_email_cta: HeroLargeEmailCta,
@@ -42,6 +44,10 @@ export const sectionComponentRegistry: SectionComponentRegistry = {
 };
 
 export const sectionRegistry: SectionRegistry = {
+	raw: {
+		...sectionSpecs.raw,
+		component: sectionComponentRegistry.raw
+	},
 	seo: {
 		...sectionSpecs.seo,
 		component: sectionComponentRegistry.seo

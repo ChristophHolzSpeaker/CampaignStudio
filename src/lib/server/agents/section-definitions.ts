@@ -43,6 +43,14 @@ export type SectionDefinition = {
 };
 
 const baseDefinitions: Record<PageSectionType, Omit<SectionDefinition, 'schema'>> = {
+	raw: {
+		type: 'raw',
+		displayName: 'Raw HTML',
+		capabilities: [],
+		generation: { allowed: false },
+		editing: {},
+		media: { requirement: 'none' }
+	},
 	seo: {
 		type: 'seo',
 		displayName: 'SEO Metadata',
