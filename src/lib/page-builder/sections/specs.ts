@@ -10,11 +10,34 @@ import {
 	youtubeGridPropsSchema,
 	speakerInActionPropsSchema,
 	proofOfPerformancePropsSchema,
+	rawPropsSchema,
 	seoPropsSchema
 } from './schema';
 import type { PageSectionSpecMap } from './types';
 
 export const sectionSpecs: PageSectionSpecMap = {
+	raw: {
+		type: 'raw',
+		label: 'Raw HTML',
+		description:
+			'Trusted-agent authored HTML layout rendered inside a stable section boundary, with its Tailwind utility classes compiled by Campaign Studio when the page is saved.',
+		whenToUse: [
+			'Use through the authenticated campaign API when the predefined component library cannot express the intended layout.',
+			'Use for self-contained, presentation-only layouts authored by Christoph’s trusted Claude agent.',
+			'Use alongside existing predefined sections when only part of a page needs a bespoke layout.'
+		],
+		whenNotToUse: [
+			'Do not use for scripts, inline event handlers, embedded styles, objects, or other executable markup; these are removed before persistence.',
+			'Do not replace a predefined section when that component already satisfies the layout.',
+			'Do not supply tailwindCss; Campaign Studio derives it from props.html.'
+		],
+		contentGuidance: [
+			'Provide a unique, stable HTML id in props.id and the layout markup in props.html.',
+			'Use complete Tailwind class tokens in class attributes so the server can discover and compile them.',
+			'Keep links and accessible names explicit; sanitized HTML is rendered without Svelte behavior or arbitrary JavaScript.'
+		],
+		propsSchema: rawPropsSchema
+	},
 	seo: {
 		type: 'seo',
 		label: 'SEO Metadata',
