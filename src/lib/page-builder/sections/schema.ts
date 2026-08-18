@@ -8,6 +8,17 @@ export const ogTypeSchema = z.enum(['website', 'article']);
 export const twitterCardTypeSchema = z.enum(['summary', 'summary_large_image']);
 export const layoutOrientationsSchema = z.enum(['right', 'left']);
 
+export const rawPropsSchema = z.object({
+	id: z
+		.string()
+		.trim()
+		.min(1)
+		.max(128)
+		.regex(/^[A-Za-z][A-Za-z0-9_:.-]*$/, 'Must be a valid HTML id'),
+	html: z.string().trim().min(1).max(250_000),
+	tailwindCss: z.string().max(1_000_000).optional()
+});
+
 export const seoPropsSchema = z.object({
 	title: z.string().trim().min(1),
 	description: z.string().trim().min(1),
@@ -233,7 +244,13 @@ export const seoSectionSchema = z.object({
 	props: seoPropsSchema
 });
 
+export const rawSectionSchema = z.object({
+	type: z.literal('raw'),
+	props: rawPropsSchema
+});
+
 export const pageSectionSchema = z.discriminatedUnion('type', [
+	rawSectionSchema,
 	seoSectionSchema,
 	immediateAuthorityHeroSectionSchema,
 	heroLargeEmailCtaSectionSchema,
@@ -251,6 +268,7 @@ export const pageSectionSchema = z.discriminatedUnion('type', [
 export const pageSectionsSchema = z.array(pageSectionSchema).min(1);
 
 export type ImmediateAuthorityHeroSection = z.infer<typeof immediateAuthorityHeroSectionSchema>;
+export type RawSection = z.infer<typeof rawSectionSchema>;
 export type HeroLargeEmailCtaSection = z.infer<typeof heroLargeEmailCtaSectionSchema>;
 export type BookletDownloadCtaSection = z.infer<typeof bookletDownloadCtaSectionSchema>;
 export type LogosOfTrustRibbonSection = z.infer<typeof logosOfTrustRibbonSectionSchema>;

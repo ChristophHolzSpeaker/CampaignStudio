@@ -24,6 +24,7 @@ import {
 	failGenerationJob,
 	markGenerationJobStage
 } from '$lib/server/generation-jobs';
+import { prepareRawSectionsForPersistence } from '$lib/server/page-builder/raw-section';
 
 type DrizzleClient = typeof db | PostgresJsTransaction<any, any>;
 
@@ -53,6 +54,7 @@ export async function persistGeneratedLandingPage(
 	dbClient: DrizzleClient = db,
 	changeNote?: string
 ): Promise<{ campaignPageId: number }> {
+	const preparedPage = await prepareRawSectionsForPersistence(page);
 	const [latestVersion] = await dbClient
 		.select({ versionNumber: campaign_pages.version_number })
 		.from(campaign_pages)
@@ -61,7 +63,7 @@ export async function persistGeneratedLandingPage(
 		.limit(1);
 
 	const nextVersionNumber = (latestVersion?.versionNumber ?? 0) + 1;
-	const baseSlug = slugify(page.slug ?? page.title);
+	const baseSlug = slugify(preparedPage.slug ?? preparedPage.title);
 	const slug = `${baseSlug}-c${campaignId}-v${nextVersionNumber}`;
 
 	let createdPage:
@@ -76,7 +78,7 @@ export async function persistGeneratedLandingPage(
 			.values({
 				campaign_id: campaignId,
 				version_number: nextVersionNumber,
-				structured_content_json: page,
+				structured_content_json: preparedPage,
 				change_note: changeNote?.trim() || null,
 				slug,
 				is_published: false,
@@ -93,7 +95,7 @@ export async function persistGeneratedLandingPage(
 			.values({
 				campaign_id: campaignId,
 				version_number: nextVersionNumber,
-				structured_content_json: page,
+				structured_content_json: preparedPage,
 				slug,
 				is_published: false,
 				published_at: null
