@@ -21,8 +21,6 @@ import {
 	getCampaignAdPackageWithDetails,
 	getCampaignAdPackages
 } from './ads';
-import { parseLandingPageDocument } from '$lib/page-builder/page';
-import { persistGeneratedLandingPage } from '$lib/server/agents/landing-page-pipeline';
 
 export type CampaignStatus = 'draft' | 'published' | 'generated' | 'scheduled' | 'archived';
 
@@ -260,6 +258,11 @@ export async function duplicateCampaign(input: {
 
 		let duplicatedCampaignPageId: number | null = null;
 		if (latestCampaignPage) {
+			// Keep page-builder imports out of this module's initialization path. Public form
+			// remotes use getCampaignById, while the page builder imports the section registry.
+			const { parseLandingPageDocument } = await import('$lib/page-builder/page');
+			const { persistGeneratedLandingPage } =
+				await import('$lib/server/agents/landing-page-pipeline');
 			const parsedLandingPage = parseLandingPageDocument(latestCampaignPage.structuredContentJson);
 			const duplicatedLandingPage = await persistGeneratedLandingPage(
 				createdCampaign.id,
