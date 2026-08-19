@@ -10,4 +10,13 @@ describe('artifact runtime booking iframe', () => {
 		expect(source).not.toContain('allow-scripts allow-same-origin');
 		expect(source).not.toContain('iframe.sandbox');
 	});
+
+	it('reports artifact preview height to an embedding parent', async () => {
+		const response = await GET({} as never);
+		const source = await response.text();
+
+		expect(source).toContain("type: 'campaignstudio:embed-height'");
+		expect(source).toContain('new ResizeObserver(reportHeight)');
+		expect(source).toContain('context.preview && parent !== window');
+	});
 });

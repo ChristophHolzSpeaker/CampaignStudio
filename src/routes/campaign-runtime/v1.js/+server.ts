@@ -84,6 +84,21 @@ const runtimeSource = String.raw`(() => {
     const iframe = Array.from(document.querySelectorAll('iframe')).find((candidate) => candidate.contentWindow === event.source);
     if (iframe && Number.isFinite(event.data.height)) iframe.style.height = Math.max(320, Math.min(2000, event.data.height)) + 'px';
   });
+  if (context.preview && parent !== window) {
+    let lastHeight = 0;
+    const reportHeight = () => {
+      const height = Math.ceil(Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0));
+      if (height === lastHeight) return;
+      lastHeight = height;
+      parent.postMessage({
+        type: 'campaignstudio:embed-height', height,
+        slug: context.slug, campaignId: context.campaignId, campaignPageId: context.campaignPageId
+      }, '*');
+    };
+    new ResizeObserver(reportHeight).observe(document.documentElement);
+    addEventListener('load', reportHeight);
+    requestAnimationFrame(reportHeight);
+  }
 })();`;
 
 export const GET: RequestHandler = () =>

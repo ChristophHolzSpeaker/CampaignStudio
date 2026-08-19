@@ -2,9 +2,8 @@ import { desc } from 'drizzle-orm';
 import { parseLandingPageDocument, type LandingPageDocument } from '$lib/page-builder/page';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
-import { buildEmbedPreviewUrl } from './embed-token';
-import { createArtifactPreviewToken } from '$lib/server/artifacts/preview-token';
 import { buildLivePageUrl, type PageRendererType } from '$lib/page-url';
+import { buildPagePreviewUrl } from '$lib/server/page-preview-url';
 
 export type PublicCampaignPageNavItem = {
 	campaignPageId: number;
@@ -78,9 +77,6 @@ export async function listPublicCampaignNavItems(origin: string): Promise<Public
 			pageRow.rendererType === 'sections'
 				? parseLandingPageDocument(pageRow.structuredContentJson)
 				: null;
-		const artifactPreviewUrl = new URL(`/artifact-preview/${pageRow.id}`, origin);
-		if (pageRow.rendererType === 'artifact')
-			artifactPreviewUrl.searchParams.set('token', createArtifactPreviewToken(pageRow.id));
 		const navPage: PublicCampaignPageNavItem = {
 			campaignPageId: pageRow.id,
 			versionNumber: pageRow.versionNumber,
@@ -91,13 +87,11 @@ export async function listPublicCampaignNavItems(origin: string): Promise<Public
 			createdAt: pageRow.createdAt,
 			updatedAt: pageRow.updatedAt,
 			heroImageUrl: page ? getHeroImageUrl(page) : null,
-			embedUrl:
-				pageRow.rendererType === 'artifact'
-					? artifactPreviewUrl.href
-					: buildEmbedPreviewUrl(origin, {
-							campaignPageId: pageRow.id,
-							slug: pageRow.slug
-						}),
+			embedUrl: buildPagePreviewUrl(origin, {
+				campaignPageId: pageRow.id,
+				slug: pageRow.slug,
+				rendererType: pageRow.rendererType
+			}),
 			liveUrl: pageRow.isPublished
 				? buildLivePageUrl(origin, pageRow.slug, pageRow.rendererType)
 				: null,

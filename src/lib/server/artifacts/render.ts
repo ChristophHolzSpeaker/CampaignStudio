@@ -76,17 +76,18 @@ export function artifactResponseHeaders(
 	assetOrigin: string
 ): HeadersInit {
 	const publicAssetOrigin = normalizeCspOrigin(assetOrigin);
+	const frameAncestors = preview ? '*' : "'none'";
 	return {
 		'Content-Type': 'text/html; charset=utf-8',
 		'Cache-Control': preview
 			? 'private, no-store'
 			: 'public, s-maxage=60, stale-while-revalidate=300',
 		ETag: `"${page.contentSha256}-${page.runtimeVersion}-${ARTIFACT_RENDERER_REVISION}"`,
-		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'; form-action 'self'; frame-src 'self'; frame-ancestors 'none'`,
+		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'; form-action 'self'; frame-src 'self'; frame-ancestors ${frameAncestors}`,
 		'Referrer-Policy': 'strict-origin-when-cross-origin',
 		'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 		'X-Content-Type-Options': 'nosniff',
-		'X-Frame-Options': 'DENY',
+		...(preview ? {} : { 'X-Frame-Options': 'DENY' }),
 		...(preview ? { 'X-Robots-Tag': 'noindex, nofollow' } : {})
 	};
 }

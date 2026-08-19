@@ -7,6 +7,7 @@
 	import { saveHybridPrimaryVisualImage } from '$lib/components/page-sections/HybridContentSectionInlineEdit.remote';
 	import { saveImmediateAuthorityHeroImage } from '$lib/components/page-sections/ImmediateAuthorityHeroInlineEdit.remote';
 	import { getLandingPagePreview } from './landing-page.remote';
+	import { onMount } from 'svelte';
 
 	const campaignId = $derived(Number(page.params.id));
 	const selectedVersion = $derived.by(() => {
@@ -30,8 +31,33 @@
 			return false;
 		}
 
-		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
+		return (
+			viewData.rendererType === 'sections' &&
+			Boolean(viewData.campaignPageId) &&
+			viewData.campaignStatus !== 'published'
+		);
 	};
+
+	let artifactFrame = $state<HTMLIFrameElement | null>(null);
+	let artifactFrameHeight = $state(900);
+
+	onMount(() => {
+		const handleArtifactHeight = (event: MessageEvent) => {
+			if (
+				event.origin !== window.location.origin ||
+				event.source !== artifactFrame?.contentWindow ||
+				event.data?.type !== 'campaignstudio:embed-height' ||
+				!Number.isFinite(event.data.height)
+			) {
+				return;
+			}
+
+			artifactFrameHeight = Math.max(480, Math.min(10000, Math.ceil(event.data.height)));
+		};
+
+		window.addEventListener('message', handleArtifactHeight);
+		return () => window.removeEventListener('message', handleArtifactHeight);
+	});
 
 	async function refreshInlinePreview(): Promise<void> {
 		await previewQuery.refresh();
@@ -122,14 +148,24 @@
 	{@const viewData = getViewData()!}
 	<div class="landing-page-preview">
 		{#if canRenderSelectedPage()}
-			<PageRenderer
-				page={viewData.page}
-				campaignId={viewData.campaignId}
-				campaignPageId={viewData.campaignPageId}
-				editable={canEditPage()}
-				onInlineEditSaved={refreshInlinePreview}
-				disableScrollReveal={true}
-			/>
+			{#if viewData.rendererType === 'artifact' && viewData.campaignPageId}
+				<iframe
+					bind:this={artifactFrame}
+					title={`Artifact preview v${viewData.versionHistory.find((version) => version.id === viewData.campaignPageId)?.versionNumber ?? ''}`}
+					src={`/campaigns/${viewData.campaignId}/artifact-preview/${viewData.campaignPageId}`}
+					style:height={`${artifactFrameHeight}px`}
+					class="block w-full border-0 bg-white"
+				></iframe>
+			{:else}
+				<PageRenderer
+					page={viewData.page}
+					campaignId={viewData.campaignId}
+					campaignPageId={viewData.campaignPageId}
+					editable={canEditPage()}
+					onInlineEditSaved={refreshInlinePreview}
+					disableScrollReveal={true}
+				/>
+			{/if}
 		{:else}
 			<div class="p-6">
 				<div class="border border-[#fecaca] bg-[#fef2f2] p-4 text-[#7f1d1d]">

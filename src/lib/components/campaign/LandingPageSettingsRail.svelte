@@ -54,7 +54,11 @@
 	const canEditPage = () => {
 		const viewData = getViewData();
 		if (!viewData) return false;
-		return Boolean(viewData.campaignPageId) && viewData.campaignStatus !== 'published';
+		return (
+			viewData.rendererType === 'sections' &&
+			Boolean(viewData.campaignPageId) &&
+			viewData.campaignStatus !== 'published'
+		);
 	};
 
 	const canUseAiEditor = () => canEditPage() && canRenderSelectedPage() && isViewingLatestVersion();
@@ -68,6 +72,9 @@
 		const viewData = getViewData();
 		if (!viewData) return 'Loading landing page preview...';
 		if (!viewData.campaignPageId) return 'Open a campaign page version to use AI edits.';
+		if (viewData.rendererType === 'artifact') {
+			return 'Artifact pages are authored and uploaded through the artifact API. They are preview-only in Campaign Studio.';
+		}
 		if (!isViewingLatestVersion()) {
 			return 'You are previewing an older version. Switch to the latest version to use AI edits.';
 		}
@@ -85,7 +92,9 @@
 
 	const getCurrentLogoIds = () => {
 		const viewData = getViewData();
-		if (!viewData || !viewData.canRenderPage) return [] as string[];
+		if (!viewData || !viewData.canRenderPage || viewData.rendererType !== 'sections') {
+			return [] as string[];
+		}
 
 		const section = viewData.page.sections.find((item) => item.type === 'logos_of_trust_ribbon');
 		if (!section || !('logos' in section.props) || !Array.isArray(section.props.logos)) return [];
@@ -101,7 +110,9 @@
 
 	const getCurrentKeynoteIds = () => {
 		const viewData = getViewData();
-		if (!viewData || !viewData.canRenderPage) return [] as string[];
+		if (!viewData || !viewData.canRenderPage || viewData.rendererType !== 'sections') {
+			return [] as string[];
+		}
 
 		const section = viewData.page.sections.find((item) => item.type === 'keynote_speeches');
 		if (!section || !('keynoteIds' in section.props) || !Array.isArray(section.props.keynoteIds))
@@ -273,7 +284,7 @@
 						Version history
 					</p>
 					<p class="mt-1 mr-0 mb-0 ml-0 text-[0.78rem] text-[#4b5563]">
-						Preview and restore any previous generated version.
+						Preview every section or artifact page version.
 					</p>
 				</div>
 				<div class="grid max-h-[240px] overflow-auto">
@@ -290,6 +301,19 @@
 								<p class="m-0 text-[0.82rem] font-semibold text-[#0f172a]">
 									v{version.versionNumber}
 								</p>
+								<div class="mt-1 flex flex-wrap gap-1">
+									<span
+										class="bg-[#e2e8f0] px-1.5 py-0.5 text-[0.58rem] font-bold tracking-[0.05em] text-[#334155] uppercase"
+									>
+										{version.rendererType}
+									</span>
+									{#if version.isPublished}
+										<span
+											class="bg-[#dcfce7] px-1.5 py-0.5 text-[0.58rem] font-bold tracking-[0.05em] text-[#166534] uppercase"
+											>published</span
+										>
+									{/if}
+								</div>
 								<p class="mt-[0.1rem] mr-0 mb-0 ml-0 text-[0.74rem] text-[#64748b]">
 									{formatVersionDate(version.createdAt)}
 								</p>
@@ -417,7 +441,7 @@
 				</div>
 			</section>
 
-			{#if canRenderSelectedPage()}
+			{#if canRenderSelectedPage() && viewData.rendererType === 'sections'}
 				<aside class="border border-stone-200 bg-white" aria-label="Landing page logo picker">
 					<form
 						method="POST"
@@ -498,31 +522,33 @@
 			{/if}
 
 			<aside class="border border-stone-200 bg-white" aria-label="Landing page editor">
-				<form
-					method="POST"
-					use:enhance={handleEditSubmit}
-					action="?/retryGeneration"
-					class="flex flex-col gap-3 p-3.5"
-				>
-					<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
-						<p
-							class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
-						>
-							Manual generation retry
-						</p>
-						<p class="m-0 text-[0.78rem] text-[#4b5563]">
-							Use this when automatic retries were exhausted.
-						</p>
-					</div>
-					<button
-						type="submit"
-						disabled={!canEditPage() || busy}
-						class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
-						>{busy ? 'Retrying...' : 'Retry landing page generation'}</button
+				{#if viewData.rendererType === 'sections'}
+					<form
+						method="POST"
+						use:enhance={handleEditSubmit}
+						action="?/retryGeneration"
+						class="flex flex-col gap-3 p-3.5"
 					>
-				</form>
+						<div class="flex flex-col items-baseline justify-between gap-3 max-[900px]:items-start">
+							<p
+								class="m-0 font-['Space_Grotesk',sans-serif] text-[0.72rem] font-bold tracking-[0.08em] text-[#1f2937] uppercase"
+							>
+								Manual generation retry
+							</p>
+							<p class="m-0 text-[0.78rem] text-[#4b5563]">
+								Use this when automatic retries were exhausted.
+							</p>
+						</div>
+						<button
+							type="submit"
+							disabled={!canEditPage() || busy}
+							class="cursor-pointer self-end border border-[#0f172a] bg-[#0f172a] px-[0.9rem] py-[0.6rem] text-[0.78rem] font-bold tracking-[0.04em] text-white uppercase disabled:cursor-not-allowed disabled:opacity-[0.55] max-[900px]:justify-self-stretch"
+							>{busy ? 'Retrying...' : 'Retry landing page generation'}</button
+						>
+					</form>
+				{/if}
 
-				{#if canRenderSelectedPage() && isViewingLatestVersion()}
+				{#if viewData.rendererType === 'sections' && canRenderSelectedPage() && isViewingLatestVersion()}
 					<!--Edit with AI panel fixed-->
 					<form
 						method="POST"

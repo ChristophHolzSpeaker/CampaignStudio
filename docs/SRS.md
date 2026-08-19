@@ -157,6 +157,10 @@ A public visitor can view a published page, interact with supported CTAs and for
 
 **FR-015** Existing page-version identifiers used by visits, lead events, email aliases, ad relationships, and reports shall remain valid during the incremental migration.
 
+**FR-016** Campaign Studio shall list every campaign regardless of whether its latest page uses the `sections` or `artifact` renderer and shall identify the latest renderer and page count.
+
+**FR-017** Campaign detail and page-version history shall expose renderer type, publication state, and a preview action for both renderer types.
+
 ### 6.3 Section renderer compatibility
 
 **FR-020** Existing `sections` pages shall continue to render through the current Svelte section registry at `/speaker/{slug}`.
@@ -222,6 +226,10 @@ A public visitor can view a published page, interact with supported CTAs and for
 **FR-056** Rollback shall publish an earlier immutable version without copying or mutating its contents.
 
 **FR-057** The public slug shall remain stable across version changes unless an authorized operation explicitly changes it.
+
+**FR-058** Campaign Studio shall render a finalized artifact version in its authenticated landing-page workspace without interpreting the artifact as section JSON or enabling section-specific editing controls.
+
+**FR-059** Public campaign navigation shall return a renderer-aware signed `embedUrl` for every previewable page version. Both section and artifact previews shall be frameable and report their document height through the documented embed message contract; canonical live artifact responses shall remain frame-protected.
 
 ### 6.7 Campaign Studio browser runtime
 
@@ -500,6 +508,8 @@ Deferred:
 **AC-016** The end-to-end workflow is documented and reliable enough for real internal use.
 
 **AC-017** The documented artifact-only create → upload → finalize → preview → publish workflow is executable using only response fields from prior steps and a campaign-write bearer token.
+
+**AC-018** An internal user can find an artifact campaign, inspect its versions, and preview a selected artifact in Campaign Studio; an external client can place the page's API-provided `embedUrl` in an iframe and receive resize messages.
 
 ---
 

@@ -14,7 +14,7 @@ import {
 import type { Actions } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { campaign_pages } from '$lib/server/db/schema';
-import { and, desc, eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 import { runCampaignRegenerationFromStrategyPrompt } from '$lib/server/agents/google-ads-pipeline';
 import { buildLivePageUrl } from '$lib/page-url';
 
@@ -46,6 +46,20 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	}
 
 	const visitMetrics = await getCampaignVisitMetricsByCampaignId(candidateId);
+	const campaignPages = await db
+		.select({
+			id: campaign_pages.id,
+			versionNumber: campaign_pages.version_number,
+			rendererType: campaign_pages.renderer_type,
+			slug: campaign_pages.slug,
+			isPublished: campaign_pages.is_published,
+			publishedAt: campaign_pages.published_at,
+			createdAt: campaign_pages.created_at,
+			changeNote: campaign_pages.change_note
+		})
+		.from(campaign_pages)
+		.where(eq(campaign_pages.campaign_id, candidateId))
+		.orderBy(desc(campaign_pages.version_number), desc(campaign_pages.id));
 
 	const adPackages = await getCampaignAdPackages(candidateId);
 	const latestPackage = adPackages.at(-1);
@@ -64,39 +78,21 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	const adGroupPageId = adGroups.find((group) => group.campaign_page_id)?.campaign_page_id ?? null;
 	let campaignPageId = adGroupPageId;
 	let campaignPageSlug: string | null = null;
-	const [publishedCampaignPage] = await db
-		.select({
-			id: campaign_pages.id,
-			slug: campaign_pages.slug,
-			rendererType: campaign_pages.renderer_type
-		})
-		.from(campaign_pages)
-		.where(and(eq(campaign_pages.campaign_id, candidateId), eq(campaign_pages.is_published, true)))
-		.orderBy(desc(campaign_pages.published_at), desc(campaign_pages.id))
-		.limit(1);
+	const publishedCampaignPage = campaignPages.find((page) => page.isPublished);
 
 	const liveLandingUrl = publishedCampaignPage?.slug
 		? buildLivePageUrl(url.origin, publishedCampaignPage.slug, publishedCampaignPage.rendererType)
 		: null;
 
 	if (campaignPageId) {
-		const [selectedCampaignPage] = await db
-			.select({ id: campaign_pages.id, slug: campaign_pages.slug })
-			.from(campaign_pages)
-			.where(eq(campaign_pages.id, campaignPageId))
-			.limit(1);
+		const selectedCampaignPage = campaignPages.find((page) => page.id === campaignPageId);
 
 		campaignPageId = selectedCampaignPage?.id ?? campaignPageId;
 		campaignPageSlug = selectedCampaignPage?.slug ?? null;
 	}
 
 	if (!campaignPageSlug) {
-		const [latestCampaignPage] = await db
-			.select({ id: campaign_pages.id, slug: campaign_pages.slug })
-			.from(campaign_pages)
-			.where(eq(campaign_pages.campaign_id, candidateId))
-			.orderBy(desc(campaign_pages.version_number))
-			.limit(1);
+		const latestCampaignPage = campaignPages[0];
 
 		campaignPageId = latestCampaignPage?.id ?? null;
 		campaignPageSlug = latestCampaignPage?.slug ?? null;
@@ -108,6 +104,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
 		adGroups,
 		adPackage,
 		campaignPageId,
+		campaignPages: campaignPages.map((page) => ({
+			...page,
+			previewUrl: `/campaigns/${candidateId}/landing-page?version=${page.id}`,
+			liveUrl: page.isPublished ? buildLivePageUrl(url.origin, page.slug, page.rendererType) : null
+		})),
 		liveLandingUrl
 	};
 };

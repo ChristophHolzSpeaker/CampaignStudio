@@ -45,4 +45,19 @@ describe('artifact response security headers', () => {
 		);
 		expect(html.indexOf('data-cs-platform-fonts')).toBeLessThan(html.indexOf('</head>'));
 	});
+
+	it('allows tokenized previews to be framed while keeping live pages frame-protected', () => {
+		const previewHeaders = new Headers(
+			artifactResponseHeaders(page, true, 'https://assets.example.com')
+		);
+		const liveHeaders = new Headers(
+			artifactResponseHeaders(page, false, 'https://assets.example.com')
+		);
+
+		expect(previewHeaders.get('content-security-policy')).toContain('frame-ancestors *');
+		expect(previewHeaders.has('x-frame-options')).toBe(false);
+		expect(previewHeaders.get('x-robots-tag')).toBe('noindex, nofollow');
+		expect(liveHeaders.get('content-security-policy')).toContain("frame-ancestors 'none'");
+		expect(liveHeaders.get('x-frame-options')).toBe('DENY');
+	});
 });

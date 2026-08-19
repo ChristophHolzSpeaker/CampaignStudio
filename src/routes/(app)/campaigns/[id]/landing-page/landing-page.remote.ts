@@ -8,6 +8,8 @@ import {
 	safeParseLandingPageDocument
 } from '$lib/page-builder/page';
 import { getCampaignById } from '$lib/server/campaigns/client';
+import { getArtifactPageById } from '$lib/server/artifacts/repository';
+import type { PageRendererType } from '$lib/page-url';
 import { asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -35,6 +37,8 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 		structuredContentJson: unknown;
 		campaignPageId: number;
 		versionNumber: number;
+		rendererType: PageRendererType;
+		isPublished: boolean;
 		changeNote: string | null;
 		slug: string;
 		createdAt: Date;
@@ -46,6 +50,8 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 				structuredContentJson: campaign_pages.structured_content_json,
 				campaignPageId: campaign_pages.id,
 				versionNumber: campaign_pages.version_number,
+				rendererType: campaign_pages.renderer_type,
+				isPublished: campaign_pages.is_published,
 				changeNote: campaign_pages.change_note,
 				slug: campaign_pages.slug,
 				createdAt: campaign_pages.created_at
@@ -64,6 +70,8 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 				structuredContentJson: campaign_pages.structured_content_json,
 				campaignPageId: campaign_pages.id,
 				versionNumber: campaign_pages.version_number,
+				rendererType: campaign_pages.renderer_type,
+				isPublished: campaign_pages.is_published,
 				slug: campaign_pages.slug,
 				createdAt: campaign_pages.created_at
 			})
@@ -85,7 +93,13 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 	let canRenderPage = true;
 	let renderErrorMessage: string | null = null;
 
-	if (selectedPageRecord) {
+	if (selectedPageRecord?.rendererType === 'artifact') {
+		const artifactPage = await getArtifactPageById(selectedPageRecord.campaignPageId);
+		if (!artifactPage || artifactPage.campaignId !== campaignId) {
+			canRenderPage = false;
+			renderErrorMessage = 'This artifact version is incomplete and is unable to render.';
+		}
+	} else if (selectedPageRecord) {
 		const parsedSelectedPage = safeParseLandingPageDocument(
 			selectedPageRecord.structuredContentJson
 		);
@@ -153,10 +167,13 @@ export const getLandingPagePreview = query(previewInputSchema, async ({ campaign
 		availableHeroImages: filteredHeroImages,
 		campaignId,
 		campaignPageId: selectedPageRecord?.campaignPageId ?? null,
+		rendererType: selectedPageRecord?.rendererType ?? 'sections',
 		latestCampaignPageId: latestPageRecord?.campaignPageId ?? null,
 		versionHistory: pageRecords.map((record) => ({
 			id: record.campaignPageId,
 			versionNumber: record.versionNumber,
+			rendererType: record.rendererType,
+			isPublished: record.isPublished,
 			changeNote: record.changeNote,
 			slug: record.slug,
 			createdAt: record.createdAt
