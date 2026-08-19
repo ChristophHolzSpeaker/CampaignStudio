@@ -198,18 +198,20 @@
 												class:mdi--publish-off={campaign.status === 'published'}
 											></span>{publishLabel(campaign.status)}</button
 										>
-										<div>
-											<input
-												type="text"
-												name="duplicate_name"
-												value={duplicateName(campaign.name)}
-												class="duplicate-name-input"
-												aria-label="Duplicated campaign name"
-											/>
-											<button type="submit" formaction="?/duplicate" class="btn">
-												<span class="material-symbols--content-copy relative top-1"></span> Duplicate
-											</button>
-										</div>
+										{#if campaign.latestRendererType !== 'artifact'}
+											<div>
+												<input
+													type="text"
+													name="duplicate_name"
+													value={duplicateName(campaign.name)}
+													class="duplicate-name-input"
+													aria-label="Duplicated campaign name"
+												/>
+												<button type="submit" formaction="?/duplicate" class="btn">
+													<span class="material-symbols--content-copy relative top-1"></span> Duplicate
+												</button>
+											</div>
+										{/if}
 									</div>
 								</form>
 							</td>

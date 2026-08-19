@@ -318,7 +318,8 @@ export const sectionSpecs: PageSectionSpecMap = {
 			'Ask for enough context to qualify the speaking request, especially event type, audience, date or timeframe, location, and desired topic.',
 			'Trust note and disclaimer should reduce uncertainty by explaining that the call helps confirm fit, scope, and next steps.',
 			'Avoid language like “book Christoph now”, “confirm Christoph’s availability”, or “secure your date” unless the wider flow has already confirmed those details.',
-			'CTA copy should focus on submitting or confirming the briefing request, not completing a booking.'
+			'CTA copy should focus on submitting or confirming the briefing request, not completing a booking.',
+			'Set props.formType to "form" for intake-only qualification before Woody sends a booking link; use "calendar" or omit it for the calendar booking sequence.'
 		],
 		propsSchema: frictionlessFunnelBookingPropsSchema
 	},

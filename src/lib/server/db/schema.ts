@@ -35,6 +35,14 @@ export const keynote_status = pgEnum('keynote_status', [
 	'archived',
 	'alt'
 ]);
+export const page_renderer_type = pgEnum('page_renderer_type', ['sections', 'artifact']);
+export const artifact_upload_status = pgEnum('artifact_upload_status', [
+	'pending',
+	'uploaded',
+	'finalizing',
+	'finalized',
+	'failed'
+]);
 
 export const campaigns = pgTable('campaigns', {
 	id: serial('id').primaryKey(),
@@ -68,7 +76,8 @@ export const campaign_pages = pgTable(
 			.notNull()
 			.references(() => campaigns.id),
 		version_number: integer('version_number').notNull().default(1),
-		structured_content_json: jsonb('structured_content_json').notNull(),
+		renderer_type: page_renderer_type('renderer_type').notNull().default('sections'),
+		structured_content_json: jsonb('structured_content_json'),
 		change_note: text('change_note'),
 		slug: text('slug').notNull(),
 		is_published: boolean('is_published').notNull().default(false),
@@ -80,6 +89,84 @@ export const campaign_pages = pgTable(
 		publishedSlugUniqueIdx: uniqueIndex('campaign_pages_published_slug_unique_idx')
 			.on(table.slug)
 			.where(sql`${table.is_published} = true`)
+	})
+);
+
+export const artifact_upload_sessions = pgTable(
+	'artifact_upload_sessions',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		campaign_id: integer('campaign_id')
+			.notNull()
+			.references(() => campaigns.id, { onDelete: 'cascade' }),
+		slug: text('slug').notNull(),
+		status: artifact_upload_status('status').notNull().default('pending'),
+		error_json: jsonb('error_json'),
+		finalized_campaign_page_id: integer('finalized_campaign_page_id').references(
+			() => campaign_pages.id,
+			{ onDelete: 'set null' }
+		),
+		created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+		expires_at: timestamp('expires_at', { withTimezone: true }).notNull()
+	},
+	(table) => ({
+		campaignIdx: index('artifact_upload_sessions_campaign_id_idx').on(table.campaign_id),
+		finalizedPageIdx: index('artifact_upload_sessions_finalized_page_id_idx').on(
+			table.finalized_campaign_page_id
+		),
+		statusExpiryIdx: index('artifact_upload_sessions_status_expires_idx').on(
+			table.status,
+			table.expires_at
+		)
+	})
+);
+
+export const artifact_upload_files = pgTable(
+	'artifact_upload_files',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		upload_session_id: uuid('upload_session_id')
+			.notNull()
+			.references(() => artifact_upload_sessions.id, { onDelete: 'cascade' }),
+		path: text('path').notNull(),
+		media_type: text('media_type').notNull(),
+		byte_size: integer('byte_size').notNull(),
+		sha256: text('sha256').notNull(),
+		storage_path: text('storage_path').notNull(),
+		created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => ({
+		sessionIdx: index('artifact_upload_files_session_id_idx').on(table.upload_session_id),
+		sessionPathUniqueIdx: uniqueIndex('artifact_upload_files_session_path_unique_idx').on(
+			table.upload_session_id,
+			table.path
+		)
+	})
+);
+
+export const page_artifacts = pgTable(
+	'page_artifacts',
+	{
+		id: uuid('id').primaryKey().defaultRandom(),
+		campaign_page_id: integer('campaign_page_id')
+			.notNull()
+			.references(() => campaign_pages.id, { onDelete: 'cascade' }),
+		source_bucket: text('source_bucket').notNull(),
+		source_path: text('source_path').notNull(),
+		asset_bucket: text('asset_bucket').notNull(),
+		asset_prefix: text('asset_prefix').notNull(),
+		entrypoint: text('entrypoint').notNull().default('index.html'),
+		manifest_json: jsonb('manifest_json').notNull(),
+		content_sha256: text('content_sha256').notNull(),
+		runtime_version: text('runtime_version').notNull().default('v1'),
+		created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => ({
+		campaignPageUniqueIdx: uniqueIndex('page_artifacts_campaign_page_id_unique_idx').on(
+			table.campaign_page_id
+		),
+		contentHashIdx: index('page_artifacts_content_sha256_idx').on(table.content_sha256)
 	})
 );
 

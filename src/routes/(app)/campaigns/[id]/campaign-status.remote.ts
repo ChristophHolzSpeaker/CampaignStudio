@@ -6,6 +6,7 @@ import { db } from '$lib/server/db';
 import { campaign_ad_groups, campaign_ad_packages, campaign_pages } from '$lib/server/db/schema';
 import { resolvePageCapabilities } from '$lib/server/agents/section-definitions';
 import { traceLlm } from '$lib/server/telemetry/llm-trace';
+import { publishArtifactPage } from '$lib/server/artifacts/repository';
 import { and, desc, eq } from 'drizzle-orm';
 
 function slugify(value: string): string {
@@ -147,7 +148,10 @@ export const publishCampaign = form('unchecked', async (rawData) => {
 
 		if (selectedCampaignPageId) {
 			const [selectedPageContent] = await db
-				.select({ structuredContentJson: campaign_pages.structured_content_json })
+				.select({
+					structuredContentJson: campaign_pages.structured_content_json,
+					rendererType: campaign_pages.renderer_type
+				})
 				.from(campaign_pages)
 				.where(
 					and(eq(campaign_pages.id, selectedCampaignPageId), eq(campaign_pages.campaign_id, id))
@@ -156,6 +160,15 @@ export const publishCampaign = form('unchecked', async (rawData) => {
 
 			if (!selectedPageContent) {
 				throw error(404, 'Campaign page not found');
+			}
+			if (selectedPageContent.rendererType === 'artifact') {
+				await publishArtifactPage(selectedCampaignPageId);
+				traceLlm(
+					'publish_action',
+					{ pipeline: 'artifact', campaignId: id },
+					{ action: 'artifact_page_published', selectedCampaignPageId }
+				);
+				return { success: true };
 			}
 
 			const parsedPage = parseLandingPageDocument(selectedPageContent.structuredContentJson);

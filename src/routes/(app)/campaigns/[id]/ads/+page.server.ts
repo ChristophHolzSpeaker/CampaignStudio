@@ -17,6 +17,7 @@ import { db } from '$lib/server/db';
 import { campaign_ad_groups, campaign_ad_packages, campaign_pages } from '$lib/server/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
 import { runCampaignRegenerationFromStrategyPrompt } from '$lib/server/agents/google-ads-pipeline';
+import { buildLivePageUrl } from '$lib/page-url';
 
 type StrategyUpdateFormState = {
 	values: {
@@ -145,14 +146,18 @@ export const load: PageServerLoad = async ({ params, url }) => {
 	let campaignPageId = adGroupPageId;
 	let campaignPageSlug: string | null = null;
 	const [publishedCampaignPage] = await db
-		.select({ id: campaign_pages.id, slug: campaign_pages.slug })
+		.select({
+			id: campaign_pages.id,
+			slug: campaign_pages.slug,
+			rendererType: campaign_pages.renderer_type
+		})
 		.from(campaign_pages)
 		.where(and(eq(campaign_pages.campaign_id, candidateId), eq(campaign_pages.is_published, true)))
 		.orderBy(desc(campaign_pages.published_at), desc(campaign_pages.id))
 		.limit(1);
 
 	const liveLandingUrl = publishedCampaignPage?.slug
-		? `${url.origin}/speaker/${publishedCampaignPage.slug}`
+		? buildLivePageUrl(url.origin, publishedCampaignPage.slug, publishedCampaignPage.rendererType)
 		: null;
 
 	if (campaignPageId) {

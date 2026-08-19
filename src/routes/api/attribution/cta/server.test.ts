@@ -9,21 +9,27 @@ vi.mock('$lib/server/attribution/campaign-visits', () => ({
 	resolveCampaignVisitId: vi.fn()
 }));
 
+vi.mock('$lib/server/attribution/campaign-context', () => ({
+	resolvePublishedCampaignPageContext: vi.fn()
+}));
+
 import { trackCTA } from '$lib/server/attribution/client';
 import {
 	readVisitorIdentifier,
 	resolveCampaignVisitId
 } from '$lib/server/attribution/campaign-visits';
+import { resolvePublishedCampaignPageContext } from '$lib/server/attribution/campaign-context';
 import { POST } from './+server';
 
 const mockedTrackCTA = vi.mocked(trackCTA);
 const mockedReadVisitorIdentifier = vi.mocked(readVisitorIdentifier);
 const mockedResolveCampaignVisitId = vi.mocked(resolveCampaignVisitId);
+const mockedResolvePublishedCampaignPageContext = vi.mocked(resolvePublishedCampaignPageContext);
 
 function requestWithBody(body: unknown): Request {
 	return new Request('http://localhost/api/attribution/cta', {
 		method: 'POST',
-		headers: { 'content-type': 'application/json' },
+		headers: { 'content-type': 'application/json', origin: 'http://localhost' },
 		body: JSON.stringify(body)
 	});
 }
@@ -35,6 +41,10 @@ describe('POST /api/attribution/cta', () => {
 		mockedResolveCampaignVisitId.mockReset();
 		mockedReadVisitorIdentifier.mockReturnValue('visitor-123');
 		mockedResolveCampaignVisitId.mockResolvedValue(77);
+		mockedResolvePublishedCampaignPageContext.mockResolvedValue({
+			campaignId: 10,
+			campaignPageId: 3
+		});
 	});
 
 	it('returns 400 for invalid CTA type', async () => {
