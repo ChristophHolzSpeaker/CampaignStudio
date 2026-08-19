@@ -4,6 +4,7 @@ type BookingFormSubmissionInput = {
 	flow:
 		| 'inline_lead_sequence'
 		| 'inline_lead_sequence_hero'
+		| 'inline_lead_intake'
 		| 'book_l_new'
 		| 'book_l_existing'
 		| 'book_g'
