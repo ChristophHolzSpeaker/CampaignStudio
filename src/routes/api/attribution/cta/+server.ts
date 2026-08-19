@@ -3,6 +3,8 @@ import {
 	readVisitorIdentifier,
 	resolveCampaignVisitId
 } from '$lib/server/attribution/campaign-visits';
+import { resolvePublishedCampaignPageContext } from '$lib/server/attribution/campaign-context';
+import { enforceSameOrigin, readLimitedJson } from '$lib/server/runtime/http';
 import { ctaTypes } from '../../../../../shared/event-types';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
@@ -22,15 +24,16 @@ const trackCtaRequestSchema = z.object({
 	cta_variant: z.string().trim().min(1).max(255).optional()
 });
 
-export const POST: RequestHandler = async ({ request, cookies }) => {
+export const POST: RequestHandler = async ({ request, cookies, url }) => {
+	const originError = enforceSameOrigin(request, url);
+	if (originError) return originError;
 	let payload: unknown;
 
 	try {
-		payload = await request.json();
+		payload = await readLimitedJson(request);
 	} catch {
 		return json({ ok: false, error: 'Invalid JSON payload' }, { status: 400 });
 	}
-
 	const parsed = trackCtaRequestSchema.safeParse(payload);
 	if (!parsed.success) {
 		return json(
@@ -41,6 +44,14 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
 			},
 			{ status: 400 }
 		);
+	}
+	if (
+		!(await resolvePublishedCampaignPageContext({
+			campaignId: parsed.data.campaign_id,
+			campaignPageId: parsed.data.campaign_page_id
+		}))
+	) {
+		return json({ ok: false, error: 'Published campaign page context not found' }, { status: 404 });
 	}
 
 	try {

@@ -3,6 +3,7 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/stati
 import { createServerClient } from '@supabase/ssr';
 import type { SetAllCookies } from '@supabase/ssr';
 import { redirect, type Handle } from '@sveltejs/kit';
+import { secureBookingWidgetResponse } from '$lib/server/runtime/booking-widget-csp';
 
 const isProtectedRoute = (routeId: string | null): boolean =>
 	typeof routeId === 'string' && routeId.startsWith('/(app)');
@@ -71,9 +72,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	return resolve(event, {
+	const response = await resolve(event, {
 		filterSerializedResponseHeaders(name: string) {
 			return name === 'content-range' || name === 'x-supabase-api-version';
 		}
 	});
+
+	return event.route.id === '/widgets/booking' ? secureBookingWidgetResponse(response) : response;
 };

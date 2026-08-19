@@ -1,653 +1,519 @@
 # Software Requirements Specification (SRS)
 
-## Project: Campaign Studio MVP
+## Project: Campaign Studio Artifact Runtime MVP
 
 ## Parent Initiative: Christoph Holz Speaker Management System
 
-## Version: 1.0
+## Version: 2.0
 
-## Status: Approved for MVP Build
+## Status: Approved Architecture Reframe for Incremental MVP Delivery
+
+## Last Updated: 2026-08-19
 
 ---
 
 ## 1. Purpose
 
-Campaign Studio MVP is the first implementation phase of Module 0 from the wider Speaker Management System SRS.
+Campaign Studio is a landing-page hosting, publishing, analytics, attribution, lead, and booking platform.
 
-Its purpose is to prove that the system can:
+Landing-page presentation may be authored outside Campaign Studio as a deployable artifact. Campaign Studio remains responsible for the platform behavior that makes each page operational, measurable, and manageable.
 
-1. accept structured campaign inputs,
-2. generate a targeted landing page using AI,
-3. publish that landing page to a public URL,
-4. track basic source and visit data,
-5. allow internal users to manage campaigns.
+The governing product principle is:
 
-This MVP is **not** the full production version of Module 0. It is a focused, usable first release intended to validate the workflow and support real campaign testing.
+> Campaign Studio should stop trying to control how every landing page looks. It should control what every landing page can do.
+
+The existing structured-section renderer remains supported because published production pages depend on it. The artifact renderer shall be introduced alongside it rather than replacing it.
 
 ---
 
 ## 2. MVP Goal
 
-Enable an internal user to complete the following end-to-end loop:
+Enable Christoph to use a local AI coding environment as a first-class authoring client and complete this loop:
 
-**Create campaign → Generate landing page → Publish page → Receive visits → View basic tracking data**
+**Create campaign → Author artifact externally → Upload → Preview → Publish → Receive visits and leads → View attribution and analytics → Roll back if required**
 
-Success for the MVP means this loop works reliably for real campaigns.
+The first milestone succeeds when one artifact-authored page can:
 
----
-
-## 3. Scope
-
-### In Scope
-
-- Internal campaign management app
-- Structured campaign intake
-- AI-generated landing page content
-- Structured page rendering using predefined components
-- One landing page per campaign for initial MVP release
-- Publish / unpublish workflow
-- Public page routes
-- Basic attribution capture
-- Basic visit logging
-- Basic campaign reporting
-- One curated speaker-page A/B experiment at a time
-- Internal authenticated access
-
-### Out of Scope
-
-- Multi-variant generation
-- General-purpose experiment authoring and multi-experiment orchestration
-- Advanced AI conversational editing UI
-- Full production-grade SEO engine
-- Full 100 percent attribution across all channels
-- Advanced analytics dashboards
-- Multi-tenant architecture
-- Sophisticated RBAC
-- Custom domains
-- Agency/external collaboration workflows
-- Automated briefing call booking integrations
-- CRM / HubSpot deal syncing
-- Production-grade email ingestion and signature parsing
+- coexist with every existing section-rendered page,
+- be uploaded, validated, previewed, and published,
+- load its immutable assets,
+- record a page visit and CTA click,
+- submit a lead through existing business rules,
+- retain existing attribution behavior,
+- expose the maintained booking experience,
+- be rolled back to an earlier version,
+- and appear in existing reporting.
 
 ---
 
-## 4. System Overview
+## 3. Product Boundaries
 
-Campaign Studio MVP consists of:
+### 3.1 Authoring responsibility
 
-1. **Internal App**
-   - authenticated interface for creating and managing campaigns
+The external authoring client owns page layout, content presentation, visual design, semantic HTML, CSS, media selection, and supported Campaign Studio runtime markup.
 
-2. **AI Generation Pipeline**
-   - takes structured campaign input and generates page content and page structure
+Campaign Studio shall not reconstruct artifact-authored pages from predefined section objects.
 
-3. **Page Renderer**
-   - renders generated structured data into predefined frontend components
+### 3.2 Platform responsibility
 
-4. **Publishing Layer**
-   - exposes public landing pages through a stable URL
+Campaign Studio owns campaign and page identity, renderer type, artifact validation and storage, preview, publishing, rollback, routing, the browser runtime contract, analytics, attribution, forms, lead capture, booking, email attribution, reporting, and platform security.
 
-5. **Tracking Layer**
-   - captures basic source/referrer/UTM data and logs visits
+### 3.3 Renderer types
 
-6. **Reporting View**
-   - displays basic campaign performance data
+Campaign Studio supports two renderer types:
+
+- `sections`: a validated structured document rendered through the existing Svelte section registry.
+- `artifact`: a validated external HTML/CSS/media artifact served as a complete HTML response and enhanced by the Campaign Studio browser runtime.
+
+Renderer type is page-version metadata and determines validation, preview, serving, and canonical live-URL behavior.
 
 ---
 
-## 5. Users
+## 4. Scope
+
+### 4.1 In Scope
+
+- Existing internal campaign management and authentication.
+- Backward-compatible operation of published section-rendered pages.
+- Authenticated artifact upload by an external authoring client.
+- Immutable artifact versions and server-generated manifests.
+- Tokenized preview of unpublished artifact versions.
+- Artifact publication at `/{slug}`.
+- Continued section-page publication at `/speaker/{slug}`.
+- Reserved public slug validation.
+- Renderer-aware preview and live URLs.
+- Supabase-backed page and artifact metadata.
+- Object storage for private artifact source and immutable public assets.
+- Automatic injection of a versioned Campaign Studio browser runtime.
+- Renderer-independent visit, engagement, CTA, form, lead, and conversion behavior.
+- A documented `data-cs-*` authoring contract.
+- A maintained Campaign Studio booking island.
+- Atomic publishing and rollback.
+- Existing attribution, email attribution, analytics, and reporting.
+- A deployment-oriented public interface for AI coding clients.
+- One live landing page per campaign for the first artifact milestone.
+- One curated experiment at a time on the legacy speaker route.
+
+### 4.2 Out of Scope
+
+- Migrating all existing section pages to artifacts.
+- Removing the section registry or `PageRenderer` while production pages use them.
+- Replacing SvelteKit, Vercel, Supabase, or Drizzle.
+- Rebuilding a visual drag-and-drop page editor.
+- Requiring Campaign Studio's AI generation pipeline for artifact pages.
+- Hosting arbitrary server-side code.
+- Unrestricted same-origin author-supplied JavaScript.
+- General-purpose static hosting for unrelated sites.
+- Multi-tenant architecture or sophisticated RBAC.
+- Custom domains in the first milestone.
+- General-purpose artifact-page A/B test authoring.
+- Multiple logical live landing pages per campaign.
+- Guaranteed cross-device attribution.
+- Full CRM/deal synchronization.
+
+---
+
+## 5. Users and Clients
 
 ### 5.1 Internal Admin User
 
-Primary MVP user.
+The internal admin can manage campaigns, inspect versions, preview, publish, unpublish, roll back, view analytics and attribution, inspect leads and bookings, and continue operating legacy section pages.
 
-Responsibilities:
+### 5.2 External Authoring Client
 
-- create campaigns
-- edit campaign metadata
-- generate landing pages
-- preview pages
-- publish/unpublish pages
-- view basic tracking/reporting
+An AI coding client can read the public authoring documentation and machine contracts without credentials. With the appropriate bearer scope, it can create or select a campaign, upload and finalize an artifact, obtain a preview URL, publish a version, receive its canonical URL, and inspect permitted analytics and leads.
 
-### 5.2 Public Visitor
+The client shall not require knowledge of Campaign Studio database tables, Svelte components, or internal server modules.
 
-Visitor arriving on a published landing page.
+### 5.3 Public Visitor
 
-Responsibilities:
-
-- view page
-- interact with CTA paths
-- generate trackable visit/session data
+A public visitor can view a published page, interact with supported CTAs and forms, use the booking experience, and participate in best-effort renderer-independent attribution.
 
 ---
 
 ## 6. Functional Requirements
 
-## 6.1 Authentication
+### 6.1 Authentication and authorization
 
-### FR-001
+**FR-001** The internal application shall require authentication.
 
-The system shall require authentication for access to the internal Campaign Studio app.
+**FR-002** Only authorized internal users or authoring clients shall create campaigns, upload artifacts, finalize versions, preview private versions, publish, unpublish, or roll back pages.
 
-### FR-002
+**FR-003** Published landing pages shall be publicly accessible without authentication.
 
-Only authenticated internal users shall be able to create, manage, generate, publish, or unpublish campaigns.
+**FR-004** Public authoring credentials shall have separate read/write scopes and rate limits.
 
-### FR-003
+### 6.2 Campaign and page versions
 
-Public landing pages shall remain accessible without authentication.
+**FR-010** An authorized user or client shall be able to create and inspect a campaign.
 
----
+**FR-011** A campaign shall contain name, audience, format, topic, language, geography, optional notes, and status.
 
-## 6.2 Campaign Management
+**FR-012** Every page version shall belong to exactly one campaign and declare exactly one renderer type.
 
-### FR-010
+**FR-013** Historical finalized page versions shall remain immutable after a newer version is published.
 
-The system shall allow an internal user to create a campaign.
+**FR-014** The first artifact milestone shall permit at most one published landing-page version per campaign.
 
-### FR-011
+**FR-015** Existing page-version identifiers used by visits, lead events, email aliases, ad relationships, and reports shall remain valid during the incremental migration.
 
-A campaign shall contain at minimum:
+### 6.3 Section renderer compatibility
 
-- campaign name
-- audience
-- format
-- topic
-- optional freeform notes or prompt instructions
-- status
+**FR-020** Existing `sections` pages shall continue to render through the current Svelte section registry at `/speaker/{slug}`.
 
-### FR-012
+**FR-021** Existing published section documents shall not require migration or data rewriting for the artifact milestone.
 
-The system shall allow the internal user to view a list of campaigns.
+**FR-022** Section documents shall continue to be schema-validated before persistence and publication.
 
-### FR-013
+**FR-023** Existing speaker-route SEO, experiment, attribution, CTA, form, and booking behavior shall remain operational unless separately changed.
 
-The system shall allow the internal user to open an existing campaign.
+**FR-024** The existing AI generation and editing workflow may continue producing `sections` versions but shall not be required for `artifact` versions.
 
-### FR-014
+### 6.4 Artifact ingestion and validation
 
-The system shall allow the internal user to edit campaign metadata before generation.
+**FR-030** The system shall accept an authenticated artifact upload containing one HTML entrypoint and referenced styles and assets.
 
-### FR-015
+**FR-031** A ZIP may be accepted as transport, but it shall be validated and extracted before the version becomes previewable.
 
-The system shall allow a campaign to exist in one of the following states:
+**FR-032** The system shall reject missing or multiple entrypoints, absolute archive paths, parent traversal, symlinks, duplicate normalized paths, prohibited executable content, unsupported media types, and configured count or size overages.
 
-- draft
-- generated
-- published
-- unpublished
-- archived
+**FR-033** The system shall generate a manifest containing each normalized path, media type, byte size, and integrity hash.
 
----
+**FR-034** Finalization shall succeed only when every referenced local asset resolves to a validated uploaded object.
 
-## 6.3 AI Content Generation
+**FR-035** Local asset references shall be normalized to immutable versioned URLs before preview or publication.
 
-### FR-020
+**FR-036** A finalized artifact and its asset objects shall be immutable.
 
-The system shall allow an internal user to trigger AI generation for a campaign.
+### 6.5 Public routing and rendering
 
-### FR-021
+**FR-040** Section pages shall retain canonical live URLs at `/speaker/{slug}`.
 
-The generation input shall include at minimum:
+**FR-041** Artifact pages shall have canonical live URLs at `/{slug}`.
 
-- audience
-- format
-- topic
-- optional freeform campaign notes
+**FR-042** The artifact route shall return a complete raw HTML response and shall not render uploaded HTML through a Svelte page or `{@html}`.
 
-### FR-022
+**FR-043** The artifact route shall resolve only a published `artifact` version whose owning campaign is published.
 
-The AI pipeline shall generate:
+**FR-044** Unknown, invalid, reserved, unpublished, or renderer-mismatched slugs shall not expose an artifact.
 
-- landing page content
-- structured page representation for rendering
-- metadata required for storage and preview
+**FR-045** Current application route namespaces and selected platform asset names shall be reserved from artifact publication.
 
-### FR-023
+**FR-046** Fixed application routes shall continue to take precedence over the root artifact route.
 
-The system shall save generated output to persistent storage.
+**FR-047** The internal app and public interfaces shall generate URLs according to renderer type.
 
-### FR-024
+**FR-048** Navigation from a Svelte page to an artifact document shall perform a full document navigation.
 
-The system shall support regeneration of campaign output.
+### 6.6 Preview, publishing, and rollback
 
-### FR-025
+**FR-050** An authorized user or client shall be able to preview an unpublished finalized artifact through a tokenized, non-indexable URL.
 
-The system shall preserve campaign ownership of generated outputs so that generated content is associated with the correct campaign.
+**FR-051** Publishing shall verify renderer content, artifact integrity, campaign ownership, and slug availability.
 
----
+**FR-052** Publishing shall atomically deactivate the previous version and activate the selected version.
 
-## 6.4 Structured Rendering
+**FR-053** A failed publish shall leave the previous version active.
 
-### FR-030
+**FR-054** An authorized user or client shall be able to unpublish a page.
 
-The system shall render generated page data using predefined frontend components.
+**FR-055** An unpublished page shall not remain accessible through its canonical public URL.
 
-### FR-031
+**FR-056** Rollback shall publish an earlier immutable version without copying or mutating its contents.
 
-The renderer shall support a fixed, controlled component library for MVP.
+**FR-057** The public slug shall remain stable across version changes unless an authorized operation explicitly changes it.
 
-### FR-032
+### 6.7 Campaign Studio browser runtime
 
-The generated page structure shall be validated before rendering.
+**FR-060** Campaign Studio shall provide a documented and versioned browser runtime for artifact pages.
 
-### FR-033
+**FR-061** The artifact renderer shall inject trusted public context and a pinned runtime version automatically.
 
-If generated structure is invalid, the system shall reject publishing and surface an internal error state.
+**FR-062** The runtime shall derive campaign, page-version, and slug identity only from server-injected context.
 
-### FR-034
+**FR-063** Runtime v1 shall recognize a documented subset of `data-cs-*` attributes for CTAs, lead forms, conversions, and supported widgets.
 
-The rendered page shall be previewable internally before publishing.
+**FR-064** Unknown attributes or values shall not create analytics semantics or invoke arbitrary platform behavior.
 
----
+**FR-065** Tracking or widget failure shall not prevent basic content and ordinary links from rendering.
 
-## 6.5 Prompt-Based Update Support
+### 6.8 Analytics and attribution
 
-### FR-040
+**FR-070** Both renderer types shall use the same visit, attribution, lead-event, and reporting models.
 
-The system shall support internal re-generation or update requests based on user prompt instructions.
+**FR-071** The runtime shall record page visits through a normal HTTP interface backed by existing campaign-visit behavior.
 
-### FR-041
+**FR-072** Visits shall capture, where available, campaign ID, page-version ID, slug, timestamp, visitor identifier, referrer, UTM parameters, user agent, and deployment geography.
 
-The system may support targeted updates to page content or section ordering if the generated structure remains valid.
+**FR-073** The runtime shall support the existing engagement threshold and best-effort engagement marking.
 
-### FR-042
+**FR-074** Supported CTA clicks shall use existing CTA event semantics.
 
-If targeted update logic is unstable or invalidates structure, the system may fall back to full regeneration.
+**FR-075** Visit ownership and trusted page context shall be resolved server-side before CTA, form, lead, or conversion events are recorded.
 
-### FR-043
+**FR-076** Existing email attribution and page-version email aliases shall remain compatible.
 
-The MVP does not require a polished conversational editing interface; prompt-based update can be initiated through a basic admin action.
+**FR-077** Artifact pages shall not automatically participate in speaker-route experiments.
 
----
+**FR-078** The artifact milestone shall not introduce a parallel artifact-only analytics system.
 
-## 6.6 Publishing
+### 6.9 Forms and lead capture
 
-### FR-050
+**FR-080** Artifact pages shall declare supported lead forms through the runtime markup contract.
 
-The system shall allow an internal user to publish a campaign page.
+**FR-081** The runtime shall submit supported forms through a renderer-independent HTTP interface.
 
-### FR-051
+**FR-082** HTTP and legacy Svelte form adapters shall invoke the same shared server-side lead-intake behavior.
 
-Publishing shall generate or activate a public URL for the campaign page.
+**FR-083** Lead processing shall retain validation, campaign/page verification, attribution, journey creation or matching, events, notification, qualification, and approved booking follow-up.
 
-### FR-052
+**FR-084** Form handling shall provide accessible pending, success, validation-error, and service-error states.
 
-The system shall allow an internal user to unpublish a campaign page.
+**FR-085** Public form endpoints shall enforce origin policy, request-size limits, schema validation, and rate limits.
 
-### FR-053
+### 6.10 Booking widget
 
-Unpublished pages shall not be accessible to the public.
+**FR-090** Artifact pages shall declare the maintained booking experience through a supported widget placeholder.
 
-### FR-054
+**FR-091** The initial widget shall be isolated from artifact CSS and author markup.
 
-The system shall allow internal preview of unpublished pages.
+**FR-092** The widget shall receive trusted campaign and page context through a short-lived signed token.
 
-### FR-055
+**FR-093** The widget shall reuse existing availability, policy, qualification, confirmation, attribution, notification, and calendar behavior.
 
-The system shall store published slug or route information.
+**FR-094** The widget shall exchange only documented lifecycle, resize, and completion messages with its parent.
 
----
+### 6.11 External authoring interface
 
-## 6.7 Public Landing Pages
+**FR-100** The public read-only interface shall expose a machine-readable contract describing bundle structure, upload limits, allowed media and markup, prohibited content, routing, fonts, form fields and validation, runtime attributes and behavior, widgets, lifecycle semantics, and contract version without exposing credentials or private campaign data.
 
-### FR-060
+**FR-101** The interface shall support creation of an artifact upload session for a campaign.
 
-Each published campaign shall have one public landing page URL for MVP.
+**FR-102** Upload and finalization shall be separate operations.
 
-### FR-061
+**FR-103** Successful finalization shall return an immutable version identifier and preview URL; failure shall return structured validation errors.
 
-Public pages shall render server-side or through a fast delivery path suitable for SEO-conscious landing pages.
+**FR-104** Publishing a finalized version shall return its canonical live URL.
 
-### FR-062
+**FR-105** The interface shall support listing versions and publishing an earlier version as rollback.
 
-Public pages shall include:
+**FR-106** The workflow shall not require clients to submit internal identifiers derivable from authenticated server state.
 
-- headline and supporting copy
-- page sections based on generated structure
-- at least one CTA path
-- campaign metadata where required for tracking
+**FR-107** The system shall publish a concise `/llms.txt` discovery index that links to the complete guide, OpenAPI document, and JSON authoring contract using absolute public URLs.
 
-### FR-063
+**FR-108** The system shall publish a complete LLM-readable Markdown guide covering authentication, artifact-only campaign creation, bundle authoring, supported platform markup, CTA tracking, lead forms, booking, fonts, upload, validation, preview, publish, rollback, unpublish, analytics, and error handling.
 
-The public page shall support at least the following CTA types in MVP:
+**FR-109** The complete OpenAPI 3.1 document and runtime-derived JSON authoring contract shall be publicly readable and cacheable. All state-changing, reporting, preview-listing, lead, and other private-data operations shall remain bearer-authenticated.
 
-- contact form CTA placeholder or form
-- external booking CTA link or placeholder
-- email CTA link or placeholder
+### 6.12 Reporting and legacy features
 
-### FR-064
+**FR-110** Reporting shall include section and artifact pages without duplicating metrics by renderer.
 
-Exact downstream integrations for booking and email handling may be stubbed or simplified in MVP, provided the CTA path is represented.
+**FR-111** Reporting shall identify campaign, live URL, renderer type, active version, visits, CTA activity, leads, and bookings where available.
 
----
+**FR-112** Historical section-page reporting shall remain intact.
 
-## 6.8 Tracking and Attribution
+**FR-120** Existing generation, section editing, preview, and selection features may be marked legacy but shall not be removed while production pages or active workflows depend on them.
 
-### FR-070
+**FR-121** Legacy authoring features shall not be extended merely to reproduce artifact authoring flexibility.
 
-The system shall capture available UTM parameters from public landing page visits.
-
-### FR-071
-
-The system shall capture available referrer data from public landing page visits.
-
-### FR-072
-
-The system shall log page visits associated with a campaign.
-
-### FR-073
-
-Visit records should include, where available:
-
-- campaign ID
-- page slug
-- timestamp
-- referrer
-- utm_source
-- utm_medium
-- utm_campaign
-- utm_term
-- utm_content
-
-### FR-074
-
-The system shall support basic attribution visibility at campaign level.
-
-### FR-075
-
-The MVP does not require guaranteed cross-device or cross-session attribution.
-
----
-
-## 6.9 Reporting
-
-### FR-080
-
-The system shall provide a basic reporting view for internal users.
-
-### FR-081
-
-The reporting view shall display at minimum:
-
-- campaign name
-- campaign status
-- page URL
-- visit count
-
-### FR-082
-
-The reporting view may additionally display simple grouped source data if available.
-
-### FR-083
-
-The MVP does not require advanced BI, charting, or funnel analytics.
+**FR-122** Retirement shall require evidence that no production page, attribution path, or required business workflow depends on the feature.
 
 ---
 
 ## 7. Non-Functional Requirements
 
-## 7.1 Performance
+### 7.1 Performance and caching
 
-### NFR-001
+**NFR-001** Published artifact HTML shall remain comfortably below Vercel's documented Function payload limit.
 
-Published pages should load quickly and minimize client-side JavaScript.
+**NFR-002** Large styles, fonts, images, scripts, and video shall be served directly from object storage or a CDN.
 
-### NFR-002
+**NFR-003** Published immutable assets shall use long-lived immutable caching.
 
-The public landing page response path should avoid unnecessary runtime database composition where possible.
+**NFR-004** Published HTML shall use bounded shared caching so publish and rollback take effect without an application rebuild.
 
-### NFR-003
+**NFR-005** Preview responses shall be private, non-indexable, and `no-store`.
 
-Tracking must not materially block page rendering.
+**NFR-006** Tracking and widget failure shall not materially block initial page rendering.
 
-### NFR-004
+**NFR-007** A database-selected artifact version shall not be build-time prerendered.
 
-The system should be designed so public pages are fast enough for paid campaign use and technically SEO-conscious usage.
+### 7.2 Reliability and atomicity
 
-### NFR-005
+**NFR-010** Campaign, version, artifact, manifest, and publication metadata shall persist reliably.
 
-Perfect Core Web Vitals are not required for MVP, but obvious performance regressions are unacceptable.
+**NFR-011** Finalization shall be idempotent for the same upload and content hash.
 
----
+**NFR-012** Partial or failed uploads shall never become publicly routable.
 
-## 7.2 Reliability
+**NFR-013** Publication and rollback shall be atomic with respect to the active version.
 
-### NFR-010
+**NFR-014** Immutable version objects shall not be overwritten.
 
-Campaign data and generated outputs must persist reliably.
+**NFR-015** Missing or invalid public artifact data shall produce a deliberate unavailable or 404 response.
 
-### NFR-011
+### 7.3 Security
 
-A failed AI generation attempt must not corrupt campaign state.
+**NFR-020** Public routes shall not expose admin behavior, private configuration, service credentials, raw prompts, or unpublished data.
 
-### NFR-012
+**NFR-021** Artifact HTML and manifests shall be treated as untrusted until validation succeeds.
 
-Publishing must only be allowed when required generated data exists and passes validation.
+**NFR-022** Extraction shall prevent traversal, symlink, duplicate-path, decompression-bomb, and type-confusion attacks.
 
----
+**NFR-023** Artifact responses shall define explicit Content Security Policy and related security headers.
 
-## 7.3 Security
+**NFR-024** Initial same-origin artifacts shall reject author JavaScript, inline event handlers, `javascript:` URLs, and unsafe executable embeds. The pinned Campaign Studio runtime shall provide supported behavior.
 
-### NFR-020
+**NFR-025** If unrestricted author JavaScript becomes required, artifact pages shall execute on a separate public origin that receives no admin authentication cookies.
 
-Internal app access must require authentication.
+**NFR-026** Runtime endpoints shall verify the published campaign/page relationship and shall not trust identity authored into artifact HTML.
 
-### NFR-021
+**NFR-027** Runtime context shall be serialized as inert data without script-context breakout.
 
-Public routes must not expose internal admin functionality.
+**NFR-028** Private source HTML and manifests shall not be publicly reachable through an uninstrumented storage URL.
 
-### NFR-022
+### 7.4 Maintainability
 
-The system must not expose raw internal prompts, secrets, or private configuration on public pages.
+**NFR-030** Renderer-specific route adapters shall remain separate from renderer-independent campaign, publishing, analytics, attribution, lead, and booking modules.
 
----
+**NFR-031** Svelte remote-function and HTTP adapters shall reuse shared server-side business behavior.
 
-## 7.4 Maintainability
+**NFR-032** The runtime authoring contract shall be small, documented, and versioned.
 
-### NFR-030
+**NFR-033** The first milestone shall favor incremental schema extension over broad migration of analytics and attribution identifiers.
 
-The MVP shall favor a simple architecture over premature extensibility.
-
-### NFR-031
-
-The component renderer shall use a constrained component set to limit rendering complexity.
-
-### NFR-032
-
-The data model should allow future extension into multi-variant generation and richer reporting without requiring total rewrite.
+**NFR-034** The Drizzle schema shall remain the database schema source of truth.
 
 ---
 
 ## 8. Technical Constraints
 
-### TC-001
+**TC-001** The application shall remain on SvelteKit and Svelte 5.
 
-Frontend application shall be built in SvelteKit.
+**TC-002** The SvelteKit application shall continue deploying through `@sveltejs/adapter-vercel` to Vercel.
 
-### TC-002
+**TC-003** Persistence shall use Supabase Postgres through Drizzle ORM.
 
-Backend persistence shall use Supabase Postgres.
+**TC-004** Artifact source and public immutable assets shall use durable object storage; Supabase Storage is the initial provider.
 
-### TC-003
+**TC-005** The artifact route shall be a SvelteKit server endpoint returning an HTML `Response`, not `{@html}`.
 
-Authentication may use Supabase Auth.
+**TC-006** AI authoring clients shall use public read-only documentation interfaces and authenticated server-side interfaces for state-changing or private-data operations.
 
-### TC-004
+**TC-007** API keys, storage credentials, signing keys, and service credentials shall remain server-side.
 
-Storage may use Supabase Storage if assets or generated artifacts require it.
-
-### TC-005
-
-Deployment target for the SvelteKit application is Vercel.
-
-### TC-006
-
-AI generation may be handled via server-side application logic and/or external model APIs.
-
-### TC-007
-
-The MVP should avoid infrastructure complexity unless directly necessary to support the core loop.
+**TC-008** The Cloudflare Worker email-attribution context shall remain compatible with page-version identifiers.
 
 ---
 
-## 9. Suggested Data Model
+## 9. Data Requirements
 
-This is a recommended MVP baseline, not a final schema.
+The exact migration remains an implementation decision, but the model shall support:
 
-## 9.1 campaigns
+### 9.1 Campaigns
 
-Fields:
+Stable identity, metadata, lifecycle status, timestamps, and creator identity where available.
 
-- id
-- name
-- audience
-- format
-- topic
-- notes
-- status
-- created_at
-- updated_at
-- created_by
+### 9.2 Page versions
 
-## 9.2 campaign_pages
+Campaign identity, version number, renderer type, renderer-specific content reference, change note, slug, publication state, and timestamps.
 
-Fields:
+For the incremental milestone, the existing `campaign_pages` row remains the page-version identity. Existing rows default to `sections`.
 
-- id
-- campaign_id
-- version_number
-- structured_content_json
-- rendered_snapshot_html (optional)
-- slug
-- is_published
-- published_at
-- created_at
-- updated_at
+### 9.3 Artifacts
 
-## 9.3 campaign_visits
+A one-to-one extension for artifact page versions containing private source location, public immutable asset prefix, entrypoint, server-generated manifest, content integrity hash, and timestamp.
 
-Fields:
+### 9.4 Visits and lead events
 
-- id
-- campaign_id
-- campaign_page_id
-- slug
-- visited_at
-- referrer
-- utm_source
-- utm_medium
-- utm_campaign
-- utm_term
-- utm_content
-- user_agent
-- ip_hash_or_session_identifier_if_used
+Existing records continue carrying campaign, page-version, visit, visitor, attribution, CTA, journey, and timestamp context.
 
-## 9.4 generation_jobs (optional but recommended)
+### 9.5 Deferred model deepening
 
-Fields:
-
-- id
-- campaign_id
-- status
-- input_payload
-- output_payload
-- error_message
-- created_at
-- completed_at
+A stable logical landing-page identity and explicit active-version pointer may be introduced when multiple logical pages per campaign are required. They are not required for the first artifact milestone.
 
 ---
 
-## 10. Assumptions
+## 10. Assumptions and Deferred Items
 
-- MVP is internal-admin driven, not self-serve for external clients
-- Only one campaign page output per campaign is required for initial release
-- Multi-variant workflows are deferred
-- SEO strategy at scale is deferred
-- Attribution is basic and best-effort, not absolute
-- Prompt-based surgical updates may fall back to full regeneration if needed
-- UI polish is secondary to workflow completion
+Assumptions:
 
----
+- Campaign Studio remains internal-admin driven.
+- Christoph's AI coding environment is the primary artifact authoring client.
+- Uploaded presentation is trusted in intent but validated as untrusted input.
+- One live page per campaign is sufficient for the first milestone.
+- Existing section pages remain production dependencies.
+- Analytics and attribution remain best-effort.
+- Artifact HTML remains visitor-invariant for shared caching.
+- Existing booking, notification, lead, email, and reporting behavior is reused.
 
-## 11. Exclusions and Deferred Items
+Deferred:
 
-Deferred to later phases:
-
-- multi-user RBAC
-- campaign collaboration workflows
-- advanced prompt editing UI
-- visual drag-and-drop editing
-- multi-page campaigns
-- full programmatic SEO rule engine
-- structured schema library at large scale
-- general-purpose split-testing platform
-- advanced source-to-conversion reporting
-- CRM and deal sync
-- booking platform integration depth
-- email ingestion and automatic lead extraction
-- production-grade marketing analytics stack
+- Multiple logical landing pages per campaign.
+- Custom domains.
+- Arbitrary author JavaScript on an isolated origin.
+- General artifact-page experiment authoring.
+- Automated optimization.
+- External collaboration workflows.
+- General-purpose visual editing.
+- Programmatic SEO at scale.
+- Cross-device identity resolution.
+- Full CRM synchronization.
+- Multi-tenant artifact hosting.
+- Complete retirement of section authoring and rendering.
 
 ---
 
-## 12. Acceptance Criteria
+## 11. Acceptance Criteria
 
-The MVP shall be considered complete when all of the following are true:
+**AC-001** Existing published `/speaker/{slug}` pages continue rendering without data migration.
 
-### AC-001
+**AC-002** A client can discover and retrieve the complete public authoring guide, OpenAPI document, and JSON authoring contract without credentials, then use authenticated operations to create or select a campaign.
 
-An internal authenticated user can create a campaign.
+**AC-003** The client can upload an artifact, and unsafe or invalid uploads are rejected before preview.
 
-### AC-002
+**AC-004** A successful upload finalizes as an immutable version with a server-generated manifest and integrity hash.
 
-A campaign can be submitted for AI generation.
+**AC-005** An authorized user or client can preview the version through a tokenized, non-indexable URL.
 
-### AC-003
+**AC-006** The artifact publishes atomically at `/{slug}` without changing `/speaker/{slug}` behavior.
 
-The generated output is saved and can be previewed.
+**AC-007** Local artifact assets resolve through immutable URLs and are not proxied through the HTML Function.
 
-### AC-004
+**AC-008** The artifact records a visit with available UTM and referrer data in the existing visit model.
 
-The generated page can be published to a public URL.
+**AC-009** A supported CTA records existing CTA semantics against the correct visit and page version.
 
-### AC-005
+**AC-010** A supported lead form invokes the same server behavior as the Svelte adapter and produces expected journeys, events, attribution, and notifications.
 
-The published page can be viewed publicly.
+**AC-011** The artifact mounts the maintained booking widget with signed page context.
 
-### AC-006
+**AC-012** Existing reporting includes the artifact without a second analytics implementation.
 
-Visits to the published page are logged with available UTM/referrer data.
+**AC-013** Publishing an earlier immutable version rolls back the canonical URL without mutating artifact objects.
 
-### AC-007
+**AC-014** Unpublishing removes the artifact from public access.
 
-The internal app displays a basic campaign list and basic visit counts.
+**AC-015** Reserved application route names cannot be published as artifact slugs.
 
-### AC-008
+**AC-016** The end-to-end workflow is documented and reliable enough for real internal use.
 
-A campaign can be unpublished and removed from public access.
-
-### AC-009
-
-The workflow from campaign creation to published page is reliable enough for real internal use.
+**AC-017** The documented artifact-only create → upload → finalize → preview → publish workflow is executable using only response fields from prior steps and a campaign-write bearer token.
 
 ---
 
-## 13. Delivery Principle
+## 12. Migration and Delivery Principle
 
-This MVP is intended to validate the commercial and technical viability of Campaign Studio.
+Delivery shall proceed through vertical slices:
 
-It is **not** intended to fulfill the full production ambition of Module 0 as described in the master SRS.
+1. Artifact identity, upload, validation, immutable storage, and preview.
+2. Raw root-route serving, asset normalization, caching, and security headers.
+3. Browser-runtime visit, engagement, and CTA behavior.
+4. Shared lead-intake behavior and artifact HTTP form adapter.
+5. Maintained booking island with signed context.
+6. External finalize/publish workflow and OpenAPI documentation.
 
-The MVP must prioritize:
+Each slice shall leave existing section-rendered production pages operational.
 
-- end-to-end usability
-- simplicity
-- speed of delivery
-- real-world testability
-
-over:
-
-- platform completeness
-- enterprise polish
-- feature breadth
+The system shall prioritize backward compatibility, controlled platform behavior, validated inputs, shared business modules, atomic lifecycle operations, and a small authoring contract over preserving Campaign Studio as the primary visual authoring environment or performing a broad rewrite before one artifact page proves the architecture.

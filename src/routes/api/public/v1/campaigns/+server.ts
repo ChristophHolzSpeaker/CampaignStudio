@@ -65,6 +65,20 @@ export const POST: RequestHandler = async ({ request, url }) => {
 
 	try {
 		const result = await createCampaignFromPublicApi(parsed.data);
+		if (result.rendererType === 'artifact') {
+			return publicApiJson(
+				{
+					ok: true,
+					data: {
+						campaignId: result.campaignId,
+						rendererType: result.rendererType,
+						campaignUrl: `/campaigns/${result.campaignId}`
+					}
+				},
+				guard.context,
+				{ status: 201 }
+			);
+		}
 		const embedUrl = buildEmbedPreviewUrl(url.origin, {
 			campaignPageId: result.campaignPageId,
 			slug: result.pageSlug
@@ -75,6 +89,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 				ok: true,
 				data: {
 					campaignId: result.campaignId,
+					rendererType: result.rendererType,
 					campaignPageId: result.campaignPageId,
 					pageSlug: result.pageSlug,
 					campaignUrl: `/campaigns/${result.campaignId}`,

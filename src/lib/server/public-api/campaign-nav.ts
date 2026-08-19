@@ -3,6 +3,8 @@ import { parseLandingPageDocument, type LandingPageDocument } from '$lib/page-bu
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
 import { buildEmbedPreviewUrl } from './embed-token';
+import { createArtifactPreviewToken } from '$lib/server/artifacts/preview-token';
+import { buildLivePageUrl, type PageRendererType } from '$lib/page-url';
 
 export type PublicCampaignPageNavItem = {
 	campaignPageId: number;
@@ -16,6 +18,7 @@ export type PublicCampaignPageNavItem = {
 	heroImageUrl: string | null;
 	embedUrl: string;
 	liveUrl: string | null;
+	rendererType: PageRendererType;
 };
 
 export type PublicCampaignNavItem = {
@@ -57,6 +60,7 @@ export async function listPublicCampaignNavItems(origin: string): Promise<Public
 				campaignId: campaign_pages.campaign_id,
 				versionNumber: campaign_pages.version_number,
 				structuredContentJson: campaign_pages.structured_content_json,
+				rendererType: campaign_pages.renderer_type,
 				slug: campaign_pages.slug,
 				isPublished: campaign_pages.is_published,
 				publishedAt: campaign_pages.published_at,
@@ -70,22 +74,34 @@ export async function listPublicCampaignNavItems(origin: string): Promise<Public
 	const pagesByCampaignId = new Map<number, PublicCampaignPageNavItem[]>();
 
 	for (const pageRow of pageRows) {
-		const page = parseLandingPageDocument(pageRow.structuredContentJson);
+		const page =
+			pageRow.rendererType === 'sections'
+				? parseLandingPageDocument(pageRow.structuredContentJson)
+				: null;
+		const artifactPreviewUrl = new URL(`/artifact-preview/${pageRow.id}`, origin);
+		if (pageRow.rendererType === 'artifact')
+			artifactPreviewUrl.searchParams.set('token', createArtifactPreviewToken(pageRow.id));
 		const navPage: PublicCampaignPageNavItem = {
 			campaignPageId: pageRow.id,
 			versionNumber: pageRow.versionNumber,
-			title: page.title,
+			title: page?.title ?? pageRow.slug,
 			slug: pageRow.slug,
 			isPublished: pageRow.isPublished,
 			publishedAt: pageRow.publishedAt,
 			createdAt: pageRow.createdAt,
 			updatedAt: pageRow.updatedAt,
-			heroImageUrl: getHeroImageUrl(page),
-			embedUrl: buildEmbedPreviewUrl(origin, {
-				campaignPageId: pageRow.id,
-				slug: pageRow.slug
-			}),
-			liveUrl: pageRow.isPublished ? new URL(`/speaker/${pageRow.slug}`, origin).href : null
+			heroImageUrl: page ? getHeroImageUrl(page) : null,
+			embedUrl:
+				pageRow.rendererType === 'artifact'
+					? artifactPreviewUrl.href
+					: buildEmbedPreviewUrl(origin, {
+							campaignPageId: pageRow.id,
+							slug: pageRow.slug
+						}),
+			liveUrl: pageRow.isPublished
+				? buildLivePageUrl(origin, pageRow.slug, pageRow.rendererType)
+				: null,
+			rendererType: pageRow.rendererType
 		};
 
 		const existingPages = pagesByCampaignId.get(pageRow.campaignId) ?? [];
