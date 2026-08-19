@@ -153,6 +153,8 @@ export const proofOfPerformancePropsSchema = z.object({
 
 export const introQuestionTypeSchema = z.enum(['text', 'email', 'tel', 'textarea', 'select']);
 
+export const ctaFormTypeSchema = z.enum(['calendar', 'form']).nullable().optional();
+
 export const introQuestionItemSchema = z.object({
 	id: z.string().trim().min(1),
 	label: z.string().trim().min(1),
@@ -167,7 +169,8 @@ export const frictionlessFunnelBookingPropsSchema = z.object({
 	introQuestions: z.array(introQuestionItemSchema).optional(),
 	calendlyUrl: z.string().trim().optional(),
 	trustNote: z.string().trim().min(1).optional(),
-	formDisclaimer: z.string().trim().min(1).optional()
+	formDisclaimer: z.string().trim().min(1).optional(),
+	formType: ctaFormTypeSchema
 });
 
 export const complianceLinkItemSchema = z.object({

@@ -11,6 +11,7 @@
 	import { saveFrictionlessFunnelField } from './FrictionlessFunnelInlineEdit.remote';
 	import type { CTAType } from '../../../../shared/event-types';
 	import SectionIdentifier from '../elements/SectionIdentifier.svelte';
+	import LeadInlineIntakeForm from '../booking/LeadInlineIntakeForm.svelte';
 
 	let {
 		props,
@@ -235,16 +236,27 @@
 					<p class="text-[11px] leading-relaxed text-on-surface/60">{formDisclaimer}</p>
 				{/if}
 			</form>-->
-
-		<LeadInlineBookingSequence
-			{campaignId}
-			{campaignPageId}
-			pageSlug={pageSlug ?? null}
-			slotGroups={bookingSlotGroups}
-			formActionKey={`frictionless-inline-booking:${campaignPageId ?? 'none'}`}
-			bookingSurface="frictionless_funnel"
-			ctaKey="frictionless_funnel_inline_booking"
-			ctaSection="frictionless_funnel"
-		/>
+		{#if props?.formType === 'form'}
+			<LeadInlineIntakeForm
+				{campaignId}
+				{campaignPageId}
+				pageSlug={pageSlug ?? null}
+				formActionKey={`frictionless-inline-booking:${campaignPageId ?? 'none'}`}
+				bookingSurface="frictionless_funnel"
+				ctaKey="frictionless_funnel_inline_booking"
+				ctaSection="frictionless_funnel"
+			></LeadInlineIntakeForm>
+		{:else}
+			<LeadInlineBookingSequence
+				{campaignId}
+				{campaignPageId}
+				pageSlug={pageSlug ?? null}
+				slotGroups={bookingSlotGroups}
+				formActionKey={`frictionless-inline-booking:${campaignPageId ?? 'none'}`}
+				bookingSurface="frictionless_funnel"
+				ctaKey="frictionless_funnel_inline_booking"
+				ctaSection="frictionless_funnel"
+			/>
+		{/if}
 	</div>
 </section>

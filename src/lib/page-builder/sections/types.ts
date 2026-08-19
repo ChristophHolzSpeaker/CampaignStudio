@@ -147,6 +147,7 @@ export interface ProofOfPerformanceProps {
 }
 
 export type IntroQuestionType = 'text' | 'email' | 'tel' | 'textarea' | 'select';
+export type CTAFormType = 'calendar' | 'form' | undefined | null;
 
 export interface IntroQuestionItem {
 	id: string;
@@ -163,6 +164,7 @@ export interface FrictionlessFunnelBookingProps {
 	calendlyUrl?: string;
 	trustNote?: string;
 	formDisclaimer?: string;
+	formType?: CTAFormType;
 }
 
 export interface ComplianceLinkItem {
