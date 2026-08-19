@@ -10,6 +10,20 @@
 	import type { CampaignVisitMetrics } from '$lib/validation/campaign-visit-metrics';
 	import Button from '$lib/components/elements/Button.svelte';
 	import { applyAction, enhance } from '$app/forms';
+	import type { PageRendererType } from '$lib/page-url';
+
+	type CampaignPageSummary = {
+		id: number;
+		versionNumber: number;
+		rendererType: PageRendererType;
+		slug: string;
+		isPublished: boolean;
+		publishedAt: Date | string | null;
+		createdAt: Date | string;
+		changeNote: string | null;
+		previewUrl: string;
+		liveUrl: string | null;
+	};
 
 	type StrategyUpdateState = {
 		values: {
@@ -40,6 +54,7 @@
 			adGroups?: CampaignAdGroupWithDetails[];
 			adPackage?: CampaignAdPackageWithDetails | null;
 			campaignPageId?: number | null;
+			campaignPages?: CampaignPageSummary[];
 			liveLandingUrl?: string | null;
 		};
 
@@ -57,6 +72,8 @@
 	const getAdGroups = () => getPageData().adGroups ?? [];
 	const getAdPackage = () => getPageData().adPackage ?? null;
 	const getLiveLandingUrl = () => getPageData().liveLandingUrl ?? null;
+	const getCampaignPages = () => getPageData().campaignPages ?? [];
+	const latestPageIsArtifact = () => getCampaignPages()[0]?.rendererType === 'artifact';
 	const getPackageId = () => getAdPackage()?.id ?? '—';
 	const getPackageVersionLabel = () => {
 		const pkg = getAdPackage();
@@ -122,25 +139,98 @@
 		<section class="col-span-12 space-y-8">
 			<div class="sticky top-24">
 				<header class="mb-10">
-					<form method="POST" action="?/duplicate" class="duplicate-campaign-form">
-						<label
-							for="duplicate-name"
-							class="block font-sans text-[10px] font-bold text-slate-500 uppercase"
-						>
-							Duplicate campaign
-						</label>
-						<div class="duplicate-campaign-controls">
-							<input
-								id="duplicate-name"
-								type="text"
-								name="duplicate_name"
-								value={getDuplicateName()}
-								class="duplicate-campaign-input"
-							/>
-							<Button variant="dark">Duplicate</Button>
-						</div>
-					</form>
+					{#if latestPageIsArtifact()}
+						<p class="m-0 text-sm text-slate-600">
+							The latest page is an externally authored artifact. Preview and publishing remain
+							available below; duplication and section regeneration are disabled.
+						</p>
+					{:else}
+						<form method="POST" action="?/duplicate" class="duplicate-campaign-form">
+							<label
+								for="duplicate-name"
+								class="block font-sans text-[10px] font-bold text-slate-500 uppercase"
+							>
+								Duplicate campaign
+							</label>
+							<div class="duplicate-campaign-controls">
+								<input
+									id="duplicate-name"
+									type="text"
+									name="duplicate_name"
+									value={getDuplicateName()}
+									class="duplicate-campaign-input"
+								/>
+								<Button variant="dark">Duplicate</Button>
+							</div>
+						</form>
+					{/if}
 				</header>
+				<section
+					class="mb-8 rounded-xl border border-stone-200 bg-white p-6"
+					aria-label="Campaign pages"
+				>
+					<div class="mb-4 flex items-end justify-between gap-4">
+						<div>
+							<span
+								class="block font-sans text-[10px] font-bold tracking-wider text-slate-500 uppercase"
+								>Campaign pages</span
+							>
+							<p class="mt-1 mb-0 text-sm text-slate-600">
+								Every renderer and version attached to this campaign.
+							</p>
+						</div>
+						<span class="font-sans text-xs font-bold text-slate-500"
+							>{getCampaignPages().length}</span
+						>
+					</div>
+					{#if getCampaignPages().length === 0}
+						<p class="m-0 text-sm text-slate-500">No campaign pages yet.</p>
+					{:else}
+						<div class="divide-y divide-stone-200 border-y border-stone-200">
+							{#each getCampaignPages() as campaignPage (campaignPage.id)}
+								<div class="flex flex-wrap items-center justify-between gap-4 py-3">
+									<div>
+										<div class="flex flex-wrap items-center gap-2">
+											<span class="font-sans text-sm font-bold text-slate-900"
+												>v{campaignPage.versionNumber}</span
+											>
+											<span
+												class="bg-slate-100 px-2 py-0.5 font-sans text-[9px] font-bold tracking-wider text-slate-600 uppercase"
+												>{campaignPage.rendererType}</span
+											>
+											<span
+												class={campaignPage.isPublished
+													? 'bg-green-100 px-2 py-0.5 font-sans text-[9px] font-bold text-green-700 uppercase'
+													: 'bg-amber-50 px-2 py-0.5 font-sans text-[9px] font-bold text-amber-700 uppercase'}
+												>{campaignPage.isPublished ? 'published' : 'draft'}</span
+											>
+										</div>
+										<p class="mt-1 mb-0 text-xs text-slate-500">
+											/{campaignPage.slug} · {formatFriendlyDate(campaignPage.createdAt)}
+										</p>
+										{#if campaignPage.changeNote}<p class="mt-1 mb-0 text-xs text-slate-600">
+												{campaignPage.changeNote}
+											</p>{/if}
+									</div>
+									<div
+										class="flex items-center gap-3 font-sans text-[10px] font-bold tracking-wider uppercase"
+									>
+										<a
+											class="text-slate-700 underline underline-offset-4"
+											href={campaignPage.previewUrl}>Preview</a
+										>
+										{#if campaignPage.liveUrl}<a
+												class="text-primary underline underline-offset-4"
+												href={campaignPage.liveUrl}
+												target="_blank"
+												rel="noreferrer">Live</a
+											>{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</section>
 				<div class="space-y-8 rounded-xl bg-stone-100 p-8">
 					<div>
 						<span class="mb-2 block font-sans text-xs font-bold text-primary uppercase">
@@ -160,54 +250,56 @@
 								{/each}
 							</div>
 						{/if}
-						<form
-							method="POST"
-							action="?/updateStrategy"
-							use:enhance={() => {
-								busy = true;
-								return async ({ result }) => {
-									await applyAction(result);
-									busy = false;
-								};
-							}}
-							class="mt-4 space-y-3"
-						>
-							<input type="hidden" name="id" value={getCampaign()?.id ?? ''} />
-							<label
-								for="strategy-prompt"
-								class="block font-sans text-[10px] font-bold text-slate-500 uppercase"
+						{#if !latestPageIsArtifact()}
+							<form
+								method="POST"
+								action="?/updateStrategy"
+								use:enhance={() => {
+									busy = true;
+									return async ({ result }) => {
+										await applyAction(result);
+										busy = false;
+									};
+								}}
+								class="mt-4 space-y-3"
 							>
-								Strategy edit prompt
-							</label>
-							<textarea
-								id="strategy-prompt"
-								name="strategy_prompt"
-								rows="4"
-								class="w-full rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-[0_2px_12px_rgba(0,0,0,0.02)] focus:border-slate-300 focus:outline-none"
-								placeholder="Describe how you'd like to refine the strategy..."
-								>{getStrategyPromptValue()}</textarea
-							>
-
-							<Button variant="dark">Update Strategy + Regenerate</Button>
-							{#if getStrategyMessage()}
-								<p
-									class="text-xs font-medium"
-									class:text-green-600={isStrategyUpdateSuccess()}
-									class:text-red-500={!isStrategyUpdateSuccess()}
+								<input type="hidden" name="id" value={getCampaign()?.id ?? ''} />
+								<label
+									for="strategy-prompt"
+									class="block font-sans text-[10px] font-bold text-slate-500 uppercase"
 								>
-									{getStrategyMessage()}
-								</p>
-							{/if}
-							{#if isStrategyUpdateSuccess() && (getUpdatedPackageId() || getUpdatedPageId())}
-								<p class="font-sans text-[10px] text-slate-500 uppercase">
-									{#if getUpdatedPackageId()}New package: {getUpdatedPackageId()}{/if}
-									{#if getUpdatedPackageId() && getUpdatedPageId()}
-										·
-									{/if}
-									{#if getUpdatedPageId()}New page: {getUpdatedPageId()}{/if}
-								</p>
-							{/if}
-						</form>
+									Strategy edit prompt
+								</label>
+								<textarea
+									id="strategy-prompt"
+									name="strategy_prompt"
+									rows="4"
+									class="w-full rounded border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-[0_2px_12px_rgba(0,0,0,0.02)] focus:border-slate-300 focus:outline-none"
+									placeholder="Describe how you'd like to refine the strategy..."
+									>{getStrategyPromptValue()}</textarea
+								>
+
+								<Button variant="dark">Update Strategy + Regenerate</Button>
+								{#if getStrategyMessage()}
+									<p
+										class="text-xs font-medium"
+										class:text-green-600={isStrategyUpdateSuccess()}
+										class:text-red-500={!isStrategyUpdateSuccess()}
+									>
+										{getStrategyMessage()}
+									</p>
+								{/if}
+								{#if isStrategyUpdateSuccess() && (getUpdatedPackageId() || getUpdatedPageId())}
+									<p class="font-sans text-[10px] text-slate-500 uppercase">
+										{#if getUpdatedPackageId()}New package: {getUpdatedPackageId()}{/if}
+										{#if getUpdatedPackageId() && getUpdatedPageId()}
+											·
+										{/if}
+										{#if getUpdatedPageId()}New page: {getUpdatedPageId()}{/if}
+									</p>
+								{/if}
+							</form>
+						{/if}
 					</div>
 					<div>
 						<span class="mb-2 block font-sans text-[10px] font-bold text-primary uppercase">

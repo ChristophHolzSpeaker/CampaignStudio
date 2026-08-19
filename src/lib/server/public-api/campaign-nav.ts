@@ -2,7 +2,8 @@ import { desc } from 'drizzle-orm';
 import { parseLandingPageDocument, type LandingPageDocument } from '$lib/page-builder/page';
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns } from '$lib/server/db/schema';
-import { buildEmbedPreviewUrl } from './embed-token';
+import { buildLivePageUrl, type PageRendererType } from '$lib/page-url';
+import { buildPagePreviewUrl } from '$lib/server/page-preview-url';
 
 export type PublicCampaignPageNavItem = {
 	campaignPageId: number;
@@ -16,6 +17,7 @@ export type PublicCampaignPageNavItem = {
 	heroImageUrl: string | null;
 	embedUrl: string;
 	liveUrl: string | null;
+	rendererType: PageRendererType;
 };
 
 export type PublicCampaignNavItem = {
@@ -57,6 +59,7 @@ export async function listPublicCampaignNavItems(origin: string): Promise<Public
 				campaignId: campaign_pages.campaign_id,
 				versionNumber: campaign_pages.version_number,
 				structuredContentJson: campaign_pages.structured_content_json,
+				rendererType: campaign_pages.renderer_type,
 				slug: campaign_pages.slug,
 				isPublished: campaign_pages.is_published,
 				publishedAt: campaign_pages.published_at,
@@ -70,22 +73,29 @@ export async function listPublicCampaignNavItems(origin: string): Promise<Public
 	const pagesByCampaignId = new Map<number, PublicCampaignPageNavItem[]>();
 
 	for (const pageRow of pageRows) {
-		const page = parseLandingPageDocument(pageRow.structuredContentJson);
+		const page =
+			pageRow.rendererType === 'sections'
+				? parseLandingPageDocument(pageRow.structuredContentJson)
+				: null;
 		const navPage: PublicCampaignPageNavItem = {
 			campaignPageId: pageRow.id,
 			versionNumber: pageRow.versionNumber,
-			title: page.title,
+			title: page?.title ?? pageRow.slug,
 			slug: pageRow.slug,
 			isPublished: pageRow.isPublished,
 			publishedAt: pageRow.publishedAt,
 			createdAt: pageRow.createdAt,
 			updatedAt: pageRow.updatedAt,
-			heroImageUrl: getHeroImageUrl(page),
-			embedUrl: buildEmbedPreviewUrl(origin, {
+			heroImageUrl: page ? getHeroImageUrl(page) : null,
+			embedUrl: buildPagePreviewUrl(origin, {
 				campaignPageId: pageRow.id,
-				slug: pageRow.slug
+				slug: pageRow.slug,
+				rendererType: pageRow.rendererType
 			}),
-			liveUrl: pageRow.isPublished ? new URL(`/speaker/${pageRow.slug}`, origin).href : null
+			liveUrl: pageRow.isPublished
+				? buildLivePageUrl(origin, pageRow.slug, pageRow.rendererType)
+				: null,
+			rendererType: pageRow.rendererType
 		};
 
 		const existingPages = pagesByCampaignId.get(pageRow.campaignId) ?? [];

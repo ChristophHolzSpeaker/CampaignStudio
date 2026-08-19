@@ -87,6 +87,7 @@
 								href={liveLandingUrl}
 								class="truncate font-sans text-[11px] text-blue-600 lowercase hover:underline"
 								target="_blank"
+								data-sveltekit-reload
 								title={liveLandingUrl}
 							>
 								{copied ? 'Copied!' : liveLandingUrl}

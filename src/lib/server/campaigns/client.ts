@@ -1,6 +1,7 @@
 import { db } from '$lib/server/db';
 import { campaign_pages, campaigns, campaign_visit_metrics, profiles } from '$lib/server/db/schema';
 import { desc, eq, sql } from 'drizzle-orm';
+import type { PageRendererType } from '$lib/page-url';
 import {
 	campaignVisitMetricsSchema,
 	type CampaignVisitMetrics
@@ -44,6 +45,8 @@ export interface CampaignRecordWithMetrics extends CampaignRecord {
 	visitCount: number;
 	uniqueVisitorCount: number;
 	lastVisitedAt: Date | null;
+	latestRendererType: PageRendererType | null;
+	pageCount: number;
 }
 
 export async function listCampaigns(): Promise<CampaignRecord[]> {
@@ -66,30 +69,55 @@ function normalizeVisitMetrics(input: {
 }
 
 export async function listCampaignsWithMetrics(): Promise<CampaignRecordWithMetrics[]> {
-	const rows = await db
-		.select({
-			id: campaigns.id,
-			name: campaigns.name,
-			audience: campaigns.audience,
-			format: campaigns.format,
-			topic: campaigns.topic,
-			language: campaigns.language,
-			geography: campaigns.geography,
-			notes: campaigns.notes,
-			status: campaigns.status,
-			created_at: campaigns.created_at,
-			updated_at: campaigns.updated_at,
-			created_by: campaigns.created_by,
-			created_by_display_name: profiles.display_name,
-			campaignId: campaign_visit_metrics.campaign_id,
-			visitCount: campaign_visit_metrics.visit_count,
-			uniqueVisitorCount: campaign_visit_metrics.unique_visitor_count,
-			lastVisitedAt: campaign_visit_metrics.last_visited_at
-		})
-		.from(campaigns)
-		.leftJoin(profiles, sql`${campaigns.created_by} = ${profiles.id}::text`)
-		.leftJoin(campaign_visit_metrics, eq(campaign_visit_metrics.campaign_id, campaigns.id))
-		.orderBy(desc(campaigns.created_at));
+	const [rows, pageRows] = await Promise.all([
+		db
+			.select({
+				id: campaigns.id,
+				name: campaigns.name,
+				audience: campaigns.audience,
+				format: campaigns.format,
+				topic: campaigns.topic,
+				language: campaigns.language,
+				geography: campaigns.geography,
+				notes: campaigns.notes,
+				status: campaigns.status,
+				created_at: campaigns.created_at,
+				updated_at: campaigns.updated_at,
+				created_by: campaigns.created_by,
+				created_by_display_name: profiles.display_name,
+				campaignId: campaign_visit_metrics.campaign_id,
+				visitCount: campaign_visit_metrics.visit_count,
+				uniqueVisitorCount: campaign_visit_metrics.unique_visitor_count,
+				lastVisitedAt: campaign_visit_metrics.last_visited_at
+			})
+			.from(campaigns)
+			.leftJoin(profiles, sql`${campaigns.created_by} = ${profiles.id}::text`)
+			.leftJoin(campaign_visit_metrics, eq(campaign_visit_metrics.campaign_id, campaigns.id))
+			.orderBy(desc(campaigns.created_at)),
+		db
+			.select({
+				campaignId: campaign_pages.campaign_id,
+				rendererType: campaign_pages.renderer_type
+			})
+			.from(campaign_pages)
+			.orderBy(desc(campaign_pages.version_number), desc(campaign_pages.id))
+	]);
+
+	const pageSummaryByCampaign = new Map<
+		number,
+		{ latestRendererType: PageRendererType; pageCount: number }
+	>();
+	for (const page of pageRows) {
+		const summary = pageSummaryByCampaign.get(page.campaignId);
+		if (summary) {
+			summary.pageCount += 1;
+		} else {
+			pageSummaryByCampaign.set(page.campaignId, {
+				latestRendererType: page.rendererType,
+				pageCount: 1
+			});
+		}
+	}
 
 	return rows.map((row) => {
 		const metrics = normalizeVisitMetrics({
@@ -99,6 +127,7 @@ export async function listCampaignsWithMetrics(): Promise<CampaignRecordWithMetr
 			uniqueVisitorCount: row.uniqueVisitorCount,
 			lastVisitedAt: row.lastVisitedAt
 		});
+		const pageSummary = pageSummaryByCampaign.get(row.id);
 
 		return {
 			id: row.id,
@@ -116,7 +145,9 @@ export async function listCampaignsWithMetrics(): Promise<CampaignRecordWithMetr
 			created_by_display_name: row.created_by_display_name,
 			visitCount: metrics.visitCount,
 			uniqueVisitorCount: metrics.uniqueVisitorCount,
-			lastVisitedAt: metrics.lastVisitedAt
+			lastVisitedAt: metrics.lastVisitedAt,
+			latestRendererType: pageSummary?.latestRendererType ?? null,
+			pageCount: pageSummary?.pageCount ?? 0
 		};
 	});
 }
@@ -223,12 +254,19 @@ export async function duplicateCampaign(input: {
 	const [latestCampaignPage] = await db
 		.select({
 			structuredContentJson: campaign_pages.structured_content_json,
-			versionNumber: campaign_pages.version_number
+			versionNumber: campaign_pages.version_number,
+			rendererType: campaign_pages.renderer_type
 		})
 		.from(campaign_pages)
 		.where(eq(campaign_pages.campaign_id, input.sourceCampaignId))
 		.orderBy(desc(campaign_pages.version_number))
 		.limit(1);
+
+	if (latestCampaignPage?.rendererType === 'artifact') {
+		throw new Error(
+			'Artifact campaigns cannot be duplicated in Campaign Studio. Create a campaign and upload a new artifact bundle instead.'
+		);
+	}
 
 	const adPackages = await getCampaignAdPackages(input.sourceCampaignId);
 	const latestAdPackage = adPackages.at(-1);

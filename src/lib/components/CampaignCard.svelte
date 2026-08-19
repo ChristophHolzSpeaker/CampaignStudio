@@ -49,6 +49,14 @@
 				{campaign?.name}
 			</div>
 			<div class="font-body-sm mt-1 text-xs text-secondary">Campaign ID: {campaign?.id}</div>
+			<div class="mt-2 flex items-center gap-2">
+				{#if campaign?.latestRendererType}
+					<span class="badge muted">{campaign.latestRendererType}</span>
+				{/if}
+				<span class="font-body-sm text-[10px] text-secondary">
+					{campaign?.pageCount ?? 0} page{campaign?.pageCount === 1 ? '' : 's'}
+				</span>
+			</div>
 		</a>
 	</div>
 </td>
