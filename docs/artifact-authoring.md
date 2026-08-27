@@ -118,6 +118,14 @@ The corresponding family names are `Bureau Grot` (weights 300 and 400) and `Bure
 </form>
 
 <div data-cs-widget="booking-calendar"></div>
+
+<div
+	data-cs-widget="youtube-video"
+	data-cs-youtube-id="dQw4w9WgXcQ"
+	data-cs-video-title="Campaign introduction"
+></div>
 ```
+
+For YouTube, provide only the exact 11-character video ID and an optional accessible title of up to 120 characters. Campaign Studio validates the ID at finalization, then presents a click-to-load control that creates a sandboxed privacy-enhanced `www.youtube-nocookie.com` player. Do not author YouTube URLs, iframes, player parameters, or API code. The runtime does not report YouTube playback analytics.
 
 Local HTML and CSS asset references are rewritten to immutable public storage URLs. External URLs remain explicit. Author scripts, inline event handlers, executable files, root-relative paths, missing references, and unsupported media types are rejected.

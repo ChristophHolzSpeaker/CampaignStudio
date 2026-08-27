@@ -239,11 +239,13 @@ A public visitor can view a published page, interact with supported CTAs and for
 
 **FR-062** The runtime shall derive campaign, page-version, and slug identity only from server-injected context.
 
-**FR-063** Runtime v1 shall recognize a documented subset of `data-cs-*` attributes for CTAs, lead forms, conversions, and supported widgets.
+**FR-063** The pinned artifact runtime shall recognize a documented subset of `data-cs-*` attributes for CTAs, lead forms, conversions, and supported widgets.
 
 **FR-064** Unknown attributes or values shall not create analytics semantics or invoke arbitrary platform behavior.
 
 **FR-065** Tracking or widget failure shall not prevent basic content and ordinary links from rendering.
+
+**FR-066** The runtime shall support a controlled YouTube video placeholder that accepts only a validated video ID and optional accessible title; authored iframe markup, URLs, player parameters, and API code shall remain prohibited.
 
 ### 6.8 Analytics and attribution
 
@@ -290,6 +292,14 @@ A public visitor can view a published page, interact with supported CTAs and for
 **FR-093** The widget shall reuse existing availability, policy, qualification, confirmation, attribution, notification, and calendar behavior.
 
 **FR-094** The widget shall exchange only documented lifecycle, resize, and completion messages with its parent.
+
+### 6.10.1 YouTube video widget
+
+**FR-095** Artifact finalization shall reject a YouTube placeholder whose video ID is absent or is not exactly 11 URL-safe characters, or whose title exceeds the documented limit.
+
+**FR-096** The runtime shall load the YouTube privacy-enhanced player only after visitor activation, and only from the documented allowlisted origin.
+
+**FR-097** The initial YouTube widget shall not claim playback analytics that cannot be verified from the cross-origin player.
 
 ### 6.11 External authoring interface
 
@@ -510,6 +520,8 @@ Deferred:
 **AC-017** The documented artifact-only create → upload → finalize → preview → publish workflow is executable using only response fields from prior steps and a campaign-write bearer token.
 
 **AC-018** An internal user can find an artifact campaign, inspect its versions, and preview a selected artifact in Campaign Studio; an external client can place the page's API-provided `embedUrl` in an iframe and receive resize messages.
+
+**AC-019** An artifact author can declare a validated YouTube placeholder, and the published runtime renders a click-to-load privacy-enhanced player without permitting authored iframe markup.
 
 ---
 

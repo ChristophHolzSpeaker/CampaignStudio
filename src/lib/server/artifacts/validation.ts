@@ -19,6 +19,7 @@ export type UploadedArtifactFile = ArtifactManifestFile & { bytes: Uint8Array };
 const prohibitedExtensions = new Set<string>(ARTIFACT_PROHIBITED_EXTENSIONS);
 const htmlMediaTypes = new Set(['text/html', 'application/xhtml+xml']);
 const allowedMediaTypes = new Set<string>(ARTIFACT_ALLOWED_MEDIA_TYPES);
+const youtubeVideoIdPattern = /^[A-Za-z0-9_-]{11}$/;
 
 export function sha256(bytes: Uint8Array | string): string {
 	return createHash('sha256').update(bytes).digest('hex');
@@ -95,8 +96,24 @@ function assertSafeHtml(html: string): void {
 	}
 }
 
+function assertSafeYouTubeWidgets(html: string): void {
+	const widgetTags = html.matchAll(
+		/<[a-z][a-z0-9:-]*\b[^>]*\bdata-cs-widget=(['"])youtube-video\1[^>]*>/gi
+	);
+	for (const match of widgetTags) {
+		const tag = match[0];
+		const videoId = /\bdata-cs-youtube-id=(['"])(.*?)\1/i.exec(tag)?.[2];
+		if (!videoId || !youtubeVideoIdPattern.test(videoId))
+			throw new Error('YouTube widgets require an 11-character URL-safe video ID');
+		const title = /\bdata-cs-video-title=(['"])(.*?)\1/i.exec(tag)?.[2];
+		if (title && title.length > 120)
+			throw new Error('YouTube widget titles must be at most 120 characters');
+	}
+}
+
 function sanitizeAndRewriteHtml(html: string, assetUrls: Map<string, string>): string {
 	assertSafeHtml(html);
+	assertSafeYouTubeWidgets(html);
 	const sanitized = sanitizeHtml(html, {
 		allowedTags: [...ARTIFACT_ALLOWED_HTML_TAGS],
 		allowedAttributes: false,
