@@ -23,11 +23,12 @@ describe('artifact response security headers', () => {
 		const headers = new Headers(artifactResponseHeaders(page, false, 'http://127.0.0.1:54321'));
 		const policy = headers.get('content-security-policy');
 
-		expect(headers.get('etag')).toBe('"content-hash-v1-r2"');
+		expect(headers.get('etag')).toBe('"content-hash-v1-r3"');
 		expect(policy).toContain("style-src 'self' 'unsafe-inline' https: http://127.0.0.1:54321");
 		expect(policy).toContain("img-src 'self' data: blob: https: http://127.0.0.1:54321");
 		expect(policy).toContain("font-src 'self' data: https: http://127.0.0.1:54321");
 		expect(policy).toContain("media-src 'self' blob: https: http://127.0.0.1:54321");
+		expect(policy).toContain("frame-src 'self' https://www.youtube-nocookie.com");
 		expect(policy).not.toMatch(
 			/(?:^|;\s)(?:style-src|img-src|font-src|media-src)[^;]*\shttp:(?:\s|;|$)/
 		);
