@@ -262,7 +262,8 @@ export async function finalizeArtifactUploadSession(
 				asset_prefix: prefix,
 				entrypoint: ARTIFACT_ENTRYPOINT,
 				manifest_json: prepared.manifest,
-				content_sha256: prepared.contentSha256
+				content_sha256: prepared.contentSha256,
+				runtime_version: prepared.manifest.runtimeVersion
 			});
 			await tx
 				.update(artifact_upload_sessions)
