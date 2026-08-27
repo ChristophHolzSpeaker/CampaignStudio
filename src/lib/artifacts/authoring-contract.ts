@@ -12,7 +12,7 @@ import {
 } from './contract';
 
 export const ARTIFACT_AUTHORING_CONTRACT = {
-	contractVersion: 2,
+	contractVersion: 3,
 	runtimeVersion: ARTIFACT_RUNTIME_VERSION,
 	rendererType: 'artifact',
 	discovery: {
@@ -76,7 +76,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 		completeDocumentRequired: true,
 		prohibitedHtmlElements: ['script', 'iframe', 'object', 'embed', 'applet', 'base'],
 		externalResources:
-			'HTTPS styles, images, fonts, audio, and video are permitted by the artifact CSP. Runtime requests and frames remain same-origin only.',
+			'HTTPS styles, images, fonts, audio, and video are permitted by the artifact CSP. Runtime requests remain same-origin. The runtime may load the documented YouTube privacy-enhanced player; authored frames remain prohibited.',
 		note: 'Campaign Studio sanitizes HTML, removes authored form actions, and injects its pinned runtime after validation.'
 	},
 	platformFonts: {
@@ -167,6 +167,21 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			behavior:
 				'Campaign Studio replaces the placeholder with its maintained same-origin booking iframe and signed page context. Preview shows a disabled-booking notice. Do not author an iframe or booking URL.',
 			example: '<div data-cs-widget="booking-calendar"></div>'
+		},
+		youtubeVideo: {
+			selector: '[data-cs-widget="youtube-video"]',
+			widget: 'youtube-video',
+			requiredAttributes: {
+				'data-cs-widget': 'youtube-video',
+				'data-cs-youtube-id': 'Exactly 11 URL-safe YouTube video ID characters.'
+			},
+			optionalAttributes: {
+				'data-cs-video-title': 'Accessible video title, maximum 120 characters.'
+			},
+			behavior:
+				'Campaign Studio validates the video ID, then renders a click-to-load control. Activating it loads the privacy-enhanced YouTube player from www.youtube-nocookie.com. Do not author an iframe, embed URL, player parameters, or YouTube API code.',
+			example:
+				'<div data-cs-widget="youtube-video" data-cs-youtube-id="dQw4w9WgXcQ" data-cs-video-title="Campaign introduction"></div>'
 		}
 	},
 	lifecycle: {
@@ -317,6 +332,14 @@ Mount booking with a placeholder only. Campaign Studio supplies the maintained b
 <div data-cs-widget="booking-calendar"></div>
 \`\`\`
 
+Mount a YouTube video with the video ID only. Campaign Studio validates the ID and creates a privacy-enhanced player only after the visitor activates the control. Do not author a YouTube URL, iframe, player parameters, or API code:
+
+\`\`\`html
+<div data-cs-widget="youtube-video"
+     data-cs-youtube-id="dQw4w9WgXcQ"
+     data-cs-video-title="Campaign introduction"></div>
+\`\`\`
+
 ### 4. Create the upload session
 
 The lowercase slug becomes the canonical root URL and must not collide with an application route. The session expires after one hour.
@@ -449,6 +472,8 @@ Lead submissions reuse Campaign Studio's lead, attribution, journey, qualificati
 
 The booking placeholder is replaced with the maintained same-origin booking widget. In preview, it renders a clear disabled-booking notice; booking mutations are unavailable.
 
+The YouTube placeholder is replaced with a click-to-load control. After activation, the runtime loads only the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID. The runtime does not receive YouTube playback events, so it does not claim video-play analytics.
+
 Do not reproduce these behaviors in authored code. Authored JavaScript is rejected, and platform IDs are resolved from signed/injected runtime context.
 
 ## Validation and error handling
@@ -490,6 +515,12 @@ Do not retry validation failures unchanged. A \`429\` response means the public 
     <section aria-labelledby="booking-heading">
       <h2 id="booking-heading">Book a meeting</h2>
       <div data-cs-widget="booking-calendar"></div>
+    </section>
+    <section aria-labelledby="video-heading">
+      <h2 id="video-heading">See the keynote in action</h2>
+      <div data-cs-widget="youtube-video"
+           data-cs-youtube-id="dQw4w9WgXcQ"
+           data-cs-video-title="Campaign introduction"></div>
     </section>
   </main>
 </body>

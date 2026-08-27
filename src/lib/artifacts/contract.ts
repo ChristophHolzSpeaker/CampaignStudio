@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-export const ARTIFACT_RUNTIME_VERSION = 'v1';
+export const ARTIFACT_RUNTIME_VERSION = 'v2';
+export const ARTIFACT_SUPPORTED_RUNTIME_VERSIONS = ['v1', ARTIFACT_RUNTIME_VERSION] as const;
 export const ARTIFACT_SOURCE_BUCKET = 'page-artifact-source';
 export const ARTIFACT_ASSET_BUCKET = 'page-artifact-assets';
 export const ARTIFACT_ENTRYPOINT = 'index.html';
@@ -191,7 +192,7 @@ export const artifactManifestFileSchema = z.object({
 export const artifactManifestSchema = z.object({
 	version: z.literal(1),
 	entrypoint: z.literal(ARTIFACT_ENTRYPOINT),
-	runtimeVersion: z.literal(ARTIFACT_RUNTIME_VERSION),
+	runtimeVersion: z.enum(ARTIFACT_SUPPORTED_RUNTIME_VERSIONS),
 	files: z.array(artifactManifestFileSchema).min(1).max(ARTIFACT_MAX_FILE_COUNT)
 });
 

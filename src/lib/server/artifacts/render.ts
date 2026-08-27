@@ -1,7 +1,7 @@
 import type { ArtifactPageRecord } from './repository';
 import { createBookingWidgetToken } from './widget-token';
 
-const ARTIFACT_RENDERER_REVISION = 'r2';
+const ARTIFACT_RENDERER_REVISION = 'r3';
 
 type ArtifactPublicContext = {
 	runtimeVersion: string;
@@ -83,7 +83,7 @@ export function artifactResponseHeaders(
 			? 'private, no-store'
 			: 'public, s-maxage=60, stale-while-revalidate=300',
 		ETag: `"${page.contentSha256}-${page.runtimeVersion}-${ARTIFACT_RENDERER_REVISION}"`,
-		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'; form-action 'self'; frame-src 'self'; frame-ancestors ${frameAncestors}`,
+		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'; form-action 'self'; frame-src 'self' https://www.youtube-nocookie.com; frame-ancestors ${frameAncestors}`,
 		'Referrer-Policy': 'strict-origin-when-cross-origin',
 		'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 		'X-Content-Type-Options': 'nosniff',

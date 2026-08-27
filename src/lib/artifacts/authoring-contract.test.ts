@@ -36,7 +36,7 @@ describe('artifact authoring documentation', () => {
 	});
 
 	it('derives bundle and form rules from the canonical contract', () => {
-		expect(ARTIFACT_AUTHORING_CONTRACT.contractVersion).toBe(2);
+		expect(ARTIFACT_AUTHORING_CONTRACT.contractVersion).toBe(3);
 		expect(ARTIFACT_AUTHORING_CONTRACT.bundle.allowedMediaTypes).toContain('text/html');
 		expect(
 			ARTIFACT_AUTHORING_CONTRACT.runtime.cta.optionalAttributes['data-cs-cta-type'].values
@@ -46,6 +46,9 @@ describe('artifact authoring documentation', () => {
 				expect.objectContaining({ name: 'email', required: true }),
 				expect.objectContaining({ name: 'scope', required: true })
 			])
+		);
+		expect(ARTIFACT_AUTHORING_CONTRACT.runtime.youtubeVideo.requiredAttributes).toEqual(
+			expect.objectContaining({ 'data-cs-youtube-id': expect.stringContaining('11') })
 		);
 	});
 });
