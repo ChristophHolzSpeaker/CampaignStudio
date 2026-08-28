@@ -6,6 +6,7 @@
 	type LandingPageNavigationData = {
 		mailto?: string;
 		mailtoCta?: string;
+		language?: 'en' | 'de';
 		campaignId?: number | null;
 		campaignPageId?: number | null;
 		campaignVisitId?: number | null;
@@ -15,6 +16,7 @@
 	let {
 		mailto = 'mailto:speaker@christophholz.com?subject=Request%20a%20talk',
 		mailtoCta = 'Vortrag Anfragen',
+		language = 'en',
 		campaignId = null,
 		campaignPageId = null,
 		campaignVisitId = null,
@@ -181,6 +183,51 @@
 		}
 	];
 
+	const localizedCategoryItems = $derived(
+		language === 'de'
+			? [
+					{
+						...categoryItems[0],
+						headline: 'Keynote-Speaker',
+						subline: 'Vorträge, Konferenzen, Panels und Moderation'
+					},
+					{
+						...categoryItems[1],
+						headline: 'TV-Experte',
+						subline: 'Schlagfertige Interviews zu aktuellen Themen'
+					},
+					{
+						...categoryItems[2],
+						headline: 'Medien / Publikationen',
+						subline: 'Meine Publikationen'
+					},
+					{ ...categoryItems[3], subline: 'Über Sinn und Unsinn der Digitalisierung' },
+					{
+						...categoryItems[4],
+						headline: 'Auszeichnungen',
+						subline: 'Was andere außergewöhnlich und preiswürdig finden'
+					},
+					{ ...categoryItems[5], subline: 'Erfahrung aus Wirtschaft, Lehre und Innovation' },
+					{
+						...categoryItems[6],
+						headline: 'Business Angel',
+						subline: 'Kapital, Wissen und Netzwerk für junge Start-ups'
+					}
+				]
+			: categoryItems
+	);
+	const copy = $derived(
+		language === 'de'
+			? {
+					home: 'Startseite',
+					menu: 'Menü',
+					close: 'Schließen',
+					categories: 'Kategorien',
+					contact: 'Kontakt'
+				}
+			: { home: 'Home', menu: 'Menu', close: 'Close', categories: 'Categories', contact: 'Contact' }
+	);
+
 	function trackEmailCta(variant: 'default' | 'mobile'): void {
 		if (campaignId == null || campaignPageId == null) {
 			return;
@@ -229,11 +276,11 @@
 				href={buildChristophLink('https://www.christophholz.com/')}
 				aria-current="page"
 				class="mr-2 text-5xl whitespace-nowrap"
-				aria-label="home"
+				aria-label={copy.home}
 				onclick={() => {
 					trackExternalNavigation({
 						ctaKey: 'landing_navigation_home',
-						ctaLabel: 'Home',
+						ctaLabel: copy.home,
 						ctaVariant: 'desktop'
 					});
 				}}>Christoph Holz</a
@@ -349,11 +396,11 @@
 				href={buildChristophLink('https://www.christophholz.com/')}
 				aria-current="page"
 				class="mr-2 text-3xl"
-				aria-label="home"
+				aria-label={copy.home}
 				onclick={() => {
 					trackExternalNavigation({
 						ctaKey: 'landing_navigation_home',
-						ctaLabel: 'Home',
+						ctaLabel: copy.home,
 						ctaVariant: 'mobile'
 					});
 				}}>Christoph Holz</a
@@ -366,9 +413,9 @@
 				}}
 				class="rounded-md border border-stone-300 px-3 py-2 text-sm font-medium"
 				aria-expanded={mobileMenuOpen}
-				aria-label="Toggle menu"
+				aria-label={copy.menu}
 			>
-				{mobileMenuOpen ? 'Close' : 'Menu'}
+				{mobileMenuOpen ? copy.close : copy.menu}
 			</button>
 		</div>
 	</div>
@@ -383,7 +430,7 @@
 	>
 		<div class="mx-auto flex w-full max-w-7xl items-center gap-10 bg-white p-4">
 			<div class="category-block tablet-hide">
-				<h2 class="text-2xl">Categories</h2>
+				<h2 class="text-2xl">{copy.categories}</h2>
 			</div>
 			<div class="expand-align-center">
 				{#snippet categoryItem({
@@ -437,7 +484,7 @@
 				{/snippet}
 				<div class="intro-categories w-dyn-list">
 					<div role="list" class="grid grid-cols-4 gap-4">
-						{#each categoryItems as cat (cat.href)}
+						{#each localizedCategoryItems as cat (cat.href)}
 							{@render categoryItem({
 								...cat,
 								categoryKey: extractCategoryKeyFromHref(cat.href)
@@ -460,13 +507,13 @@
 				class="flex w-full items-center justify-between border-b border-stone-200 pb-3 text-left text-base font-medium"
 				aria-expanded={mobileCategoriesOpen}
 			>
-				<span>Categories</span>
+				<span>{copy.categories}</span>
 				<span>{mobileCategoriesOpen ? '−' : '+'}</span>
 			</button>
 
 			{#if mobileCategoriesOpen}
 				<div class="mt-3 space-y-3 border-b border-stone-200 pb-4">
-					{#each categoryItems as cat (cat.href)}
+					{#each localizedCategoryItems as cat (cat.href)}
 						{@const categoryKey = extractCategoryKeyFromHref(cat.href)}
 						<a
 							href={cat.href}
@@ -504,7 +551,7 @@
 				<a
 					href="#contact"
 					class="block text-sm font-medium"
-					onclick={() => (mobileMenuOpen = false)}>Contact</a
+					onclick={() => (mobileMenuOpen = false)}>{copy.contact}</a
 				>
 			</div>
 

@@ -30,6 +30,10 @@ type CampaignLanguageRow = {
 	language: string;
 };
 
+type CampaignPageRendererRow = {
+	renderer_type: string;
+};
+
 type MatchedBy = 'duplicate' | 'thread' | 'plus_address_email_campaign' | 'new_journey';
 
 type AutoResponseDecision =
@@ -214,6 +218,24 @@ async function resolveCampaignLanguage(
 	return normalizeLanguageTag(campaign?.language ?? null);
 }
 
+async function isArtifactCampaignPage(
+	env: WorkerEnv,
+	campaignPageId: number | null
+): Promise<boolean> {
+	if (campaignPageId === null) {
+		return false;
+	}
+
+	const query = new URLSearchParams({
+		select: 'renderer_type',
+		id: `eq.${campaignPageId}`,
+		limit: '1'
+	});
+
+	const page = await selectOne<CampaignPageRendererRow>(env, 'campaign_pages', query);
+	return page?.renderer_type === 'artifact';
+}
+
 function readLanguageHeader(
 	rawMetadata: Record<string, unknown>,
 	headerName: string
@@ -298,11 +320,16 @@ async function resolveAutoresponseLanguage(
 	env: WorkerEnv,
 	input: {
 		campaignId: number | null;
+		campaignPageId: number | null;
 		rawMetadata: Record<string, unknown>;
 		subject: string;
 		bodyText: string;
 	}
 ): Promise<string> {
+	if (await isArtifactCampaignPage(env, input.campaignPageId)) {
+		return 'German';
+	}
+
 	const headerLanguage = resolveLanguageFromHeaders(input.rawMetadata);
 	if (headerLanguage) {
 		return headerLanguage;
@@ -675,6 +702,7 @@ export async function processInboundGmailMessage(
 
 	const responseLanguage = await resolveAutoresponseLanguage(env, {
 		campaignId: journeyResolution.campaign_id,
+		campaignPageId: journeyResolution.campaign_page_id,
 		rawMetadata: normalized.raw_metadata,
 		subject: normalized.subject,
 		bodyText: normalized.body_text

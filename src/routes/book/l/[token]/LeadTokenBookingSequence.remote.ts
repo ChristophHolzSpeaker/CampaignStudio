@@ -2,7 +2,6 @@ import { form, getRequestEvent } from '$app/server';
 import {
 	confirmBookingSelection,
 	getBookingPolicy,
-	getPublicBookingUnavailableMessage,
 	resolveLeadBookingToken
 } from '$lib/server/bookings';
 import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
@@ -26,10 +25,10 @@ function readSingleString(input: unknown): string | undefined {
 
 function getTokenMessage(state: 'invalid' | 'expired'): string {
 	if (state === 'expired') {
-		return 'This briefing link has expired. Please request a new link.';
+		return 'Dieser Link für das Briefing ist abgelaufen. Bitte fordern Sie einen neuen Link an.';
 	}
 
-	return 'This briefing link is invalid.';
+	return 'Dieser Link für das Briefing ist ungültig.';
 }
 
 export const submitLeadTokenBooking = form('unchecked', async (rawData) => {
@@ -57,7 +56,7 @@ export const submitLeadTokenBooking = form('unchecked', async (rawData) => {
 		return {
 			success: false,
 			confirmationState: 'booking_unavailable',
-			message: getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
+			message: 'Das Briefing ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.'
 		};
 	}
 
@@ -66,8 +65,7 @@ export const submitLeadTokenBooking = form('unchecked', async (rawData) => {
 		return {
 			success: false,
 			confirmationState: 'invalid',
-			message:
-				parseResult.error.issues[0]?.message ?? 'Please review your details and selected slot.'
+			message: 'Bitte überprüfen Sie Ihre Angaben und den ausgewählten Termin.'
 		};
 	}
 
@@ -126,13 +124,14 @@ export const submitLeadTokenBooking = form('unchecked', async (rawData) => {
 			confirmationState: 'confirmed',
 			confirmedBookingId: confirmation.booking.id,
 			message:
-				"Briefing confirmed. Woody, Christoph's AI assistant will email you shortly. Please check your inbox for the calendar invite."
+				'Briefing bestätigt. Woody, Christophs KI-Assistent, schreibt Ihnen in Kürze per E-Mail. Bitte prüfen Sie Ihren Posteingang auf die Kalendereinladung.'
 		};
 	}
 
 	return {
 		success: false,
 		confirmationState: confirmation.state,
-		message: confirmation.message
+		message:
+			'Der ausgewählte Termin ist leider nicht mehr verfügbar. Bitte wählen Sie einen anderen Termin.'
 	};
 });

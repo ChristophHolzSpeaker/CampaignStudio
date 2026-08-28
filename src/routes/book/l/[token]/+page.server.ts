@@ -4,7 +4,6 @@ import {
 	confirmBookingSelection,
 	createBookingLinkForJourney,
 	getBookingPolicy,
-	getPublicBookingUnavailableMessage,
 	markBookingLinkClickedAt,
 	resolveLeadBookingIntakeContext,
 	resolveLeadBookingToken,
@@ -121,10 +120,44 @@ function toClassificationView(input: {
 
 function getTokenMessage(state: 'invalid' | 'expired'): string {
 	if (state === 'expired') {
-		return 'This briefing link has expired. Please request a new link.';
+		return 'Dieser Link für das Briefing ist abgelaufen. Bitte fordern Sie einen neuen Link an.';
 	}
 
-	return 'This briefing link is invalid.';
+	return 'Dieser Link für das Briefing ist ungültig.';
+}
+
+const germanFieldErrors = {
+	email: 'Bitte geben Sie eine gültige E-Mail-Adresse ein.',
+	scope: 'Bitte beschreiben Sie kurz Ihr Anliegen für das Briefing.',
+	name: 'Der Name ist zu lang.',
+	phone: 'Bitte geben Sie eine gültige Telefonnummer ein.',
+	company: 'Der Unternehmensname ist zu lang.',
+	selectedStartsAtIso: 'Bitte wählen Sie einen Termin aus.',
+	selectedEndsAtIso: 'Bitte wählen Sie einen Termin aus.'
+} as const;
+
+function localizeIntakeErrors(errors: BookingIntakeFieldErrors): BookingIntakeFieldErrors {
+	return Object.fromEntries(
+		Object.keys(errors).map((field) => [
+			field,
+			germanFieldErrors[field as keyof typeof germanFieldErrors]
+		])
+	) as BookingIntakeFieldErrors;
+}
+
+function localizeConfirmationErrors(
+	errors: BookingConfirmationFieldErrors
+): BookingConfirmationFieldErrors {
+	return Object.fromEntries(
+		Object.keys(errors).map((field) => [
+			field,
+			germanFieldErrors[field as keyof typeof germanFieldErrors]
+		])
+	) as BookingConfirmationFieldErrors;
+}
+
+function getGermanBookingUnavailableMessage(): string {
+	return 'Die Terminbuchung ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.';
 }
 
 export const load: PageServerLoad = async ({
@@ -158,7 +191,7 @@ export const load: PageServerLoad = async ({
 			tokenState: 'new' as const,
 			tokenMessage: null,
 			policyState: policy.state,
-			unavailableMessage: getPublicBookingUnavailableMessage(policy),
+			unavailableMessage: policy.state === 'active' ? null : getGermanBookingUnavailableMessage(),
 			utmContext: {
 				source: utmSource,
 				campaignId: utmCampaignId,
@@ -219,7 +252,7 @@ export const load: PageServerLoad = async ({
 			tokenState: 'usable' as const,
 			tokenMessage: null,
 			policyState: policy.state,
-			unavailableMessage: getPublicBookingUnavailableMessage(policy),
+			unavailableMessage: policy.state === 'active' ? null : getGermanBookingUnavailableMessage(),
 			prefillValues: intakeContext.values,
 			intakeSummary: intakeContext.summary ?? undefined,
 			intakeSkipped: true,
@@ -235,7 +268,7 @@ export const load: PageServerLoad = async ({
 			searchEndsAtIso: bookingFlow.searchEndsAt.toISOString(),
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No briefing slots are currently available in the upcoming days.'
+					? 'In den kommenden Tagen sind derzeit keine Termine für ein Briefing verfügbar.'
 					: undefined
 		} satisfies LeadBookingPageData;
 	}
@@ -245,7 +278,7 @@ export const load: PageServerLoad = async ({
 		tokenState: 'usable' as const,
 		tokenMessage: null,
 		policyState: policy.state,
-		unavailableMessage: getPublicBookingUnavailableMessage(policy),
+		unavailableMessage: policy.state === 'active' ? null : getGermanBookingUnavailableMessage(),
 		prefillValues: intakeContext.values,
 		intakeSummary: intakeContext.summary ?? undefined,
 		intakeSkipped: false
@@ -264,8 +297,7 @@ export const actions: Actions = {
 			if (policy.state !== 'active') {
 				return fail<LeadBookingActionData>(409, {
 					values,
-					message:
-						getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
+					message: getGermanBookingUnavailableMessage()
 				});
 			}
 
@@ -273,7 +305,7 @@ export const actions: Actions = {
 			if (!parseResult.success) {
 				return fail<LeadBookingActionData>(400, {
 					values,
-					errors: toBookingIntakeFieldErrors(parseResult.error)
+					errors: localizeIntakeErrors(toBookingIntakeFieldErrors(parseResult.error))
 				});
 			}
 
@@ -289,14 +321,14 @@ export const actions: Actions = {
 			if (!Number.isInteger(campaignId) || campaignId <= 0) {
 				return fail<LeadBookingActionData>(400, {
 					values,
-					message: 'Invalid campaign context. Please try again from the speaker page.'
+					message: 'Ungültiger Kampagnenkontext. Bitte starten Sie erneut über die Speaker-Seite.'
 				});
 			}
 
 			if (!Number.isInteger(campaignPageId) || campaignPageId <= 0) {
 				return fail<LeadBookingActionData>(400, {
 					values,
-					message: 'Invalid campaign page context. Please try again from the speaker page.'
+					message: 'Ungültiger Seitenkontext. Bitte starten Sie erneut über die Speaker-Seite.'
 				});
 			}
 
@@ -421,7 +453,7 @@ export const actions: Actions = {
 				},
 				message:
 					bookingFlow.availability.state === 'no_slots'
-						? 'No briefing slots are currently available in the upcoming days.'
+						? 'In den kommenden Tagen sind derzeit keine Termine für ein Briefing verfügbar.'
 						: undefined
 			};
 		}
@@ -440,7 +472,7 @@ export const actions: Actions = {
 		if (policy.state !== 'active') {
 			return fail<LeadBookingActionData>(409, {
 				values,
-				message: getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
+				message: getGermanBookingUnavailableMessage()
 			});
 		}
 
@@ -448,7 +480,7 @@ export const actions: Actions = {
 		if (!parseResult.success) {
 			return fail<LeadBookingActionData>(400, {
 				values,
-				errors: toBookingIntakeFieldErrors(parseResult.error)
+				errors: localizeIntakeErrors(toBookingIntakeFieldErrors(parseResult.error))
 			});
 		}
 
@@ -507,7 +539,7 @@ export const actions: Actions = {
 			},
 			message:
 				bookingFlow.availability.state === 'no_slots'
-					? 'No briefing slots are currently available in the upcoming days.'
+					? 'In den kommenden Tagen sind derzeit keine Termine für ein Briefing verfügbar.'
 					: undefined
 		};
 	},
@@ -534,7 +566,7 @@ export const actions: Actions = {
 				values,
 				confirmationValues,
 				confirmationState: 'booking_unavailable',
-				message: getPublicBookingUnavailableMessage(policy) ?? 'Briefing is currently unavailable.'
+				message: getGermanBookingUnavailableMessage()
 			});
 		}
 
@@ -543,7 +575,9 @@ export const actions: Actions = {
 			return fail<LeadBookingActionData>(400, {
 				values,
 				confirmationValues,
-				confirmationErrors: toBookingConfirmationFieldErrors(parseResult.error)
+				confirmationErrors: localizeConfirmationErrors(
+					toBookingConfirmationFieldErrors(parseResult.error)
+				)
 			});
 		}
 
@@ -603,7 +637,7 @@ export const actions: Actions = {
 				confirmationState: 'confirmed' as const,
 				confirmedBookingId: confirmation.booking.id,
 				message:
-					"Briefing confirmed. Woody, Christoph's AI assistant will email you shortly. Please check your inbox for the calendar invite."
+					'Briefing bestätigt. Woody, Christophs KI-Assistent, schreibt Ihnen in Kürze per E-Mail. Bitte prüfen Sie Ihren Posteingang auf die Kalendereinladung.'
 			};
 		}
 
@@ -617,7 +651,10 @@ export const actions: Actions = {
 					: confirmation.state === 'calendar_sync_failed'
 						? 'calendar_sync_failed'
 						: 'booking_unavailable',
-			message: confirmation.message
+			message:
+				confirmation.state === 'slot_unavailable'
+					? 'Der ausgewählte Termin ist leider nicht mehr verfügbar. Bitte wählen Sie einen anderen Termin.'
+					: getGermanBookingUnavailableMessage()
 		});
 	}
 };
