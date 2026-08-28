@@ -9,27 +9,51 @@
 		props,
 		campaignId = null,
 		campaignPageId = null,
-		mailtoHref
+		mailtoHref,
+		language = 'en'
 	}: {
 		props?: ComplianceTransparencyFooterProps;
 		campaignId?: number | null;
 		campaignPageId?: number | null;
 		mailtoHref?: string;
+		language?: 'en' | 'de';
 	} = $props();
 
 	const privacyPolicyUrl = $derived(props?.privacyPolicyUrl ?? 'https://christophholz.com/privacy');
 	const contactEmail = $derived(props?.contactEmail ?? 'speaker@christophholz.com');
 
 	const phone = $derived(props?.phone);
-	const copyrightText = $derived(props?.copyrightText ?? '© Christoph Holz. All rights reserved.');
+	const copyrightText = $derived(
+		props?.copyrightText ??
+			(language === 'de'
+				? '© Christoph Holz. Alle Rechte vorbehalten.'
+				: '© Christoph Holz. All rights reserved.')
+	);
 	const additionalLinks = $derived(props?.additionalLinks ?? []);
 
 	const brandName = 'Christoph Holz';
 	const brandDescriptor =
 		'Designing the digital future through speech, strategy, and responsible innovation.';
+	const copy = $derived(
+		language === 'de'
+			? {
+					footerTitle: 'Transparenz und rechtliche Hinweise',
+					home: 'Startseite',
+					keynoteSpeaker: 'Keynote-Speaker',
+					angelInvestor: 'Business Angel',
+					socialMedia: 'Soziale Medien'
+				}
+			: {
+					footerTitle: 'Compliance and Transparency footer section',
+					home: 'Home',
+					keynoteSpeaker: 'Keynote Speaker',
+					angelInvestor: 'Angel Investor',
+					socialMedia: 'Social Media'
+				}
+	);
 
 	const legalLinks = $derived([
-		{ label: 'Privacy Policy', href: privacyPolicyUrl },
+		{ label: language === 'de' ? 'Datenschutz' : 'Privacy Policy', href: privacyPolicyUrl },
 		...additionalLinks
 	]);
 
@@ -83,7 +107,7 @@
 
 <footer
 	class="border-outline/20 bg-surface-container-highest relative border-t px-6 py-16 sm:px-8 lg:px-12"
-	aria-label="Compliance and Transparency footer section"
+	aria-label={copy.footerTitle}
 >
 	<SectionIdentifier props={{ id: 'compliance_footer' }}></SectionIdentifier>
 	<div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-12 lg:gap-12">
@@ -116,7 +140,7 @@
 				<div class="top-margin _10-pixels">
 					<div class="top-margin _15-pixels">
 						<a href="/" aria-current="page" class="footer-menu-link w-inline-block w--current"
-							><div>Home</div>
+							><div>{copy.home}</div>
 							<div class="footer-underline" style="width: 0px;"></div></a
 						>
 					</div>
@@ -134,7 +158,7 @@
 									href="/category/keynote-speaker"
 									data-w-id="b3e83569-8560-1e34-cca7-cec611d3a75b"
 									class="footer-menu-link w-inline-block"
-									><div>Keynote Speaker</div>
+									><div>{copy.keynoteSpeaker}</div>
 									<div class="footer-underline" style="width: 0px;"></div></a
 								>
 							</div>
@@ -197,7 +221,7 @@
 									href="/category/angel-investor"
 									data-w-id="771583c4-ae57-c2c8-7414-667d88901f00"
 									class="footer-menu-link w-inline-block"
-									><div>Angel Investor</div>
+									><div>{copy.angelInvestor}</div>
 									<div class="footer-underline" style="width: 0px;"></div></a
 								>
 							</div>
@@ -206,7 +230,7 @@
 				</div>
 			</div>
 			<div class="menu">
-				<div class="footer-title">Social Media</div>
+				<div class="footer-title">{copy.socialMedia}</div>
 				<div class="top-margin _15-pixels">
 					<a
 						href="https://www.linkedin.com/in/christophholz/"

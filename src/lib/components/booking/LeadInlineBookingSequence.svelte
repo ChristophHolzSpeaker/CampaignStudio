@@ -34,6 +34,7 @@
 		ctaKey?: string;
 		ctaSection?: string;
 		ctaVariant?: string | null;
+		language?: 'en' | 'de';
 		displayTimeZone?: string | null;
 		initialValues?: {
 			email?: string | null;
@@ -56,6 +57,7 @@
 		ctaKey = 'inline_booking_sequence',
 		ctaSection = 'booking',
 		ctaVariant = null,
+		language = 'en',
 		displayTimeZone = null,
 		initialValues = {}
 	}: Props = $props();
@@ -93,6 +95,75 @@
 		});
 	}
 	const effectiveIntakeScope = $derived(showIntakeStep ? intakeScope : (initialValues.scope ?? ''));
+	const copy = $derived(
+		language === 'de'
+			? {
+					email: 'E-Mail*',
+					emailPlaceholder: 'sie@beispiel.de',
+					introWithIntake:
+						'Bitte wählen Sie zuerst einen verfügbaren Termin und geben Sie anschließend Ihre Angaben ein.',
+					introWithoutIntake: 'Bitte wählen Sie einen verfügbaren Termin für Ihr Video-Briefing.',
+					retry: 'Buchungsanfrage erneut versuchen',
+					loading: 'Verfügbare Termine werden geprüft …',
+					stepOne: 'Schritt 1',
+					selectSlot: 'Termin für das Briefing auswählen',
+					availableDays: 'Verfügbare Tage für das Briefing',
+					morning: 'Vormittag',
+					afternoon: 'Nachmittag',
+					evening: 'Abend',
+					selectedSlot: 'Ausgewählter Termin:',
+					selectSlotToContinue: 'Bitte wählen Sie einen Termin aus, um fortzufahren.',
+					wait: 'Bitte warten …',
+					confirm: 'Briefing-Termin bestätigen',
+					stepTwo: 'Schritt 2',
+					shareDetails: 'Angaben zum Briefing',
+					name: 'Name*',
+					namePlaceholder: 'Ihr Name',
+					phone: 'Telefon (optional)',
+					company: 'Unternehmen*',
+					companyPlaceholder: 'Ihr Unternehmen',
+					meetingScope: 'Anliegen für das Briefing*',
+					changeSlot: 'Termin ändern',
+					noSlots: 'Über diesen Link sind derzeit keine Termine verfügbar.',
+					contact: 'Kontaktieren Sie uns für einen individuellen Termin',
+					meetingScopePlaceholder: `Wir planen eine Veranstaltung:
+Datum und Uhrzeit:
+Veranstaltungsort:`
+				}
+			: {
+					email: 'Email*',
+					emailPlaceholder: 'you@example.com',
+					introWithIntake:
+						'Please select an available slot first, then share your details to confirm your briefing request.',
+					introWithoutIntake: 'Please select an available slot to confirm your briefing request.',
+					retry: 'Retry booking request',
+					loading: 'Checking available briefing slots...',
+					stepOne: 'Step 1',
+					selectSlot: 'Select a briefing slot',
+					availableDays: 'Available briefing days',
+					morning: 'Morning',
+					afternoon: 'Afternoon',
+					evening: 'Evening',
+					selectedSlot: 'Selected slot:',
+					selectSlotToContinue: 'Please select a slot to continue.',
+					wait: 'Please wait...',
+					confirm: 'Confirm briefing slot',
+					stepTwo: 'Step 2',
+					shareDetails: 'Share your briefing details',
+					name: 'Name*',
+					namePlaceholder: 'Your name',
+					phone: 'Phone (optional)',
+					company: 'Company*',
+					companyPlaceholder: 'Your organization',
+					meetingScope: 'Meeting scope*',
+					changeSlot: 'Change slot',
+					noSlots: 'No slots are currently available from this page context.',
+					contact: 'Contact us to request a custom time',
+					meetingScopePlaceholder: `We are planning an event:
+Date and time:
+Venue:`
+				}
+	);
 
 	const normalizedSlotGroups = $derived(slotGroups ?? []);
 	const isLoadingSlotGroups = $derived(slotGroups === undefined);
@@ -146,9 +217,9 @@
 			}
 
 			return [
-				{ label: 'Morning', slots: morning },
-				{ label: 'Afternoon', slots: afternoon },
-				{ label: 'Evening', slots: evening }
+				{ label: copy.morning, slots: morning },
+				{ label: copy.afternoon, slots: afternoon },
+				{ label: copy.evening, slots: evening }
 			].filter((group) => group.slots.length > 0);
 		})()
 	);
@@ -190,7 +261,7 @@
 
 	function formatDayLabel(dateKey: string): string {
 		const date = new Date(`${dateKey}T00:00:00.000Z`);
-		return date.toLocaleDateString('en-US', {
+		return date.toLocaleDateString(language === 'de' ? 'de-AT' : 'en-US', {
 			weekday: 'short',
 			month: 'short',
 			day: 'numeric',
@@ -220,12 +291,12 @@
 		const startsAt = new Date(startsAtIso);
 		const endsAt = new Date(endsAtIso);
 
-		const startTime = startsAt.toLocaleTimeString('en-US', {
+		const startTime = startsAt.toLocaleTimeString(language === 'de' ? 'de-AT' : 'en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
 			timeZone: displayTimeZone ?? undefined
 		});
-		const endTime = endsAt.toLocaleTimeString('en-US', {
+		const endTime = endsAt.toLocaleTimeString(language === 'de' ? 'de-AT' : 'en-US', {
 			hour: 'numeric',
 			minute: '2-digit',
 			timeZone: displayTimeZone ?? undefined
@@ -258,17 +329,11 @@
 		intakeScope = '';
 		hideFailureMessage = true;
 	}
-
-	const meetingScopePlaceholder = `Wir planen einen Event:
-Datum und Uhrzeit:
-Veranstaltungsort:`;
 </script>
 
 <section class="space-y-6 bg-[var(--surface-card)] p-6 shadow-[var(--shadow-card)] lg:p-8">
 	<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-		{showIntakeStep
-			? 'Please select an available slot first, then share your details to confirm your briefing request.'
-			: 'Please select an available slot to confirm your briefing request.'}
+		{showIntakeStep ? copy.introWithIntake : copy.introWithoutIntake}
 	</p>
 
 	{#if isSubmitSuccess && submitResult?.message}
@@ -294,7 +359,7 @@ Veranstaltungsort:`;
 							resetBookingFormUi();
 						}}
 					>
-						Retry booking request
+						{copy.retry}
 					</a>
 				</div>
 			{/if}
@@ -321,7 +386,7 @@ Veranstaltungsort:`;
 					aria-busy="true"
 					aria-live="polite"
 				>
-					<p>Checking available briefing slots...</p>
+					<p>{copy.loading}</p>
 					<div class="grid gap-2 sm:grid-cols-3">
 						<div class="h-10 animate-pulse bg-slate-200"></div>
 						<div class="h-10 animate-pulse bg-slate-200"></div>
@@ -332,11 +397,11 @@ Veranstaltungsort:`;
 				{#if showSlotStage}
 					<section class="space-y-5">
 						<div class="space-y-1">
-							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 1</p>
-							<h2 class="text-xl text-(--text-primary)">Select a briefing slot</h2>
+							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">{copy.stepOne}</p>
+							<h2 class="text-xl text-(--text-primary)">{copy.selectSlot}</h2>
 						</div>
 
-						<div role="tablist" aria-label="Available briefing days" class="flex flex-wrap gap-2">
+						<div role="tablist" aria-label={copy.availableDays} class="flex flex-wrap gap-2">
 							{#each normalizedSlotGroups as day (day.dateKey)}
 								<button
 									type="button"
@@ -402,12 +467,12 @@ Veranstaltungsort:`;
 							>
 								<p class="text-xs text-slate-600">
 									{#if hasSelectedSlot}
-										Selected slot:
+										{copy.selectedSlot}
 										<strong class="text-slate-900"
 											>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
 										>
 									{:else}
-										Please select a slot to continue.
+										{copy.selectSlotToContinue}
 									{/if}
 								</p>
 								<button
@@ -416,9 +481,9 @@ Veranstaltungsort:`;
 									disabled={isSubmitDisabled}
 								>
 									{#if resolvedSubmitAction.pending}
-										Please wait...
+										{copy.wait}
 									{:else}
-										Confirm briefing slot
+										{copy.confirm}
 									{/if}
 								</button>
 							</div>
@@ -427,17 +492,17 @@ Veranstaltungsort:`;
 				{:else if showIntakeStep}
 					<section class="space-y-5">
 						<div class="space-y-1">
-							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">Step 2</p>
-							<h2 class="text-xl text-(--text-primary)">Share your briefing details</h2>
+							<p class="text-[0.65rem] tracking-[0.2em] text-slate-500 uppercase">{copy.stepTwo}</p>
+							<h2 class="text-xl text-(--text-primary)">{copy.shareDetails}</h2>
 						</div>
 
 						<div class="grid gap-5 md:grid-cols-2">
 							<Input
 								id="inline-booking-email"
 								name="email"
-								label="Email*"
+								label={copy.email}
 								type="email"
-								placeholder="you@example.com"
+								placeholder={copy.emailPlaceholder}
 								required
 								autocomplete="email"
 								bind:value={intakeEmail}
@@ -446,9 +511,9 @@ Veranstaltungsort:`;
 							<Input
 								id="inline-booking-name"
 								name="name"
-								label="Name*"
+								label={copy.name}
 								type="text"
-								placeholder="Your name"
+								placeholder={copy.namePlaceholder}
 								required
 								autocomplete="name"
 								bind:value={intakeName}
@@ -458,7 +523,7 @@ Veranstaltungsort:`;
 						<Input
 							id="inline-booking-phone"
 							name="phone"
-							label="Phone (optional)"
+							label={copy.phone}
 							type="tel"
 							placeholder="+491234567890"
 							autocomplete="tel"
@@ -468,9 +533,9 @@ Veranstaltungsort:`;
 						<Input
 							id="inline-booking-company"
 							name="company"
-							label="Company*"
+							label={copy.company}
 							type="text"
-							placeholder="Your organization"
+							placeholder={copy.companyPlaceholder}
 							required
 							autocomplete="organization"
 							bind:value={intakeCompany}
@@ -479,8 +544,8 @@ Veranstaltungsort:`;
 						<TextArea
 							id="inline-booking-scope"
 							name="scope"
-							label="Meeting scope*"
-							placeholder={meetingScopePlaceholder}
+							label={copy.meetingScope}
+							placeholder={copy.meetingScopePlaceholder}
 							rows={4}
 							required
 							bind:value={intakeScope}
@@ -490,7 +555,7 @@ Veranstaltungsort:`;
 							class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-300/60 pt-4"
 						>
 							<p class="text-xs text-slate-600">
-								Selected slot:
+								{copy.selectedSlot}
 								<strong class="text-slate-900"
 									>{formatSlotRange(selectedStartsAt, selectedEndsAt)}</strong
 								>
@@ -503,7 +568,7 @@ Veranstaltungsort:`;
 										resetToSlotStage();
 									}}
 								>
-									Change slot
+									{copy.changeSlot}
 								</button>
 								<button
 									type="submit"
@@ -511,9 +576,9 @@ Veranstaltungsort:`;
 									disabled={isSubmitDisabled}
 								>
 									{#if resolvedSubmitAction.pending}
-										Please wait...
+										{copy.wait}
 									{:else}
-										Confirm briefing slot
+										{copy.confirm}
 									{/if}
 								</button>
 							</div>
@@ -524,13 +589,13 @@ Veranstaltungsort:`;
 				<div
 					class="space-y-3 border border-amber-300/80 bg-amber-50 px-4 py-4 text-sm text-amber-800"
 				>
-					<p>No slots are currently available from this page context.</p>
+					<p>{copy.noSlots}</p>
 					<a
 						href="mailto:speaker@christophholz.com"
 						onclick={trackUnavailableMailto}
 						class="inline-flex items-center text-xs tracking-[0.12em] text-amber-900 uppercase underline"
 					>
-						Contact us to request a custom time
+						{copy.contact}
 					</a>
 				</div>
 			{/if}

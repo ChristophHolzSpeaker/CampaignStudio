@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('$lib/server/bookings', () => ({
 	confirmBookingSelection: vi.fn(),
 	getBookingPolicy: vi.fn(),
-	getPublicBookingUnavailableMessage: vi.fn(),
 	markBookingLinkClickedAt: vi.fn(),
 	resolveLeadBookingIntakeContext: vi.fn(),
 	resolveLeadBookingToken: vi.fn(),
@@ -22,7 +21,6 @@ vi.mock('$lib/server/attribution/lead-journeys', () => ({
 import {
 	confirmBookingSelection,
 	getBookingPolicy,
-	getPublicBookingUnavailableMessage,
 	markBookingLinkClickedAt,
 	resolveLeadBookingIntakeContext,
 	resolveLeadBookingToken,
@@ -33,7 +31,6 @@ import { getLeadJourneyById } from '$lib/server/attribution/lead-journeys';
 import { actions, load } from './+page.server';
 
 const mockedGetBookingPolicy = vi.mocked(getBookingPolicy);
-const mockedGetPublicBookingUnavailableMessage = vi.mocked(getPublicBookingUnavailableMessage);
 const mockedMarkBookingLinkClickedAt = vi.mocked(markBookingLinkClickedAt);
 const mockedResolveLeadBookingIntakeContext = vi.mocked(resolveLeadBookingIntakeContext);
 const mockedResolveLeadBookingToken = vi.mocked(resolveLeadBookingToken);
@@ -46,7 +43,6 @@ describe('/book/l/[token] +page.server', () => {
 	beforeEach(() => {
 		mockedConfirmBookingSelection.mockReset();
 		mockedGetBookingPolicy.mockReset();
-		mockedGetPublicBookingUnavailableMessage.mockReset();
 		mockedMarkBookingLinkClickedAt.mockReset();
 		mockedResolveLeadBookingIntakeContext.mockReset();
 		mockedResolveLeadBookingToken.mockReset();
@@ -67,7 +63,7 @@ describe('/book/l/[token] +page.server', () => {
 		} as never)) as any;
 
 		expect(result.tokenState).toBe('invalid');
-		expect(result.tokenMessage).toContain('invalid');
+		expect(result.tokenMessage).toContain('ungültig');
 		expect(mockedGetBookingPolicy).not.toHaveBeenCalled();
 	});
 
@@ -93,7 +89,7 @@ describe('/book/l/[token] +page.server', () => {
 		} as never)) as any;
 
 		expect(result.tokenState).toBe('expired');
-		expect(result.tokenMessage).toContain('expired');
+		expect(result.tokenMessage).toContain('abgelaufen');
 		expect(mockedGetBookingPolicy).not.toHaveBeenCalled();
 	});
 
@@ -123,7 +119,6 @@ describe('/book/l/[token] +page.server', () => {
 			},
 			rules: null
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce('Bookings paused');
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: 'lead@example.com',
@@ -156,7 +151,9 @@ describe('/book/l/[token] +page.server', () => {
 
 		expect(result.tokenState).toBe('usable');
 		expect(result.policyState).toBe('globally_paused');
-		expect(result.unavailableMessage).toBe('Bookings paused');
+		expect(result.unavailableMessage).toBe(
+			'Die Terminbuchung ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.'
+		);
 		expect(result.prefillValues.email).toBe('lead@example.com');
 		expect(result.intakeSkipped).toBe(false);
 	});
@@ -200,7 +197,6 @@ describe('/book/l/[token] +page.server', () => {
 			},
 			rules: null
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce('Bookings paused');
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: 'lead@example.com',
@@ -268,7 +264,6 @@ describe('/book/l/[token] +page.server', () => {
 			},
 			rules: null
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce('Bookings paused');
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: 'lead@example.com',
@@ -337,7 +332,6 @@ describe('/book/l/[token] +page.server', () => {
 				updatedAt: new Date('2026-04-17T00:00:00.000Z')
 			}
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce(null);
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: 'lead@example.com',
@@ -468,7 +462,6 @@ describe('/book/l/[token] +page.server', () => {
 				updatedAt: new Date('2026-04-17T00:00:00.000Z')
 			}
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce(null);
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: 'lead@example.com',
@@ -545,7 +538,6 @@ describe('/book/l/[token] +page.server', () => {
 				updatedAt: new Date('2026-04-17T00:00:00.000Z')
 			}
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce(null);
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: 'lead@example.com',
@@ -616,7 +608,6 @@ describe('/book/l/[token] +page.server', () => {
 				updatedAt: new Date('2026-04-17T00:00:00.000Z')
 			}
 		});
-		mockedGetPublicBookingUnavailableMessage.mockReturnValueOnce(null);
 		mockedResolveLeadBookingIntakeContext.mockResolvedValueOnce({
 			values: {
 				email: '',
@@ -671,7 +662,7 @@ describe('/book/l/[token] +page.server', () => {
 		} as never)) as any;
 
 		expect(response.status).toBe(400);
-		expect(response.data.message).toContain('invalid');
+		expect(response.data.message).toContain('ungültig');
 	});
 
 	it('action returns available slots for lead booking type', async () => {
@@ -901,6 +892,6 @@ describe('/book/l/[token] +page.server', () => {
 		} as never)) as any;
 
 		expect(response.status).toBe(400);
-		expect(response.data.message).toContain('invalid');
+		expect(response.data.message).toContain('ungültig');
 	});
 });
