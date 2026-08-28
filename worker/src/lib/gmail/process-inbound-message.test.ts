@@ -248,8 +248,15 @@ describe('processInboundGmailMessage', () => {
 		expect(result.lead_message_id).toBe('lead_message_winner');
 	});
 
-	it('processes inbound message and logs classification + decision events', async () => {
-		mockedNormalizeGmailMessage.mockReturnValue(sampleNormalizedInbound());
+	it('forces German Woody replies for artifact pages', async () => {
+		mockedNormalizeGmailMessage.mockReturnValue({
+			...sampleNormalizedInbound(),
+			raw_metadata: {
+				gmail: {
+					headers: [{ name: 'Accept-Language', value: 'fr-FR,fr;q=0.9' }]
+				}
+			}
+		});
 		mockedRunAutoresponsePipeline.mockResolvedValueOnce({
 			status: 'sent_successfully',
 			lead_journey_id: 'journey_1',
@@ -262,7 +269,9 @@ describe('processInboundGmailMessage', () => {
 			generation_status: 'success',
 			send_status: 'sent'
 		});
-		mockedSelectOne.mockResolvedValueOnce(null).mockResolvedValueOnce({ language: 'German' });
+		mockedSelectOne
+			.mockResolvedValueOnce(null)
+			.mockResolvedValueOnce({ renderer_type: 'artifact' });
 		mockedResolveInboundJourney.mockResolvedValue({
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
