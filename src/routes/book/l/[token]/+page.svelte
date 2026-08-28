@@ -88,33 +88,33 @@
 </script>
 
 <svelte:head>
-	<title>Schedule a video call briefing</title>
+	<title>Video-Briefing vereinbaren</title>
 </svelte:head>
 
-<LandingNavigation />
+<LandingNavigation language="de" />
 
 <div class="min-h-screen bg-(--surface) py-12">
 	<div id="booking" class="mx-auto w-full max-w-6xl px-4 pt-20 lg:pt-24">
 		<div class="space-y-8 bg-(--surface-card) p-8 shadow-(--shadow-card) lg:p-10">
 			<p class="text-[0.6rem] tracking-[0.5em] text-(--text-muted) uppercase">Christoph Holz</p>
-			<h1 class="text-4xl font-semibold text-(--text-primary)">Briefing request</h1>
+			<h1 class="text-4xl font-semibold text-(--text-primary)">Briefing-Anfrage</h1>
 
 			{#if !isTokenUsable}
 				<div
 					class="rounded-none border border-rose-400/70 bg-rose-50 px-4 py-4 text-sm text-rose-700"
 				>
-					{data.tokenMessage ?? 'This briefing link cannot be used.'}
+					{data.tokenMessage ?? 'Dieser Link für das Briefing kann nicht verwendet werden.'}
 				</div>
 			{:else if isUnavailable}
 				<div
 					class="rounded-none border border-amber-400/70 bg-amber-50 px-4 py-4 text-sm text-amber-800"
 				>
-					{data.unavailableMessage ?? 'Briefing is currently unavailable.'}
+					{data.unavailableMessage ?? 'Das Briefing ist derzeit nicht verfügbar.'}
 				</div>
 			{:else}
 				<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-					Please confirm your details, then select a slot to schedule a video call briefing with
-					Christoph in the next 3 days.
+					Bitte bestätigen Sie Ihre Angaben und wählen Sie anschließend einen Termin für ein
+					Video-Briefing mit Christoph in den nächsten drei Tagen.
 				</p>
 
 				{#if showIntakeStage}
@@ -159,9 +159,9 @@
 							<Input
 								id="email"
 								name="email"
-								label="Email"
+								label="E-Mail"
 								type="email"
-								placeholder="you@example.com"
+								placeholder="sie@beispiel.de"
 								value={activeValues.email}
 								error={form?.errors?.email}
 								autocomplete="email"
@@ -172,7 +172,7 @@
 								name="name"
 								label="Name (optional)"
 								type="text"
-								placeholder="Your name"
+								placeholder="Ihr Name"
 								value={activeValues.name}
 								error={form?.errors?.name}
 								autocomplete="name"
@@ -182,7 +182,7 @@
 						<Input
 							id="phone"
 							name="phone"
-							label="Phone (optional)"
+							label="Telefon (optional)"
 							type="tel"
 							placeholder="+491234567890"
 							value={activeValues.phone}
@@ -193,9 +193,9 @@
 						<Input
 							id="company"
 							name="company"
-							label="Company (optional)"
+							label="Unternehmen (optional)"
 							type="text"
-							placeholder="Your company"
+							placeholder="Ihr Unternehmen"
 							value={activeValues.company}
 							error={form?.errors?.company}
 							autocomplete="organization"
@@ -204,20 +204,21 @@
 						<TextArea
 							id="scope"
 							name="scope"
-							label="Meeting purpose"
-							placeholder="Describe what you want to cover"
+							label="Anliegen für das Briefing"
+							placeholder="Beschreiben Sie kurz, worüber Sie sprechen möchten"
 							value={activeValues.scope}
 							error={form?.errors?.scope}
 							rows={4}
 						/>
 
-						<Button>Check available slots</Button>
+						<Button>Verfügbare Termine prüfen</Button>
 					</form>
 				{:else if hasAvailableSlots}
 					<LeadInlineBookingSequence
 						submitAction={submitLeadTokenBooking}
 						slotGroups={activeSlotGroups}
 						showIntakeStep={false}
+						language="de"
 						initialValues={{
 							email: activeValues.email,
 							name: activeValues.name,
@@ -233,5 +234,5 @@
 </div>
 
 <div id="contact">
-	<ComplianceFooterSection />
+	<ComplianceFooterSection language="de" />
 </div>

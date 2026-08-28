@@ -54,14 +54,14 @@ describe('/book/l/[token] +page.svelte', () => {
 			}
 		});
 
-		expect(body).toContain('Select a briefing slot');
+		expect(body).toContain('Termin für das Briefing auswählen');
 		expect(body).toContain('lead@example.com');
-		expect(body).toContain('Confirm briefing slot');
+		expect(body).toContain('Briefing-Termin bestätigen');
 		expect(body).toContain('Christoph Holz');
-		expect(body).toContain('Compliance and Transparency footer section');
+		expect(body).toContain('Footer für Transparenz und rechtliche Hinweise');
 		expect(body).toContain('id="booking"');
 		expect(body).toContain('id="contact"');
-		expect(body).not.toContain('Briefing details');
+		expect(body).not.toContain('Angaben zum Briefing');
 	});
 
 	it('renders editable intake form with prefilled values when intake is not skipped', () => {
@@ -94,7 +94,7 @@ describe('/book/l/[token] +page.svelte', () => {
 		});
 
 		expect(body).toContain('action="?/check"');
-		expect(body).not.toContain('Briefing details');
+		expect(body).not.toContain('Angaben zum Briefing');
 		expect(body).toContain('value="lead@example.com"');
 		expect(body).toContain('value="Lead User"');
 		expect(body).toContain('value="ACME"');
