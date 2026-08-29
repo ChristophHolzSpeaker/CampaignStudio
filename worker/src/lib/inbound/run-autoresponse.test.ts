@@ -145,14 +145,13 @@ describe('runAutoresponsePipeline', () => {
 			body_html: '',
 			body_text: '',
 			extracted_fields: {
-				event_topic: 'TBD',
-				talking_length: 'TBD',
-				location: 'TBD',
-				date_time: 'TBD',
-				event_name: 'TBD',
-				audience: 'TBD',
-				agent: 'TBD',
-				client: 'TBD'
+				location: 'To be determined',
+				date_time: 'To be determined',
+				event_name: 'To be determined',
+				audience: 'To be determined',
+				topic: 'To be determined',
+				requester: 'To be determined',
+				organization: 'To be determined'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
@@ -182,17 +181,16 @@ describe('runAutoresponsePipeline', () => {
 		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
 			subject: 'Subject',
 			body_html:
-				'<p>Body</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
+				'<p>Body</p><ul><li>Location: To be determined</li><li>Date and time: To be determined</li><li>Event name: To be determined</li><li>Audience: To be determined</li><li>Topic: To be determined</li><li>Requester: To be determined</li><li>Organization: To be determined</li></ul>',
 			body_text: 'Body',
 			extracted_fields: {
-				event_topic: 'TBD',
-				talking_length: 'TBD',
-				location: 'TBD',
-				date_time: 'TBD',
-				event_name: 'TBD',
-				audience: 'TBD',
-				agent: 'TBD',
-				client: 'TBD'
+				location: 'To be determined',
+				date_time: 'To be determined',
+				event_name: 'To be determined',
+				audience: 'To be determined',
+				topic: 'To be determined',
+				requester: 'To be determined',
+				organization: 'To be determined'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
@@ -260,17 +258,16 @@ describe('runAutoresponsePipeline', () => {
 		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
 			subject: 'Subject',
 			body_html:
-				'<p>Body</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
+				'<p>Body</p><ul><li>Location: To be determined</li><li>Date and time: To be determined</li><li>Event name: To be determined</li><li>Audience: To be determined</li><li>Topic: To be determined</li><li>Requester: To be determined</li><li>Organization: To be determined</li></ul>',
 			body_text: 'Body',
 			extracted_fields: {
-				event_topic: 'TBD',
-				talking_length: 'TBD',
-				location: 'TBD',
-				date_time: 'TBD',
-				event_name: 'TBD',
-				audience: 'TBD',
-				agent: 'TBD',
-				client: 'TBD'
+				location: 'To be determined',
+				date_time: 'To be determined',
+				event_name: 'To be determined',
+				audience: 'To be determined',
+				topic: 'To be determined',
+				requester: 'To be determined',
+				organization: 'To be determined'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',
@@ -310,17 +307,16 @@ describe('runAutoresponsePipeline', () => {
 		mockedInvokeWoodyAcknowledgement.mockResolvedValue({
 			subject: 'Subject',
 			body_html:
-				'<p>Body</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
+				'<p>Body</p><ul><li>Location: To be determined</li><li>Date and time: To be determined</li><li>Event name: To be determined</li><li>Audience: To be determined</li><li>Topic: To be determined</li><li>Requester: To be determined</li><li>Organization: To be determined</li></ul>',
 			body_text: 'Body',
 			extracted_fields: {
-				event_topic: 'TBD',
-				talking_length: 'TBD',
-				location: 'TBD',
-				date_time: 'TBD',
-				event_name: 'TBD',
-				audience: 'TBD',
-				agent: 'TBD',
-				client: 'TBD'
+				location: 'To be determined',
+				date_time: 'To be determined',
+				event_name: 'To be determined',
+				audience: 'To be determined',
+				topic: 'To be determined',
+				requester: 'To be determined',
+				organization: 'To be determined'
 			},
 			model: 'openai/gpt-4.1-mini',
 			provider: 'openrouter',

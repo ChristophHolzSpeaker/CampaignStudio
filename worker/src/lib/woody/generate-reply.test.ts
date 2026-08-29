@@ -22,18 +22,17 @@ function validModelContent(): string {
 	return JSON.stringify({
 		subject: 'Thanks for reaching out',
 		body_html:
-			'<p>Hello</p><ul><li>Event Topic: Product Launch</li><li>Talking Length: 45 minutes</li><li>Location: Berlin</li><li>Date/Time: TBD</li><li>Event Name: Innovation Summit</li><li>Audience: Founders</li><li>Agent: TBD</li><li>Client: TBD</li></ul><p>Please book here: https://book.domain.com/example</p>',
+			'<p>Hello</p><ul><li>Location: Berlin</li><li>Date and time: To be determined</li><li>Event name: Innovation Summit</li><li>Audience: Founders</li><li>Topic: Product Launch</li><li>Requester: Jane</li><li>Organization: To be determined</li></ul><p><a href="https://book.domain.com/example">Schedule a video call</a><br/>https://book.domain.com/example</p>',
 		body_text:
-			'Hello\nEvent Topic: Product Launch\nTalking Length: 45 minutes\nLocation: Berlin\nDate/Time: TBD\nEvent Name: Innovation Summit\nAudience: Founders\nAgent: TBD\nClient: TBD\nPlease book here: https://book.domain.com/example',
+			'Hello\nLocation: Berlin\nDate and time: To be determined\nEvent name: Innovation Summit\nAudience: Founders\nTopic: Product Launch\nRequester: Jane\nOrganization: To be determined\nSchedule a video call\nhttps://book.domain.com/example',
 		extracted_fields: {
-			event_topic: 'Product Launch',
-			talking_length: '45 minutes',
 			location: 'Berlin',
 			date_time: '',
 			event_name: 'Innovation Summit',
 			audience: 'Founders',
-			agent: '',
-			client: ''
+			topic: 'Product Launch',
+			requester: 'Jane',
+			organization: ''
 		}
 	});
 }
@@ -66,8 +65,8 @@ describe('generate woody reply', () => {
 
 		expect(result.generation_status).toBe('success');
 		expect(result.provider).toBe('openrouter');
-		expect(result.extracted_fields.date_time).toBe('TBD');
-		expect(result.extracted_fields.agent).toBe('TBD');
+		expect(result.extracted_fields.date_time).toBe('To be determined');
+		expect(result.extracted_fields.organization).toBe('To be determined');
 	});
 
 	it('falls back unsupported language to english explicitly', async () => {
@@ -126,7 +125,7 @@ describe('generate woody reply', () => {
 
 		expect(result.generation_status).toBe('error');
 		expect(result.subject).toBe('');
-		expect(result.extracted_fields.event_topic).toBe('TBD');
+		expect(result.extracted_fields.topic).toBe('To be determined');
 	});
 
 	it('returns controlled error when html summary list labels are missing', async () => {
@@ -136,14 +135,13 @@ describe('generate woody reply', () => {
 				body_html: '<p>No summary list</p><ul><li>Only one item</li></ul>',
 				body_text: 'Hello',
 				extracted_fields: {
-					event_topic: 'TBD',
-					talking_length: 'TBD',
-					location: 'TBD',
-					date_time: 'TBD',
-					event_name: 'TBD',
-					audience: 'TBD',
-					agent: 'TBD',
-					client: 'TBD'
+					location: 'To be determined',
+					date_time: 'To be determined',
+					event_name: 'To be determined',
+					audience: 'To be determined',
+					topic: 'To be determined',
+					requester: 'To be determined',
+					organization: 'To be determined'
 				}
 			}),
 			model: 'openai/gpt-4.1-mini',
@@ -167,22 +165,50 @@ describe('generate woody reply', () => {
 		expect(result.generation_status).toBe('error');
 	});
 
+	it('returns controlled error when summary fields are in the wrong order', async () => {
+		const parsed = JSON.parse(validModelContent()) as {
+			body_html: string;
+			[key: string]: unknown;
+		};
+		parsed.body_html = parsed.body_html
+			.replace('<li>Location: Berlin</li>', '<li>SWAP</li>')
+			.replace('<li>Audience: Founders</li>', '<li>Location: Berlin</li>')
+			.replace('<li>SWAP</li>', '<li>Audience: Founders</li>');
+		mockedCallOpenRouterChat.mockResolvedValue({
+			content: JSON.stringify(parsed),
+			model: 'openai/gpt-4.1-mini',
+			usage: null,
+			raw_response: { id: 'resp_wrong_order' }
+		});
+
+		const result = await generateWoodyReply(makeEnv(), {
+			sender_name: 'Jane',
+			sender_email: 'jane@example.com',
+			inbound_subject: 'Inquiry',
+			inbound_body: 'Please share details',
+			response_language: 'English',
+			booking_link: 'https://book.domain.com/example',
+			response_type: 'initial_speaking_inquiry_ack'
+		});
+
+		expect(result.generation_status).toBe('error');
+	});
+
 	it('returns controlled error when forbidden lead-call wording appears', async () => {
 		mockedCallOpenRouterChat.mockResolvedValue({
 			content: JSON.stringify({
 				subject: 'Your lead call is now locked in',
 				body_html:
-					'<p>Hello</p><ul><li>Event Topic: TBD</li><li>Talking Length: TBD</li><li>Location: TBD</li><li>Date/Time: TBD</li><li>Event Name: TBD</li><li>Audience: TBD</li><li>Agent: TBD</li><li>Client: TBD</li></ul>',
+					'<p>Hello</p><ul><li>Location: To be determined</li><li>Date and time: To be determined</li><li>Event name: To be determined</li><li>Audience: To be determined</li><li>Topic: To be determined</li><li>Requester: To be determined</li><li>Organization: To be determined</li></ul>',
 				body_text: 'Your lead call is now locked in',
 				extracted_fields: {
-					event_topic: 'TBD',
-					talking_length: 'TBD',
-					location: 'TBD',
-					date_time: 'TBD',
-					event_name: 'TBD',
-					audience: 'TBD',
-					agent: 'TBD',
-					client: 'TBD'
+					location: 'To be determined',
+					date_time: 'To be determined',
+					event_name: 'To be determined',
+					audience: 'To be determined',
+					topic: 'To be determined',
+					requester: 'To be determined',
+					organization: 'To be determined'
 				}
 			}),
 			model: 'openai/gpt-4.1-mini',

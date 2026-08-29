@@ -22,6 +22,10 @@ vi.mock('$lib/server/campaigns/client', () => ({
 	getCampaignById: vi.fn()
 }));
 
+vi.mock('$lib/server/openrouter/client', () => ({
+	callOpenRouter: vi.fn()
+}));
+
 vi.mock('$lib/server/notifications/woody-email', () => ({
 	sendBookingLinkInviteWoodyEmail: vi.fn(),
 	sendBookingConfirmedWoodyEmail: vi.fn()
@@ -35,6 +39,7 @@ import {
 } from '$lib/server/attribution/lead-journeys';
 import { getCampaignById } from '$lib/server/campaigns/client';
 import { getBookingById, markBookingConfirmationEmailSent } from '$lib/server/bookings/repository';
+import { callOpenRouter } from '$lib/server/openrouter/client';
 import {
 	sendBookingLinkInviteWoodyEmail,
 	sendBookingConfirmedWoodyEmail
@@ -47,6 +52,7 @@ import {
 	sendBookingConfirmedEmail,
 	sendBookingLinkInviteEmailForLeadSubmission
 } from './woody-email-service';
+import { buildLeadInviteSummaryPrompt, extractLeadInviteSummary } from './woody-lead-invite';
 
 const mockedCreateBookingLink = vi.mocked(createBookingLink);
 const mockedGetLatestFormSubmissionEventForJourney = vi.mocked(
@@ -54,6 +60,7 @@ const mockedGetLatestFormSubmissionEventForJourney = vi.mocked(
 );
 const mockedGetLeadJourneyById = vi.mocked(getLeadJourneyById);
 const mockedGetCampaignById = vi.mocked(getCampaignById);
+const mockedCallOpenRouter = vi.mocked(callOpenRouter);
 const mockedMarkLeadJourneyBookingLinkInviteEmailSent = vi.mocked(
 	markLeadJourneyBookingLinkInviteEmailSent
 );
@@ -68,6 +75,17 @@ describe('woody-email-service', () => {
 		mockedGetLatestFormSubmissionEventForJourney.mockReset();
 		mockedGetLeadJourneyById.mockReset();
 		mockedGetCampaignById.mockReset();
+		mockedCallOpenRouter.mockReset();
+		mockedCallOpenRouter.mockResolvedValue({
+			greeting: 'To be determined',
+			location: 'Berlin',
+			date_time: '30 January 2025',
+			event_name: 'Innovation Summit',
+			audience: 'Executives',
+			topic: 'Responsible AI',
+			requester: 'Lead User',
+			organization: 'ACME'
+		});
 		mockedMarkLeadJourneyBookingLinkInviteEmailSent.mockReset();
 		mockedGetBookingById.mockReset();
 		mockedMarkBookingConfirmationEmailSent.mockReset();
@@ -180,27 +198,107 @@ describe('woody-email-service', () => {
 	});
 
 	it('composeBookingLinkInviteEmail includes tokenized booking link', () => {
-		const composed = composeBookingLinkInviteEmail({
-			intent: 'booking_link_invite',
-			recipientEmail: 'lead@example.com',
-			recipientName: 'Lead User',
-			language: 'en',
+		const composed = composeBookingLinkInviteEmail(
+			{
+				intent: 'booking_link_invite',
+				recipientEmail: 'lead@example.com',
+				recipientName: 'Jaun-Paul Stevenson',
+				language: 'de',
+				leadJourneyId: 'journey-1',
+				campaignId: 7,
+				campaignPageId: 11,
+				bookingType: 'lead',
+				meetingScope: 'Keynote zur globalen Erwärmung und KI',
+				requestSummary: 'Keynote zur globalen Erwärmung und KI',
+				organization: 'The Compote',
+				bookingLinkUrl: 'https://book.example.com/book/l/token-1',
+				bookingLinkToken: 'token-1',
+				pagePath: '/speaker/christoph',
+				pageSlug: 'speaker-landing'
+			},
+			{
+				greeting: 'Sehr geehrter Herr Stevenson,',
+				location: 'Berlin',
+				dateTime: '30. Januar 2025',
+				eventName: 'XYZ-Konferenz',
+				audience: 'To be determined',
+				topic: 'Globale Erwärmung und der Einfluss von Künstlicher Intelligenz',
+				requester: 'Jaun-Paul Stevenson',
+				organization: 'The Compote'
+			}
+		);
+
+		expect(composed.bodyText).toContain('https://book.example.com/book/l/token-1');
+		expect(composed.bodyText).toContain('Sehr geehrter Herr Stevenson,');
+		const orderedSummary = [
+			'Ort: Berlin',
+			'Datum und Uhrzeit: 30. Januar 2025',
+			'Veranstaltungsname: XYZ-Konferenz',
+			'Publikum: To be determined',
+			'Thema: Globale Erwärmung und der Einfluss von Künstlicher Intelligenz',
+			'Anfragender: Jaun-Paul Stevenson',
+			'Organisation: The Compote'
+		];
+		for (const item of orderedSummary) {
+			expect(composed.bodyText).toContain(`- ${item}`);
+		}
+		for (let index = 1; index < orderedSummary.length; index += 1) {
+			expect(composed.bodyText.indexOf(orderedSummary[index - 1])).toBeLessThan(
+				composed.bodyText.indexOf(orderedSummary[index])
+			);
+		}
+		expect(composed.bodyHtml).toContain(
+			'<a href="https://book.example.com/book/l/token-1">Videoanruf planen</a>'
+		);
+		expect(composed.bodyHtml.match(/<li>/g)).toHaveLength(7);
+		expect(composed.bodyHtml).toContain('https://book.example.com/book/l/token-1');
+		expect(composed.bodyText).toContain('KI-Assistent von Christoph Holz');
+		expect(composed.bodyText.toLowerCase()).not.toContain('lead call');
+		expect(composed.bodyText.toLowerCase()).not.toContain('locked in');
+	});
+
+	it('extracts the approved lead summary without inventing missing values', async () => {
+		mockedCallOpenRouter.mockResolvedValueOnce({
+			greeting: 'Sehr geehrter Herr Stevenson,',
+			location: 'Berlin',
+			date_time: '',
+			event_name: 'XYZ-Konferenz',
+			audience: 'CEOs der DAX-Unternehmen',
+			topic: 'Künstliche Intelligenz',
+			requester: 'Jaun-Paul Stevenson',
+			organization: 'The Compote'
+		});
+		const context = {
+			intent: 'booking_link_invite' as const,
+			recipientEmail: 'jp@example.com',
+			recipientName: 'Jaun-Paul Stevenson',
+			language: 'de',
 			leadJourneyId: 'journey-1',
 			campaignId: 7,
 			campaignPageId: 11,
-			bookingType: 'lead',
-			meetingScope: 'Discuss launch strategy',
-			requestSummary: 'Discuss launch strategy',
-			organization: 'ACME',
+			bookingType: 'lead' as const,
+			meetingScope: 'XYZ-Konferenz in Berlin für CEOs zum Thema KI',
+			requestSummary: 'XYZ-Konferenz in Berlin für CEOs zum Thema KI',
+			organization: 'The Compote',
 			bookingLinkUrl: 'https://book.example.com/book/l/token-1',
 			bookingLinkToken: 'token-1',
 			pagePath: '/speaker/christoph',
 			pageSlug: 'speaker-landing'
-		});
+		};
 
-		expect(composed.bodyText).toContain('https://book.example.com/book/l/token-1');
-		expect(composed.bodyText.toLowerCase()).not.toContain('lead call');
-		expect(composed.bodyText.toLowerCase()).not.toContain('locked in');
+		const summary = await extractLeadInviteSummary(context);
+		const prompt = buildLeadInviteSummaryPrompt(context);
+
+		expect(prompt.systemPrompt).toContain('"To be determined"');
+		expect(prompt.userPrompt).toContain('XYZ-Konferenz in Berlin');
+		expect(summary).toEqual(
+			expect.objectContaining({
+				greeting: 'Sehr geehrter Herr Stevenson,',
+				dateTime: 'To be determined',
+				requester: 'Jaun-Paul Stevenson',
+				organization: 'The Compote'
+			})
+		);
 	});
 
 	it('composeBookingConfirmedEmail uses personalized briefing copy with calendar invite', () => {
@@ -384,7 +482,8 @@ describe('woody-email-service', () => {
 				}),
 				email_content: expect.objectContaining({
 					subject: expect.stringContaining('Ihre Buchungsanfrage'),
-					body_text: expect.stringContaining('Hallo JP Live Test,')
+					body_text: expect.stringContaining('Guten Tag JP Live Test,'),
+					body_html: expect.stringContaining('<ul>')
 				})
 			})
 		);
