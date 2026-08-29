@@ -6,6 +6,7 @@ import type {
 	WoodyEmailNotificationRequest,
 	WoodyEmailNotificationResponse
 } from '../../../shared/woody-email-notifications';
+import { SPEAKER_EMAIL } from '../../../shared/speaker-email';
 import { sendOutboundEmail } from '../lib/gmail/send';
 import { GmailApiError } from '../lib/gmail/client';
 
@@ -115,6 +116,7 @@ export async function handleWoodyEmailNotification(
 		const result = await sendOutboundEmail(env, {
 			leadJourneyId: input.campaign_context?.lead_journey_id ?? null,
 			gmailUser: requireEnv(env, 'GOOGLE_IMPERSONATED_USER'),
+			fromEmail: SPEAKER_EMAIL.campaignStudio,
 			to: [input.recipient_email],
 			subject: input.email_content.subject,
 			bodyText: input.email_content.body_text,
