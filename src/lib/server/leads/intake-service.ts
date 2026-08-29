@@ -124,6 +124,20 @@ export async function submitLeadIntake(
 			booking_surface: input.surface
 		}
 	});
+	await logLeadEvent({
+		leadJourneyId: journey.id,
+		campaignVisitId,
+		campaignId: input.campaignId,
+		campaignPageId: input.campaignPageId,
+		eventType: 'lead_identified',
+		eventSource: input.eventSource,
+		anonymousId: input.visitorIdentifier,
+		eventPayload: {
+			identification_method: 'form_submission',
+			contact_email: normalizedEmail,
+			contact_name: intake.name
+		}
+	});
 	if (intentApproved) {
 		try {
 			await sendBookingLinkInviteEmailForLeadSubmission({ leadJourneyId: journey.id });

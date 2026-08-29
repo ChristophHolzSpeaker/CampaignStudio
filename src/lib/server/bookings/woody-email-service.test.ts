@@ -114,6 +114,37 @@ describe('woody-email-service', () => {
 		);
 	});
 
+	it('keeps campaign-language booking invites limited to Webflow submissions', async () => {
+		mockedGetLeadJourneyById.mockResolvedValueOnce({
+			id: 'journey-webflow',
+			campaign_id: 7,
+			campaign_page_id: null,
+			contact_email: 'lead@example.com',
+			contact_name: 'Lead User'
+		} as never);
+		mockedGetLatestFormSubmissionEventForJourney.mockResolvedValueOnce({
+			eventPayload: {
+				form: {
+					form_type: 'webflow_lead_intake',
+					meeting_scope: 'Nous organisons une conférence.'
+				}
+			},
+			campaignId: 7,
+			campaignPageId: null,
+			occurredAt: new Date('2026-08-29T12:00:00.000Z')
+		});
+		mockedGetCampaignById.mockResolvedValueOnce({ language: 'French' } as never);
+
+		const context = await buildBookingLinkInviteEmailContext({
+			leadJourneyId: 'journey-webflow',
+			bookingLinkUrl: 'https://book.example.com/book/l/token-webflow',
+			bookingLinkToken: 'token-webflow'
+		});
+
+		expect(context?.language).toBe('fr');
+		expect(composeBookingLinkInviteEmail(context!).subject).toContain('Votre demande');
+	});
+
 	it('buildBookingConfirmedEmailContext builds DB-backed booking summary context', async () => {
 		mockedGetBookingById.mockResolvedValueOnce({
 			id: '2dd66b8f-0bd5-45f6-8d6b-7fd90d0ddf9a',
@@ -153,6 +184,7 @@ describe('woody-email-service', () => {
 			intent: 'booking_link_invite',
 			recipientEmail: 'lead@example.com',
 			recipientName: 'Lead User',
+			language: 'en',
 			leadJourneyId: 'journey-1',
 			campaignId: 7,
 			campaignPageId: 11,
@@ -296,7 +328,69 @@ describe('woody-email-service', () => {
 		);
 	});
 
-	it('sendBookingConfirmedEmail triggers worker invocation for confirmed booking', async () => {
+	it('sends an artifact lead invite in German with the submitted page version', async () => {
+		mockedGetLeadJourneyById.mockResolvedValueOnce({
+			id: 'e0005383-dd54-4888-b5ed-5e92bc627428',
+			campaign_id: 38,
+			campaign_page_id: 98,
+			contact_email: 'lead@example.com',
+			contact_name: 'JP Live Test',
+			booking_link_invite_email_sent_at: null
+		} as never);
+		mockedCreateBookingLink.mockResolvedValueOnce({
+			ok: true,
+			url: 'https://book.example.com/book/l/token-1',
+			token: 'token-1',
+			expires_at: '2026-09-28T00:00:00.000Z'
+		});
+		mockedGetLeadJourneyById.mockResolvedValueOnce({
+			id: 'e0005383-dd54-4888-b5ed-5e92bc627428',
+			campaign_id: 38,
+			campaign_page_id: 98,
+			contact_email: 'lead@example.com',
+			contact_name: 'JP Live Test'
+		} as never);
+		mockedGetLatestFormSubmissionEventForJourney.mockResolvedValueOnce({
+			eventPayload: {
+				form: {
+					form_type: 'artifact_lead_intake',
+					meeting_scope: 'Wir suchen einen Keynote-Speaker für unsere Technologiekonferenz.'
+				},
+				attribution: {
+					page_slug: 'ki-keynote-speaker-buchen',
+					page_path: '/ki-keynote-speaker-buchen'
+				}
+			},
+			campaignId: 38,
+			campaignPageId: 197,
+			occurredAt: new Date('2026-08-29T11:17:40.971Z')
+		});
+		mockedGetCampaignById.mockResolvedValueOnce({ language: 'English' } as never);
+		mockedSendBookingLinkInviteWoodyEmail.mockResolvedValueOnce({
+			ok: true,
+			provider_message_id: 'gmail-message-1',
+			provider_thread_id: 'thread-1'
+		});
+
+		await sendBookingLinkInviteEmailForLeadSubmission({
+			leadJourneyId: 'e0005383-dd54-4888-b5ed-5e92bc627428'
+		});
+
+		expect(mockedSendBookingLinkInviteWoodyEmail).toHaveBeenCalledWith(
+			expect.objectContaining({
+				campaign_context: expect.objectContaining({
+					campaign_id: 38,
+					campaign_page_id: 197
+				}),
+				email_content: expect.objectContaining({
+					subject: expect.stringContaining('Ihre Buchungsanfrage'),
+					body_text: expect.stringContaining('Hallo JP Live Test,')
+				})
+			})
+		);
+	});
+
+	it('sendBookingConfirmedEmail preserves campaign language for a Webflow booking', async () => {
 		mockedGetBookingById.mockResolvedValueOnce({
 			id: '2dd66b8f-0bd5-45f6-8d6b-7fd90d0ddf9a',
 			status: 'confirmed',
@@ -319,6 +413,12 @@ describe('woody-email-service', () => {
 			campaign_id: 7,
 			campaign_page_id: 11
 		} as never);
+		mockedGetLatestFormSubmissionEventForJourney.mockResolvedValueOnce({
+			eventPayload: { form: { form_type: 'webflow_lead_intake' } },
+			campaignId: 7,
+			campaignPageId: 11,
+			occurredAt: new Date('2026-06-01T09:00:00.000Z')
+		});
 		mockedGetCampaignById.mockResolvedValueOnce({ language: 'Spanish' } as never);
 		mockedSendBookingConfirmedWoodyEmail.mockResolvedValueOnce({
 			ok: true,

@@ -794,7 +794,7 @@ export async function getFunnelDailyByCampaign(
 				.from(vw_lead_event_enriched)
 				.where(
 					and(
-						eq(vw_lead_event_enriched.event_type, 'lead_identified'),
+						inArray(vw_lead_event_enriched.event_type, ['lead_identified', 'form_submitted']),
 						eq(vw_lead_event_enriched.resolved_campaign_id, campaignId),
 						gte(vw_lead_event_enriched.occurred_at, window.from),
 						lt(vw_lead_event_enriched.occurred_at, window.toExclusive)
