@@ -31,23 +31,51 @@ type PersistedLeadMessageRow = {
 	id: string;
 };
 
-function toBase64Url(value: string): string {
+function toBase64(value: string): string {
 	const bytes = new TextEncoder().encode(value);
 	let binary = '';
 	for (const byte of bytes) {
 		binary += String.fromCharCode(byte);
 	}
-	return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+	return btoa(binary);
+}
+
+function toBase64Url(value: string): string {
+	return toBase64(value).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }
 
 function sanitizeHeader(value: string): string {
 	return value.replace(/[\r\n]+/g, ' ').trim();
 }
 
+function encodeSubjectHeader(value: string): string {
+	const sanitized = sanitizeHeader(value);
+	if (/^[\x20-\x7e]*$/.test(sanitized)) {
+		return sanitized;
+	}
+
+	const chunks: string[] = [];
+	let chunk = '';
+	for (const character of sanitized) {
+		const candidate = `${chunk}${character}`;
+		if (chunk && new TextEncoder().encode(candidate).length > 45) {
+			chunks.push(chunk);
+			chunk = character;
+		} else {
+			chunk = candidate;
+		}
+	}
+	if (chunk) {
+		chunks.push(chunk);
+	}
+
+	return chunks.map((part) => `=?UTF-8?B?${toBase64(part)}?=`).join('\r\n ');
+}
+
 function buildMimeMessage(input: SendOutboundEmailInput): string {
 	const toHeader = input.to.join(', ');
 	const fromHeader = input.fromEmail ?? input.gmailUser;
-	const subject = sanitizeHeader(input.subject);
+	const subject = encodeSubjectHeader(input.subject);
 	const dateHeader = new Date().toUTCString();
 
 	const lines: string[] = [

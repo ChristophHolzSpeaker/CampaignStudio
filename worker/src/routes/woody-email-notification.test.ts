@@ -68,6 +68,8 @@ describe('handleWoodyEmailNotification', () => {
 			expect.anything(),
 			expect.objectContaining({
 				leadJourneyId: '97de6934-e5a2-4bd0-b93b-1e9a6f0b1c2d',
+				gmailUser: 'speaker@christophholz.com',
+				fromEmail: 'speakerlp@christophholz.com',
 				to: ['lead@example.com'],
 				subject: 'Subject'
 			})

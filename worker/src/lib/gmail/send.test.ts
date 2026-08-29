@@ -20,6 +20,18 @@ const mockedSelectOne = vi.mocked(selectOne);
 const mockedUpsertOne = vi.mocked(upsertOne);
 const mockedGmailSendMessage = vi.mocked(gmailSendMessage);
 
+function decodeEncodedSubject(mime: string): string {
+	const subjectHeader = mime.match(/^Subject: ([^\r\n]*(?:\r\n [^\r\n]*)*)/m)?.[1] ?? '';
+	const encodedWords = [...subjectHeader.matchAll(/=\?UTF-8\?B\?([^?]+)\?=/gi)];
+
+	return encodedWords
+		.map((match) => {
+			const bytes = Uint8Array.from(atob(match[1]), (character) => character.charCodeAt(0));
+			return new TextDecoder().decode(bytes);
+		})
+		.join('');
+}
+
 describe('sendOutboundEmail', () => {
 	beforeEach(() => {
 		mockedInsertOne.mockReset();
@@ -105,5 +117,25 @@ describe('sendOutboundEmail', () => {
 		});
 		expect(mockedUpsertOne).not.toHaveBeenCalled();
 		expect(mockedInsertOne).toHaveBeenCalledTimes(1);
+	});
+
+	it('RFC 2047 encodes a non-ASCII subject before sending it to Gmail', async () => {
+		mockedGmailSendMessage.mockResolvedValue({ id: 'msg_sent_3', threadId: 'thread_3' });
+		mockedUpsertOne.mockResolvedValue({ id: 'lead_message_3' });
+		const subject = 'Ihre Buchungsanfrage ist eingegangen – wählen Sie Ihren Termin';
+
+		await sendOutboundEmail(makeTestEnv(), {
+			leadJourneyId: 'journey_3',
+			gmailUser: 'speaker@christophholz.com',
+			to: ['lead@example.com'],
+			subject,
+			bodyText: 'Text'
+		});
+
+		const rawArg = mockedGmailSendMessage.mock.calls[0]?.[1]?.raw;
+		const decodedMime = decodeBase64Url(String(rawArg));
+		expect(decodedMime).not.toContain(`Subject: ${subject}`);
+		expect(decodedMime).toMatch(/^Subject: =\?UTF-8\?B\?/m);
+		expect(decodeEncodedSubject(decodedMime)).toBe(subject);
 	});
 });
