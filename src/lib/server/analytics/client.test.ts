@@ -10,6 +10,7 @@ import { db } from '$lib/server/db';
 import {
 	buildOverviewKpis,
 	getExperimentPerformanceByCampaign,
+	getFunnelDailyByCampaign,
 	getGeoPerformance,
 	type FunnelDailyPoint
 } from './client';
@@ -26,6 +27,61 @@ describe('analytics overview KPIs', () => {
 		expect(overview.visits).toBe(5);
 		expect(overview.bouncedVisits).toBe(2);
 		expect(overview.bounceRate).toBe(0.4);
+	});
+
+	it('counts historical form submissions as identified leads without double-counting a journey', async () => {
+		const containsValue = (
+			input: unknown,
+			expected: string,
+			seen = new WeakSet<object>(),
+			depth = 0
+		): boolean => {
+			if (input === expected) return true;
+			if (!input || typeof input !== 'object' || seen.has(input) || depth > 12) return false;
+			seen.add(input);
+			return Object.values(input).some((value) => containsValue(value, expected, seen, depth + 1));
+		};
+		const emptyQuery = {
+			from: () => ({ where: async () => [] })
+		} as never;
+
+		mockedDb.select.mockReset();
+		mockedDb.select
+			.mockReturnValueOnce(emptyQuery)
+			.mockReturnValueOnce(emptyQuery)
+			.mockReturnValueOnce({
+				from: () => ({
+					where: async (condition: unknown) => {
+						expect(containsValue(condition, 'lead_identified')).toBe(true);
+						expect(containsValue(condition, 'form_submitted')).toBe(true);
+						return [
+							{
+								occurredAt: new Date('2026-08-29T11:17:40.971Z'),
+								journeyId: 'e0005383-dd54-4888-b5ed-5e92bc627428'
+							},
+							{
+								occurredAt: new Date('2026-08-29T11:17:41.000Z'),
+								journeyId: 'e0005383-dd54-4888-b5ed-5e92bc627428'
+							}
+						];
+					}
+				})
+			} as never)
+			.mockReturnValueOnce(emptyQuery)
+			.mockReturnValueOnce(emptyQuery)
+			.mockReturnValueOnce(emptyQuery);
+
+		const result = await getFunnelDailyByCampaign(
+			{
+				from: new Date('2026-08-29T00:00:00.000Z'),
+				toExclusive: new Date('2026-08-30T00:00:00.000Z')
+			},
+			38
+		);
+
+		expect(result).toEqual([
+			expect.objectContaining({ reportDate: '2026-08-29', identifiedLeads: 1 })
+		]);
 	});
 
 	it('groups geo labels for countries and cities', async () => {
