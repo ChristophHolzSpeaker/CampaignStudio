@@ -10,6 +10,7 @@ import {
 	sendBookingConfirmedWoodyEmail,
 	sendBookingLinkInviteWoodyEmail
 } from '$lib/server/notifications/woody-email';
+import { composeBookingLinkInviteEmail, extractLeadInviteSummary } from './woody-lead-invite';
 import type {
 	BookingConfirmedEmailContext,
 	BookingLinkInviteEmailContext,
@@ -350,93 +351,6 @@ export async function buildBookingConfirmedEmailContext(input: {
 	};
 }
 
-export function composeBookingLinkInviteEmail(context: BookingLinkInviteEmailContext): {
-	subject: string;
-	bodyText: string;
-} {
-	const greetingName = context.recipientName ?? 'there';
-	const languageTag = normalizeLanguageTag(context.language);
-
-	switch (languageTag) {
-		case 'de':
-			return {
-				subject: 'Ihre Buchungsanfrage ist eingegangen – wählen Sie Ihren Termin',
-				bodyText: [
-					`Hallo ${greetingName},`,
-					'',
-					'ich bin Woody, Christophs Assistent. Vielen Dank für Ihre Anfrage – wir haben sie erhalten.',
-					context.meetingScope
-						? `Ich verstehe, dass Sie sich wegen Folgendem melden: ${context.meetingScope}`
-						: 'Ihre Anfrage liegt mir vor und ich koordiniere den nächsten Schritt.',
-					'',
-					`Bitte wählen Sie hier Ihren Wunschtermin: ${context.bookingLinkUrl}`,
-					'',
-					'Sobald Sie einen Termin gewählt haben, senden wir Ihnen die Bestätigungsdetails und die Kalendereinladung.',
-					'',
-					'Viele Grüße,',
-					'Woody'
-				].join('\n')
-			};
-		case 'fr':
-			return {
-				subject: 'Votre demande de réservation est bien arrivée – choisissez votre créneau',
-				bodyText: [
-					`Bonjour ${greetingName},`,
-					'',
-					'Je suis Woody, l’assistant de Christoph. Merci pour votre demande – nous l’avons bien reçue.',
-					context.meetingScope
-						? `Je comprends que votre demande concerne : ${context.meetingScope}`
-						: 'J’ai bien reçu votre demande et je vais coordonner la prochaine étape.',
-					'',
-					`Veuillez choisir le créneau qui vous convient ici : ${context.bookingLinkUrl}`,
-					'',
-					'Une fois votre créneau choisi, nous vous enverrons la confirmation et l’invitation calendrier.',
-					'',
-					'Cordialement,',
-					'Woody'
-				].join('\n')
-			};
-		case 'es':
-			return {
-				subject: 'Hemos recibido tu solicitud de reserva – elige tu horario',
-				bodyText: [
-					`Hola ${greetingName},`,
-					'',
-					'Soy Woody, el asistente de Christoph. Gracias por tu solicitud; la hemos recibido.',
-					context.meetingScope
-						? `Entiendo que te pones en contacto por lo siguiente: ${context.meetingScope}`
-						: 'Ya tengo tu solicitud y coordinaré el siguiente paso.',
-					'',
-					`Elige aquí el horario que prefieras: ${context.bookingLinkUrl}`,
-					'',
-					'Cuando elijas un horario, te enviaremos la confirmación y la invitación de calendario.',
-					'',
-					'Un saludo,',
-					'Woody'
-				].join('\n')
-			};
-		default:
-			return {
-				subject: 'Your booking request is in - choose your time',
-				bodyText: [
-					`Hi ${greetingName},`,
-					'',
-					"I'm Woody, Christoph's assistant. Thanks for your submission - we received it.",
-					context.meetingScope
-						? `I understand you are reaching out about: ${context.meetingScope}`
-						: 'I have your request and will help coordinate the next step.',
-					'',
-					`Please book your preferred slot here: ${context.bookingLinkUrl}`,
-					'',
-					'Once you choose a time, we will send your confirmation details and the calendar invitation.',
-					'',
-					'Best,',
-					'Woody'
-				].join('\n')
-			};
-	}
-}
-
 export function composeBookingConfirmedEmail(context: BookingConfirmedEmailContext): {
 	subject: string;
 	bodyText: string;
@@ -532,7 +446,8 @@ export async function sendBookingLinkInviteEmailForLeadSubmission(input: {
 		return { status: 'skipped', reason: 'context_unavailable' };
 	}
 
-	const content = composeBookingLinkInviteEmail(context);
+	const summary = await extractLeadInviteSummary(context);
+	const content = composeBookingLinkInviteEmail(context, summary);
 	const delivery = await sendBookingLinkInviteWoodyEmail({
 		intent: 'booking_link_invite',
 		recipient_email: context.recipientEmail,
@@ -554,7 +469,8 @@ export async function sendBookingLinkInviteEmailForLeadSubmission(input: {
 		},
 		email_content: {
 			subject: content.subject,
-			body_text: content.bodyText
+			body_text: content.bodyText,
+			body_html: content.bodyHtml
 		},
 		metadata: {
 			booking_link_token: context.bookingLinkToken
@@ -571,6 +487,8 @@ export async function sendBookingLinkInviteEmailForLeadSubmission(input: {
 		providerMessageId: delivery.provider_message_id
 	};
 }
+
+export { composeBookingLinkInviteEmail } from './woody-lead-invite';
 
 export async function sendBookingConfirmedEmail(input: {
 	bookingId: string;

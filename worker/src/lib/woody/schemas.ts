@@ -1,11 +1,14 @@
 import { z } from 'zod';
 import { woodyResponseTypes } from './types';
 
-const toDetermine = 'TBD';
+const toDetermine = 'To be determined';
 
 function normalizeExtractedValue(value: string): string {
 	const trimmed = value.trim();
-	return trimmed.length > 0 ? trimmed : toDetermine;
+	if (!trimmed || /^(tbd|unknown|not provided|nicht angegeben|unbekannt)$/i.test(trimmed)) {
+		return toDetermine;
+	}
+	return trimmed;
 }
 
 export const woodyGenerateReplyInputSchema = z.object({
@@ -22,14 +25,13 @@ export const woodyGenerateReplyInputSchema = z.object({
 });
 
 export const woodyExtractedFieldsSchema = z.object({
-	event_topic: z.string().transform(normalizeExtractedValue),
-	talking_length: z.string().transform(normalizeExtractedValue),
 	location: z.string().transform(normalizeExtractedValue),
 	date_time: z.string().transform(normalizeExtractedValue),
 	event_name: z.string().transform(normalizeExtractedValue),
 	audience: z.string().transform(normalizeExtractedValue),
-	agent: z.string().transform(normalizeExtractedValue),
-	client: z.string().transform(normalizeExtractedValue)
+	topic: z.string().transform(normalizeExtractedValue),
+	requester: z.string().transform(normalizeExtractedValue),
+	organization: z.string().transform(normalizeExtractedValue)
 });
 
 export const woodyModelOutputSchema = z.object({
