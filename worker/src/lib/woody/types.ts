@@ -3,14 +3,13 @@ export const woodyResponseTypes = ['initial_speaking_inquiry_ack'] as const;
 export type WoodyResponseType = (typeof woodyResponseTypes)[number];
 
 export type WoodyExtractedFields = {
-	event_topic: string;
-	talking_length: string;
 	location: string;
 	date_time: string;
 	event_name: string;
 	audience: string;
-	agent: string;
-	client: string;
+	topic: string;
+	requester: string;
+	organization: string;
 };
 
 export type WoodyGenerateReplyInput = {

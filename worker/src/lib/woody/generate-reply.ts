@@ -68,8 +68,112 @@ function validateHtmlShape(bodyHtml: string): void {
 	}
 
 	const listItemMatches = bodyHtml.match(/<li\b[^>]*>[\s\S]*?<\/li>/gi) ?? [];
-	if (listItemMatches.length !== 8) {
-		throw new Error('Generated HTML summary list must contain exactly 8 list items');
+	if (listItemMatches.length !== 7) {
+		throw new Error('Generated HTML summary list must contain exactly 7 list items');
+	}
+}
+
+function getLocalizedSummaryLabels(language: string): readonly string[] {
+	const normalized = language.trim().toLowerCase();
+	if (normalized.startsWith('de') || normalized === 'german') {
+		return [
+			'Ort',
+			'Datum und Uhrzeit',
+			'Veranstaltungsname',
+			'Publikum',
+			'Thema',
+			'Anfragender',
+			'Organisation'
+		];
+	}
+	if (normalized.startsWith('fr') || normalized === 'french') {
+		return [
+			'Lieu',
+			'Date et heure',
+			'Nom de l’événement',
+			'Public',
+			'Thème',
+			'Demandeur',
+			'Organisation'
+		];
+	}
+	if (normalized.startsWith('es') || normalized === 'spanish') {
+		return [
+			'Lugar',
+			'Fecha y hora',
+			'Nombre del evento',
+			'Público',
+			'Tema',
+			'Solicitante',
+			'Organización'
+		];
+	}
+	return [
+		'Location',
+		'Date and time',
+		'Event name',
+		'Audience',
+		'Topic',
+		'Requester',
+		'Organization'
+	];
+}
+
+function stripHtml(value: string): string {
+	return value
+		.replace(/<[^>]*>/g, ' ')
+		.replace(/\s+/g, ' ')
+		.trim();
+}
+
+function validateSummaryOrder(input: {
+	bodyHtml: string;
+	bodyText: string;
+	responseLanguage: string;
+}): void {
+	const labels = getLocalizedSummaryLabels(input.responseLanguage);
+	const listItems = input.bodyHtml.match(/<li\b[^>]*>[\s\S]*?<\/li>/gi) ?? [];
+
+	for (const [index, label] of labels.entries()) {
+		if (!stripHtml(listItems[index] ?? '').startsWith(`${label}:`)) {
+			throw new Error(`Generated HTML summary item ${index + 1} must start with ${label}:`);
+		}
+	}
+
+	let previousIndex = -1;
+	for (const label of labels) {
+		const labelIndex = input.bodyText.indexOf(`${label}:`, previousIndex + 1);
+		if (labelIndex < 0) {
+			throw new Error(`Generated text summary is missing ordered label ${label}:`);
+		}
+		previousIndex = labelIndex;
+	}
+}
+
+function getBookingLinkLabel(language: string): string {
+	const normalized = language.trim().toLowerCase();
+	if (normalized.startsWith('de') || normalized === 'german') return 'Videoanruf planen';
+	if (normalized.startsWith('fr') || normalized === 'french') return 'Planifier un appel vidéo';
+	if (normalized.startsWith('es') || normalized === 'spanish') return 'Programar videollamada';
+	return 'Schedule a video call';
+}
+
+function validateBookingLink(input: {
+	bodyHtml: string;
+	bodyText: string;
+	bookingLink: string;
+	responseLanguage: string;
+}): void {
+	const visibleHtml = stripHtml(input.bodyHtml);
+	const linkLabel = getBookingLinkLabel(input.responseLanguage);
+	if (!input.bodyHtml.includes(`href="${input.bookingLink}"`)) {
+		throw new Error('Generated HTML must link to the provided booking URL');
+	}
+	if (!visibleHtml.includes(linkLabel) || !visibleHtml.includes(input.bookingLink)) {
+		throw new Error('Generated HTML must include the booking label and visible fallback URL');
+	}
+	if (!input.bodyText.includes(linkLabel) || !input.bodyText.includes(input.bookingLink)) {
+		throw new Error('Generated text must include the booking label and fallback URL');
 	}
 }
 
@@ -111,14 +215,13 @@ function fallbackErrorOutput(params: {
 		body_html: '',
 		body_text: '',
 		extracted_fields: {
-			event_topic: WOODY_TO_DETERMINE,
-			talking_length: WOODY_TO_DETERMINE,
 			location: WOODY_TO_DETERMINE,
 			date_time: WOODY_TO_DETERMINE,
 			event_name: WOODY_TO_DETERMINE,
 			audience: WOODY_TO_DETERMINE,
-			agent: WOODY_TO_DETERMINE,
-			client: WOODY_TO_DETERMINE
+			topic: WOODY_TO_DETERMINE,
+			requester: WOODY_TO_DETERMINE,
+			organization: WOODY_TO_DETERMINE
 		},
 		model: params.model,
 		provider: 'openrouter',
@@ -169,6 +272,17 @@ export async function generateWoodyReply(
 		}
 
 		validateHtmlShape(modelOutput.body_html);
+		validateSummaryOrder({
+			bodyHtml: modelOutput.body_html,
+			bodyText: modelOutput.body_text,
+			responseLanguage: languageResolution.resolved_language
+		});
+		validateBookingLink({
+			bodyHtml: modelOutput.body_html,
+			bodyText: modelOutput.body_text,
+			bookingLink: parsedInput.booking_link,
+			responseLanguage: languageResolution.resolved_language
+		});
 		validateNoForbiddenLeadWording({
 			subject: modelOutput.subject,
 			bodyHtml: modelOutput.body_html,
