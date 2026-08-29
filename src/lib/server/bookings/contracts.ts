@@ -373,6 +373,7 @@ export type BookingLinkInviteEmailContext = {
 	intent: 'booking_link_invite';
 	recipientEmail: string;
 	recipientName: string | null;
+	language: string;
 	leadJourneyId: string;
 	campaignId: number | null;
 	campaignPageId: number | null;

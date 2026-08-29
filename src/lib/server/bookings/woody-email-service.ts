@@ -46,14 +46,23 @@ function readNestedRecord(
 	return value as Record<string, unknown>;
 }
 
-function formatDateTimeRange(input: { startsAt: Date; endsAt: Date }): string {
-	const formatter = new Intl.DateTimeFormat('en-US', {
+function formatDateTimeRange(input: { startsAt: Date; endsAt: Date; languageTag: string }): string {
+	const locale =
+		input.languageTag === 'de'
+			? 'de-DE'
+			: input.languageTag === 'fr'
+				? 'fr-FR'
+				: input.languageTag === 'es'
+					? 'es-ES'
+					: 'en-US';
+	const separator = input.languageTag === 'de' ? ' bis ' : ' – ';
+	const formatter = new Intl.DateTimeFormat(locale, {
 		dateStyle: 'full',
 		timeStyle: 'short',
 		timeZone: 'UTC'
 	});
 
-	return `${formatter.format(input.startsAt)} to ${formatter.format(input.endsAt)} (UTC)`;
+	return `${formatter.format(input.startsAt)}${separator}${formatter.format(input.endsAt)} (UTC)`;
 }
 
 function normalizeLanguageTag(language: string | null | undefined): string {
@@ -273,16 +282,22 @@ export async function buildBookingLinkInviteEmailContext(input: {
 
 	const organization = readStringRecordValue(formPayload, 'organization');
 	const meetingScope = readStringRecordValue(formPayload, 'meeting_scope');
+	const formType = readStringRecordValue(formPayload, 'form_type');
 	const pagePath = readStringRecordValue(attributionPayload, 'page_path');
 	const pageSlug = readStringRecordValue(attributionPayload, 'page_slug');
+	const campaign =
+		formType === 'webflow_lead_intake' && journey.campaign_id
+			? await getCampaignById(journey.campaign_id)
+			: null;
 
 	return {
 		intent: 'booking_link_invite',
 		recipientEmail: journey.contact_email,
 		recipientName: journey.contact_name,
+		language: formType === 'webflow_lead_intake' ? normalizeLanguageTag(campaign?.language) : 'de',
 		leadJourneyId: journey.id,
 		campaignId: journey.campaign_id,
-		campaignPageId: latestFormSubmission?.campaignId ?? journey.campaign_page_id,
+		campaignPageId: latestFormSubmission?.campaignPageId ?? journey.campaign_page_id,
 		bookingType: 'lead',
 		meetingScope,
 		requestSummary: meetingScope,
@@ -306,8 +321,15 @@ export async function buildBookingConfirmedEmailContext(input: {
 	const journey = booking.lead_journey_id
 		? await getLeadJourneyById(booking.lead_journey_id)
 		: null;
-
-	const campaign = journey?.campaign_id ? await getCampaignById(journey.campaign_id) : null;
+	const latestFormSubmission = booking.lead_journey_id
+		? await getLatestFormSubmissionEventForJourney(booking.lead_journey_id)
+		: null;
+	const formPayload = readNestedRecord(latestFormSubmission?.eventPayload ?? {}, 'form') ?? {};
+	const formType = readStringRecordValue(formPayload, 'form_type');
+	const campaign =
+		formType === 'webflow_lead_intake' && journey?.campaign_id
+			? await getCampaignById(journey.campaign_id)
+			: null;
 
 	return {
 		intent: 'booking_confirmed',
@@ -324,7 +346,7 @@ export async function buildBookingConfirmedEmailContext(input: {
 		confirmedStartsAt: booking.starts_at,
 		confirmedEndsAt: booking.ends_at,
 		calendarEventUrl: input.calendarEventUrl,
-		language: normalizeLanguageTag(campaign?.language)
+		language: formType === 'webflow_lead_intake' ? normalizeLanguageTag(campaign?.language) : 'de'
 	};
 }
 
@@ -333,26 +355,86 @@ export function composeBookingLinkInviteEmail(context: BookingLinkInviteEmailCon
 	bodyText: string;
 } {
 	const greetingName = context.recipientName ?? 'there';
-	const requestSummary = context.meetingScope
-		? `I understand you are reaching out about: ${context.meetingScope}`
-		: 'I have your request and will help coordinate the next step.';
+	const languageTag = normalizeLanguageTag(context.language);
 
-	return {
-		subject: 'Your booking request is in - choose your time',
-		bodyText: [
-			`Hi ${greetingName},`,
-			'',
-			"I'm Woody, Christoph's assistant. Thanks for your submission - we received it.",
-			requestSummary,
-			'',
-			`Please book your preferred slot here: ${context.bookingLinkUrl}`,
-			'',
-			'Once you choose a time, we will send your confirmation details and the calendar invitation.',
-			'',
-			'Best,',
-			'Woody'
-		].join('\n')
-	};
+	switch (languageTag) {
+		case 'de':
+			return {
+				subject: 'Ihre Buchungsanfrage ist eingegangen – wählen Sie Ihren Termin',
+				bodyText: [
+					`Hallo ${greetingName},`,
+					'',
+					'ich bin Woody, Christophs Assistent. Vielen Dank für Ihre Anfrage – wir haben sie erhalten.',
+					context.meetingScope
+						? `Ich verstehe, dass Sie sich wegen Folgendem melden: ${context.meetingScope}`
+						: 'Ihre Anfrage liegt mir vor und ich koordiniere den nächsten Schritt.',
+					'',
+					`Bitte wählen Sie hier Ihren Wunschtermin: ${context.bookingLinkUrl}`,
+					'',
+					'Sobald Sie einen Termin gewählt haben, senden wir Ihnen die Bestätigungsdetails und die Kalendereinladung.',
+					'',
+					'Viele Grüße,',
+					'Woody'
+				].join('\n')
+			};
+		case 'fr':
+			return {
+				subject: 'Votre demande de réservation est bien arrivée – choisissez votre créneau',
+				bodyText: [
+					`Bonjour ${greetingName},`,
+					'',
+					'Je suis Woody, l’assistant de Christoph. Merci pour votre demande – nous l’avons bien reçue.',
+					context.meetingScope
+						? `Je comprends que votre demande concerne : ${context.meetingScope}`
+						: 'J’ai bien reçu votre demande et je vais coordonner la prochaine étape.',
+					'',
+					`Veuillez choisir le créneau qui vous convient ici : ${context.bookingLinkUrl}`,
+					'',
+					'Une fois votre créneau choisi, nous vous enverrons la confirmation et l’invitation calendrier.',
+					'',
+					'Cordialement,',
+					'Woody'
+				].join('\n')
+			};
+		case 'es':
+			return {
+				subject: 'Hemos recibido tu solicitud de reserva – elige tu horario',
+				bodyText: [
+					`Hola ${greetingName},`,
+					'',
+					'Soy Woody, el asistente de Christoph. Gracias por tu solicitud; la hemos recibido.',
+					context.meetingScope
+						? `Entiendo que te pones en contacto por lo siguiente: ${context.meetingScope}`
+						: 'Ya tengo tu solicitud y coordinaré el siguiente paso.',
+					'',
+					`Elige aquí el horario que prefieras: ${context.bookingLinkUrl}`,
+					'',
+					'Cuando elijas un horario, te enviaremos la confirmación y la invitación de calendario.',
+					'',
+					'Un saludo,',
+					'Woody'
+				].join('\n')
+			};
+		default:
+			return {
+				subject: 'Your booking request is in - choose your time',
+				bodyText: [
+					`Hi ${greetingName},`,
+					'',
+					"I'm Woody, Christoph's assistant. Thanks for your submission - we received it.",
+					context.meetingScope
+						? `I understand you are reaching out about: ${context.meetingScope}`
+						: 'I have your request and will help coordinate the next step.',
+					'',
+					`Please book your preferred slot here: ${context.bookingLinkUrl}`,
+					'',
+					'Once you choose a time, we will send your confirmation details and the calendar invitation.',
+					'',
+					'Best,',
+					'Woody'
+				].join('\n')
+			};
+	}
 }
 
 export function composeBookingConfirmedEmail(context: BookingConfirmedEmailContext): {
@@ -361,12 +443,13 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 	bodyHtml: string;
 } {
 	const greetingName = context.recipientName ?? 'there';
+	const languageTag = normalizeLanguageTag(context.language);
 	const timeRange = formatDateTimeRange({
 		startsAt: context.confirmedStartsAt,
-		endsAt: context.confirmedEndsAt
+		endsAt: context.confirmedEndsAt,
+		languageTag
 	});
 	const zoomLink = 'https://zoom.christophholz.com';
-	const languageTag = normalizeLanguageTag(context.language);
 	const greetingLine = getLocalizedConfirmedGreeting({ languageTag, greetingName });
 	const introLine = getLocalizedConfirmedIntro(languageTag);
 	const summaryLine = getLocalizedConfirmedSummaryLine(languageTag);
