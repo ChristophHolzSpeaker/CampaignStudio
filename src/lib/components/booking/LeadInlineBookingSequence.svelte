@@ -332,15 +332,14 @@ Venue:`
 </script>
 
 <section class="space-y-6 bg-[var(--surface-card)] p-6 shadow-[var(--shadow-card)] lg:p-8">
-	<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-		{showIntakeStep ? copy.introWithIntake : copy.introWithoutIntake}
-	</p>
-
 	{#if isSubmitSuccess && submitResult?.message}
 		<div class={`rounded-none border px-4 py-3 text-xs font-semibold  uppercase ${resultTone}`}>
 			{submitResult.message}
 		</div>
 	{:else}
+	<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
+		{showIntakeStep ? copy.introWithIntake : copy.introWithoutIntake}
+	</p>
 		<form
 			{...resolvedSubmitAction}
 			class="space-y-8"

@@ -69,9 +69,6 @@ function buildDescription(input: UpdateBookingCalendarEventRequest): string {
 		'Request summary:',
 		input.meeting_scope,
 		'',
-		'Video call link:',
-		'https://zoom.christophholz.com',
-		'',
 		`Reschedule link: ${input.reschedule_url}`,
 		'',
 		urgentLine
