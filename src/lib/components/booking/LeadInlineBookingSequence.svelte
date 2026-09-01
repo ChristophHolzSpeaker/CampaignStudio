@@ -76,6 +76,7 @@
 	let intakeCompany = $state('');
 	let intakeScope = $state('');
 	let hideFailureMessage = $state(false);
+	let hasSubmitted = $state(false);
 
 	const effectiveIntakeEmail = $derived(showIntakeStep ? intakeEmail : (initialValues.email ?? ''));
 	const effectiveIntakeName = $derived(showIntakeStep ? intakeName : (initialValues.name ?? ''));
@@ -337,13 +338,16 @@ Venue:`
 			{submitResult.message}
 		</div>
 	{:else}
-	<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-		{showIntakeStep ? copy.introWithIntake : copy.introWithoutIntake}
-	</p>
+		{#if !hasSubmitted}
+			<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
+				{showIntakeStep ? copy.introWithIntake : copy.introWithoutIntake}
+			</p>
+		{/if}
 		<form
 			{...resolvedSubmitAction}
 			class="space-y-8"
 			onsubmit={() => {
+				hasSubmitted = true;
 				hideFailureMessage = false;
 			}}
 		>

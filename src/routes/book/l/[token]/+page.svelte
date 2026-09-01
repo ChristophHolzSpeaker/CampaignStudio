@@ -44,6 +44,7 @@
 	const hasAvailableSlots = $derived(
 		activeAvailabilityState === 'available' && activeSlotGroups.length > 0
 	);
+	let hasSubmittedIntake = $state(false);
 
 	function handleFormResult({ result }: { result: { type: string; data?: unknown } }) {
 		if (result.type === 'success' || result.type === 'failure') {
@@ -112,10 +113,12 @@
 					{data.unavailableMessage ?? 'Das Briefing ist derzeit nicht verfügbar.'}
 				</div>
 			{:else}
-				<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
-					Bitte bestätigen Sie Ihre Angaben und wählen Sie anschließend einen Termin für ein
-					Video-Briefing mit Christoph in den nächsten drei Tagen.
-				</p>
+				{#if !hasSubmittedIntake}
+					<p class="max-w-2xl text-sm leading-relaxed text-slate-600">
+						Bitte bestätigen Sie Ihre Angaben und wählen Sie anschließend einen Termin für ein
+						Video-Briefing mit Christoph in den nächsten drei Tagen.
+					</p>
+				{/if}
 
 				{#if showIntakeStage}
 					<form
@@ -123,6 +126,8 @@
 						action="?/check"
 						class="space-y-6"
 						use:enhance={() => {
+							hasSubmittedIntake = true;
+
 							return async ({ result, update }) => {
 								handleFormResult({ result });
 
