@@ -75,9 +75,7 @@ describe('handleBookingCalendarEventUpdate', () => {
 				endsAtIso: '2026-06-02T10:30:00.000Z'
 			})
 		);
-		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).toContain(
-			'https://zoom.christophholz.com'
-		);
+		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).not.toContain('zoom');
 		expect(mockedUpdateCalendarEvent.mock.calls[0]?.[1].description).toContain(
 			'Reschedule link: https://book.example.com/book/r/resched123'
 		);

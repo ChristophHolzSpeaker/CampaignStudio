@@ -221,22 +221,6 @@ function getLocalizedConfirmedCalendarInviteLine(input: {
 	}
 }
 
-function getLocalizedConfirmedVideoCallLine(input: {
-	languageTag: string;
-	zoomLink: string;
-}): string {
-	switch (input.languageTag) {
-		case 'de':
-			return `Link fuer das Video-Briefing: ${input.zoomLink}`;
-		case 'fr':
-			return `Lien du video briefing : ${input.zoomLink}`;
-		case 'es':
-			return `Enlace del video briefing: ${input.zoomLink}`;
-		default:
-			return `Video briefing link: ${input.zoomLink}`;
-	}
-}
-
 function getLocalizedConfirmedClosing(languageTag: string): string {
 	switch (languageTag) {
 		case 'de':
@@ -363,7 +347,6 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 		endsAt: context.confirmedEndsAt,
 		languageTag
 	});
-	const zoomLink = 'https://zoom.christophholz.com';
 	const greetingLine = getLocalizedConfirmedGreeting({ languageTag, greetingName });
 	const introLine = getLocalizedConfirmedIntro(languageTag);
 	const summaryLine = getLocalizedConfirmedSummaryLine(languageTag);
@@ -376,7 +359,6 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 		languageTag,
 		calendarEventUrl: context.calendarEventUrl
 	});
-	const videoCallLine = getLocalizedConfirmedVideoCallLine({ languageTag, zoomLink });
 	const alternativeVideoCallLine = getLocalizedAlternativeVideoCallLine(languageTag);
 	const urgentPhoneLine = getLocalizedUrgentPhoneLine(languageTag);
 	const closingLine = getLocalizedConfirmedClosing(languageTag);
@@ -393,7 +375,6 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 			eventSummaryLine,
 			'',
 			calendarInviteLine,
-			videoCallLine,
 			alternativeVideoCallLine,
 			urgentPhoneLine,
 			'',
@@ -406,7 +387,7 @@ export function composeBookingConfirmedEmail(context: BookingConfirmedEmailConte
 			`<p>${greetingLine}</p>`,
 			`<p>${introLine}</p>`,
 			`<p>${summaryLine}<br/>${briefingTimeLine}<br/>${eventSummaryLine}</p>`,
-			`<p>${calendarInviteLine}<br/><a href="${context.calendarEventUrl}">${context.calendarEventUrl}</a><br/>${videoCallLine}<br/><a href="${zoomLink}">${zoomLink}</a></p>`,
+			`<p>${calendarInviteLine}<br/><a href="${context.calendarEventUrl}">${context.calendarEventUrl}</a></p>`,
 			`<p>${alternativeVideoCallLine}</p>`,
 			`<p>${urgentPhoneLine}</p>`,
 			`<p>${closingLine}</p>`,
