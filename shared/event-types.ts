@@ -1,4 +1,4 @@
-export const ctaTypes = ['email', 'booking', 'form', 'navigation'] as const;
+export const ctaTypes = ['email', 'booking', 'form', 'navigation', 'video'] as const;
 export type CTAType = (typeof ctaTypes)[number];
 
 // Canonical analytics vocabulary for lead/journey attribution reporting.
@@ -84,7 +84,8 @@ export const CTA_EVENT_TYPE: Record<CTAType, AnalyticsEventType> = {
 	email: 'cta_click',
 	booking: 'cta_click',
 	form: 'cta_click',
-	navigation: 'cta_click'
+	navigation: 'cta_click',
+	video: 'cta_click'
 };
 
 export const legacyToCanonicalEventType: Partial<Record<LegacyEventType, AnalyticsEventType>> = {

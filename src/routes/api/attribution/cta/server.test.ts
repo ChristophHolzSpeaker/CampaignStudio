@@ -90,4 +90,29 @@ describe('POST /api/attribution/cta', () => {
 			requestedVisitId: undefined
 		});
 	});
+
+	it('accepts a video playback CTA with the legacy video key', async () => {
+		const response = await POST({
+			request: requestWithBody({
+				type: 'video',
+				campaign_id: 10,
+				campaign_page_id: 3,
+				cta_key: 'video-xmJRcJAr8Rc',
+				cta_label: 'Campaign recording',
+				cta_section: 'videos'
+			}),
+			cookies: {} as never
+		} as never);
+
+		expect(response.status).toBe(204);
+		expect(mockedTrackCTA).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: 'video',
+				campaign_visit_id: 77,
+				cta_key: 'video-xmJRcJAr8Rc',
+				cta_label: 'Campaign recording',
+				cta_section: 'videos'
+			})
+		);
+	});
 });

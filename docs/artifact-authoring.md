@@ -126,6 +126,6 @@ The corresponding family names are `Bureau Grot` (weights 300 and 400) and `Bure
 ></div>
 ```
 
-For YouTube, provide only the exact 11-character video ID and an optional accessible title of up to 120 characters. Campaign Studio validates the ID at finalization, then presents a click-to-load control that creates a sandboxed privacy-enhanced `www.youtube-nocookie.com` player. Do not author YouTube URLs, iframes, player parameters, or API code. The runtime does not report YouTube playback analytics.
+For YouTube, provide only the exact 11-character video ID and an optional accessible title of up to 120 characters. Campaign Studio validates the ID at finalization, then presents a click-to-load control that creates a sandboxed privacy-enhanced `www.youtube-nocookie.com` player. On the first confirmed playback, the runtime records a `cta_click` event with type `video`, key `video-<youtubeId>`, section `videos`, and the title (or video ID) as its label. Do not author YouTube URLs, iframes, player parameters, or API code.
 
 Local HTML and CSS asset references are rewritten to immutable public storage URLs. External URLs remain explicit. Author scripts, inline event handlers, executable files, root-relative paths, missing references, and unsupported media types are rejected.

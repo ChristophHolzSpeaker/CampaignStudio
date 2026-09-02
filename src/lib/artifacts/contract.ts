@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-export const ARTIFACT_RUNTIME_VERSION = 'v2';
-export const ARTIFACT_SUPPORTED_RUNTIME_VERSIONS = ['v1', ARTIFACT_RUNTIME_VERSION] as const;
+export const ARTIFACT_RUNTIME_VERSION = 'v3';
+export const ARTIFACT_SUPPORTED_RUNTIME_VERSIONS = ['v1', 'v2', ARTIFACT_RUNTIME_VERSION] as const;
 export const ARTIFACT_SOURCE_BUCKET = 'page-artifact-source';
 export const ARTIFACT_ASSET_BUCKET = 'page-artifact-assets';
 export const ARTIFACT_ENTRYPOINT = 'index.html';
