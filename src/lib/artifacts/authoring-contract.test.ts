@@ -36,7 +36,7 @@ describe('artifact authoring documentation', () => {
 	});
 
 	it('derives bundle and form rules from the canonical contract', () => {
-		expect(ARTIFACT_AUTHORING_CONTRACT.contractVersion).toBe(3);
+		expect(ARTIFACT_AUTHORING_CONTRACT.contractVersion).toBe(4);
 		expect(ARTIFACT_AUTHORING_CONTRACT.bundle.allowedMediaTypes).toContain('text/html');
 		expect(
 			ARTIFACT_AUTHORING_CONTRACT.runtime.cta.optionalAttributes['data-cs-cta-type'].values

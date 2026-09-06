@@ -12,7 +12,7 @@ import {
 } from './contract';
 
 export const ARTIFACT_AUTHORING_CONTRACT = {
-	contractVersion: 3,
+	contractVersion: 4,
 	runtimeVersion: ARTIFACT_RUNTIME_VERSION,
 	rendererType: 'artifact',
 	discovery: {
@@ -181,7 +181,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 				'data-cs-video-title': 'Accessible video title, maximum 120 characters.'
 			},
 			behavior:
-				'Campaign Studio validates the video ID, then renders a click-to-load control. Activating it loads the privacy-enhanced YouTube player from www.youtube-nocookie.com. On first confirmed playback, the runtime records a video CTA event with key video-<youtubeId>, section videos, and the title or video ID as label. Do not author an iframe, embed URL, player parameters, or YouTube API code.',
+				'Campaign Studio validates the video ID and initializes a privacy-enhanced YouTube player from www.youtube-nocookie.com directly in the placeholder when the page loads, with native controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube’s own play control once; there is no Campaign Studio load button. YouTube resources load before visitor activation. Place the placeholder in normal document flow; do not add modal, lightbox, overlay, or separate play-link wrappers. On first confirmed playback, the runtime records a video CTA event with key video-<youtubeId>, section videos, and the title or video ID as label. Do not add CTA tracking to the widget or its ancestors, or author an iframe, embed URL, player parameters, or YouTube API code.',
 			example:
 				'<div data-cs-widget="youtube-video" data-cs-youtube-id="dQw4w9WgXcQ" data-cs-video-title="Campaign introduction"></div>'
 		}
@@ -474,7 +474,7 @@ Lead submissions reuse Campaign Studio's lead, attribution, journey, qualificati
 
 The booking placeholder is replaced with the maintained same-origin booking widget. In preview, it renders a clear disabled-booking notice; booking mutations are unavailable.
 
-The YouTube placeholder is replaced with a click-to-load control. After activation, the runtime loads only the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID. On first confirmed playback, it records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Pauses, resumes, seeks, and replays do not create additional events for that rendered widget.
+The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. YouTube resources load before visitor activation. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v4, then preview and publish it. v3 retains its two-step click-to-load behavior.
 
 Do not reproduce these behaviors in authored code. Authored JavaScript is rejected, and platform IDs are resolved from signed/injected runtime context.
 
