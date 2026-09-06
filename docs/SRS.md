@@ -297,7 +297,7 @@ A public visitor can view a published page, interact with supported CTAs and for
 
 **FR-095** Artifact finalization shall reject a YouTube placeholder whose video ID is absent or is not exactly 11 URL-safe characters, or whose title exceeds the documented limit.
 
-**FR-096** The runtime shall load the YouTube privacy-enhanced player only after visitor activation, and only from the documented allowlisted origin.
+**FR-096** Runtime v4 shall initialize the YouTube privacy-enhanced player from the documented allowlisted origin directly in the placeholder when the page loads, with native controls, autoplay disabled, and inline playback enabled, matching the section renderer’s YouTube grid. The visitor shall start playback using the native player control, without a separate Campaign Studio load button. Legacy pinned runtimes retain their existing loading behavior.
 
 **FR-097** The initial YouTube widget shall not claim playback analytics that cannot be verified from the cross-origin player.
 
@@ -521,7 +521,7 @@ Deferred:
 
 **AC-018** An internal user can find an artifact campaign, inspect its versions, and preview a selected artifact in Campaign Studio; an external client can place the page's API-provided `embedUrl` in an iframe and receive resize messages.
 
-**AC-019** An artifact author can declare a validated YouTube placeholder, and the published runtime renders a click-to-load privacy-enhanced player without permitting authored iframe markup.
+**AC-019** An artifact author can declare a validated YouTube placeholder, and the published runtime renders an inline privacy-enhanced player with native controls and autoplay disabled, without permitting authored iframe markup or requiring a separate load-button click.
 
 ---
 
