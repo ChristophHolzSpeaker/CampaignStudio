@@ -85,14 +85,19 @@ describe('artifact bundle validation', () => {
 		).toMatchObject({ runtimeVersion: 'v1' });
 	});
 
-	it('continues to read v2 artifact manifests after the runtime advances', () => {
-		expect(
-			artifactManifestSchema.parse({
-				version: 1,
-				entrypoint: 'index.html',
-				runtimeVersion: 'v2',
-				files: [{ path: 'index.html', mediaType: 'text/html', byteSize: 1, sha256: 'a'.repeat(64) }]
-			})
-		).toMatchObject({ runtimeVersion: 'v2' });
-	});
+	it.each(['v2', 'v3'])(
+		'continues to read %s artifact manifests after the runtime advances',
+		(runtimeVersion) => {
+			expect(
+				artifactManifestSchema.parse({
+					version: 1,
+					entrypoint: 'index.html',
+					runtimeVersion,
+					files: [
+						{ path: 'index.html', mediaType: 'text/html', byteSize: 1, sha256: 'a'.repeat(64) }
+					]
+				})
+			).toMatchObject({ runtimeVersion });
+		}
+	);
 });
