@@ -146,6 +146,7 @@ describe('artifact runtime v5 inline video', () => {
 		expect(app.window.dataLayer.filter((e) => e.cs_event_name === 'video_play')).toHaveLength(1);
 		expect(app.window.dataLayer.find((e) => e.cs_event_name === 'video_play')).toMatchObject({
 			cs_action: 'video-xmJRcJAr8Rc',
+			cs_ads_conversion_id: '123',
 			cs_ads_conversion_label: 'video'
 		});
 		expect(app.fetch).toHaveBeenCalledWith(

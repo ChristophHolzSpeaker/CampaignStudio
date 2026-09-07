@@ -47,7 +47,7 @@ const runtimeSource = String.raw`(() => {
     window.dataLayer.push({event:'cs_event', cs_event_name:e.name, cs_event_id:e.id,
       cs_campaign_id:context.campaignId, cs_page_id:context.campaignPageId,
       cs_action:e.action || null, cs_section:e.section || null, cs_metric:e.metric ?? null,
-      cs_ads_conversion_id:mapping?.conversionId || null, cs_ads_conversion_label:mapping?.conversionLabel || null,
+      cs_ads_conversion_id:mapping?.conversionId?.replace(/^AW-/, '') || null, cs_ads_conversion_label:mapping?.conversionLabel || null,
       cs_value:mapping?.value ?? null, cs_currency:mapping?.currency || null});
   };
   const flush = async () => {
