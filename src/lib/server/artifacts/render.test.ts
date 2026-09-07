@@ -31,6 +31,10 @@ describe('artifact response security headers', () => {
 			artifactResponseHeaders({ ...page, runtimeVersion: 'v5' }, true, 'https://assets.example.com')
 		).get('content-security-policy')!;
 		expect(live).toContain('https://www.googletagmanager.com');
+		expect(live.split(';').find((d) => d.trim().startsWith('connect-src'))).toContain(
+			'https://pagead2.googlesyndication.com'
+		);
+		expect(preview).not.toContain('pagead2.googlesyndication.com');
 		expect(preview).not.toContain('googletagmanager');
 		expect(live.split(';').find((d) => d.trim().startsWith('script-src'))).not.toContain(
 			'unsafe-inline'
@@ -40,7 +44,7 @@ describe('artifact response security headers', () => {
 		const headers = new Headers(artifactResponseHeaders(page, false, 'http://127.0.0.1:54321'));
 		const policy = headers.get('content-security-policy');
 
-		expect(headers.get('etag')).toBe('"content-hash-v1-r4"');
+		expect(headers.get('etag')).toBe('"content-hash-v1-r5"');
 		expect(policy).toContain("script-src 'self' https://www.youtube.com");
 		expect(policy).toContain("style-src 'self' 'unsafe-inline' https: http://127.0.0.1:54321");
 		expect(policy).toContain("img-src 'self' data: blob: https: http://127.0.0.1:54321");

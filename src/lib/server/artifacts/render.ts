@@ -1,7 +1,7 @@
 import type { ArtifactPageRecord } from './repository';
 import { createBookingWidgetToken } from './widget-token';
 
-const ARTIFACT_RENDERER_REVISION = 'r4';
+const ARTIFACT_RENDERER_REVISION = 'r5';
 
 type ArtifactPublicContext = {
 	runtimeVersion: string;
@@ -83,7 +83,7 @@ export function artifactResponseHeaders(
 			? 'private, no-store'
 			: 'public, s-maxage=60, stale-while-revalidate=300',
 		ETag: `"${page.contentSha256}-${page.runtimeVersion}-${ARTIFACT_RENDERER_REVISION}"`,
-		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self' https://www.youtube.com${page.runtimeVersion === 'v5' && !preview ? ' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com' : ''}; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'${page.runtimeVersion === 'v5' && !preview ? ' https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://www.google.de https://*.doubleclick.net' : ''}; form-action 'self'; frame-src 'self' https://www.youtube-nocookie.com${page.runtimeVersion === 'v5' && !preview ? ' https://www.googletagmanager.com https://td.doubleclick.net https://www.google.com' : ''}; frame-ancestors ${frameAncestors}`,
+		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self' https://www.youtube.com${page.runtimeVersion === 'v5' && !preview ? ' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com' : ''}; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'${page.runtimeVersion === 'v5' && !preview ? ' https://pagead2.googlesyndication.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://www.google.de https://*.doubleclick.net' : ''}; form-action 'self'; frame-src 'self' https://www.youtube-nocookie.com${page.runtimeVersion === 'v5' && !preview ? ' https://www.googletagmanager.com https://td.doubleclick.net https://www.google.com' : ''}; frame-ancestors ${frameAncestors}`,
 		'Referrer-Policy': 'strict-origin-when-cross-origin',
 		'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 		'X-Content-Type-Options': 'nosniff',
