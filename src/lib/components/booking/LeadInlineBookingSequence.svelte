@@ -16,6 +16,7 @@
 	};
 
 	type Props = {
+		onBookingConfirmed?: () => void;
 		submitAction?: {
 			pending?: unknown;
 			result?: {
@@ -46,6 +47,7 @@
 	};
 
 	let {
+		onBookingConfirmed,
 		submitAction,
 		campaignId = null,
 		campaignPageId = null,
@@ -258,6 +260,7 @@ Venue:`
 		dataLayerWindow.dataLayer.push({
 			event: 'calendar_booking_confirmed'
 		});
+		onBookingConfirmed?.();
 	});
 
 	function formatDayLabel(dateKey: string): string {

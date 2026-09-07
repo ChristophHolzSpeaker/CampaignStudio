@@ -539,3 +539,9 @@ Delivery shall proceed through vertical slices:
 Each slice shall leave existing section-rendered production pages operational.
 
 The system shall prioritize backward compatibility, controlled platform behavior, validated inputs, shared business modules, atomic lifecycle operations, and a small authoring contract over preserving Campaign Studio as the primary visual authoring environment or performing a broad rewrite before one artifact page proves the architecture.
+
+## Dynamic measurement and CRM conversion delivery (runtime v5)
+
+Published v5 artifacts provide a versioned generic measurement envelope, declarative action/section attributes, automatic click/play/form/scroll/visible-time events, and platform-managed GTM loading. Authored JavaScript remains prohibited. Campaign-level browser/offline mappings are authenticated API configuration independent of artifact versions. Marketing controls Google conversion actions and bidding policy.
+
+Persist Google click history independently of visit deduplication and expose it on authenticated journey reporting. Accept idempotent CRM business outcomes through a dedicated write scope. Queue server-side Google Data Manager delivery with stable transaction identifiers, retry leases, explicit blocked/failed/accepted/delivered states, and diagnostic polling. Preview is measurement-free. Never capture form values or reverse-IP enrichment as Google event parameters. See src/lib/artifacts/tracking-guide.md for the runtime/API contract and operator setup.

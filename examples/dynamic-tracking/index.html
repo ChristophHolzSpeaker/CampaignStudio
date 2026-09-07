@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Campaign Studio tracking reference</title>
+		<link rel="stylesheet" href="assets/site.css" />
+	</head>
+	<body>
+		<main>
+			<section data-cs-section="intro" data-cs-track-view="intro_visible">
+				<h1>One event contract. Any landing page.</h1>
+				<p>
+					This reference uses native controls and declared identifiers. Its HTML contains no
+					tracking scripts.
+				</p>
+				<a href="#booklet" data-cs-track="download_booklet" data-cs-event="booklet_interest"
+					>Get the booklet</a
+				><button type="button" data-cs-track="show_interest">I'm interested</button>
+			</section>
+			<section data-cs-section="videos">
+				<h2>Play inline</h2>
+				<div
+					data-cs-widget="youtube-video"
+					data-cs-youtube-id="xmJRcJAr8Rc"
+					data-cs-video-title="Keynote reference"
+				></div>
+			</section>
+			<section id="booklet" data-cs-section="booklet" data-cs-track-view="booklet_visible">
+				<h2>Request the booklet</h2>
+				<form data-cs-form="lead-intake" data-cs-form-key="booklet_request">
+					<label
+						>Email <input type="email" name="email" required data-cs-track="email_field" /></label
+					><label
+						>Purpose
+						<textarea name="scope" required data-cs-track="purpose_field"></textarea></label
+					><button type="submit" data-cs-track="request_booklet">Send request</button>
+					<p data-cs-form-status></p>
+				</form>
+			</section>
+		</main>
+	</body>
+</html>

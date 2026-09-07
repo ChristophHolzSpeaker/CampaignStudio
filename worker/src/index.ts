@@ -1,3 +1,4 @@
+import { triggerConversionProcessing } from './lib/conversions';
 import { type WorkerEnv, type WorkerExecutionContext, type WorkerScheduledEvent } from './lib/env';
 import { json } from './lib/http';
 import { requireInternalAuth } from './lib/auth';
@@ -118,6 +119,8 @@ export default {
 		env: WorkerEnv,
 		ctx: WorkerExecutionContext
 	): Promise<void> {
+		if (env.CONVERSION_PROCESSOR_URL && env.CONVERSION_PROCESSOR_TOKEN)
+			ctx.waitUntil(triggerConversionProcessing(env));
 		ctx.waitUntil(
 			(async () => {
 				try {

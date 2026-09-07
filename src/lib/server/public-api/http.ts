@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { authenticateAnyPublicApiRequest, authenticatePublicApiRequest } from './auth';
 import { enforcePublicApiRateLimit, rateLimitHeaders, rateLimitResponse } from './rate-limit';
 
-type PublicApiRequestScope = 'lead-read' | 'campaign-write';
+type PublicApiRequestScope = 'lead-read' | 'campaign-write' | 'crm-write';
 
 export type PublicApiContext = {
 	tokenFingerprint: string;
@@ -103,4 +103,8 @@ export function parseOptionalPositiveInt(value: string | null): number | null {
 	if (!value) return null;
 	const parsed = Number(value);
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export async function requireCrmWriteRequest(request: Request) {
+	return requireScopedPublicApiRequest(request, 'crm-write');
 }

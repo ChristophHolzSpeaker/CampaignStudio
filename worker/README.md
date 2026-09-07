@@ -8,6 +8,12 @@ Cloudflare Worker for attribution, Gmail ingest/sync, booking workflows, and int
 - Uses Google service-account domain-wide delegation for Gmail/Calendar operations.
 - Uses `INTERNAL_API_TOKEN` bearer auth for internal control/notification endpoints.
 
+## CTA contract deployment
+
+`shared/event-types.ts` is bundled separately into the SvelteKit app and this Worker. Changes to accepted CTA types or their canonical event mapping require deploying both services; deploying a new artifact runtime does not update the Worker.
+
+For confirmed video playback, the Worker must accept `type=video` and persist `event_type=cta_click` with `event_payload.cta_type=video`. `legacy_event_type=video_cta_click` is payload metadata, not a separate database event type. Run `pnpm exec vitest run src/routes/track-cta.test.ts` from `worker/` before releasing a CTA contract change. Verify the active Worker version and a persisted event with the correct campaign/page/visit after deployment; the app's HTTP response alone is not proof of persistence.
+
 ## Routes
 
 ### Public
@@ -146,3 +152,7 @@ pnpm worker:dev
 pnpm --filter campaignstudio-worker run check
 pnpm --filter campaignstudio-worker run test
 ```
+
+### CRM conversion queue
+
+The existing 15-minute scheduled handler also triggers the app's durable conversion queue when configured. Set `CONVERSION_PROCESSOR_URL` to the HTTPS app URL ending `/api/internal/conversions/process`; set the Worker secret `CONVERSION_PROCESSOR_TOKEN` to the app's `CRON_SECRET`. The app owns Google Data Manager OAuth credentials. Missing processor settings disable this task. Deploy both app and Worker for this feature; see `src/lib/artifacts/tracking-guide.md` in the application for full setup and diagnostics.
