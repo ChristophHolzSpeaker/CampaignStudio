@@ -214,3 +214,24 @@ it('records native media only on confirmed playing and deduplicates resume', asy
 	callback({ target: media });
 	expect(app.window.dataLayer.filter((e) => e.cs_event_name === 'video_play')).toHaveLength(1);
 });
+
+it('applies owner-configured Google defaults before events without recording visitor consent', async () => {
+	const app = await mount();
+	const defaults = app.window.dataLayer.find((e) => e[0] === 'consent');
+	expect(defaults).toMatchObject({
+		0: 'consent',
+		1: 'default',
+		2: {
+			ad_storage: 'granted',
+			analytics_storage: 'granted',
+			ad_user_data: 'granted',
+			ad_personalization: 'granted'
+		}
+	});
+	expect(app.window.dataLayer.indexOf(defaults!)).toBeLessThan(
+		app.window.dataLayer.findIndex((e) => e.event === 'cs_event')
+	);
+	expect(app.window.dataLayer.some((e) => e.event === 'consent_given')).toBe(false);
+	const preview = await mount(true);
+	expect(preview.window.dataLayer).toHaveLength(0);
+});

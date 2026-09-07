@@ -67,9 +67,9 @@ const runtimeSource = String.raw`(() => {
   const sectionOf = el => el.closest('[data-cs-section]')?.getAttribute('data-cs-section') || el.getAttribute('data-cs-cta-section');
   const actionOf = el => el.getAttribute('data-cs-track') || el.getAttribute('data-cs-cta-key') || identifier(el.id);
   if (!context.preview) {
-    // The installed CMP must update these defaults via Consent Mode; no implicit grant.
+    // Owner-configured Google defaults. This is not a record of visitor consent.
     function consent(){window.dataLayer.push(arguments);}
-    consent('consent','default',{ad_storage:'denied',analytics_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',wait_for_update:500});
+    consent('consent','default',{ad_storage:'granted',analytics_storage:'granted',ad_user_data:'granted',ad_personalization:'granted'});
     fetch('/api/runtime/v1/tracking?pageId='+context.campaignPageId,{credentials:'same-origin'})
       .then(r=>{if(!r.ok)throw new Error('Tracking configuration unavailable');return r.json();})
       .then(result=>{

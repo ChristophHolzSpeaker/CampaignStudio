@@ -95,6 +95,14 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 		note: 'The stylesheet defines font faces and variables but does not override authored typography.'
 	},
 	measurement: {
+		googleConsentDefaults: {
+			ad_storage: 'granted',
+			analytics_storage: 'granted',
+			ad_user_data: 'granted',
+			ad_personalization: 'granted',
+			source: 'owner_configuration',
+			visitorConsentEvidence: false
+		},
 		eventSchema: z.toJSONSchema(measurementSchema),
 		configurationSchema: z.toJSONSchema(trackingConfigSchema),
 		outcomeSchema: z.toJSONSchema(outcomeSchema),
