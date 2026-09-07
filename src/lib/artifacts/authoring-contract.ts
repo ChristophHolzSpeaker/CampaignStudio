@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import { measurementSchema, trackingConfigSchema, outcomeSchema } from '$lib/tracking/contract';
+import trackingGuide from './tracking-guide.md?raw';
 import { ctaTypes } from '../../../shared/event-types';
 import {
 	ARTIFACT_ALLOWED_HTML_TAGS,
@@ -12,7 +15,7 @@ import {
 } from './contract';
 
 export const ARTIFACT_AUTHORING_CONTRACT = {
-	contractVersion: 4,
+	contractVersion: 5,
 	runtimeVersion: ARTIFACT_RUNTIME_VERSION,
 	rendererType: 'artifact',
 	discovery: {
@@ -90,6 +93,32 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			{ name: 'Bureau Grot Compressed', weights: [300, 400, 500, 700] }
 		],
 		note: 'The stylesheet defines font faces and variables but does not override authored typography.'
+	},
+	measurement: {
+		googleConsentDefaults: {
+			ad_storage: 'granted',
+			analytics_storage: 'granted',
+			ad_user_data: 'granted',
+			ad_personalization: 'granted',
+			source: 'owner_configuration',
+			visitorConsentEvidence: false
+		},
+		eventSchema: z.toJSONSchema(measurementSchema),
+		configurationSchema: z.toJSONSchema(trackingConfigSchema),
+		outcomeSchema: z.toJSONSchema(outcomeSchema),
+		version: 1,
+		envelope: 'cs_event',
+		guide: '/llms-full.txt',
+		attributes: [
+			'data-cs-track',
+			'data-cs-event',
+			'data-cs-section',
+			'data-cs-track-view',
+			'data-cs-track-ignore'
+		],
+		configuration: '/api/public/v1/campaigns/{id}/tracking',
+		outcomes: '/api/public/v1/lead-journeys/{id}/outcomes',
+		reporting: '/api/public/v1/lead-journeys/{id}/tracking'
 	},
 	runtime: {
 		injectedScript: `/campaign-runtime/${ARTIFACT_RUNTIME_VERSION}.js`,
@@ -466,7 +495,9 @@ Unpublishing removes the selected active artifact from public access and returns
 
 Upload retry rules are deliberately strict: a duplicate path is rejected. Repeating finalize after the same session has finalized returns the same page version. A session that failed finalization cannot be reused; create a fresh session and upload the corrected bundle. Publishing the same finalized version is safe to retry.
 
-## Runtime and analytics semantics
+${trackingGuide}
+
+## Legacy runtime and analytics semantics
 
 On a published artifact, the injected runtime automatically records a visit with available campaign attribution. It records engagement after ten seconds or on page exit following interaction. CTA clicks are best-effort and also push a \`cta_click\` object to \`window.dataLayer\` when that array exists. Any element can carry the CTA marker, but use native links and buttons so keyboard activation produces a normal click; middle-button \`auxclick\` is not tracked. Modifier-assisted link clicks retain native navigation and are tracked best-effort. CTA keys are not uniqueness-enforced, so make them stable and unique within a page; section values are author-defined analytics labels.
 
@@ -474,7 +505,7 @@ Lead submissions reuse Campaign Studio's lead, attribution, journey, qualificati
 
 The booking placeholder is replaced with the maintained same-origin booking widget. In preview, it renders a clear disabled-booking notice; booking mutations are unavailable.
 
-The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. YouTube resources load before visitor activation. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v4, then preview and publish it. v3 retains its two-step click-to-load behavior.
+The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. YouTube resources load before visitor activation. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v5, then preview and publish it. v3 retains its two-step click-to-load behavior.
 
 Do not reproduce these behaviors in authored code. Authored JavaScript is rejected, and platform IDs are resolved from signed/injected runtime context.
 

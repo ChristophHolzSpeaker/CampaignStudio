@@ -5,9 +5,10 @@ export type PublicApiAuthResult =
 	| { ok: true; tokenFingerprint: string }
 	| { ok: false; status: 401 | 503; message: string };
 
-export type PublicApiTokenScope = 'lead-read' | 'campaign-write';
+export type PublicApiTokenScope = 'lead-read' | 'campaign-write' | 'crm-write';
 
 function getConfiguredToken(scope: PublicApiTokenScope): string | undefined {
+	if (scope === 'crm-write') return env.CRM_WRITE_API_TOKEN;
 	if (scope === 'campaign-write') {
 		return env.CAMPAIGN_WRITE_API_TOKEN;
 	}

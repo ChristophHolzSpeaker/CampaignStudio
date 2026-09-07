@@ -1,0 +1,7 @@
+# Dynamic tracking reference
+
+Upload this directory through the artifact API, preview and publish. Read the complete [tracking guide](../../src/lib/artifacts/tracking-guide.md) for mapping/GTM/CRM setup; it is also served in `/llms-full.txt`.
+
+Prompt for Christoph's Claude:
+
+> Read Campaign Studio's `/llms-full.txt` and `/api/public/v1/openapi.json`. Update my artifact to runtime v5 by uploading/finalizing a new version. Use native inline YouTube widgets and stable data-cs-track/data-cs-event/data-cs-section attributes; never add authored JavaScript or GTM snippets. Preserve the layout and existing identifiers. Read the campaign's tracking configuration before modifying mappings; preserve unrelated mappings. If authorized Google Ads access is available, select/create the team's requested conversion actions and map the actual returned identifiers through Campaign Studio's tracking API. Do not invent IDs, consent, values, primary/secondary settings or delivery claims. Extend the CRM to post confirmed outcomes using its existing Campaign Studio journey IDs, stable external event IDs and recorded consent. Reuse the generic GTM tags described in the guide. Verify preview is measurement-free, published interactions create the expected dataLayer and persisted events, and duplicate CRM requests return the same delivery. Distinguish queued, Google-accepted and delivered status. Report missing Google credentials/container setup explicitly. Preview and verify before publishing changes to existing live pages.

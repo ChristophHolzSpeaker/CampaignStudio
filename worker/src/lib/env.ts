@@ -1,4 +1,6 @@
 export type WorkerEnv = {
+	CONVERSION_PROCESSOR_URL?: string;
+	CONVERSION_PROCESSOR_TOKEN?: string;
 	SUPABASE_URL: string;
 	SUPABASE_SERVICE_ROLE_KEY: string;
 	BOOKING_TOKEN_SECRET: string;
