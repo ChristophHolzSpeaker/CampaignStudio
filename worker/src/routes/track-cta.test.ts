@@ -88,4 +88,33 @@ describe('handleTrackCTA', () => {
 		expect(response.status).toBe(400);
 		expect(mockedLogLeadEvent).not.toHaveBeenCalled();
 	});
+	it('accepts confirmed video plays and persists canonical CTA semantics with visit attribution', async () => {
+		mockedSelectOne.mockResolvedValueOnce({ id: 245, campaign_id: 62 });
+		mockedSelectOne.mockResolvedValueOnce({ id: 1119 });
+		mockedLogLeadEvent.mockResolvedValueOnce(undefined);
+		const response = await handleTrackCTA(
+			makeRequest(
+				'https://worker.test/track/cta?type=video&campaign_id=62&campaign_page_id=245&campaign_visit_id=1119&cta_key=video-mpbtCg2NSUs&cta_section=videos'
+			),
+			makeTestEnv()
+		);
+		expect(response.status).toBe(200);
+		expect(mockedLogLeadEvent).toHaveBeenCalledTimes(1);
+		expect(mockedLogLeadEvent).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({
+				campaign_id: 62,
+				campaign_page_id: 245,
+				campaign_visit_id: 1119,
+				event_type: 'cta_click',
+				event_source: 'worker.track_cta',
+				cta_key: 'video-mpbtCg2NSUs',
+				cta_section: 'videos',
+				event_payload: expect.objectContaining({
+					cta_type: 'video',
+					legacy_event_type: 'video_cta_click'
+				})
+			})
+		);
+	});
 });

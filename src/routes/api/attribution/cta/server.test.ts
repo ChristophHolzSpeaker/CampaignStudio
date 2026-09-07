@@ -115,4 +115,33 @@ describe('POST /api/attribution/cta', () => {
 			})
 		);
 	});
+	it('returns a failure when the Worker rejects a video event instead of claiming it was accepted', async () => {
+		mockedResolvePublishedCampaignPageContext.mockResolvedValue({
+			campaignId: 62,
+			campaignPageId: 245
+		});
+		mockedResolveCampaignVisitId.mockResolvedValue(1119);
+		mockedTrackCTA.mockRejectedValueOnce(new Error('Worker rejected unsupported CTA type video'));
+		const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+		try {
+			const response = await POST({
+				request: requestWithBody({
+					type: 'video',
+					campaign_id: 62,
+					campaign_page_id: 245,
+					campaign_visit_id: 1119,
+					cta_key: 'video-mpbtCg2NSUs',
+					cta_section: 'videos'
+				}),
+				cookies: {} as never
+			} as never);
+			expect(response.status).toBe(502);
+			expect(await response.json()).toEqual({
+				ok: false,
+				error: 'CTA tracking is temporarily unavailable'
+			});
+		} finally {
+			log.mockRestore();
+		}
+	});
 });

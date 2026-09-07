@@ -73,6 +73,7 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 		});
 	} catch (trackingError) {
 		console.error('CTA tracking failed', trackingError);
+		return json({ ok: false, error: 'CTA tracking is temporarily unavailable' }, { status: 502 });
 	}
 
 	return new Response(null, { status: 204 });

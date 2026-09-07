@@ -1,3 +1,4 @@
+import { trackingApiPaths } from '$lib/tracking/openapi';
 import { json } from '@sveltejs/kit';
 import { ARTIFACT_AUTHORING_CONTRACT } from '$lib/artifacts/authoring-contract';
 import { ARTIFACT_ALLOWED_MEDIA_TYPES } from '$lib/artifacts/contract';
@@ -20,7 +21,7 @@ export const _openApiDocument = {
 	openapi: '3.1.0',
 	info: {
 		title: 'Campaign Studio Public API',
-		version: '2.1.0',
+		version: '2.2.0',
 		description:
 			'Artifact documentation is public. Campaign creation, upload, lifecycle, reporting, and private data operations require bearer authentication. Lead responses may contain PII and full email bodies.'
 	},
@@ -30,6 +31,7 @@ export const _openApiDocument = {
 	},
 	servers: [{ url: '/', description: 'The same Campaign Studio origin that served this document' }],
 	paths: {
+		...trackingApiPaths,
 		'/api/public/v1/page-sections/schema': {
 			get: {
 				operationId: 'getPageSectionSchemas',

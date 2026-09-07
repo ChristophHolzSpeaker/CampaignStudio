@@ -2,7 +2,35 @@
 	import { onMount } from 'svelte';
 	import LeadInlineBookingSequence from '$lib/components/booking/LeadInlineBookingSequence.svelte';
 	let { data } = $props();
+
+	function report(name: string, action: string) {
+		if (!data.preview && parent !== window)
+			parent.postMessage({ type: 'cs-widget-measure', name, action }, location.origin);
+	}
 	onMount(() => {
+		const fields = new WeakSet<Element>();
+		let started = false;
+		const click = (event: MouseEvent) => {
+			const target = event.target instanceof Element ? event.target.closest('button,a') : null;
+			if (target)
+				report(
+					target.matches('a') ? 'navigation_click' : 'button_click',
+					target.matches('a') ? 'booking_link' : 'booking_button'
+				);
+		};
+		const input = (event: Event) => {
+			const target = event.target;
+			if (!(target instanceof Element) || fields.has(target)) return;
+			fields.add(target);
+			if (!started) {
+				started = true;
+				report('form_start', 'booking_form');
+			}
+			report('form_input', 'booking_field');
+		};
+		document.addEventListener('click', click);
+		document.addEventListener('input', input);
+
 		const observer = new ResizeObserver(() =>
 			parent.postMessage(
 				{
@@ -14,7 +42,11 @@
 			)
 		);
 		observer.observe(document.documentElement);
-		return () => observer.disconnect();
+		return () => {
+			observer.disconnect();
+			document.removeEventListener('click', click);
+			document.removeEventListener('input', input);
+		};
 	});
 </script>
 
@@ -23,6 +55,7 @@
 		<p class="preview-note">Booking is disabled in artifact preview.</p>
 	{:else}
 		<LeadInlineBookingSequence
+			onBookingConfirmed={() => report('booking_confirmed', 'booking_form')}
 			campaignId={data.campaignId}
 			campaignPageId={data.campaignPageId}
 			pageSlug={data.slug}

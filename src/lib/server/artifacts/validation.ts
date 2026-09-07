@@ -120,6 +120,15 @@ function sanitizeAndRewriteHtml(html: string, assetUrls: Map<string, string>): s
 		allowVulnerableTags: true,
 		disallowedTagsMode: 'discard',
 		exclusiveFilter(frame) {
+			for (const [key, value] of Object.entries(frame.attribs)) {
+				if (
+					['data-cs-track', 'data-cs-section', 'data-cs-track-view'].includes(key) &&
+					!/^[a-z][a-zA-Z0-9_-]{0,63}$/.test(value)
+				)
+					throw new Error(`Invalid tracking identifier: ${key}`);
+				if (key === 'data-cs-event' && !/^[a-z][a-z0-9_]{0,39}$/.test(value))
+					throw new Error('Invalid tracking event name');
+			}
 			return ['script', 'iframe', 'object', 'embed', 'applet', 'base'].includes(
 				frame.tag.toLowerCase()
 			);

@@ -1,3 +1,4 @@
+import { captureAdClicks } from '$lib/server/tracking/attribution';
 import { db } from '$lib/server/db';
 import { campaign_visits } from '$lib/server/db/schema';
 import type { Cookies } from '@sveltejs/kit';
@@ -107,6 +108,7 @@ export async function logCampaignVisit(input: {
 	headers: Headers;
 	visitorIdentifier: string;
 }): Promise<{ logged: boolean; visitId: number | null }> {
+	await captureAdClicks(input);
 	// page_view source of truth: we intentionally model page views in campaign_visits
 	// (deduped by visitor and time window) instead of duplicating every view into lead_events.
 	const dedupeWindowStart = new Date(Date.now() - VISIT_DEDUPE_WINDOW_MINUTES * 60 * 1000);

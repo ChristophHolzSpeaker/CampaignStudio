@@ -1030,3 +1030,74 @@ export const task = pgTable('task', {
 
 // Temporarily commented out until auth schema is generated
 // export * from './auth.schema';
+
+// Runtime measurement and CRM delivery share identifiers, not browser-authored credentials.
+export const campaign_tracking = pgTable('campaign_tracking', {
+	campaign_id: integer('campaign_id')
+		.primaryKey()
+		.references(() => campaigns.id, { onDelete: 'cascade' }),
+	config: jsonb('config').notNull(),
+	updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+export const ad_clicks = pgTable(
+	'ad_clicks',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		visitor_id: text('visitor_id').notNull(),
+		campaign_id: integer('campaign_id')
+			.notNull()
+			.references(() => campaigns.id),
+		campaign_page_id: integer('campaign_page_id')
+			.notNull()
+			.references(() => campaign_pages.id),
+		kind: text('kind').notNull(),
+		click_id: text('click_id').notNull(),
+		captured_at: timestamp('captured_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		uniqueIndex('ad_clicks_visitor_click_idx').on(t.visitor_id, t.kind, t.click_id),
+		index('ad_clicks_visitor_time_idx').on(t.visitor_id, t.captured_at)
+	]
+);
+export const tracking_events = pgTable(
+	'tracking_events',
+	{
+		id: uuid('id').primaryKey(),
+		campaign_id: integer('campaign_id')
+			.notNull()
+			.references(() => campaigns.id),
+		campaign_page_id: integer('campaign_page_id').references(() => campaign_pages.id),
+		campaign_visit_id: integer('campaign_visit_id').references(() => campaign_visits.id),
+		lead_journey_id: uuid('lead_journey_id').references(() => lead_journeys.id),
+		event_name: text('event_name').notNull(),
+		source: text('source').notNull(),
+		action: text('action'),
+		section: text('section'),
+		payload: jsonb('payload').notNull(),
+		occurred_at: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		index('tracking_events_visit_time_idx').on(t.campaign_visit_id, t.occurred_at),
+		index('tracking_events_journey_time_idx').on(t.lead_journey_id, t.occurred_at)
+	]
+);
+export const conversion_deliveries = pgTable(
+	'conversion_deliveries',
+	{
+		id: uuid('id').defaultRandom().primaryKey(),
+		event_id: uuid('event_id')
+			.notNull()
+			.references(() => tracking_events.id),
+		click_captured_at: timestamp('click_captured_at', { withTimezone: true }),
+		request_key: text('request_key').notNull().unique(),
+		payload_hash: text('payload_hash').notNull(),
+		request_payload: jsonb('request_payload').notNull(),
+		status: text('status').notNull().default('pending'),
+		attempts: integer('attempts').notNull().default(0),
+		next_attempt_at: timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+		google_request_id: text('google_request_id'),
+		last_error: text('last_error'),
+		updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [index('conversion_deliveries_pending_idx').on(t.status, t.next_attempt_at)]
+);
