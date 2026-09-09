@@ -42,7 +42,9 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 		'Upload every file as raw bytes to the session using its exact relative path and media type.',
 		'Finalize the session and retain the returned campaignPageId and previewUrl.',
 		'Have a human review the tokenized previewUrl.',
+		'For each v5 campaign, GET its tracking configuration and PUT the owner-approved GTM-MCDDK28B container while preserving mappings. There is no global default; republishing does not configure GTM. Confirm before replacing a different container or deliberately disabled tracking.',
 		'Publish that campaignPageId. Publishing an older finalized version performs rollback.',
+		'Verify the live tracking endpoint returns the expected container and the published page loads gtm.js and connects in Tag Assistant; preview cannot verify GTM. Report incomplete verification.',
 		'Use the returned liveUrl; unpublish the active campaignPageId when removal is required.'
 	],
 	routing: {
@@ -452,12 +454,22 @@ Finalization validates every file and local reference, sanitizes HTML, rewrites 
 
 Open the returned preview URL for human review. Preview disables visits, engagement, CTA tracking, and lead submissions; it exists to verify layout, assets, fonts, and runtime placeholders without contaminating production data.
 
+### 6a. Configure GTM for each campaign
+
+For every campaign being created or migrated to runtime v5, read \`GET /api/public/v1/campaigns/{id}/tracking\` with the campaign-write token before publishing. Tracking settings belong to the campaign and are shared by its artifact versions; they are not global. New or unconfigured campaigns default to \`gtmContainerId: null\`, which disables GTM loading. Uploading, finalizing, and republishing do not set or inherit a container ID.
+
+For this deployment, the owner-approved existing container is \`GTM-MCDDK28B\`. Set \`gtmContainerId\` through \`PUT /api/public/v1/campaigns/{id}/tracking\`, preserving the complete mappings array returned by GET. Do not copy illustrative Ads mappings or clear existing mappings. If a campaign has a different container or explicitly disabled tracking, confirm the intended change before replacing it. This API setup needs the campaign-write token; it does not require Google Ads OAuth access. Never insert GTM snippets into artifact HTML.
+
+If configuration cannot be read or saved, report tracking setup as incomplete. Preview intentionally loads no GTM and cannot verify this step. See the runtime v5 tracking guide below for the configuration schema and Google container setup.
+
 ### 7. Publish, rollback, or unpublish
 
 \`\`\`sh
 curl -sS -X POST "${origin}/api/public/v1/artifact-versions/$CAMPAIGN_PAGE_ID/publish" \\
   -H "Authorization: Bearer $CAMPAIGN_WRITE_TOKEN"
 \`\`\`
+
+After publishing a v5 artifact, check \`GET /api/runtime/v1/tracking?pageId={campaignPageId}\` returns the expected container, then open the live page and verify a request to \`https://www.googletagmanager.com/gtm.js?id=GTM-MCDDK28B\` and connection in Tag Assistant. Repeat for every affected campaign. A successful publish or a dataLayer event alone does not prove GTM loaded. Report any verification you could not perform. Configuration changes apply on the next page load without republishing.
 
 The returned \`data.liveUrl\` is the canonical \`/{slug}\` URL. Publication is atomic. To perform rollback, publish an older finalized \`campaignPageId\`; immutable artifact objects are not changed.
 
