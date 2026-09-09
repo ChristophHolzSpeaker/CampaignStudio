@@ -28,7 +28,9 @@ YouTube `video_play` means the player confirmed PLAYING, once per widget per pag
 
 Scroll events fire once at 25/50/75/90/100%, using action `percent_25`, etc. Active time counts only while the document is visible, at 10/30/60/120 seconds, with action `seconds_10`, etc. `cs_metric` carries the milestone. `page_exit` carries visible time in milliseconds and is best-effort. Browser crashes/blocked scripts can lose exit signals; derive bounce from absence of engagement, not an authoritative "bounce conversion". These runtime page views are per document; legacy CS visits remain deduplicated for 30 minutes.
 
-### One-time GTM installation
+### One-time Google container setup and per-campaign registration
+
+Register the owner-approved container `GTM-MCDDK28B` separately for every campaign through the campaign tracking API below. There is no global default or inheritance: missing configuration defaults to `gtmContainerId: null` and loads no GTM. All artifact versions in a campaign share these settings. Creating or republishing an artifact does not configure them. Read first, preserve all mappings, and save the container ID; Google Ads OAuth is not needed for this API operation. Do not overwrite a different container or deliberately disabled tracking without confirming intent.
 
 Configure the container once, including the existing Google tag and Conversion Linker. Campaign Studio loads the configured container itself on published v5 artifacts. The platform CSP permits Google tag destinations; authored scripts remain prohibited. Test the actual container for additional vendor domains before deployment.
 
