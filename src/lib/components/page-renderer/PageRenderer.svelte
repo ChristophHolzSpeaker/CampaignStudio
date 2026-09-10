@@ -38,41 +38,43 @@
 		{@const SectionComponent = entry?.component}
 
 		{#if SectionComponent}
-			{#if section.type === 'immediate_authority_hero'}
-				<SectionComponent
-					props={section.props}
-					{campaignId}
-					{campaignPageId}
-					{editable}
-					{onInlineEditSaved}
-					sectionIndex={index}
-					{mailtoHref}
-					{abTest}
-				/>
-			{:else if section.type === 'hybrid_content_section' || section.type === 'keynote_speeches'}
-				<SectionComponent
-					props={section.props}
-					{campaignId}
-					{campaignPageId}
-					{editable}
-					{onInlineEditSaved}
-					sectionIndex={index}
-					{mailtoHref}
-					{bookingSlotGroups}
-					{disableScrollReveal}
-				/>
-			{:else}
-				<SectionComponent
-					props={section.props}
-					{campaignId}
-					{campaignPageId}
-					{editable}
-					{onInlineEditSaved}
-					sectionIndex={index}
-					{mailtoHref}
-					{bookingSlotGroups}
-				/>
-			{/if}
+			<div style="display: contents" data-cs-section={section.type} data-cs-track-view>
+				{#if section.type === 'immediate_authority_hero'}
+					<SectionComponent
+						props={section.props}
+						{campaignId}
+						{campaignPageId}
+						{editable}
+						{onInlineEditSaved}
+						sectionIndex={index}
+						{mailtoHref}
+						{abTest}
+					/>
+				{:else if section.type === 'hybrid_content_section' || section.type === 'keynote_speeches'}
+					<SectionComponent
+						props={section.props}
+						{campaignId}
+						{campaignPageId}
+						{editable}
+						{onInlineEditSaved}
+						sectionIndex={index}
+						{mailtoHref}
+						{bookingSlotGroups}
+						{disableScrollReveal}
+					/>
+				{:else}
+					<SectionComponent
+						props={section.props}
+						{campaignId}
+						{campaignPageId}
+						{editable}
+						{onInlineEditSaved}
+						sectionIndex={index}
+						{mailtoHref}
+						{bookingSlotGroups}
+					/>
+				{/if}
+			</div>
 		{:else}
 			<section aria-label="Unsupported section">
 				<p>Unsupported section: {section.type}</p>

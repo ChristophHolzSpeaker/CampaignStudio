@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { getSpeakerTracking } from '$lib/tracking/speaker-context';
 	import { browser } from '$app/environment';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import { submitInlineLeadBooking } from '$lib/components/booking/LeadInlineBookingSequence.remote';
 	import { trackMailtoClick } from '$lib/analytics/track-mailto-click';
+
+	const speakerTracking = getSpeakerTracking();
 
 	type SlotPresentation = {
 		startsAtIso: string;
@@ -170,6 +173,7 @@
 		}
 
 		hasTrackedCalendarBookingConfirmed = true;
+		speakerTracking?.measure({ name: 'booking_confirmed', action: ctaKey, section: ctaSection });
 
 		const dataLayerWindow = window as WindowWithDataLayer;
 		dataLayerWindow.dataLayer = dataLayerWindow.dataLayer || [];
@@ -242,6 +246,8 @@ Veranstaltungsort:`;
 		</div>
 	{:else}
 		<form
+			data-cs-track={ctaKey}
+			data-cs-section={ctaSection}
 			{...resolvedSubmitAction}
 			class="space-y-8"
 			onsubmit={() => {
@@ -309,6 +315,7 @@ Veranstaltungsort:`;
 								{#each normalizedSlotGroups as day (day.dateKey)}
 									<button
 										type="button"
+										data-cs-track="booking_day_select"
 										role="tab"
 										id={`inline-booking-day-tab-${day.dateKey}`}
 										aria-controls={`inline-booking-day-panel-${day.dateKey}`}
@@ -344,6 +351,7 @@ Veranstaltungsort:`;
 												{#each slotGroup.slots as slot (slot.startsAtIso)}
 													<button
 														type="button"
+														data-cs-track="booking_slot_select"
 														role="radio"
 														aria-checked={selectedStartsAt === slot.startsAtIso}
 														class={[
@@ -380,6 +388,7 @@ Veranstaltungsort:`;
 										{/if}
 									</p>
 									<button
+										data-cs-track="booking_submit"
 										type="submit"
 										class="btn-primary inline-flex items-center gap-2"
 										disabled={isSubmitDisabled}
@@ -467,6 +476,7 @@ Veranstaltungsort:`;
 								<div class="flex items-center gap-3">
 									<button
 										type="button"
+										data-cs-track="booking_slot_change"
 										class="text-xs tracking-[0.15em] text-slate-600 uppercase underline hover:text-slate-900"
 										onclick={() => {
 											resetToSlotStage();
@@ -475,6 +485,7 @@ Veranstaltungsort:`;
 										Termin aendern
 									</button>
 									<button
+										data-cs-track="booking_submit"
 										type="submit"
 										class="btn btn-primary inline-flex items-center gap-2"
 										disabled={isSubmitDisabled}

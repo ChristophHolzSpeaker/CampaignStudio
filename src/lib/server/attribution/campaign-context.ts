@@ -31,7 +31,7 @@ export async function resolveCampaignPageContext(input: {
 }
 
 export async function resolvePublishedCampaignPageContext(input: {
-	campaignId: number;
+	campaignId?: number;
 	campaignPageId: number;
 }): Promise<{ campaignId: number; campaignPageId: number } | null> {
 	const [record] = await db
@@ -41,7 +41,9 @@ export async function resolvePublishedCampaignPageContext(input: {
 		.where(
 			and(
 				eq(campaign_pages.id, input.campaignPageId),
-				eq(campaign_pages.campaign_id, input.campaignId),
+				input.campaignId === undefined
+					? undefined
+					: eq(campaign_pages.campaign_id, input.campaignId),
 				eq(campaign_pages.is_published, true),
 				eq(campaigns.status, 'published')
 			)

@@ -294,6 +294,7 @@
 					<div class="flex flex-wrap items-center gap-3">
 						<a
 							href={mailtoHref}
+							data-cs-track="hero_email"
 							class="btn-primary inline-flex items-center gap-2"
 							onclick={() => {
 								trackHeroCtaClick('primary');
@@ -304,6 +305,7 @@
 						</a>
 						<a
 							href="#booking"
+							data-cs-track="hero_booking"
 							class="btn inline-flex items-center gap-2 border border-slate-300 bg-white px-3 py-2 text-xl font-bold text-slate-700 uppercase transition hover:border-slate-50"
 							onclick={() => trackHeroCtaClick('secondary')}
 						>

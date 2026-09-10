@@ -7,7 +7,7 @@ import {
 	readVisitorIdentifier,
 	resolveCampaignVisitId
 } from '$lib/server/attribution/campaign-visits';
-import { getPublishedArtifactPageById } from '$lib/server/artifacts/repository';
+import { resolvePublishedCampaignPageContext } from '$lib/server/attribution/campaign-context';
 import {
 	enforceRuntimeRateLimit,
 	enforceSameOrigin,
@@ -37,7 +37,9 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	}
 	const parsed = schema.safeParse(body);
 	if (!parsed.success) return json({ ok: false, error: 'Invalid events' }, { status: 400 });
-	const page = await getPublishedArtifactPageById(parsed.data.campaignPageId);
+	const page = await resolvePublishedCampaignPageContext({
+		campaignPageId: parsed.data.campaignPageId
+	});
 	if (!page) return json({ ok: false, error: 'Page not found' }, { status: 404 });
 	const visit = await resolveCampaignVisitId({
 		campaignId: page.campaignId,
