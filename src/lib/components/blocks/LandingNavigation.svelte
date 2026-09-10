@@ -269,7 +269,10 @@
 	}
 </script>
 
-<div class="fixed inset-x-0 top-0 z-50 bg-white px-4 py-2 lg:px-0 lg:py-4">
+<div
+	data-cs-section="landing_navigation"
+	class="fixed inset-x-0 top-0 z-50 bg-white px-4 py-2 lg:px-0 lg:py-4"
+>
 	<div class="mx-auto w-full max-w-7xl">
 		<div class="hidden justify-between lg:flex">
 			<a
@@ -423,6 +426,7 @@
 
 {#if categoriesDropdown}
 	<nav
+		data-cs-section="landing_navigation"
 		id="categories-menu"
 		bind:this={dropdown}
 		use:clickOutside
@@ -498,7 +502,11 @@
 {/if}
 
 {#if mobileMenuOpen}
-	<nav use:clickOutside class="fixed inset-x-0 top-20 z-40 lg:hidden">
+	<nav
+		data-cs-section="landing_navigation"
+		use:clickOutside
+		class="fixed inset-x-0 top-20 z-40 lg:hidden"
+	>
 		<div
 			class="mx-4 origin-top rounded-b-xl border border-stone-200 bg-white p-4 shadow-lg transition-all duration-200 ease-out"
 		>

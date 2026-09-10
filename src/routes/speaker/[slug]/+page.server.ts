@@ -113,6 +113,7 @@ export const load: PageServerLoad = async ({ params, url, cookies }) => {
 		.where(
 			and(
 				eq(campaign_pages.slug, slug),
+				eq(campaign_pages.renderer_type, 'sections'),
 				eq(campaign_pages.is_published, true),
 				eq(campaigns.status, 'published')
 			)

@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { getSpeakerTracking } from '$lib/tracking/speaker-context';
 	import Input from '$lib/components/elements/Input.svelte';
 	import TextArea from '$lib/components/elements/TextArea.svelte';
 	import { submitInlineLeadIntake } from '$lib/components/booking/LeadInlineIntakeForm.remote';
+
+	const speakerTracking = getSpeakerTracking();
 
 	type SubmitAction = {
 		pending?: unknown;
@@ -58,6 +61,14 @@
 			: 'border-rose-400/70 bg-rose-50 text-rose-700'
 	);
 
+	let trackedSuccess: typeof submitResult;
+	$effect(() => {
+		if (submitResult?.success && trackedSuccess !== submitResult) {
+			trackedSuccess = submitResult;
+			speakerTracking?.measure({ name: 'form_submit', action: ctaKey, section: ctaSection });
+		}
+	});
+
 	function resetFormUi(): void {
 		hideFailureMessage = true;
 	}
@@ -74,6 +85,8 @@ Veranstaltungsort:`;
 		</div>
 	{:else}
 		<form
+			data-cs-track={ctaKey}
+			data-cs-section={ctaSection}
 			{...resolvedSubmitAction}
 			class="space-y-8"
 			oninput={() => {
@@ -161,6 +174,7 @@ Veranstaltungsort:`;
 
 			<div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-300/60 pt-4">
 				<button
+					data-cs-track="lead_intake_submit"
 					type="submit"
 					class="btn btn-primary inline-flex items-center gap-2"
 					disabled={Boolean(resolvedSubmitAction.pending)}
