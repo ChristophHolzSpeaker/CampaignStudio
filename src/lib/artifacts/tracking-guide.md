@@ -119,3 +119,32 @@ The existing Cloudflare Worker cron runs every 15 minutes. Configure its `CONVER
 Verify in local development first: publish a v5 artifact, configure mock mappings, trigger interactions, inspect `cs_event`, query stored events, connect a lead to the visit, post a CRM outcome twice, and confirm one delivery. Mock Google ingestion/diagnostics for repeatable integration tests. Production verification additionally requires the actual GTM container configuration and authorized Google credentials; never report Google receipt based solely on local mocks.
 
 Google references: https://developers.google.com/data-manager/api/devguides/events/send-events and https://developers.google.com/data-manager/api/devguides/diagnostics .
+
+## Published section pages (`/speaker/{slug}`)
+
+Shared Svelte components emit the same `cs_event` envelope and use the same campaign browser mappings as runtime v5. Deploying these component changes covers existing published section versions: no republishing or document migration is required. The immutable artifact runtime is unchanged.
+
+Set `gtmContainerId` and browser mappings on **each campaign** through the existing authenticated tracking configuration API. Section pages now load the configured container instead of a hard-coded container. A null container means no GTM loader; no browser mappings means no mapped conversion destination. Inspect `GET /api/runtime/v1/tracking?pageId={campaignPageId}` to verify the live configuration for either renderer. Never copy artifact-specific action mappings blindly: section actions are listed below. Do not overwrite unrelated or offline mappings.
+
+| Interaction                           | `cs_event_name`     | `cs_action`                                                                          |
+| ------------------------------------- | ------------------- | ------------------------------------------------------------------------------------ |
+| Hero email link                       | `navigation_click`  | `hero_email`                                                                         |
+| Hero availability link                | `navigation_click`  | `hero_booking`                                                                       |
+| Other email / telephone links         | `navigation_click`  | `email` / `phone`                                                                    |
+| PDF booklet link                      | `navigation_click`  | `booklet_download`                                                                   |
+| Booking controls                      | `button_click`      | `booking_day_select`, `booking_slot_select`, `booking_slot_change`, `booking_submit` |
+| Intake submit button (attempt only)   | `button_click`      | `lead_intake_submit`                                                                 |
+| Other booking anchor links            | `navigation_click`  | `booking_open`                                                                       |
+| Accepted standalone lead intake       | `form_submit`       | Component's configured `ctaKey`                                                      |
+| Successfully confirmed inline booking | `booking_confirmed` | Component's configured `ctaKey`                                                      |
+| YouTube player reports playback       | `video_play`        | `video-<YouTubeId>`                                                                  |
+
+Other links/buttons emit `navigation_click`/`button_click`; explicitly declared `data-cs-track` takes precedence. Forms emit `form_start` and one `form_input` per field, without field values or inferred identifiers. Native media playback, page views/exits, visible time thresholds, scroll thresholds, and section visibility are also measured. Section names follow section types, with navigation using `landing_navigation`. Autoplay hero background video is not treated as a user playback conversion.
+
+Booking submission attempts, validation errors and failed bookings do not emit `booking_confirmed`. Existing `mailto_clicked` and `calendar_booking_confirmed` events remain for compatibility: use either those legacy triggers or the new mapped `cs_event` for any one Google conversion, not both. Avoid adding an offline upload for the same browser-confirmed booking.
+
+The speaker visit path already stores Google click IDs independently of visit deduplication, using its visitor cookie; intake/booking services retain journey attribution. Measurement requests use that visit and the existing same-origin, publication, rate-limit and visit-ownership checks. Editor previews do not install the new tracker. Navigation away from a speaker document loads a fresh document so loaded GTM tags cannot leak into another campaign or an editor preview; shallow modal navigation remains supported.
+
+Google Consent Mode defaults match the owner-configured runtime v5 defaults. They are not visitor consent evidence for offline uploads.
+
+For GTM Preview testing after deployment: verify the configured container request, `cs_event` identity/action/destination fields, and successful `/api/runtime/v1/events` responses. Test a rejected submission first (no success conversion), then a coordinated successful intake or booking; a successful booking test creates a real calendar booking. Confirm one destination request per conversion. Configuration updates take effect on the next page load; a local build or dataLayer push alone is not evidence of live Google delivery.

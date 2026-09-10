@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { getSpeakerTracking } from '$lib/tracking/speaker-context';
+	const speakerTracking = getSpeakerTracking();
 
 	type YouTubePlayer = {
 		stopVideo?: () => void;
@@ -105,6 +107,7 @@
 		}
 
 		let cancelled = false;
+		let reportedPlayback = false;
 
 		void loadYouTubeIframeApi()
 			.then((YT) => {
@@ -120,6 +123,16 @@
 						autoplay: autoplay ? 1 : 0
 					},
 					events: {
+						onStateChange: (event: { data: number }) => {
+							if (!cancelled && event.data === 1 && !reportedPlayback) {
+								reportedPlayback = true;
+								speakerTracking?.measure({
+									name: 'video_play',
+									action: 'video-' + videoId,
+									section: 'video'
+								});
+							}
+						},
 						onReady: (event: { target?: { playVideo?: () => void } }) => {
 							if (autoplay) {
 								event.target?.playVideo?.();

@@ -1,8 +1,10 @@
 <script lang="ts">
-	import { afterNavigate } from '$app/navigation';
+	import { afterNavigate, beforeNavigate } from '$app/navigation';
 	import { page } from '$app/state';
 	import { injectAnalytics } from '@vercel/analytics/sveltekit';
 	import { onMount } from 'svelte';
+	import { startSpeakerTracking } from '$lib/tracking/speaker-browser';
+	import { provideSpeakerTracking } from '$lib/tracking/speaker-context';
 	import LandingNavigation from '$lib/components/blocks/LandingNavigation.svelte';
 	import ShallowRouteModal from '$lib/components/blocks/ShallowRouteModal.svelte';
 	import YouTubeEmbed from '$lib/components/blocks/YouTubeEmbed.svelte';
@@ -36,7 +38,9 @@
 
 	let bookingSlotGroups = $state<BookingSlotGroups | undefined>(undefined);
 	let bookingSlotsRequestId = 0;
-	let visitLogged = false;
+	let loggedPageId: number | null = null;
+	let tracking: ReturnType<typeof startSpeakerTracking> | undefined;
+	provideSpeakerTracking({ measure: (event) => tracking?.measure(event) });
 	let visitId = $state<number | null>(null);
 	let visitVisitorIdentifier = $state<string | null>(null);
 	let visitStartedAtMs: number | null = null;
@@ -71,16 +75,32 @@
 		}
 
 		injectAnalytics();
-		void loadBookingSlots();
-		void logVisit();
-		afterNavigate(() => {
-			void loadBookingSlots();
-			void logVisit();
-		});
 
 		return () => {
 			clearEngagementTimer();
+			tracking?.stop();
+			loggedPageId = null;
 		};
+	});
+
+	// GTM containers cannot be unloaded on SPA navigation. Leave this document when
+	// changing pages so a campaign's tags cannot keep running in another campaign or preview.
+	beforeNavigate((navigation) => {
+		const target = navigation.to?.url;
+		if (
+			!navigation.willUnload &&
+			target &&
+			(target.pathname !== page.url.pathname || target.search !== page.url.search)
+		) {
+			navigation.cancel();
+			if (navigation.type === 'popstate') window.location.replace(target.href);
+			else window.location.assign(target.href);
+		}
+	});
+
+	afterNavigate(() => {
+		void loadBookingSlots();
+		void logVisit();
 	});
 
 	function clearEngagementTimer(): void {
@@ -126,7 +146,7 @@
 	}
 
 	async function logVisit(): Promise<void> {
-		if (visitLogged) {
+		if (loggedPageId === data.campaignPageId) {
 			return;
 		}
 
@@ -138,7 +158,13 @@
 			return;
 		}
 
-		visitLogged = true;
+		tracking?.stop();
+		clearEngagementTimer();
+		loggedPageId = campaignPageId;
+		visitId = null;
+		engagementMarked = false;
+		isNavigationEngagementRequested = false;
+		tracking = startSpeakerTracking(campaignId, campaignPageId, () => visitId);
 		visitVisitorIdentifier = data.abTest.visitorId;
 		visitStartedAtMs = performance.now();
 
@@ -150,6 +176,7 @@
 			searchParams: Object.fromEntries(page.url.searchParams)
 		});
 
+		if (loggedPageId !== campaignPageId) return;
 		if (result.visitId !== null) {
 			visitId = result.visitId;
 			if (isNavigationEngagementRequested) {
@@ -162,37 +189,11 @@
 </script>
 
 <svelte:head>
-	<!-- Google Tag Manager -->
-	<script>
-		(function (w, d, s, l, i) {
-			w[l] = w[l] || [];
-			w[l].push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
-			var f = d.getElementsByTagName(s)[0],
-				j = d.createElement(s),
-				dl = l != 'dataLayer' ? '&l=' + l : '';
-			j.async = true;
-			j.src = 'https://www.googletagmanager.com/gtm.js?id=' + i + dl;
-			f.parentNode.insertBefore(j, f);
-		})(window, document, 'script', 'dataLayer', 'GTM-MCDDK28B');
-	</script>
-	<!-- End Google Tag Manager -->
 	<!-- prettier-ignore -->
 	<script type="application/ld+json">
 {data.jsonLd}
 	</script>
 </svelte:head>
-
-<!-- Google Tag Manager (noscript) -->
-<noscript
-	><iframe
-		src="https://www.googletagmanager.com/ns.html?id=GTM-MCDDK28B"
-		title="Google Tag Manager"
-		height="0"
-		width="0"
-		style="display:none;visibility:hidden"
-	></iframe></noscript
->
-<!-- End Google Tag Manager (noscript) -->
 
 <LandingNavigation
 	mailto={data.speakerMailtoHref}
