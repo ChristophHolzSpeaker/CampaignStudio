@@ -90,7 +90,7 @@ export const outcomeSchema = z
 			.string()
 			.regex(/^[A-Z]{3}$/)
 			.optional(),
-		adUserDataConsent: z.enum(['GRANTED', 'DENIED'])
+		adUserDataConsent: z.enum(['GRANTED', 'DENIED']).default('GRANTED')
 	})
 	.strict()
 	.superRefine((o, ctx) => {
@@ -99,3 +99,19 @@ export const outcomeSchema = z
 		if ((o.value !== undefined) !== (o.currency !== undefined))
 			ctx.addIssue({ code: 'custom', message: 'Provide value and currency together' });
 	});
+
+// Records a visitor decision, never the dashboard operator's qualification decision.
+export const visitConsentSchema = z
+	.object({
+		adUserDataConsent: z.enum(['GRANTED', 'DENIED']),
+		evidenceRef: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/),
+		policyVersion: z.string().regex(/^[A-Za-z0-9_.:-]{1,80}$/)
+	})
+	.strict();
+export const visitTrackingQuerySchema = z
+	.object({
+		name: eventName.default('company_identified'),
+		action: identifier.optional(),
+		occurredAt: z.iso.datetime({ offset: true }).optional()
+	})
+	.strict();

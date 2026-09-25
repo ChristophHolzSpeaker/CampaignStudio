@@ -56,3 +56,12 @@ describe('google jwt assertion', () => {
 		expect(payloadJson.exp).toBe((payloadJson.iat as number) + 3600);
 	});
 });
+
+it('omits delegated sub for direct service-account Data Manager authentication', () => {
+	const claims = createGoogleJwtClaims({
+		serviceAccountEmail: 'svc@example.iam.gserviceaccount.com',
+		tokenUri: 'https://oauth2.googleapis.com/token',
+		scopes: ['https://www.googleapis.com/auth/datamanager']
+	});
+	expect(claims).not.toHaveProperty('sub');
+});

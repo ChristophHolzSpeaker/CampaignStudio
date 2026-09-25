@@ -1,5 +1,6 @@
 import {
 	pgTable,
+	primaryKey,
 	serial,
 	integer,
 	text,
@@ -1101,3 +1102,31 @@ export const conversion_deliveries = pgTable(
 	},
 	(t) => [index('conversion_deliveries_pending_idx').on(t.status, t.next_attempt_at)]
 );
+
+// Explicit capture provenance; never reconstruct this relationship from company/IP data.
+export const visit_ad_clicks = pgTable(
+	'visit_ad_clicks',
+	{
+		campaign_visit_id: integer('campaign_visit_id')
+			.notNull()
+			.references(() => campaign_visits.id, { onDelete: 'cascade' }),
+		ad_click_id: uuid('ad_click_id')
+			.notNull()
+			.references(() => ad_clicks.id, { onDelete: 'cascade' }),
+		observed_at: timestamp('observed_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(t) => [
+		primaryKey({ columns: [t.campaign_visit_id, t.ad_click_id] }),
+		index('visit_ad_clicks_click_idx').on(t.ad_click_id)
+	]
+);
+
+export const visit_ad_consent = pgTable('visit_ad_consent', {
+	campaign_visit_id: integer('campaign_visit_id')
+		.primaryKey()
+		.references(() => campaign_visits.id, { onDelete: 'cascade' }),
+	ad_user_data: text('ad_user_data').notNull(),
+	evidence_ref: text('evidence_ref').notNull(),
+	policy_version: text('policy_version').notNull(),
+	recorded_at: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow()
+});

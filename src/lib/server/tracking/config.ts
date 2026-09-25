@@ -1,3 +1,4 @@
+import { withManualOutcomeDefaults } from '$lib/tracking/manual-outcomes';
 import { db } from '$lib/server/db';
 import { campaign_tracking } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -8,5 +9,5 @@ export async function getTrackingConfig(campaignId: number) {
 		.from(campaign_tracking)
 		.where(eq(campaign_tracking.campaign_id, campaignId))
 		.limit(1);
-	return trackingConfigSchema.parse(row?.config ?? {});
+	return withManualOutcomeDefaults(trackingConfigSchema.parse(row?.config ?? {}));
 }

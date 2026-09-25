@@ -1,4 +1,6 @@
 export type WorkerEnv = {
+	GOOGLE_DIAGNOSTICS_TOKEN?: string;
+	GOOGLE_DATA_MANAGER_TOKEN?: string;
 	CONVERSION_PROCESSOR_URL?: string;
 	CONVERSION_PROCESSOR_TOKEN?: string;
 	SUPABASE_URL: string;

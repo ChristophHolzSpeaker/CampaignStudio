@@ -155,4 +155,8 @@ pnpm --filter campaignstudio-worker run test
 
 ### CRM conversion queue
 
-The existing 15-minute scheduled handler also triggers the app's durable conversion queue when configured. Set `CONVERSION_PROCESSOR_URL` to the HTTPS app URL ending `/api/internal/conversions/process`; set the Worker secret `CONVERSION_PROCESSOR_TOKEN` to the app's `CRON_SECRET`. The app owns Google Data Manager OAuth credentials. Missing processor settings disable this task. Deploy both app and Worker for this feature; see `src/lib/artifacts/tracking-guide.md` in the application for full setup and diagnostics.
+The existing 15-minute scheduled handler also triggers the app's durable conversion queue when configured. Set `CONVERSION_PROCESSOR_URL` to the HTTPS app URL ending `/api/internal/conversions/process`; set the Worker secret `CONVERSION_PROCESSOR_TOKEN` to the app's `CRON_SECRET`. The app can use the worker-held service account through the dedicated Google conversion relay described below. Missing processor settings disable this task. Deploy both app and Worker for this feature; see `src/lib/artifacts/tracking-guide.md` in the application for full setup and diagnostics.
+
+### Google Data Manager relay
+
+Set `GOOGLE_DATA_MANAGER_TOKEN` to a dedicated random secret, and set the app's `GOOGLE_DATA_MANAGER_WORKER_TOKEN` to the same value and `GOOGLE_DATA_MANAGER_WORKER_URL` to this worker's HTTPS origin. Protected POST routes under `/google/conversions/` support `ingest`, `status`, and `validate`. They do not accept the general internal API token. Credentials remain in the worker; JWTs for Data Manager omit the Gmail/Calendar delegated user. The `validate` route always uses Google's `validateOnly: true` and cannot create a conversion. Application readiness only checks configuration; validate Google access separately before a real upload.

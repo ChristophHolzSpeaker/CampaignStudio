@@ -21,7 +21,7 @@ export const _openApiDocument = {
 	openapi: '3.1.0',
 	info: {
 		title: 'Campaign Studio Public API',
-		version: '2.2.0',
+		version: '2.3.0',
 		description:
 			'Artifact documentation is public. Campaign creation, upload, lifecycle, reporting, and private data operations require bearer authentication. Lead responses may contain PII and full email bodies.'
 	},

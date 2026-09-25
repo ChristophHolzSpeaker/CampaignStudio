@@ -547,3 +547,11 @@ Published v5 artifacts provide a versioned generic measurement envelope, declara
 Persist Google click history independently of visit deduplication and expose it on authenticated journey reporting. Accept idempotent CRM business outcomes through a dedicated write scope. Queue server-side Google Data Manager delivery with stable transaction identifiers, retry leases, explicit blocked/failed/accepted/delivered states, and diagnostic polling. Preview is measurement-free. Never capture form values or reverse-IP enrichment as Google event parameters. See src/lib/artifacts/tracking-guide.md for the runtime/API contract and operator setup.
 
 Owner-selected Google configuration: published runtime v5 sets all four Google Consent Mode defaults to granted without a consent request. This configuration is not recorded as visitor consent, does not establish compliance, and does not supply consent evidence to CRM outcome records. Preview remains measurement-free.
+
+## Explicit visit outcomes (September 2026)
+
+A CRM operator may submit an idempotent manual outcome against an exact campaign visit without creating a lead journey. Attribution must use a click explicitly captured on that visit and preserve that relationship when IP fields are redacted. Company enrichment may inform the operator's decision but must never select or infer a click. Historical visit links are not guessed. Readiness reports click metadata, consent source, delivery status and unmet prerequisites; rejected prerequisites do not consume an event ID.
+
+Owner-selected policy: manual visit advertising consent defaults to GRANTED. This is reported as owner configuration, not a visitor consent record. Explicit visitor denial overrides the default and blocks pending uploads. A platform-managed integration may record decisions through the same-origin, cookie-owned consent endpoint; no authored JavaScript or new banner is required. Google delivery uses the existing worker-held service account with a dedicated relay credential and no delegated Gmail user.
+
+Owner-selected manual destination: `company_identified` and `lead_marked_eligible` default to existing Ads action `7755799338` in customer `2354667197`, with campaign overrides preserved. A client submits one event per decision, never both aliases.

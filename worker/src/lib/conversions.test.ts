@@ -18,7 +18,7 @@ describe('conversion scheduler', () => {
 		} as WorkerEnv);
 		expect(fetch).toHaveBeenCalledWith(
 			new URL('https://app.example/api/internal/conversions/process'),
-			expect.objectContaining({ headers: { Authorization: 'Bearer test' }, redirect: 'error' })
+			expect.objectContaining({ headers: { Authorization: 'Bearer test' }, redirect: 'manual' })
 		);
 	});
 });

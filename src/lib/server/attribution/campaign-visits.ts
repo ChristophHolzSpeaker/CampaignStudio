@@ -108,7 +108,6 @@ export async function logCampaignVisit(input: {
 	headers: Headers;
 	visitorIdentifier: string;
 }): Promise<{ logged: boolean; visitId: number | null }> {
-	await captureAdClicks(input);
 	// page_view source of truth: we intentionally model page views in campaign_visits
 	// (deduped by visitor and time window) instead of duplicating every view into lead_events.
 	const dedupeWindowStart = new Date(Date.now() - VISIT_DEDUPE_WINDOW_MINUTES * 60 * 1000);
@@ -127,6 +126,7 @@ export async function logCampaignVisit(input: {
 		.limit(1);
 
 	if (existingVisit) {
+		await captureAdClicks({ ...input, visitId: existingVisit.id });
 		return { logged: false, visitId: existingVisit.id };
 	}
 
@@ -150,6 +150,7 @@ export async function logCampaignVisit(input: {
 		})
 		.returning({ id: campaign_visits.id });
 
+	if (createdVisit) await captureAdClicks({ ...input, visitId: createdVisit.id });
 	return { logged: true, visitId: createdVisit?.id ?? null };
 }
 
