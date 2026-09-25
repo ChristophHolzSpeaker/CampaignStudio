@@ -9,7 +9,24 @@ export class GoogleDeliveryError extends Error {
 		super(code);
 	}
 }
+function relayConfigured() {
+	try {
+		const url = new URL(env.GOOGLE_DATA_MANAGER_WORKER_URL ?? '');
+		return (
+			url.protocol === 'https:' &&
+			!url.username &&
+			!url.password &&
+			!url.search &&
+			!url.hash &&
+			Boolean(env.GOOGLE_DATA_MANAGER_WORKER_TOKEN)
+		);
+	} catch {
+		return false;
+	}
+}
 export function googleConfigured() {
+	if (env.GOOGLE_DATA_MANAGER_WORKER_URL || env.GOOGLE_DATA_MANAGER_WORKER_TOKEN)
+		return relayConfigured();
 	return Boolean(
 		env.GOOGLE_DATA_MANAGER_CLIENT_ID &&
 		env.GOOGLE_DATA_MANAGER_CLIENT_SECRET &&
@@ -33,6 +50,37 @@ async function token() {
 	return data.access_token;
 }
 async function call(path: string, body?: unknown) {
+	if (env.GOOGLE_DATA_MANAGER_WORKER_URL || env.GOOGLE_DATA_MANAGER_WORKER_TOKEN) {
+		if (!relayConfigured()) throw new GoogleDeliveryError('google_relay_not_configured', true);
+		const status = path.startsWith('/requestStatus:retrieve');
+		const url = new URL(
+			'/google/conversions/' + (status ? 'status' : 'ingest'),
+			env.GOOGLE_DATA_MANAGER_WORKER_URL
+		);
+		const payload = status
+			? { requestId: new URL('https://google.example' + path).searchParams.get('requestId') }
+			: body;
+		const response = await fetch(url, {
+			method: 'POST',
+			redirect: 'error',
+			signal: AbortSignal.timeout(30000),
+			headers: {
+				Authorization: `Bearer ${env.GOOGLE_DATA_MANAGER_WORKER_TOKEN}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(payload)
+		});
+		if (!response.ok)
+			throw new GoogleDeliveryError(
+				`google_relay_http_${response.status}`,
+				response.status === 401 ||
+					response.status === 403 ||
+					response.status === 429 ||
+					response.status >= 500
+			);
+		return response.json() as Promise<unknown>;
+	}
+
 	const access = await token();
 	const r = await fetch(BASE + path, {
 		method: body ? 'POST' : 'GET',

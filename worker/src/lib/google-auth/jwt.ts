@@ -9,12 +9,12 @@ export type GoogleJwtClaims = {
 	aud: string;
 	iat: number;
 	exp: number;
-	sub: string;
+	sub?: string;
 };
 
 export type CreateGoogleJwtAssertionInput = {
 	serviceAccountEmail: string;
-	impersonatedUser: string;
+	impersonatedUser?: string;
 	privateKeyPem: string;
 	tokenUri: string;
 	scopes: readonly string[];
@@ -83,7 +83,7 @@ async function signJwtRs256(assertionInput: string, privateKeyPem: string): Prom
 
 export function createGoogleJwtClaims(input: {
 	serviceAccountEmail: string;
-	impersonatedUser: string;
+	impersonatedUser?: string;
 	tokenUri: string;
 	scopes: readonly string[];
 	nowMs?: number;
@@ -98,7 +98,7 @@ export function createGoogleJwtClaims(input: {
 		aud: input.tokenUri,
 		iat,
 		exp,
-		sub: input.impersonatedUser
+		...(input.impersonatedUser ? { sub: input.impersonatedUser } : {})
 	};
 }
 

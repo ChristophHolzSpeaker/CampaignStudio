@@ -7,7 +7,7 @@ export async function triggerConversionProcessing(env: WorkerEnv): Promise<void>
 			throw new Error('Invalid processor URL');
 		const response = await fetch(url, {
 			headers: { Authorization: `Bearer ${env.CONVERSION_PROCESSOR_TOKEN}` },
-			redirect: 'error',
+			redirect: 'manual',
 			signal: AbortSignal.timeout(45000)
 		});
 		if (!response.ok) console.error('conversion_processing_failed', { status: response.status });

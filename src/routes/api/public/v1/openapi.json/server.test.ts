@@ -19,3 +19,14 @@ describe('public OpenAPI document', () => {
 		expect(_openApiDocument.components.schemas.ArtifactUnpublishResponse).toBeDefined();
 	});
 });
+
+it('documents the visit button and consent integration without requiring a journey', () => {
+	const paths = _openApiDocument.paths;
+	expect(paths['/api/public/v1/campaign-visits/{id}/outcomes'].post.operationId).toBe(
+		'recordVisitOutcome'
+	);
+	expect(paths['/api/public/v1/campaign-visits/{id}/tracking'].get.operationId).toBe(
+		'getVisitTracking'
+	);
+	expect(paths['/api/runtime/v1/consent'].post.security).toEqual([]);
+});

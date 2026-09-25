@@ -1,3 +1,5 @@
+import { handleGoogleDataManagerAccess } from './routes/google-data-manager-access';
+import { handleGoogleConversions } from './routes/google-conversions';
 import { triggerConversionProcessing } from './lib/conversions';
 import { type WorkerEnv, type WorkerExecutionContext, type WorkerScheduledEvent } from './lib/env';
 import { json } from './lib/http';
@@ -23,6 +25,10 @@ export default {
 		const { pathname } = new URL(request.url);
 
 		try {
+			if (pathname === '/google/data-manager/access' && request.method === 'GET')
+				return await handleGoogleDataManagerAccess(request, env);
+			if (pathname.startsWith('/google/conversions/'))
+				return await handleGoogleConversions(request, env);
 			if (pathname === '/health' && request.method === 'GET') {
 				return handleHealth();
 			}

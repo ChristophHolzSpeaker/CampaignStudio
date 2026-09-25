@@ -33,7 +33,7 @@ const enabled = Boolean(process.env.CS_TEST_DATABASE_URL);
 describe.runIf(enabled)('local Postgres conversion integration', () => {
 	let campaignId: number, pageId: number, visitId: number, journeyId: string;
 	const visitor = crypto.randomUUID();
-	const occurredAt = new Date().toISOString();
+	let occurredAt: string;
 	beforeAll(async () => {
 		const url = new URL(process.env.CS_TEST_DATABASE_URL!);
 		if (!['localhost', '127.0.0.1'].includes(url.hostname))
@@ -94,6 +94,7 @@ describe.runIf(enabled)('local Postgres conversion integration', () => {
 		});
 		await captureAdClicks({
 			visitorIdentifier: visitor,
+			visitId,
 			campaignId,
 			campaignPageId: pageId,
 			searchParams: new URLSearchParams('gclid=local-test-click')
@@ -102,6 +103,7 @@ describe.runIf(enabled)('local Postgres conversion integration', () => {
 			.update(ad_clicks)
 			.set({ captured_at: new Date(Date.now() - 60000) })
 			.where(eq(ad_clicks.visitor_id, visitor));
+		occurredAt = new Date().toISOString();
 	});
 	afterAll(async () => {
 		if (!campaignId) return;
@@ -126,12 +128,14 @@ describe.runIf(enabled)('local Postgres conversion integration', () => {
 	it('keeps original click timestamp across repeated click and direct return', async () => {
 		await captureAdClicks({
 			visitorIdentifier: visitor,
+			visitId,
 			campaignId,
 			campaignPageId: pageId,
 			searchParams: new URLSearchParams('gclid=local-test-click')
 		});
 		await captureAdClicks({
 			visitorIdentifier: visitor,
+			visitId,
 			campaignId,
 			campaignPageId: pageId,
 			searchParams: new URLSearchParams()
