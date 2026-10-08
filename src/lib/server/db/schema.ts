@@ -195,6 +195,20 @@ export const campaign_visits = pgTable('campaign_visits', {
 	ip_hash_or_session_identifier: text('ip_hash_or_session_identifier')
 });
 
+export const email_visit_references = pgTable(
+	'email_visit_references',
+	{
+		token: uuid('token').defaultRandom().primaryKey(),
+		campaign_visit_id: integer('campaign_visit_id')
+			.notNull()
+			.references(() => campaign_visits.id, { onDelete: 'cascade' }),
+		created_at: timestamp('created_at').notNull().defaultNow()
+	},
+	(table) => ({
+		visitUniqueIdx: uniqueIndex('email_visit_references_visit_idx').on(table.campaign_visit_id)
+	})
+).enableRLS();
+
 export const campaign_visit_metrics = pgView('campaign_visit_metrics', {
 	campaign_id: integer('campaign_id'),
 	visit_count: integer('visit_count'),
@@ -589,6 +603,11 @@ export const lead_events = pgTable(
 		occurred_at: timestamp('occurred_at').notNull().defaultNow()
 	},
 	(table) => ({
+		nativeOutcomeIdx: index('lead_events_native_outcome_idx').on(
+			table.event_type,
+			table.occurred_at,
+			table.lead_journey_id
+		),
 		eventJourneyOccurredIdx: index('lead_events_journey_occurred_idx').on(
 			table.lead_journey_id,
 			table.occurred_at

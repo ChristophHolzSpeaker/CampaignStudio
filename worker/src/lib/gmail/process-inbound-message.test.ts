@@ -228,6 +228,7 @@ describe('processInboundGmailMessage', () => {
 			provider_thread_id: 'thread_456'
 		});
 		mockedResolveInboundJourney.mockResolvedValue({
+			campaign_visit_id: null,
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
@@ -273,6 +274,7 @@ describe('processInboundGmailMessage', () => {
 			.mockResolvedValueOnce(null)
 			.mockResolvedValueOnce({ renderer_type: 'artifact' });
 		mockedResolveInboundJourney.mockResolvedValue({
+			campaign_visit_id: null,
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
@@ -345,6 +347,7 @@ describe('processInboundGmailMessage', () => {
 		});
 		mockedSelectOne.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
 		mockedResolveInboundJourney.mockResolvedValue({
+			campaign_visit_id: null,
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
@@ -402,6 +405,7 @@ describe('processInboundGmailMessage', () => {
 			.mockResolvedValueOnce({ language: 'English' })
 			.mockResolvedValueOnce(null);
 		mockedResolveInboundJourney.mockResolvedValue({
+			campaign_visit_id: null,
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,
@@ -443,6 +447,7 @@ describe('processInboundGmailMessage', () => {
 		mockedNormalizeGmailMessage.mockReturnValue(sampleNormalizedInbound());
 		mockedSelectOne.mockResolvedValue(null);
 		mockedResolveInboundJourney.mockResolvedValue({
+			campaign_visit_id: null,
 			lead_journey_id: 'journey_1',
 			campaign_id: 12,
 			campaign_page_id: 3,

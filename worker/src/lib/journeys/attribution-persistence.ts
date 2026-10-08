@@ -49,6 +49,7 @@ export async function persistWorkerJourneyAttributionSnapshot(
 		campaignPageId: number | null;
 		observedAt?: Date;
 		visitorIdentifier?: string | null;
+		campaignVisitId?: number | null;
 	}
 ): Promise<void> {
 	const observedAtIso = (input.observedAt ?? new Date()).toISOString();
@@ -68,7 +69,25 @@ export async function persistWorkerJourneyAttributionSnapshot(
 	let firstVisit: VisitAttributionRow | null = null;
 	let lastVisit: VisitAttributionRow | null = null;
 
-	if (input.visitorIdentifier && input.campaignId !== null) {
+	if (input.campaignVisitId && input.campaignId !== null) {
+		const visit = await selectOne<VisitAttributionRow>(
+			env,
+			'campaign_visits',
+			new URLSearchParams({
+				select:
+					'id,campaign_id,campaign_page_id,utm_source,utm_medium,utm_campaign,referrer,visited_at',
+				id: `eq.${input.campaignVisitId}`,
+				campaign_id: `eq.${input.campaignId}`,
+				...(input.campaignPageId !== null
+					? { campaign_page_id: `eq.${input.campaignPageId}` }
+					: {}),
+				visited_at: `lte.${observedAtIso}`,
+				limit: '1'
+			})
+		);
+		firstVisit = visit;
+		lastVisit = visit;
+	} else if (input.visitorIdentifier && input.campaignId !== null) {
 		const baseQuery: Record<string, string> = {
 			select:
 				'id,campaign_id,campaign_page_id,utm_source,utm_medium,utm_campaign,referrer,visited_at',
@@ -141,9 +160,12 @@ export async function persistWorkerJourneyAttributionSnapshot(
 	const shouldSetFirst =
 		journey.first_seen_at === null
 			? true
-			: firstCandidate.visit_id !== null && firstCandidate.seen_at < journey.first_seen_at;
+			: firstCandidate.visit_id !== null &&
+				(journey.first_visit_id === null || firstCandidate.seen_at < journey.first_seen_at);
 	const shouldSetLast =
-		journey.last_seen_at === null || lastCandidate.seen_at > journey.last_seen_at;
+		journey.last_seen_at === null ||
+		lastCandidate.seen_at > journey.last_seen_at ||
+		(journey.last_visit_id === null && lastCandidate.visit_id !== null);
 
 	if (
 		!shouldSetFirst &&
@@ -169,7 +191,9 @@ export async function persistWorkerJourneyAttributionSnapshot(
 		first_referrer: shouldSetFirst ? firstCandidate.referrer : journey.first_referrer,
 		first_cta_key: shouldSetFirst ? firstCandidate.cta_key : journey.first_cta_key,
 		first_seen_at: shouldSetFirst ? firstCandidate.seen_at : journey.first_seen_at,
-		last_visit_id: shouldSetLast ? lastCandidate.visit_id : journey.last_visit_id,
+		last_visit_id: shouldSetLast
+			? (lastCandidate.visit_id ?? journey.last_visit_id)
+			: journey.last_visit_id,
 		last_campaign_id: shouldSetLast ? lastCandidate.campaign_id : journey.last_campaign_id,
 		last_page_id: shouldSetLast ? lastCandidate.page_id : journey.last_page_id,
 		last_utm_source:

@@ -2,6 +2,8 @@ import type { AttributionStatus } from '../../../../shared/event-types';
 import { insertOne, selectOne } from '../db';
 import type { WorkerEnv } from '../env';
 import { resolveCampaignEmailAttribution } from '../attribution/campaign-page';
+import { resolveEmailVisitReference } from '../attribution/email-reference';
+import { parsePlusAddressFromRecipients } from '../attribution/plus-address';
 import { persistWorkerJourneyAttributionSnapshot } from './attribution-persistence';
 
 const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'archived'] as const;
@@ -111,7 +113,7 @@ async function createNewJourney(
 	});
 }
 
-export async function resolveInboundJourney(
+async function resolveInboundJourneyContext(
 	env: WorkerEnv,
 	params: {
 		providerThreadId: string;
@@ -190,5 +192,41 @@ export async function resolveInboundJourney(
 		attribution_status: plusResolution.attribution_status,
 		created_new_journey: true,
 		matched_by: 'new_journey'
+	};
+}
+
+export async function resolveInboundJourney(
+	env: WorkerEnv,
+	params: {
+		providerThreadId: string;
+		normalizedSenderEmail: string;
+		senderDisplayName: string | null;
+		toRecipients: string[];
+		bodyText?: string;
+		observedAt?: Date;
+	}
+): Promise<InboundJourneyResolutionResult & { campaign_visit_id: number | null }> {
+	const result = await resolveInboundJourneyContext(env, params);
+	const alias = parsePlusAddressFromRecipients(params.toRecipients);
+	const observedAt = params.observedAt ?? new Date();
+	const visitId = await resolveEmailVisitReference(env, {
+		bodyText: params.bodyText ?? '',
+		campaignId: result.campaign_id,
+		campaignPageId: alias.campaign_page_id,
+		observedAt
+	});
+	if (visitId !== null) {
+		await persistWorkerJourneyAttributionSnapshot(env, {
+			journeyId: result.lead_journey_id,
+			campaignId: result.campaign_id,
+			campaignPageId: alias.campaign_page_id,
+			campaignVisitId: visitId,
+			observedAt
+		});
+	}
+	return {
+		...result,
+		campaign_visit_id: visitId,
+		...(visitId !== null ? { campaign_page_id: alias.campaign_page_id } : {})
 	};
 }

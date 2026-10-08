@@ -1,6 +1,6 @@
 # Manual visit conversion rollout
 
-This change adds exact-visit outcomes and readiness. It does not deploy the unfinished automatic native-outcome reconciler from the older work-in-progress branch.
+This change adds exact-visit outcomes and readiness. The automatic native reconciler has its own activation and rollout requirements; see [the offline conversion rollout](offline-conversions-rollout.md).
 
 ## Deployment order
 

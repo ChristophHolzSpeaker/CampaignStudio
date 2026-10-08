@@ -159,10 +159,15 @@ export const trackingApiPaths = {
 		},
 		post: {
 			operationId: 'retryConversionDelivery',
-			summary: 'Retry failed delivery without changing its snapshot (crm-write token)',
+			summary:
+				'Retry failed delivery or refresh never-uploaded blocked eligibility (crm-write token)',
 			security,
 			parameters,
-			responses: { '202': response, '409': { description: 'Delivery is not failed' } }
+			responses: {
+				'202': response,
+				'409': { description: 'Delivery is neither failed nor a never-uploaded blocked delivery' },
+				'422': { description: 'Attribution prerequisites are still unmet' }
+			}
 		}
 	},
 	'/api/public/v1/campaigns/{id}/tracking/events': {
