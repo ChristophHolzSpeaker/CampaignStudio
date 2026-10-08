@@ -1,3 +1,4 @@
+import { withNativeOutcomeDefaults } from '$lib/tracking/native-outcomes';
 import { withManualOutcomeDefaults } from '$lib/tracking/manual-outcomes';
 import { db } from '$lib/server/db';
 import { campaign_tracking } from '$lib/server/db/schema';
@@ -9,5 +10,7 @@ export async function getTrackingConfig(campaignId: number) {
 		.from(campaign_tracking)
 		.where(eq(campaign_tracking.campaign_id, campaignId))
 		.limit(1);
-	return withManualOutcomeDefaults(trackingConfigSchema.parse(row?.config ?? {}));
+	return withNativeOutcomeDefaults(
+		withManualOutcomeDefaults(trackingConfigSchema.parse(row?.config ?? {}))
+	);
 }

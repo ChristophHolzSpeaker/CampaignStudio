@@ -1,7 +1,7 @@
 import type { ArtifactPageRecord } from './repository';
 import { createBookingWidgetToken } from './widget-token';
 
-const ARTIFACT_RENDERER_REVISION = 'r5';
+const ARTIFACT_RENDERER_REVISION = 'r6';
 
 type ArtifactPublicContext = {
 	runtimeVersion: string;
@@ -53,7 +53,8 @@ export function injectArtifactRuntime(
 		}
 	};
 	const fontStylesheet = `<link rel="stylesheet" href="/campaign-runtime/fonts/${page.runtimeVersion}.css" data-cs-platform-fonts>`;
-	const injection = `<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="/campaign-runtime/${page.runtimeVersion}.js" defer></script>`;
+	const emailHelper = preview ? '' : '<script src="/campaign-runtime/email-v1.js" defer></script>';
+	const injection = `<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="/campaign-runtime/${page.runtimeVersion}.js" defer></script>${emailHelper}`;
 	const documentWithFonts = /<\/head\s*>/i.test(html)
 		? html.replace(/<\/head\s*>/i, `${fontStylesheet}</head>`)
 		: `${fontStylesheet}${html}`;

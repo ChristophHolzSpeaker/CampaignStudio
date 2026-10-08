@@ -1,3 +1,4 @@
+import { reconcileNativeOutcomes } from '$lib/server/tracking/native-outcomes';
 import { env } from '$env/dynamic/private';
 import { timingSafeEqual } from 'node:crypto';
 import { json } from '@sveltejs/kit';
@@ -8,8 +9,9 @@ export const GET: RequestHandler = async ({ request }) => {
 	const expected = Buffer.from(`Bearer ${env.CRON_SECRET ?? ''}`);
 	if (!env.CRON_SECRET || actual.length !== expected.length || !timingSafeEqual(actual, expected))
 		return json({ ok: false }, { status: 401 });
+	const native = await reconcileNativeOutcomes();
 	return json(
-		{ ok: true, data: await processConversions() },
+		{ ok: true, data: { ...(await processConversions()), native } },
 		{ headers: { 'Cache-Control': 'no-store' } }
 	);
 };

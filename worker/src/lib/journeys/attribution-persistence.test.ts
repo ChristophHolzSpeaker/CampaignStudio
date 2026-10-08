@@ -65,7 +65,7 @@ describe('persistWorkerJourneyAttributionSnapshot', () => {
 
 		expect(mockedUpdateMany).toHaveBeenCalledTimes(1);
 		const updatePayload = mockedUpdateMany.mock.calls[0]?.[3] as Record<string, unknown>;
-		expect(updatePayload.last_visit_id).toBeNull();
+		expect(updatePayload.last_visit_id).toBe(11);
 		expect(updatePayload.last_utm_source).toBe('google');
 		expect(updatePayload.last_utm_medium).toBe('cpc');
 		expect(updatePayload.last_utm_campaign).toBe('launch');
