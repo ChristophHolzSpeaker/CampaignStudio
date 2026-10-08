@@ -7,7 +7,7 @@ import {
 	requireCrmWriteRequest,
 	publicApiJson
 } from '$lib/server/public-api/http';
-import { deliveryView } from '$lib/server/tracking/outcomes';
+import { deliveryView, refreshBlockedOutcome, OutcomeError } from '$lib/server/tracking/outcomes';
 import type { RequestHandler } from './$types';
 const handle: RequestHandler = async ({ request, params }) => {
 	const guard = await (request.method === 'GET'
@@ -25,6 +25,15 @@ const handle: RequestHandler = async ({ request, params }) => {
 		.limit(1);
 	if (!row) return reply({ ok: false, error: 'Delivery not found' }, 404);
 	if (request.method === 'GET') return reply({ ok: true, data: deliveryView(row) });
+	if (row.status === 'blocked') {
+		try {
+			return reply({ ok: true, data: deliveryView(await refreshBlockedOutcome(row.id)) }, 202);
+		} catch (error) {
+			if (error instanceof OutcomeError)
+				return reply({ ok: false, error: error.message }, error.status);
+			throw error;
+		}
+	}
 	// Explicit retry retains the original transaction, attribution and destination snapshot.
 	if (row.status !== 'failed')
 		return reply({ ok: false, error: 'Only failed deliveries may be retried' }, 409);

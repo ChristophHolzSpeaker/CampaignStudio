@@ -84,6 +84,16 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			'HTTPS styles, images, fonts, audio, and video are permitted by the artifact CSP. Runtime requests remain same-origin. The runtime may load the documented YouTube privacy-enhanced player; authored frames remain prohibited.',
 		note: 'Campaign Studio sanitizes HTML, removes authored form actions, and injects its pinned runtime after validation.'
 	},
+	emailAttribution: {
+		recipient: 'speakerlp@christophholz.com',
+		example:
+			'<a href="mailto:speakerlp@christophholz.com?subject=Vortragsanfrage">E-Mail senden</a>',
+		behavior:
+			'Campaign Studio supplies speakerlp+{campaignPageId}@christophholz.com and appends an opaque visit reference to the composed email body. Authors must not generate references, add visitor IDs or embed Google click IDs. No extra markup attributes are required.',
+		copyBehavior:
+			'Copy only the short page email address. Address-only copy preserves campaign attribution but cannot guarantee visitor/ad attribution.',
+		preview: 'No visitor references or attribution requests in preview.'
+	},
 	platformFonts: {
 		injectedStylesheet: `/campaign-runtime/fonts/${ARTIFACT_RUNTIME_VERSION}.css`,
 		cssVariables: {
@@ -150,7 +160,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			},
 			label: 'Derived from trimmed visible text and truncated to 255 characters.',
 			example:
-				'<a href="mailto:hello@example.com" data-cs-action="cta" data-cs-cta-type="email" data-cs-cta-key="hero-email" data-cs-cta-section="hero">Contact us</a>'
+				'<a href="mailto:speakerlp@christophholz.com" data-cs-action="cta" data-cs-cta-type="email" data-cs-cta-key="hero-email" data-cs-cta-section="hero">Contact us</a>'
 		},
 		leadForm: {
 			selector: 'form[data-cs-form="lead-intake"]',
@@ -332,7 +342,7 @@ Campaign Studio injects the platform font stylesheet. Use \`var(--cs-font-sans)\
 CTA tracking marks a real interactive element. The marker records analytics but does not alter the element's native navigation:
 
 \`\`\`html
-<a href="mailto:hello@example.com"
+<a href="mailto:speakerlp@christophholz.com"
    data-cs-action="cta"
    data-cs-cta-type="email"
    data-cs-cta-key="hero-email"
@@ -340,6 +350,12 @@ CTA tracking marks a real interactive element. The marker records analytics but 
 \`\`\`
 
 Allowed CTA types are ${ctaTypes.map((value) => `\`${value}\``).join(', ')}; omitted type defaults to \`navigation\`. Use stable, descriptive key and section values. The visible text becomes the tracked label.
+
+### Campaign email links
+
+Use an ordinary anchor to \`mailto:speakerlp@christophholz.com\`, with an optional subject/body. Campaign Studio fills the short \`speakerlp+{campaignPageId}@christophholz.com\` alias and adds a visitor reference to the composed body at runtime. The page ID need not be known before artifact finalization. Literal email-address labels on these anchors also receive the page alias. Existing correctly page-addressed anchors work too. No extra attributes or authored JavaScript are needed for this handoff; CTA attributes still measure clicks. Never generate reference tokens or place visit/Google click identifiers in the artifact. Copying only the address retains campaign attribution but has no guaranteed ad attribution. Preview requests no references; lookup failure opens the original email template with the short page alias.
+
+### Lead inquiry forms
 
 A lead form must use exactly the canonical field names. Email and scope are required. Scope is 2–500 characters; name/company are at most 120; phone is empty or 8–15 digits with an optional leading plus.
 

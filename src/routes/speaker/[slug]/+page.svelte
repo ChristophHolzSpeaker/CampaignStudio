@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { injectAnalytics } from '@vercel/analytics/sveltekit';
 	import { onMount } from 'svelte';
+	import { startEmailAttribution } from '$lib/tracking/email-browser';
 	import { startSpeakerTracking } from '$lib/tracking/speaker-browser';
 	import { provideSpeakerTracking } from '$lib/tracking/speaker-context';
 	import LandingNavigation from '$lib/components/blocks/LandingNavigation.svelte';
@@ -75,8 +76,12 @@
 		}
 
 		injectAnalytics();
+		const stopEmailAttribution = data.campaignPageId
+			? startEmailAttribution(data.campaignPageId)
+			: () => {};
 
 		return () => {
+			stopEmailAttribution();
 			clearEngagementTimer();
 			tracking?.stop();
 			loggedPageId = null;

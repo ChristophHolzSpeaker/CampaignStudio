@@ -44,7 +44,7 @@ describe('artifact response security headers', () => {
 		const headers = new Headers(artifactResponseHeaders(page, false, 'http://127.0.0.1:54321'));
 		const policy = headers.get('content-security-policy');
 
-		expect(headers.get('etag')).toBe('"content-hash-v1-r5"');
+		expect(headers.get('etag')).toBe('"content-hash-v1-r6"');
 		expect(policy).toContain("script-src 'self' https://www.youtube.com");
 		expect(policy).toContain("style-src 'self' 'unsafe-inline' https: http://127.0.0.1:54321");
 		expect(policy).toContain("img-src 'self' data: blob: https: http://127.0.0.1:54321");
@@ -67,6 +67,8 @@ describe('artifact response security headers', () => {
 			'<link rel="stylesheet" href="/campaign-runtime/fonts/v1.css" data-cs-platform-fonts>'
 		);
 		expect(html.indexOf('data-cs-platform-fonts')).toBeLessThan(html.indexOf('</head>'));
+		expect(html).toContain('/campaign-runtime/email-v1.js');
+		expect(html).toContain('/campaign-runtime/v1.js');
 	});
 
 	it('allows tokenized previews to be framed while keeping live pages frame-protected', () => {

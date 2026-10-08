@@ -64,7 +64,7 @@ export async function journeyClicks(journeyId: string, before = new Date()) {
 	const linked = await db
 		.select({ id: lead_events.campaign_visit_id })
 		.from(lead_events)
-		.where(eq(lead_events.lead_journey_id, journeyId));
+		.where(and(eq(lead_events.lead_journey_id, journeyId), lte(lead_events.occurred_at, before)));
 	const visitIds = [
 		...new Set(
 			[journey.first_visit_id, journey.last_visit_id, ...linked.map((e) => e.id)].filter(
@@ -83,6 +83,7 @@ export async function journeyClicks(journeyId: string, before = new Date()) {
 				inArray(visit_ad_clicks.campaign_visit_id, visitIds),
 				lte(ad_clicks.captured_at, before),
 				lte(visit_ad_clicks.observed_at, before),
+				lte(campaign_visits.visited_at, before),
 				eq(campaign_visits.campaign_id, journey.campaign_id ?? journey.first_campaign_id ?? -1)
 			)
 		)
@@ -93,7 +94,13 @@ export async function journeyClicks(journeyId: string, before = new Date()) {
 	const visitors = await db
 		.select({ id: campaign_visits.ip_hash_or_session_identifier })
 		.from(campaign_visits)
-		.where(inArray(campaign_visits.id, visitIds));
+		.where(
+			and(
+				inArray(campaign_visits.id, visitIds),
+				lte(campaign_visits.visited_at, before),
+				eq(campaign_visits.campaign_id, journey.campaign_id ?? journey.first_campaign_id ?? -1)
+			)
+		);
 	const visitorIds = visitors.map((v) => v.id).filter((v): v is string => Boolean(v));
 	const legacy = visitorIds.length
 		? await db

@@ -491,12 +491,15 @@ export async function processInboundGmailMessage(
 		providerThreadId: normalized.provider_thread_id,
 		normalizedSenderEmail: normalized.from_email,
 		senderDisplayName: normalized.from_name,
+		bodyText: normalized.body_text,
+		observedAt: normalized.received_at ? new Date(normalized.received_at) : new Date(),
 		toRecipients: normalized.to_recipients
 	});
 
 	if (journeyResolution.created_new_journey) {
 		await logLeadEvent(env, {
 			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_visit_id: journeyResolution.campaign_visit_id,
 			campaign_id: journeyResolution.campaign_id,
 			campaign_page_id: journeyResolution.campaign_page_id,
 			experiment_id: journeyResolution.experiment_id,
@@ -621,6 +624,7 @@ export async function processInboundGmailMessage(
 
 	await logLeadEvent(env, {
 		lead_journey_id: journeyResolution.lead_journey_id,
+		campaign_visit_id: journeyResolution.campaign_visit_id,
 		campaign_id: journeyResolution.campaign_id,
 		campaign_page_id: journeyResolution.campaign_page_id,
 		event_type: 'message_received',
@@ -640,6 +644,7 @@ export async function processInboundGmailMessage(
 	if (classification) {
 		await logLeadEvent(env, {
 			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_visit_id: journeyResolution.campaign_visit_id,
 			campaign_id: journeyResolution.campaign_id,
 			campaign_page_id: journeyResolution.campaign_page_id,
 			event_type: 'message_classified',
@@ -658,6 +663,7 @@ export async function processInboundGmailMessage(
 	if (decision.classification === 'speaking_inquiry') {
 		await logLeadEvent(env, {
 			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_visit_id: journeyResolution.campaign_visit_id,
 			campaign_id: journeyResolution.campaign_id,
 			campaign_page_id: journeyResolution.campaign_page_id,
 			event_type: 'lead_qualified',
@@ -671,6 +677,7 @@ export async function processInboundGmailMessage(
 	} else if (decision.classification === 'not_speaking_inquiry') {
 		await logLeadEvent(env, {
 			lead_journey_id: journeyResolution.lead_journey_id,
+			campaign_visit_id: journeyResolution.campaign_visit_id,
 			campaign_id: journeyResolution.campaign_id,
 			campaign_page_id: journeyResolution.campaign_page_id,
 			event_type: 'lead_disqualified',
@@ -685,6 +692,7 @@ export async function processInboundGmailMessage(
 
 	await logLeadEvent(env, {
 		lead_journey_id: journeyResolution.lead_journey_id,
+		campaign_visit_id: journeyResolution.campaign_visit_id,
 		campaign_id: journeyResolution.campaign_id,
 		campaign_page_id: journeyResolution.campaign_page_id,
 		event_type: mapDecisionEventType(decision.auto_response_decision),
