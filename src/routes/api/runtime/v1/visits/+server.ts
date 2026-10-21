@@ -1,5 +1,5 @@
 import { getTrackingConfig } from '$lib/server/tracking/config';
-import { browserStatisticsAllowed } from '$lib/server/tracking/browser-consent';
+import { browserStatisticsAllowed, readBrowserConsent } from '$lib/server/tracking/browser-consent';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getPublishedArtifactPageById } from '$lib/server/artifacts/repository';
@@ -55,7 +55,8 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 		searchParams: pageUrl.searchParams,
 		headers: request.headers,
 		visitorIdentifier,
-		consentOnly: Boolean(policy && !statisticsAllowed)
+		consentOnly: Boolean(policy && !statisticsAllowed),
+		captureAds: policy ? readBrowserConsent(cookies, policy)?.marketing === true : true
 	});
 	return json({ ok: true, data: result });
 };

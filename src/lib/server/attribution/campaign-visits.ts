@@ -109,7 +109,9 @@ export async function logCampaignVisit(input: {
 	headers: Headers;
 	visitorIdentifier: string;
 	consentOnly?: boolean;
+	captureAds?: boolean;
 }): Promise<{ logged: boolean; visitId: number | null }> {
+	const captureAds = input.captureAds ?? !input.consentOnly;
 	const measurement = input.consentOnly
 		? {}
 		: {
@@ -150,7 +152,7 @@ export async function logCampaignVisit(input: {
 					and(eq(campaign_visits.id, existingVisit.id), eq(campaign_visits.is_consent_only, true))
 				);
 		}
-		if (!input.consentOnly) await captureAdClicks({ ...input, visitId: existingVisit.id });
+		if (captureAds) await captureAdClicks({ ...input, visitId: existingVisit.id });
 		return { logged: false, visitId: existingVisit.id };
 	}
 
@@ -166,8 +168,7 @@ export async function logCampaignVisit(input: {
 		})
 		.returning({ id: campaign_visits.id });
 
-	if (createdVisit && !input.consentOnly)
-		await captureAdClicks({ ...input, visitId: createdVisit.id });
+	if (createdVisit && captureAds) await captureAdClicks({ ...input, visitId: createdVisit.id });
 	return { logged: true, visitId: createdVisit?.id ?? null };
 }
 

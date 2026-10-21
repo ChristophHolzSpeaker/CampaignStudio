@@ -185,6 +185,7 @@ const runtimeSource = String.raw`(() => {
   const initializeWidget = async (node) => {
     const widget = node.getAttribute('data-cs-widget');
     if (widget === 'youtube-video') {
+      if(context.preview){node.style.aspectRatio='16 / 9';node.textContent='Video-Vorschau: Im veröffentlichten Artefakt nach Marketing-Zustimmung verfügbar.';return;}
       if(!context.preview && !choice?.marketing){
         node.replaceChildren();
         const button=document.createElement('button');button.type='button';

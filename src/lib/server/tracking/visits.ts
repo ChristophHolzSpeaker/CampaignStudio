@@ -123,6 +123,7 @@ export async function recordVisitConsent(
 	});
 	return {
 		adUserDataConsent: row.ad_user_data,
+		expiresAt: policy ? row.expires_at : null,
 		recordedAt: row.recorded_at,
 		policyVersion: row.policy_version
 	};

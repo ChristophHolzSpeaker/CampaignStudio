@@ -45,15 +45,17 @@ export const consentRuntimeSource = String.raw`
   };
   let visitPromise = null;
   let measuredVisit = false;
+  let advertisingVisit = false;
   let emailCleanup = null;
   const ensureVisit = () => {
     if (context.preview) return Promise.resolve(null);
-    if (visitId && (!statisticsAllowed() || measuredVisit)) return Promise.resolve(visitId);
+    if (visitId && (!statisticsAllowed() || measuredVisit) && (!choice?.marketing || advertisingVisit)) return Promise.resolve(visitId);
     if (visitPromise) return visitPromise;
     const measuring=statisticsAllowed();
-    visitPromise=post(context.endpoints.visits,{campaignPageId:context.campaignPageId,pageUrl:measuring?location.pathname+location.search:location.pathname,consentOnly:!measuring})
-      .then(result=>{visitId=result?.data?.visitId || null;measuredVisit=measuring;if(visitId && statisticsAllowed() && !emailCleanup)emailCleanup=startEmailAttribution(context.campaignPageId);return visitId;})
-      .finally(()=>{visitPromise=null;if(visitId && statisticsAllowed() && !measuredVisit)ensureVisit().catch(()=>undefined);});
+    const advertising=choice?.marketing===true;
+    visitPromise=post(context.endpoints.visits,{campaignPageId:context.campaignPageId,pageUrl:(measuring || advertising)?location.pathname+location.search:location.pathname,consentOnly:!measuring})
+      .then(result=>{visitId=result?.data?.visitId || null;measuredVisit=measuring;advertisingVisit=advertising;if(visitId && statisticsAllowed() && !emailCleanup)emailCleanup=startEmailAttribution(context.campaignPageId);return visitId;})
+      .finally(()=>{visitPromise=null;if(visitId && ((statisticsAllowed() && !measuredVisit) || (choice?.marketing && !advertisingVisit)))ensureVisit().catch(()=>undefined);});
     return visitPromise;
   };
   const persistChoice = (selected) => {
@@ -95,7 +97,11 @@ export const consentRuntimeSource = String.raw`
     refreshConsentWidgets();
     if(statisticsAllowed()){startStatistics();ensureVisit().catch(()=>undefined);if(remember && !previouslyMeasured)measure('page_view');}
     persistChoice({...selected});
-    if(consentOpener && !consentHost?.contains(consentOpener)){consentOpener.focus();}else{document.querySelector('[data-cs-consent-open]')?.focus();}consentOpener=null;
+    if(remember){
+      const target=consentOpener && !consentHost?.contains(consentOpener) ? consentOpener : document.querySelector('[data-cs-consent-open]');
+      target?.focus({preventScroll:true});
+    }
+    consentOpener=null;
   };
   const selectConsent = (statistics,marketing,personalization) => {
     if(!consentReady)return;

@@ -151,6 +151,11 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 		},
 		consent: {
 			sinceRuntime: 'v6',
+			gtmTemplatePath: '/campaign-runtime/consent-v6.tpl',
+			gtmTemplateTriggers: [
+				'Consent Initialization – All Pages',
+				'Custom Event: cs_consent_update'
+			],
 			settings: 'GET/PUT /api/public/v1/campaigns/{id}/tracking, consent field',
 			reopenSelector: '[data-cs-consent-open]',
 			dismissal:
@@ -175,7 +180,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			cookie:
 				'cs_consent; host-only; SameSite=Lax; Secure on HTTPS; invalidated by expiry or policyVersion change',
 			measurement:
-				'Statistics requires opt-in by default. A minimal visit and cs_vid after a choice are necessary only to bind consent evidence. Lead submission and booking remain available.'
+				'Statistics requires opt-in by default. A minimal visit and cs_vid after a choice are necessary only to bind consent evidence. Google click-ID capture independently requires Marketing. Lead submission and booking remain available.'
 		},
 		cta: {
 			selector: '[data-cs-action="cta"]',
@@ -253,7 +258,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 				'data-cs-video-title': 'Accessible video title, maximum 120 characters.'
 			},
 			behavior:
-				'Campaign Studio validates the video ID and initializes a privacy-enhanced YouTube player from www.youtube-nocookie.com directly in the placeholder when the page loads, with native controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube’s own play control once; there is no Campaign Studio load button. On live v6 pages YouTube resources wait for Marketing consent; otherwise the widget offers a Cookie-Einstellungen button. Legacy v4/v5 resources load on page initialization. Place the placeholder in normal document flow; do not add modal, lightbox, overlay, or separate play-link wrappers. On first confirmed playback, the runtime records a video CTA event with key video-<youtubeId>, section videos, and the title or video ID as label. Do not add CTA tracking to the widget or its ancestors, or author an iframe, embed URL, player parameters, or YouTube API code.',
+				'Campaign Studio validates the video ID and initializes a privacy-enhanced YouTube player from www.youtube-nocookie.com directly in the placeholder when the page loads, with native controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube’s own play control once; there is no Campaign Studio load button. V6 preview renders a disabled video placeholder. On live v6 pages YouTube resources wait for Marketing consent; otherwise the widget offers a Cookie-Einstellungen button. Legacy v4/v5 resources load on page initialization. Place the placeholder in normal document flow; do not add modal, lightbox, overlay, or separate play-link wrappers. On first confirmed playback, the runtime records a video CTA event with key video-<youtubeId>, section videos, and the title or video ID as label. Do not add CTA tracking to the widget or its ancestors, or author an iframe, embed URL, player parameters, or YouTube API code.',
 			example:
 				'<div data-cs-widget="youtube-video" data-cs-youtube-id="dQw4w9WgXcQ" data-cs-video-title="Campaign introduction"></div>'
 		}
@@ -564,7 +569,7 @@ Lead submissions reuse Campaign Studio's lead, attribution, journey, qualificati
 
 The booking placeholder is replaced with the maintained same-origin booking widget. In preview, it renders a clear disabled-booking notice; booking mutations are unavailable.
 
-The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. On live v6 pages YouTube resources wait for Marketing consent; otherwise the widget offers a Cookie-Einstellungen button. Legacy v4/v5 resources load on page initialization. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v6, then preview and publish it. v3 retains its two-step click-to-load behavior.
+The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. V6 preview renders a disabled video placeholder. On live v6 pages YouTube resources wait for Marketing consent; otherwise the widget offers a Cookie-Einstellungen button. Legacy v4/v5 resources load on page initialization. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v6, then preview and publish it. v3 retains its two-step click-to-load behavior.
 
 Do not reproduce these behaviors in authored code. Authored JavaScript is rejected, and platform IDs are resolved from signed/injected runtime context.
 

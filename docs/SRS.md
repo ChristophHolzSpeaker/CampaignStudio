@@ -556,7 +556,6 @@ Owner-selected policy: manual visit advertising consent defaults to GRANTED. Thi
 
 Owner-selected manual destination: `company_identified` and `lead_marked_eligible` default to existing Ads action `7755799338` in customer `2354667197`, with campaign overrides preserved. A client submits one event per decision, never both aliases.
 
-
 ## Visitor consent for artifact landing pages (runtime v6, October 2026)
 
 New artifact versions use the platform-managed v6 consent banner. Existing finalized versions remain immutable and pinned to v1–v5 until republished through new upload sessions. Authored JavaScript remains prohibited.
@@ -567,6 +566,6 @@ The compact German bottom banner follows the landing page aesthetic, reserves sp
 
 A host-only first-party cookie remembers category choices, opaque evidence, policy version and original expiry. Owner settings allow 180 or 365 days, provisionally 180. Expiry or a policy change asks again. Explicit marketing decisions use the existing browser-owned consent endpoint; previews show the UI but send no consent, measurement or Google requests.
 
-Campaign Studio optional measurement waits for Statistik by default; the owner may explicitly classify it as necessary. Necessary consent-evidence ownership records contain no measurement metadata and are excluded from visits and analytics. Lead submission and booking remain available. Missing or expired v6 advertising consent defaults to DENIED for offline delivery; the owner setting remains explicit and does not fabricate visitor evidence. Withdrawal blocks queued uploads and stops further optional collection. Legacy defaults remain unchanged for pinned older versions.
+Campaign Studio optional measurement waits for Statistik by default; the owner may explicitly classify it as necessary. Necessary consent-evidence ownership records contain no measurement metadata and are excluded from visits and analytics. Google click-ID capture independently requires Marketing consent, including when own measurement is necessary. Lead submission and booking remain available. Missing or expired v6 advertising consent defaults to DENIED for offline delivery; the owner setting remains explicit and does not fabricate visitor evidence. Withdrawal blocks queued uploads and stops further optional collection. Legacy defaults remain unchanged for pinned older versions.
 
 Release requires owner/DPO approval of texts and policy settings, the authenticated GTM tag audit (including the Meta consent override and GA4 placeholder), and real HTTPS Tag Assistant/network verification. Local tests establish application behavior, not a GDPR certification or proof of Google receipt. The runtime tracking guide contains the template installation and rollout steps.

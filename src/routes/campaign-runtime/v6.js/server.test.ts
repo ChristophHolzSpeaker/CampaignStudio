@@ -23,6 +23,7 @@ async function mount(
 		deferTracking?: boolean;
 		failConsent?: boolean;
 		template?: boolean;
+		youtube?: boolean;
 	} = {}
 ) {
 	const win = new Window({ url: 'https://example.com/landing?gclid=test' });
@@ -37,6 +38,9 @@ async function mount(
 	};
 	win.document.body.innerHTML =
 		'<main><form data-cs-form="lead-intake"><input name="email"><button type="submit">Send</button></form><button data-cs-consent-open>Cookie-Einstellungen</button></main>' +
+		(options.youtube
+			? '<div data-cs-widget="youtube-video" data-cs-youtube-id="dQw4w9WgXcQ"></div>'
+			: '') +
 		consentBannerMarkup +
 		'<script id="cs-page-context" type="application/json">' +
 		JSON.stringify(context) +
@@ -178,6 +182,45 @@ const saved = (extra: Record<string, unknown> = {}) => ({
 });
 
 describe('runtime v6 consent', () => {
+	it('does not request YouTube resources in preview or before Marketing consent', async () => {
+		for (const preview of [true, false]) {
+			const app = await mount({ preview, youtube: true });
+			expect(app.win.document.querySelector('script[src*="youtube"]')).toBeNull();
+			expect(app.win.document.querySelector('iframe')).toBeNull();
+			expect(
+				app.win.document.querySelector('[data-cs-widget="youtube-video"]')?.textContent
+			).toContain(preview ? 'Video-Vorschau' : 'Marketing');
+		}
+	});
+	it('preserves the reading position on restore and prevents scrolling after an explicit choice', async () => {
+		const restored = await mount({ cookie: saved() });
+		expect(restored.win.document.activeElement).toBe(restored.win.document.body);
+		const app = await mount();
+		const focus = vi.spyOn(
+			app.win.document.querySelector<HTMLElement>('main [data-cs-consent-open]')!,
+			'focus'
+		);
+		await app.click('[data-cs-consent-accept]');
+		expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+	});
+	it('captures Marketing-only click context and refreshes it when Marketing is granted later', async () => {
+		const app = await mount();
+		await app.click('[data-cs-consent-settings]');
+		app.win.document.querySelector<HTMLInputElement>(
+			'[data-cs-consent-category="marketing"]'
+		)!.checked = true;
+		await app.click('[data-cs-consent-save]');
+		expect(app.posts('/visits')).toEqual([
+			{ campaignPageId: 222, pageUrl: '/landing?gclid=test', consentOnly: true }
+		]);
+		expect(app.posts('/api/runtime/v1/events')).toHaveLength(0);
+		const later = await mount();
+		await later.click('[data-cs-consent-reject]');
+		await later.click('main [data-cs-consent-open]');
+		await later.click('[data-cs-consent-accept]');
+		expect(later.posts('/visits')).toHaveLength(2);
+		expect(later.posts('/visits')[1].pageUrl).toBe('/landing?gclid=test');
+	});
 	it('does not persist an obsolete grant while visit creation is still pending', async () => {
 		const app = await mount({ deferVisit: true });
 		await app.click('[data-cs-consent-accept]');
