@@ -1,3 +1,5 @@
+import { visitConsentPolicy } from '$lib/server/tracking/consent-policy';
+import { browserStatisticsAllowed } from '$lib/server/tracking/browser-consent';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getPublishedArtifactPageById } from '$lib/server/artifacts/repository';
@@ -36,6 +38,9 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	if (!visitor) return json({ ok: false, error: 'Visitor context is missing' }, { status: 400 });
 	const rateError = await enforceRuntimeRateLimit(visitor);
 	if (rateError) return rateError;
+	const policy = await visitConsentPolicy(parsed.data.visitId);
+	if (policy && !browserStatisticsAllowed(cookies, policy))
+		return json({ ok: false, error: 'Statistics consent required' }, { status: 403 });
 	return json({
 		ok: true,
 		data: await markCampaignVisitEngaged({

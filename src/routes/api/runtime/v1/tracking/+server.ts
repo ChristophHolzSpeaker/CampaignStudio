@@ -13,6 +13,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			ok: true,
 			data: {
 				gtmContainerId: config.gtmContainerId,
+				consent: config.consent,
 				mappings: config.mappings.filter((m) => m.channel === 'browser')
 			}
 		},

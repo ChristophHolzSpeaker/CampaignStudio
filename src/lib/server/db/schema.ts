@@ -172,6 +172,7 @@ export const page_artifacts = pgTable(
 );
 
 export const campaign_visits = pgTable('campaign_visits', {
+	is_consent_only: boolean('is_consent_only').notNull().default(false),
 	id: serial('id').primaryKey(),
 	campaign_id: integer('campaign_id')
 		.notNull()
@@ -1147,5 +1148,6 @@ export const visit_ad_consent = pgTable('visit_ad_consent', {
 	ad_user_data: text('ad_user_data').notNull(),
 	evidence_ref: text('evidence_ref').notNull(),
 	policy_version: text('policy_version').notNull(),
+	expires_at: timestamp('expires_at', { withTimezone: true }),
 	recorded_at: timestamp('recorded_at', { withTimezone: true }).notNull().defaultNow()
 });

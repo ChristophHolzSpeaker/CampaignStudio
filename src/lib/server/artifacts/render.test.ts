@@ -44,7 +44,7 @@ describe('artifact response security headers', () => {
 		const headers = new Headers(artifactResponseHeaders(page, false, 'http://127.0.0.1:54321'));
 		const policy = headers.get('content-security-policy');
 
-		expect(headers.get('etag')).toBe('"content-hash-v1-r6"');
+		expect(headers.get('etag')).toBe('"content-hash-v1-r7"');
 		expect(policy).toContain("script-src 'self' https://www.youtube.com");
 		expect(policy).toContain("style-src 'self' 'unsafe-inline' https: http://127.0.0.1:54321");
 		expect(policy).toContain("img-src 'self' data: blob: https: http://127.0.0.1:54321");
@@ -84,5 +84,18 @@ describe('artifact response security headers', () => {
 		expect(previewHeaders.get('x-robots-tag')).toBe('noindex, nofollow');
 		expect(liveHeaders.get('content-security-policy')).toContain("frame-ancestors 'none'");
 		expect(liveHeaders.get('x-frame-options')).toBe('DENY');
+	});
+	it('injects the v6 banner with reserved viewport CSS and suppresses returning-visitor flashes', () => {
+		const v6 = { ...page, runtimeVersion: 'v6' };
+		const html = '<html><head></head><body><form>Lead form</form></body></html>';
+		expect(injectArtifactRuntime(html, v6, false)).toContain('id="cs-consent" aria-label=');
+		expect(injectArtifactRuntime(html, v6, false, true)).toContain('id="cs-consent" hidden');
+		expect(injectArtifactRuntime(html, v6, true, true)).not.toContain('id="cs-consent" hidden');
+		expect(injectArtifactRuntime(html, v6, false)).toContain('data-cs-consent-style');
+		expect(injectArtifactRuntime(html, page, false)).not.toContain('id="cs-consent"');
+		const headers = new Headers(artifactResponseHeaders(v6, false, 'https://assets.example.com'));
+		expect(headers.get('cache-control')).toBe('private, no-store');
+		expect(headers.has('etag')).toBe(false);
+		expect(headers.get('content-security-policy')).toContain('https://www.googletagmanager.com');
 	});
 });

@@ -1,8 +1,12 @@
 import { expect, it } from 'vitest';
-import { findMapping } from './contract';
+import { findMapping, consentSettingsSchema } from './contract';
 import { withManualOutcomeDefaults } from './manual-outcomes';
 it('maps the company and lead manual aliases to the owner-selected existing action', () => {
-	const config = withManualOutcomeDefaults({ gtmContainerId: null, mappings: [] });
+	const config = withManualOutcomeDefaults({
+		gtmContainerId: null,
+		mappings: [],
+		consent: consentSettingsSchema.parse({})
+	});
 	for (const event of ['company_identified', 'lead_marked_eligible'])
 		expect(findMapping(config, 'offline', event)).toMatchObject({
 			customerId: '2354667197',
@@ -14,6 +18,7 @@ it('maps the company and lead manual aliases to the owner-selected existing acti
 it('preserves per-campaign overrides, browser mappings and container without duplicates', () => {
 	const input = {
 		gtmContainerId: 'GTM-EXAMPLE',
+		consent: consentSettingsSchema.parse({}),
 		mappings: [
 			{
 				channel: 'offline' as const,
