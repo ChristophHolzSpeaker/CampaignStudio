@@ -1,6 +1,6 @@
-## Runtime v5: events, Google Tag Manager, and CRM conversions
+## Runtime v6: consent, events, Google Tag Manager, and CRM conversions
 
-Runtime v5 adds dynamic measurement to artifacts. v1–v4 remain immutable. Upload/finalize a new version, preview, then publish to adopt v5. Do not add authored JavaScript, GTM snippets, iframe code, credentials, Google labels, or platform IDs to artifact HTML. Preview emits no measurement, loads no GTM, and submits no leads.
+Runtime v6 adds a platform-managed Consent Mode v2 banner. v1–v5 remain pinned and retain their behavior. Upload/finalize a new version, preview, then publish to adopt v6. Existing live pages must be republished; deployment alone does not upgrade them. Do not add authored JavaScript, GTM snippets, iframe code, credentials, Google labels, or platform IDs to artifact HTML. Preview emits no measurement, loads no GTM, and submits no leads.
 
 ### Authoring attributes
 
@@ -32,13 +32,13 @@ Scroll events fire once at 25/50/75/90/100%, using action `percent_25`, etc. Act
 
 Register the owner-approved container `GTM-MCDDK28B` separately for every campaign through the campaign tracking API below. There is no global default or inheritance: missing configuration defaults to `gtmContainerId: null` and loads no GTM. All artifact versions in a campaign share these settings. Creating or republishing an artifact does not configure them. Read first, preserve all mappings, and save the container ID; Google Ads OAuth is not needed for this API operation. Do not overwrite a different container or deliberately disabled tracking without confirming intent.
 
-Configure the container once, including the existing Google tag and Conversion Linker. Campaign Studio loads the configured container itself on published v5 artifacts. The platform CSP permits Google tag destinations; authored scripts remain prohibited. Test the actual container for additional vendor domains before deployment.
+Configure the container once, including the existing Google tag and Conversion Linker. Campaign Studio loads the configured container itself on published v5 artifacts and, subject to the owner consent mode, on v6. The platform CSP permits Google tag destinations; authored scripts remain prohibited. Test the actual container for additional vendor domains before deployment.
 
 1. Create one Custom Event trigger matching exactly `cs_event`.
 2. Create Data Layer Variables for `cs_event_name`, `cs_event_id`, `cs_campaign_id`, `cs_page_id`, `cs_action`, `cs_section`, `cs_metric`, `cs_ads_conversion_id`, `cs_ads_conversion_label`, `cs_value`, `cs_currency`.
 3. Create one GA4 Event tag: Event Name = `{{cs_event_name}}`; map campaign/page/action/section/metric parameters to the corresponding variables. Trigger on `cs_event`. Register needed custom dimensions in GA4 for reporting. Avoid enabling overlapping automatic GA4 form/scroll/video events that would duplicate these measurements.
 4. Create one Google Ads Conversion Tracking tag: Conversion ID = `{{cs_ads_conversion_id}}`, Conversion Label = `{{cs_ads_conversion_label}}`, Value = `{{cs_value}}`, Currency = `{{cs_currency}}`, Transaction ID = `{{cs_event_id}}`. Use a `cs_event` trigger filtered by `cs_ads_conversion_id` matching RegEx `^[0-9]+$` AND `cs_ads_conversion_label` matching RegEx `^[A-Za-z0-9_-]+$`. The data-layer conversion ID is digits only because this GTM tag adds `AW-` itself. Campaign configuration still stores the full `AW-...` ID; the runtime removes the prefix at the GTM boundary. This single tag routes all mapped browser events.
-5. Owner-selected behavior: published v5 pages initialize `ad_storage`, `analytics_storage`, `ad_user_data`, and `ad_personalization` as `granted` before loading GTM. There is no consent prompt or CMP integration. These are configured Google defaults, not evidence of a visitor's consent and not a GDPR-compliance claim. Do not manufacture visitor consent records from these defaults. For manual visit outcomes, the owner has separately selected a GRANTED default; readiness exposes its source as `owner_default`, and explicit visitor denial overrides it. Preview initializes no Google consent state and emits no measurement. In Tag Assistant, check for any existing container tags that override these defaults.
+5. Runtime v6 sets all four Google consent signals to `denied`, with `wait_for_update: 500`, `ads_data_redaction: true` and `url_passthrough: true`, before loading GTM. Basic mode (default) loads GTM only after at least one optional category is accepted. Advanced mode allows cookieless Google pings while denied. Preview loads no tags and sends no consent records. Legacy v5 retains its owner-configured granted defaults; those are not visitor evidence. Audit the actual GTM container for consent overrides and additional consent checks.
 6. Preview with Tag Assistant and check the destination network requests and Ads diagnostics. A dataLayer push or our HTTP 204 only confirms our side, not Google receipt. Do not import the same GA4 outcome into Ads while also reporting it directly unless deduplication has been explicitly designed.
 
 Every push uses `event: "cs_event"` plus the fields above. Optional fields are explicitly cleared to null on each push, preventing a previous conversion label/value from leaking to the next interaction. Unknown/unmapped events still reach GA4; they do not fire the Ads conversion tag. No new GTM tag or trigger is needed for new event names or sections.
@@ -133,9 +133,9 @@ Identical retries return the same delivery. A changed body under the same visit/
 
 Attribution selects the latest click explicitly captured on the selected visit at or before the outcome, with its original capture time retained. A later click from another visit on the same cookie cannot replace it. New `visit_ad_clicks` links survive clearing both IP-related visit columns. Migration 047 deliberately does not guess historical links from cookies/timestamps or reverse-IP enrichment: old unlinked visits return `missing_click_id`. Journey reporting retains its existing cookie lookup for known journey visitors, scoped to the journey campaign; the exact-visit endpoint never uses this fallback. Deleting the visit or click deletes its provenance links; IP-field redaction is not a complete deletion of advertising identifiers.
 
-**Consent policy:** absent an explicit record, the owner-selected visit policy returns `adUserDataConsent: "GRANTED"`, `source: "owner_default"`, `recordedAt: null`. An explicit browser decision returns `source: "visitor_record"`. Denial always blocks new uploads, including a pending delivery whose consent was withdrawn. Outcomes store which source was used; defaults are never materialized as fabricated visitor records. Already uploaded conversions cannot be withdrawn by this queue.
+**Consent policy:** for visits pinned to v6, missing, expired or superseded consent defaults to `adUserDataConsent: "DENIED"`, `source: "owner_default"`, `recordedAt: null`. Withdrawal updates older v6 grants with the same policy owned by this browser as well. Current explicit browser decisions return `source: "visitor_record"`. The owner may change `consent.missingOfflineConsent`; the safe default is DENIED. Legacy visits retain their previous owner default. Denial blocks new uploads, including queued deliveries whose consent was withdrawn, for visit and journey outcomes. Already uploaded conversions cannot be withdrawn by this queue. Defaults are never fabricated into visitor records.
 
-A platform-managed consent integration can record an explicit choice through `POST /api/runtime/v1/consent` with `{ "campaignPageId": 274, "visitId": 123, "adUserDataConsent": "DENIED", "evidenceRef": "cmp:choice:opaque-id", "policyVersion": "ads-v1" }`. This endpoint requires the owning browser's `cs_vid` cookie, same Origin, a published page, and rate limits. It is not a CRM-token endpoint. Opaque references must contain no personal data. It stores the server time and replaces the visit's current decision. Preview must never call it. No new consent banner is installed, and authored artifact JavaScript remains prohibited.
+A platform-managed consent integration can record an explicit choice through `POST /api/runtime/v1/consent` with `{ "campaignPageId": 274, "visitId": 123, "adUserDataConsent": "DENIED", "evidenceRef": "cmp:choice:opaque-id", "policyVersion": "cs-consent-v1", "expiresAt": "2027-04-19T12:00:00Z" }`. This endpoint requires the owning browser's `cs_vid` cookie, same Origin, a published page, and rate limits. It is not a CRM-token endpoint. Opaque references must contain no personal data. It stores the server time and replaces the visit's current decision. Preview must never call it. Runtime v6 installs the platform banner; authored artifact JavaScript remains prohibited. V6 records require the current policyVersion and an expiry within the configured retention. A returning browser reuses the original choice evidence and expiry; browsing never extends consent.
 
 The owner-selected defaults map both `company_identified` and `lead_marked_eligible` (offline channel) to Ads customer `2354667197`, conversion action `7755799338` (**CS | Lead Marked Eligible (manual)**). No new Ads action is required. The existing action's primary/secondary and bidding settings are unchanged. Submit **one** of these names per business decision, not both. These defaults do not automatically qualify visits or fire browser conversions.
 
@@ -152,6 +152,56 @@ The existing Cloudflare Worker cron runs every 15 minutes. Configure its `CONVER
 Verify in local development first: publish a v5 artifact, configure mock mappings, trigger interactions, inspect `cs_event`, query stored events, connect a lead to the visit, post a CRM outcome twice, and confirm one delivery. Mock Google ingestion/diagnostics for repeatable integration tests. Production verification additionally requires the actual GTM container configuration and authorized Google credentials; never report Google receipt based solely on local mocks.
 
 Google references: https://developers.google.com/data-manager/api/devguides/events/send-events and https://developers.google.com/data-manager/api/devguides/diagnostics .
+
+### Rollout (v6)
+
+Apply `supabase/migrations/049_consent_expiry.sql` and `050_consent_measurement.sql` before deploying the application (the Drizzle schema and companion migrations define the same columns). The second migration excludes consent-only ownership records from visit totals and downstream analytics views, and an opt-in promotes that same record to a measured visit without duplicating it. Then configure owner-approved consent settings, complete the GTM audit, and deploy v6. Existing pages keep their pinned runtime. Republish all 13 landing pages through new upload sessions with a Cookie-Einstellungen footer hook; do not alter finalized artifacts in place. Verify real cookie and `gcs` behavior in Tag Assistant after deployment. No production configuration, migration or publication is performed by this code change.
+
+### Owner consent settings (v6)
+
+Use the existing campaign-write configuration endpoint `GET/PUT /api/public/v1/campaigns/{id}/tracking`. GET first and preserve the mappings when PUT replaces the configuration. The `consent` object is:
+
+```json
+{
+	"mode": "basic",
+	"policyVersion": "cs-consent-v1",
+	"retentionDays": 180,
+	"ownMeasurement": "statistics",
+	"missingOfflineConsent": "DENIED"
+}
+```
+
+The owner/DPO chooses `mode` (`basic` or `advanced`), retention (180 or 365 days), own measurement (`statistics` or `necessary`), and the offline fallback (`DENIED` or `GRANTED`). These implementation defaults are provisional, not legal approval. Increment `policyVersion` whenever the policy changes; old browser choices and old server grants then cease to apply.
+
+The banner follows the landing-page brand: platform Bureau Grot body and condensed display fonts, square controls, a white surface, and a restrained Christoph Holz red accent. “Alle akzeptieren”, “Nur notwendige”, and “Einstellungen” have equal visual weight. The compact white bar is separated from the page by a subtle shadow above it. On narrow screens, the information area is keyboard-scrollable and the action buttons remain visible. The top-right close button and Escape dismiss the panel for this page view without changing consent, storing a choice cookie, or creating a visitor record. With no previous choice all four signals remain denied; the footer hook reopens preferences. A new visit shows the banner again until a choice is saved. Necessary is always on; Statistik maps to analytics_storage, Marketing maps to ad_storage and ad_user_data, Personalisierung maps to ad_personalization. It links to https://www.christophholz.com/datenschutzerklarung and https://www.christophholz.com/impressum. Add this hook to every artifact footer:
+
+```html
+<button type="button" data-cs-consent-open>Cookie-Einstellungen</button>
+```
+
+Campaign Studio handles the click and updates consent without reloading. Do not add your own click handler. V6 reserves a bottom viewport area; the page body scrolls independently above it so the banner cannot overlay the lead form. Avoid depending on document/window scroll coordinates in authored CSS; runtime events use body scrolling. The preference panel scrolls inside the same area. Preview shows a disabled video placeholder without requesting YouTube resources. Live YouTube widgets wait for Marketing consent; without it they offer a platform-managed settings button. It is nonmodal and keyboard operable.
+
+The host-only first-party `cs_consent` cookie remembers all categories, opaque evidence, policy version and the original expiry. It is SameSite=Lax and Secure on HTTPS. No cross-domain sharing or automatic import from Finsweet is implemented.
+
+Platform position implemented by default: optional Campaign Studio statistics (visits with attribution/geo/referrer, events, engagement, CTA telemetry and email references) wait for Statistik. A choice still creates a minimal visit record and a necessary `cs_vid` ownership cookie to bind the consent evidence to this browser. Without Marketing consent this minimal operational record contains no captured click IDs; it never includes UTM, IP, user agent or geography and is excluded from visit counts, analytics views, and journey measurement attribution. A subsequent Statistik opt-in promotes the same visit once; withdrawal stops future collection and retains measurements previously collected with consent. Lead submission and booking stay available. The owner may instead select necessary measurement only after approving that classification. Declining Statistik reduces the measurable funnel. Capturing Google click IDs is independent and requires Marketing consent, even if ownMeasurement is necessary; Marketing alone can capture a click for permitted offline attribution without counting a statistical visit. Successful consent persistence keeps the necessary ownership cookie until the original choice expiry, including renewed choices; restoration does not extend that expiry.
+
+### Install the v6 Google consent template
+
+Google requires `setDefaultConsentState` and `updateConsentState` for GTM-managed consent. A queued `gtag('consent','update', …)` is insufficient for reliable event ordering. The runtime sets a denied bootstrap before any container request, then publishes complete `cs_consent_update` snapshots. The template applies the current snapshot through Google's consent APIs before acknowledging it; only then does the runtime release `cs_event` messages. Without this template, the bootstrap remains denied and platform Google events stay buffered. Campaign Studio's consent evidence and permitted first-party statistics remain independent.
+
+1. Download `/campaign-runtime/consent-v6.tpl` from Campaign Studio (local development: http://localhost:5173/campaign-runtime/consent-v6.tpl).
+2. In `GTM-MCDDK28B`, open **Templates → Tag Templates → New → Import**, select that file and save. Review the narrow permissions: write four consent types, read the v6 snapshot, and call its acknowledgement function. It has no cookie or network permissions.
+3. Create a tag named **Campaign Studio consent v6** from the template. Fire it on **Consent Initialization – All Pages** and a **Custom Event** trigger matching exactly `cs_consent_update`. Choose **No additional consent required** for this consent-management tag, so it can process rejections. Do not attach measurement tags to `cs_consent_update`.
+4. Remove competing consent setters for v6. The template exits without changing consent on legacy pages; v1–v5 remain pinned and preserve their existing behavior. Audit Google and non-Google measurement tags individually before publishing the container.
+5. Use GTM Preview / Tag Assistant on an HTTPS v6 page. Check default-denied before tag requests, each category combination, reload with a remembered choice, and withdrawal. Confirm the template executes successfully and consent changes precede `cs_event`.
+
+The template has automated sandbox-API tests, but an actual GTM import and browser verification remain release checks. Updating this repository does not modify or publish your GTM container.
+
+GTM deployment audit remains separate: inspect every published tag’s built-in/additional consent checks, remove hard-coded granted overrides, and resolve the reported GA4 `G-1234` placeholder. `_gcl_au`, `gcs` values and real Google receipt depend on the container, consent, browser and actual network traffic; runtime unit tests cannot certify them. Basic mode prevents initial GTM loading on rejection; after tags have already loaded, withdrawal sends denied updates and stops new platform tag events, but a running container must also respect that change. Cookie deletion is best effort for accessible Google cookies; it cannot erase HttpOnly or other-origin storage.
+
+Expected impact: directly measured conversions fall with rejection; advanced mode may allow Google modelling. This feature does not improve the underlying lead quality signal or create missing form submissions.
+
+Implementation reference: https://developers.google.com/tag-platform/security/guides/consent and https://developers.google.com/tag-platform/security/concepts/consent-mode .
 
 ## Published section pages (`/speaker/{slug}`)
 
@@ -181,3 +231,13 @@ The speaker visit path already stores Google click IDs independently of visit de
 Google Consent Mode defaults match the owner-configured runtime v5 defaults. They are not visitor consent evidence. Manual visit outcomes use the separately documented owner-default policy and respect explicit denials.
 
 For GTM Preview testing after deployment: verify the configured container request, `cs_event` identity/action/destination fields, and successful `/api/runtime/v1/events` responses. Test a rejected submission first (no success conversion), then a coordinated successful intake or booking; a successful booking test creates a real calendar booking. Confirm one destination request per conversion. Configuration updates take effect on the next page load; a local build or dataLayer push alone is not evidence of live Google delivery.
+
+### Published GTM audit, 2026-10-21
+
+Read-only inspection of the public `GTM-MCDDK28B` container script (resource version 4) confirmed:
+
+- GA4 event tag 24 has `vtp_measurementIdOverride: "G-1234"` and fires on `cs_event`. Replace it with the approved real measurement ID, or disable the tag.
+- Meta Pixel tag 11 has `vtp_consent: true` and a container-load trigger. Its template translates true to Meta consent `grant`; it is not a visitor decision. The artifact CSP currently blocks the Meta script/CAPI origins. Do not broaden that CSP before fixing consent gating.
+- The resource contains Google tag, Ads conversion and Conversion Linker templates. Published source inspection cannot certify the authenticated workspace's “additional consent checks” settings or Tag Assistant/network behavior. An authorized container owner must complete that audit before release, including denial, mixed choices and withdrawal.
+
+No Tag Manager configuration was changed by this implementation.

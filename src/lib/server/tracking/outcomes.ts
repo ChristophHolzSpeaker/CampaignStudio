@@ -1,3 +1,4 @@
+import { effectiveVisitConsent, visitConsentPolicy } from './consent-policy';
 import { journeyConsent } from './journey-consent';
 import { createHash } from 'node:crypto';
 import { db } from '$lib/server/db';
@@ -20,7 +21,7 @@ import {
 } from './google';
 import { env } from '$env/dynamic/private';
 import { OutcomeError } from './errors';
-import { visitReadiness, consentBlock } from './visits';
+import { visitReadiness } from './visits';
 export { OutcomeError } from './errors';
 type Outcome = z.infer<typeof outcomeSchema>;
 export function recordOutcome(journeyId: string, input: Outcome, source: 'crm' | 'worker' = 'crm') {
@@ -179,7 +180,11 @@ export async function processConversions(deliveryIds?: string[]) {
 							.select()
 							.from(visit_ad_consent)
 							.where(eq(visit_ad_consent.campaign_visit_id, event.campaign_visit_id));
-						const reason = consentBlock(consent);
+						const reason =
+							(await effectiveVisitConsent(event.campaign_visit_id, consent)).adUserDataConsent ===
+							'GRANTED'
+								? null
+								: 'consent_denied';
 						if (reason) {
 							await db
 								.update(conversion_deliveries)
@@ -248,9 +253,16 @@ async function prepareOutcome(
 		const reasons = [...result.reasons];
 		if (input.adUserDataConsent !== 'GRANTED' && !reasons.includes('consent_denied'))
 			reasons.push('consent_denied');
-		if (reasons.length)
+		const bannerPolicy = await visitConsentPolicy(scope.visitId);
+		const blockers = ['consent_denied', 'missing_click_id', 'click_expired'];
+		const invalid = bannerPolicy ? reasons.filter((reason) => !blockers.includes(reason)) : reasons;
+		if (invalid.length)
 			throw new OutcomeError(422, 'Visit is not ready for conversion delivery', reasons);
-		consentSource = result.consent ? 'visitor_record' : 'owner_default';
+		if (bannerPolicy)
+			blocked = reasons.includes('consent_denied')
+				? 'consent_denied'
+				: (reasons.find((reason) => blockers.includes(reason)) ?? null);
+		consentSource = result.effectiveConsent.source;
 		campaignId = result.visit.campaign_id;
 		pageId = result.visit.campaign_page_id ?? undefined;
 		mapping = result.mapping;

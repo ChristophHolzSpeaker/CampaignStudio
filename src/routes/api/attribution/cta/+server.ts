@@ -1,3 +1,5 @@
+import { pageConsentPolicy } from '$lib/server/tracking/consent-policy';
+import { browserStatisticsAllowed } from '$lib/server/tracking/browser-consent';
 import { trackCTA } from '$lib/server/attribution/client';
 import {
 	readVisitorIdentifier,
@@ -53,6 +55,10 @@ export const POST: RequestHandler = async ({ request, cookies, url }) => {
 	) {
 		return json({ ok: false, error: 'Published campaign page context not found' }, { status: 404 });
 	}
+
+	const policy = await pageConsentPolicy(parsed.data.campaign_page_id);
+	if (policy && !browserStatisticsAllowed(cookies, policy))
+		return json({ ok: false, error: 'Statistics consent required' }, { status: 403 });
 
 	try {
 		const visitorIdentifier = cookies ? readVisitorIdentifier(cookies) : null;

@@ -52,6 +52,19 @@ export const mappingSchema = z
 		if ((m.value !== undefined) !== (m.currency !== undefined))
 			ctx.addIssue({ code: 'custom', message: 'Provide value and currency together' });
 	});
+export const consentSettingsSchema = z
+	.object({
+		mode: z.enum(['basic', 'advanced']).default('basic'),
+		policyVersion: z
+			.string()
+			.regex(/^[A-Za-z0-9_.:-]{1,80}$/)
+			.default('cs-consent-v1'),
+		retentionDays: z.union([z.literal(180), z.literal(365)]).default(180),
+		ownMeasurement: z.enum(['statistics', 'necessary']).default('statistics'),
+		missingOfflineConsent: z.enum(['DENIED', 'GRANTED']).default('DENIED')
+	})
+	.strict();
+export type ConsentSettings = z.infer<typeof consentSettingsSchema>;
 export const trackingConfigSchema = z
 	.object({
 		gtmContainerId: z
@@ -59,6 +72,7 @@ export const trackingConfigSchema = z
 			.regex(/^GTM-[A-Z0-9]+$/)
 			.nullable()
 			.default(null),
+		consent: consentSettingsSchema.prefault({}),
 		mappings: z.array(mappingSchema).max(200).default([])
 	})
 	.strict()
@@ -105,7 +119,8 @@ export const visitConsentSchema = z
 	.object({
 		adUserDataConsent: z.enum(['GRANTED', 'DENIED']),
 		evidenceRef: z.string().regex(/^[A-Za-z0-9_.:-]{1,120}$/),
-		policyVersion: z.string().regex(/^[A-Za-z0-9_.:-]{1,80}$/)
+		policyVersion: z.string().regex(/^[A-Za-z0-9_.:-]{1,80}$/),
+		expiresAt: z.iso.datetime({ offset: true }).optional()
 	})
 	.strict();
 export const visitTrackingQuerySchema = z

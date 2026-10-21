@@ -1,5 +1,8 @@
+vi.mock('$lib/server/tracking/consent-policy', () => ({ pageConsentPolicy: mocks.policy }));
+import { consentSettingsSchema } from '$lib/tracking/contract';
 import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
+	policy: vi.fn(),
 	page: vi.fn(),
 	issue: vi.fn(),
 	visitor: vi.fn(),
@@ -28,10 +31,11 @@ const call = (body: unknown = { campaignPageId: 287 }, origin = 'https://app.exa
 			body: JSON.stringify(body)
 		}),
 		url: new URL('https://app.example/api/runtime/v1/email-reference'),
-		cookies: {}
-	} as Parameters<typeof POST>[0]);
+		cookies: { get: () => undefined }
+	} as unknown as Parameters<typeof POST>[0]);
 beforeEach(() => {
 	vi.resetAllMocks();
+	mocks.policy.mockResolvedValue(null);
 	mocks.page.mockResolvedValue({ campaignId: 39, campaignPageId: 287 });
 	mocks.visitor.mockReturnValue('owner-cookie');
 	mocks.issue.mockResolvedValue('Referenz: CS-00112233445546778899aabbccddeeff');
@@ -63,4 +67,9 @@ it('passes only the server-resolved campaign and cookie ownership and disables c
 		ok: true,
 		data: { reference: 'Referenz: CS-00112233445546778899aabbccddeeff' }
 	});
+});
+
+it('rejects v6 statistics when the visitor has no opt-in', async () => {
+	mocks.policy.mockResolvedValue(consentSettingsSchema.parse({}));
+	expect((await call()).status).toBe(403);
 });

@@ -36,10 +36,20 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	const page = await resolvePublishedCampaignPageContext({ campaignPageId });
 	if (!page) return reply({ ok: false, error: 'Published page not found' }, 404);
 	try {
-		return reply({
-			ok: true,
-			data: await recordVisitConsent(visitId, consent, { visitorIdentifier, campaignPageId })
+		const decision = await recordVisitConsent(visitId, consent, {
+			visitorIdentifier,
+			campaignPageId
 		});
+		// Preserve identity until the actual choice expires, including when renewed.
+		if (decision.expiresAt)
+			cookies.set('cs_vid', visitorIdentifier, {
+				path: '/',
+				httpOnly: true,
+				sameSite: 'lax',
+				secure: url.protocol === 'https:',
+				expires: decision.expiresAt
+			});
+		return reply({ ok: true, data: decision });
 	} catch (e) {
 		if (e instanceof OutcomeError) return reply({ ok: false, error: e.message }, e.status);
 		throw e;

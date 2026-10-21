@@ -1,10 +1,13 @@
+import { evaluateConsent } from './consent-policy';
+import { getTrackingConfig } from './config';
 import { and, eq, inArray, lte } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	campaign_visits,
 	lead_events,
 	lead_journeys,
-	visit_ad_consent
+	visit_ad_consent,
+	page_artifacts
 } from '$lib/server/db/schema';
 
 // Denial wins across the journey's verified visits. No visitor evidence is fabricated.
@@ -24,11 +27,30 @@ export async function journeyConsent(journeyId: string, before = new Date()) {
 		journey.last_visit_id,
 		...linked.map((row) => row.id)
 	].filter((id): id is number => id !== null);
-	if (!ids.length) return { denied: false, source: 'owner_default' as const };
+	const fallback = async () => {
+		const pageId = journey.campaign_page_id ?? journey.first_page_id ?? journey.last_page_id;
+		const [page] = pageId
+			? await db
+					.select({ runtime: page_artifacts.runtime_version })
+					.from(page_artifacts)
+					.where(eq(page_artifacts.campaign_page_id, pageId))
+					.limit(1)
+			: [];
+		const consent =
+			page?.runtime === 'v6'
+				? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
+				: null;
+		return {
+			denied: consent?.missingOfflineConsent === 'DENIED',
+			source: 'owner_default' as const
+		};
+	};
+	if (!ids.length) return fallback();
 	const rows = await db
-		.select({ value: visit_ad_consent.ad_user_data })
-		.from(visit_ad_consent)
-		.innerJoin(campaign_visits, eq(campaign_visits.id, visit_ad_consent.campaign_visit_id))
+		.select({ runtime: page_artifacts.runtime_version, record: visit_ad_consent })
+		.from(campaign_visits)
+		.leftJoin(visit_ad_consent, eq(campaign_visits.id, visit_ad_consent.campaign_visit_id))
+		.leftJoin(page_artifacts, eq(page_artifacts.campaign_page_id, campaign_visits.campaign_page_id))
 		.where(
 			and(
 				inArray(campaign_visits.id, ids),
@@ -36,8 +58,17 @@ export async function journeyConsent(journeyId: string, before = new Date()) {
 				eq(campaign_visits.campaign_id, journey.campaign_id ?? journey.first_campaign_id ?? -1)
 			)
 		);
+	if (!rows.length) return fallback();
+	const policy = rows.some((row) => row.runtime === 'v6')
+		? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
+		: null;
+	const decisions = rows.map((row) =>
+		evaluateConsent(row.record ?? undefined, row.runtime === 'v6' ? policy : null)
+	);
 	return {
-		denied: rows.some((row) => row.value !== 'GRANTED'),
-		source: rows.length ? ('visitor_record' as const) : ('owner_default' as const)
+		denied: decisions.some((decision) => decision.adUserDataConsent !== 'GRANTED'),
+		source: decisions.some((decision) => decision.source === 'visitor_record')
+			? ('visitor_record' as const)
+			: ('owner_default' as const)
 	};
 }

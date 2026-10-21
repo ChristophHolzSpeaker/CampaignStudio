@@ -17,6 +17,9 @@ import { db } from '$lib/server/db';
 import {
 	campaigns,
 	campaign_pages,
+	page_artifacts,
+	visit_ad_consent,
+	lead_journeys,
 	campaign_visits,
 	ad_clicks,
 	campaign_tracking,
@@ -27,6 +30,7 @@ import { logCampaignVisit } from '$lib/server/attribution/campaign-visits';
 import { recordVisitOutcome, processConversions } from './outcomes';
 import { recordVisitConsent, getVisitTracking } from './visits';
 import { ingestConversion } from './google';
+import { journeyConsent } from './journey-consent';
 
 describe.skipIf(!process.env.CS_TEST_DATABASE_URL)('manual visit conversions', () => {
 	let campaignId: number, pageId: number, visitId: number, otherVisitId: number;
@@ -257,5 +261,80 @@ describe.skipIf(!process.env.CS_TEST_DATABASE_URL)('manual visit conversions', (
 			.where(eq(conversion_deliveries.id, delivery.id));
 		expect(updated.status).toBe('blocked');
 		expect(updated.last_error).toBe('consent_denied');
+	});
+	it('uses v6 denied defaults, stores blocked outcomes, expires grants and withdraws older browser grants', async () => {
+		await db.insert(page_artifacts).values({
+			campaign_page_id: pageId,
+			source_bucket: 'test',
+			source_path: 'test',
+			asset_bucket: 'test',
+			asset_prefix: 'test',
+			manifest_json: {},
+			content_sha256: 'a'.repeat(64),
+			runtime_version: 'v6'
+		});
+		const [visit] = await db
+			.insert(campaign_visits)
+			.values({
+				campaign_id: campaignId,
+				campaign_page_id: pageId,
+				slug: 'consent-v6',
+				ip_hash_or_session_identifier: visitor
+			})
+			.returning();
+		const [untracked] = await db
+			.insert(lead_journeys)
+			.values({ campaign_id: campaignId, campaign_page_id: pageId, first_touch_type: 'test' })
+			.returning();
+		try {
+			expect(await journeyConsent(untracked.id)).toEqual({ denied: true, source: 'owner_default' });
+		} finally {
+			await db.delete(lead_journeys).where(eq(lead_journeys.id, untracked.id));
+		}
+		const owner = { visitorIdentifier: visitor, campaignPageId: pageId };
+		expect(
+			(await getVisitTracking(visit.id, { name: 'company_identified' }))?.consent
+		).toMatchObject({ adUserDataConsent: 'DENIED', source: 'owner_default' });
+		const blocked = await recordVisitOutcome(visit.id, {
+			...outcome(),
+			externalEventId: 'v6:missing'
+		});
+		expect(blocked).toMatchObject({ status: 'blocked', last_error: 'consent_denied' });
+		const explicit = {
+			...consent,
+			policyVersion: 'cs-consent-v1',
+			expiresAt: new Date(Date.now() + 86400000).toISOString()
+		};
+		await expect(
+			recordVisitConsent(visit.id, { ...explicit, policyVersion: 'old' }, owner)
+		).rejects.toMatchObject({ status: 400 });
+		await recordVisitConsent(visit.id, explicit, owner);
+		expect(
+			(await getVisitTracking(visit.id, { name: 'company_identified' }))?.consent
+		).toMatchObject({ adUserDataConsent: 'GRANTED', source: 'visitor_record' });
+		await db
+			.update(visit_ad_consent)
+			.set({ expires_at: new Date(Date.now() - 1000) })
+			.where(eq(visit_ad_consent.campaign_visit_id, visit.id));
+		expect(
+			(await getVisitTracking(visit.id, { name: 'company_identified' }))?.consent
+		).toMatchObject({ adUserDataConsent: 'DENIED', source: 'owner_default' });
+		const [older] = await db
+			.insert(campaign_visits)
+			.values({
+				campaign_id: campaignId,
+				campaign_page_id: pageId,
+				slug: 'old-v6',
+				ip_hash_or_session_identifier: visitor
+			})
+			.returning();
+		await recordVisitConsent(older.id, explicit, owner);
+		await recordVisitConsent(visit.id, { ...explicit, adUserDataConsent: 'DENIED' }, owner);
+		expect(
+			(await getVisitTracking(older.id, { name: 'company_identified' }))?.consent
+		).toMatchObject({ adUserDataConsent: 'DENIED', source: 'visitor_record' });
+		expect(
+			(await getVisitTracking(visit.id, { name: 'company_identified' }))?.consent
+		).toMatchObject({ adUserDataConsent: 'DENIED', source: 'visitor_record' });
 	});
 });

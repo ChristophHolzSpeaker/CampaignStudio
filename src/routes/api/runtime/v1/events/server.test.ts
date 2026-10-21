@@ -1,5 +1,8 @@
+vi.mock('$lib/server/tracking/consent-policy', () => ({ visitConsentPolicy: mocks.policy }));
+import { consentSettingsSchema } from '$lib/tracking/contract';
 import { beforeEach, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
+	policy: vi.fn(),
 	page: vi.fn(),
 	visit: vi.fn(),
 	journey: vi.fn(),
@@ -36,11 +39,12 @@ function request(events: unknown[] = [event]) {
 			body: JSON.stringify({ campaignPageId: 269, visitId: 17, events })
 		}),
 		url: new URL('https://example.com/api/runtime/v1/events'),
-		cookies: {}
-	} as Parameters<typeof POST>[0]);
+		cookies: { get: () => undefined }
+	} as unknown as Parameters<typeof POST>[0]);
 }
 beforeEach(() => {
 	vi.resetAllMocks();
+	mocks.policy.mockResolvedValue(null);
 	mocks.page.mockResolvedValue({ campaignId: 44, campaignPageId: 269 });
 	mocks.visit.mockResolvedValue(17);
 	mocks.journey.mockResolvedValue(null);
@@ -85,4 +89,9 @@ it('retains origin enforcement', async () => {
 	mocks.origin.mockReturnValue(new Response(null, { status: 403 }));
 	expect((await request()).status).toBe(403);
 	expect(mocks.page).not.toHaveBeenCalled();
+});
+
+it('rejects v6 statistics when the visitor has no opt-in', async () => {
+	mocks.policy.mockResolvedValue(consentSettingsSchema.parse({}));
+	expect((await request()).status).toBe(403);
 });

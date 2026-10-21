@@ -3,7 +3,8 @@ const mocks = vi.hoisted(() => ({
 	page: vi.fn(),
 	record: vi.fn(),
 	visitor: vi.fn(),
-	rate: vi.fn()
+	rate: vi.fn(),
+	setCookie: vi.fn()
 }));
 vi.mock('$lib/server/attribution/campaign-context', () => ({
 	resolvePublishedCampaignPageContext: mocks.page
@@ -34,8 +35,8 @@ const call = (origin = 'https://app.example', body: unknown = input) =>
 			body: JSON.stringify(body)
 		}),
 		url: new URL('https://app.example/api/runtime/v1/consent'),
-		cookies: {}
-	} as Parameters<typeof POST>[0]);
+		cookies: { set: mocks.setCookie }
+	} as unknown as Parameters<typeof POST>[0]);
 beforeEach(() => {
 	vi.resetAllMocks();
 	mocks.page.mockResolvedValue({ campaignId: 62, campaignPageId: 274 });
@@ -65,4 +66,19 @@ it('passes the owning browser context and explicit denial to the service', async
 		{ adUserDataConsent: 'DENIED', evidenceRef: 'cmp:choice:1', policyVersion: 'ads-v1' },
 		{ visitorIdentifier: 'owner-cookie', campaignPageId: 274 }
 	);
+});
+
+it('retains browser ownership to the original expiry when a v6 choice is persisted or restored', async () => {
+	const expiresAt = new Date(Date.now() + 180 * 86400000);
+	mocks.record.mockResolvedValue({ adUserDataConsent: 'DENIED', expiresAt });
+	const body = { ...input, expiresAt: expiresAt.toISOString() };
+	expect((await call(undefined, body)).status).toBe(200);
+	expect((await call(undefined, body)).status).toBe(200);
+	expect(mocks.setCookie).toHaveBeenCalledTimes(2);
+	for (const call of mocks.setCookie.mock.calls)
+		expect(call).toEqual([
+			'cs_vid',
+			'owner-cookie',
+			{ path: '/', httpOnly: true, sameSite: 'lax', secure: true, expires: expiresAt }
+		]);
 });

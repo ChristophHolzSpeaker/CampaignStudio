@@ -1,3 +1,5 @@
+import { pageConsentPolicy } from '$lib/server/tracking/consent-policy';
+import { browserStatisticsAllowed } from '$lib/server/tracking/browser-consent';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { readVisitorIdentifier } from '$lib/server/attribution/campaign-visits';
@@ -36,6 +38,9 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 		campaignPageId: parsed.data.campaignPageId
 	});
 	if (!context) return reply({ ok: false, error: 'Published page not found' }, 404);
+	const policy = await pageConsentPolicy(context.campaignPageId);
+	if (policy && !browserStatisticsAllowed(cookies, policy))
+		return reply({ ok: false, error: 'Statistics consent required' }, 403);
 	const reference = await issueEmailVisitReference({
 		...context,
 		visitorIdentifier,
