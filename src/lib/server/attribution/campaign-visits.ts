@@ -47,6 +47,7 @@ function readVercelGeoHeader(headers: Headers, key: string): string | null {
 export function getOrCreateVisitorIdentifier(input: {
 	cookies: Cookies;
 	secureCookie: boolean;
+	maxAge?: number;
 }): string {
 	const existing = input.cookies.get(VISITOR_COOKIE_NAME);
 	if (existing) {
@@ -59,7 +60,7 @@ export function getOrCreateVisitorIdentifier(input: {
 		httpOnly: true,
 		sameSite: 'lax',
 		secure: input.secureCookie,
-		maxAge: VISITOR_COOKIE_MAX_AGE_SECONDS
+		maxAge: input.maxAge ?? VISITOR_COOKIE_MAX_AGE_SECONDS
 	});
 
 	return created;
@@ -107,13 +108,28 @@ export async function logCampaignVisit(input: {
 	searchParams: URLSearchParams;
 	headers: Headers;
 	visitorIdentifier: string;
+	consentOnly?: boolean;
 }): Promise<{ logged: boolean; visitId: number | null }> {
+	const measurement = input.consentOnly
+		? {}
+		: {
+				referrer: input.headers.get('referer'),
+				utm_source: readUtm(input.searchParams, 'utm_source'),
+				utm_medium: readUtm(input.searchParams, 'utm_medium'),
+				utm_campaign: readUtm(input.searchParams, 'utm_campaign'),
+				utm_term: readUtm(input.searchParams, 'utm_term'),
+				utm_content: readUtm(input.searchParams, 'utm_content'),
+				user_agent: input.headers.get('user-agent'),
+				ip_address: readFirstForwardedIp(input.headers),
+				country: readVercelGeoHeader(input.headers, 'x-vercel-ip-country'),
+				city: readVercelGeoHeader(input.headers, 'x-vercel-ip-city')
+			};
 	// page_view source of truth: we intentionally model page views in campaign_visits
 	// (deduped by visitor and time window) instead of duplicating every view into lead_events.
 	const dedupeWindowStart = new Date(Date.now() - VISIT_DEDUPE_WINDOW_MINUTES * 60 * 1000);
 
 	const [existingVisit] = await db
-		.select({ id: campaign_visits.id })
+		.select({ id: campaign_visits.id, consentOnly: campaign_visits.is_consent_only })
 		.from(campaign_visits)
 		.where(
 			and(
@@ -126,7 +142,15 @@ export async function logCampaignVisit(input: {
 		.limit(1);
 
 	if (existingVisit) {
-		await captureAdClicks({ ...input, visitId: existingVisit.id });
+		if (existingVisit.consentOnly && !input.consentOnly) {
+			await db
+				.update(campaign_visits)
+				.set({ ...measurement, is_consent_only: false })
+				.where(
+					and(eq(campaign_visits.id, existingVisit.id), eq(campaign_visits.is_consent_only, true))
+				);
+		}
+		if (!input.consentOnly) await captureAdClicks({ ...input, visitId: existingVisit.id });
 		return { logged: false, visitId: existingVisit.id };
 	}
 
@@ -136,21 +160,14 @@ export async function logCampaignVisit(input: {
 			campaign_id: input.campaignId,
 			campaign_page_id: input.campaignPageId,
 			slug: input.slug,
-			referrer: input.headers.get('referer'),
-			utm_source: readUtm(input.searchParams, 'utm_source'),
-			utm_medium: readUtm(input.searchParams, 'utm_medium'),
-			utm_campaign: readUtm(input.searchParams, 'utm_campaign'),
-			utm_term: readUtm(input.searchParams, 'utm_term'),
-			utm_content: readUtm(input.searchParams, 'utm_content'),
-			user_agent: input.headers.get('user-agent'),
-			ip_address: readFirstForwardedIp(input.headers),
-			country: readVercelGeoHeader(input.headers, 'x-vercel-ip-country'),
-			city: readVercelGeoHeader(input.headers, 'x-vercel-ip-city'),
+			is_consent_only: Boolean(input.consentOnly),
+			...measurement,
 			ip_hash_or_session_identifier: input.visitorIdentifier
 		})
 		.returning({ id: campaign_visits.id });
 
-	if (createdVisit) await captureAdClicks({ ...input, visitId: createdVisit.id });
+	if (createdVisit && !input.consentOnly)
+		await captureAdClicks({ ...input, visitId: createdVisit.id });
 	return { logged: true, visitId: createdVisit?.id ?? null };
 }
 

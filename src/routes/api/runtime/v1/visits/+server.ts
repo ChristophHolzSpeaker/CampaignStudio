@@ -1,3 +1,5 @@
+import { getTrackingConfig } from '$lib/server/tracking/config';
+import { browserStatisticsAllowed } from '$lib/server/tracking/browser-consent';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { getPublishedArtifactPageById } from '$lib/server/artifacts/repository';
@@ -14,7 +16,8 @@ import type { RequestHandler } from './$types';
 
 const schema = z.object({
 	campaignPageId: z.number().int().positive(),
-	pageUrl: z.string().max(2048)
+	pageUrl: z.string().max(2048),
+	consentOnly: z.boolean().optional()
 });
 
 export const POST: RequestHandler = async ({ request, url, cookies }) => {
@@ -33,9 +36,15 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	const pageUrl = new URL(parsed.data.pageUrl, url.origin);
 	if (pageUrl.origin !== url.origin || pageUrl.pathname !== `/${page.slug}`)
 		return json({ ok: false, error: 'Page context mismatch' }, { status: 400 });
+	const policy =
+		page.runtimeVersion === 'v6' ? (await getTrackingConfig(page.campaignId)).consent : null;
+	const statisticsAllowed = !policy || browserStatisticsAllowed(cookies, policy);
+	if (!statisticsAllowed && !parsed.data.consentOnly)
+		return json({ ok: false, error: 'Statistics consent required' }, { status: 403 });
 	const visitorIdentifier = getOrCreateVisitorIdentifier({
 		cookies,
-		secureCookie: url.protocol === 'https:'
+		secureCookie: url.protocol === 'https:',
+		...(policy ? { maxAge: policy.retentionDays * 86400 } : {})
 	});
 	const rateError = await enforceRuntimeRateLimit(visitorIdentifier);
 	if (rateError) return rateError;
@@ -45,7 +54,8 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 		slug: page.slug,
 		searchParams: pageUrl.searchParams,
 		headers: request.headers,
-		visitorIdentifier
+		visitorIdentifier,
+		consentOnly: Boolean(policy && !statisticsAllowed)
 	});
 	return json({ ok: true, data: result });
 };

@@ -555,3 +555,18 @@ A CRM operator may submit an idempotent manual outcome against an exact campaign
 Owner-selected policy: manual visit advertising consent defaults to GRANTED. This is reported as owner configuration, not a visitor consent record. Explicit visitor denial overrides the default and blocks pending uploads. A platform-managed integration may record decisions through the same-origin, cookie-owned consent endpoint; no authored JavaScript or new banner is required. Google delivery uses the existing worker-held service account with a dedicated relay credential and no delegated Gmail user.
 
 Owner-selected manual destination: `company_identified` and `lead_marked_eligible` default to existing Ads action `7755799338` in customer `2354667197`, with campaign overrides preserved. A client submits one event per decision, never both aliases.
+
+
+## Visitor consent for artifact landing pages (runtime v6, October 2026)
+
+New artifact versions use the platform-managed v6 consent banner. Existing finalized versions remain immutable and pinned to v1–v5 until republished through new upload sessions. Authored JavaScript remains prohibited.
+
+Before GTM loads, all four Consent Mode v2 signals default to denied, with wait_for_update 500, ads_data_redaction true, and url_passthrough true, for all visitors. The owner can select basic or advanced mode; basic is the provisional default pending the owner's/DPO's decision. A GTM custom template must apply updates using Google's consent APIs before platform measurement events are released.
+
+The compact German bottom banner follows the landing page aesthetic, reserves space above it for the usable lead form, and gives equal visual weight to accept, necessary-only and preferences. Keyboard focus remains visible. Categories map Statistik to analytics_storage, Marketing to ad_storage/ad_user_data, and Personalisierung to ad_personalization; all optional categories start off. Links point to https://www.christophholz.com/datenschutzerklarung and https://www.christophholz.com/impressum. A close cross or Escape dismisses for the current page view without granting consent or recording a decision. The data-cs-consent-open authoring hook reopens preferences without reloading.
+
+A host-only first-party cookie remembers category choices, opaque evidence, policy version and original expiry. Owner settings allow 180 or 365 days, provisionally 180. Expiry or a policy change asks again. Explicit marketing decisions use the existing browser-owned consent endpoint; previews show the UI but send no consent, measurement or Google requests.
+
+Campaign Studio optional measurement waits for Statistik by default; the owner may explicitly classify it as necessary. Necessary consent-evidence ownership records contain no measurement metadata and are excluded from visits and analytics. Lead submission and booking remain available. Missing or expired v6 advertising consent defaults to DENIED for offline delivery; the owner setting remains explicit and does not fabricate visitor evidence. Withdrawal blocks queued uploads and stops further optional collection. Legacy defaults remain unchanged for pinned older versions.
+
+Release requires owner/DPO approval of texts and policy settings, the authenticated GTM tag audit (including the Meta consent override and GA4 placeholder), and real HTTPS Tag Assistant/network verification. Local tests establish application behavior, not a GDPR certification or proof of Google receipt. The runtime tracking guide contains the template installation and rollout steps.

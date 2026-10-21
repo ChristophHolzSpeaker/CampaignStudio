@@ -118,6 +118,7 @@ async function getVisitCandidates(input: {
 	}
 
 	const where = and(
+		eq(campaign_visits.is_consent_only, false),
 		eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier),
 		eq(campaign_visits.campaign_id, input.campaignId),
 		lte(campaign_visits.visited_at, input.observedAt)

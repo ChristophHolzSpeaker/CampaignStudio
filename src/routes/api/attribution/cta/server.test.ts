@@ -1,3 +1,6 @@
+import { consentSettingsSchema } from '$lib/tracking/contract';
+import { pageConsentPolicy } from '$lib/server/tracking/consent-policy';
+vi.mock('$lib/server/tracking/consent-policy', () => ({ pageConsentPolicy: vi.fn() }));
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('$lib/server/attribution/client', () => ({
@@ -36,6 +39,7 @@ function requestWithBody(body: unknown): Request {
 
 describe('POST /api/attribution/cta', () => {
 	beforeEach(() => {
+		vi.mocked(pageConsentPolicy).mockResolvedValue(null);
 		mockedTrackCTA.mockReset();
 		mockedReadVisitorIdentifier.mockReset();
 		mockedResolveCampaignVisitId.mockReset();
@@ -143,5 +147,15 @@ describe('POST /api/attribution/cta', () => {
 		} finally {
 			log.mockRestore();
 		}
+	});
+
+	it('rejects v6 CTA measurement without Statistik opt-in', async () => {
+		vi.mocked(pageConsentPolicy).mockResolvedValue(consentSettingsSchema.parse({}));
+		const response = await POST({
+			request: requestWithBody({ type: 'navigation', campaign_id: 10, campaign_page_id: 3 }),
+			cookies: { get: () => undefined }
+		} as never);
+		expect(response.status).toBe(403);
+		expect(mockedTrackCTA).not.toHaveBeenCalled();
 	});
 });

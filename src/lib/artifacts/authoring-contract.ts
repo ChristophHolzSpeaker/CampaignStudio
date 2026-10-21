@@ -15,7 +15,7 @@ import {
 } from './contract';
 
 export const ARTIFACT_AUTHORING_CONTRACT = {
-	contractVersion: 5,
+	contractVersion: 6,
 	runtimeVersion: ARTIFACT_RUNTIME_VERSION,
 	rendererType: 'artifact',
 	discovery: {
@@ -42,7 +42,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 		'Upload every file as raw bytes to the session using its exact relative path and media type.',
 		'Finalize the session and retain the returned campaignPageId and previewUrl.',
 		'Have a human review the tokenized previewUrl.',
-		'For each v5 campaign, GET its tracking configuration and PUT the owner-approved GTM-MCDDK28B container while preserving mappings. There is no global default; republishing does not configure GTM. Confirm before replacing a different container or deliberately disabled tracking.',
+		'For each v6 campaign, GET its tracking configuration and PUT the owner-approved GTM-MCDDK28B container while preserving mappings. There is no global default; republishing does not configure GTM. Confirm before replacing a different container or deliberately disabled tracking.',
 		'Publish that campaignPageId. Publishing an older finalized version performs rollback.',
 		'Verify the live tracking endpoint returns the expected container and the published page loads gtm.js and connects in Tag Assistant; preview cannot verify GTM. Report incomplete verification.',
 		'Use the returned liveUrl; unpublish the active campaignPageId when removal is required.'
@@ -108,11 +108,14 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 	},
 	measurement: {
 		googleConsentDefaults: {
-			ad_storage: 'granted',
-			analytics_storage: 'granted',
-			ad_user_data: 'granted',
-			ad_personalization: 'granted',
-			source: 'owner_configuration',
+			ad_storage: 'denied',
+			analytics_storage: 'denied',
+			ad_user_data: 'denied',
+			ad_personalization: 'denied',
+			wait_for_update: 500,
+			ads_data_redaction: true,
+			url_passthrough: true,
+			source: 'platform_default',
 			visitorConsentEvidence: false
 		},
 		eventSchema: z.toJSONSchema(measurementSchema),
@@ -140,11 +143,39 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			'Preview is tokenized and non-indexable. Visit, engagement, CTA, and lead submission side effects are disabled in preview.',
 		automaticAnalytics: {
 			pageVisit:
-				'Recorded on a published artifact load with available URL, UTM, referrer, and visitor context.',
+				'Runtime v6: after Statistik opt-in by default; a choice without Statistik creates only a minimal consent ownership visit. Legacy runtimes record on load.',
 			engagement: 'Recorded after 10 seconds or on page exit after a runtime interaction.',
 			ctaClick: 'Recorded for the closest ancestor marked data-cs-action="cta".',
 			youtubeVideoPlay:
 				'Recorded once per rendered YouTube widget after its player first enters playback.'
+		},
+		consent: {
+			sinceRuntime: 'v6',
+			settings: 'GET/PUT /api/public/v1/campaigns/{id}/tracking, consent field',
+			reopenSelector: '[data-cs-consent-open]',
+			dismissal:
+				'The top-right close button and Escape dismiss for this page view without changing consent or recording a choice. Defaults remain denied when no previous choice exists; the footer hook reopens preferences.',
+			appearance:
+				'Uses the platform Bureau Grot body and condensed display fonts, square equal-weight outlined controls, a white surface and the Christoph Holz red accent. On narrow screens the content scrolls while choice buttons stay visible.',
+			example: '<button type="button" data-cs-consent-open>Cookie-Einstellungen</button>',
+			behavior:
+				'Platform-managed German banner with equal-weight accept, reject and preferences controls. Preview is local only. No authored JavaScript. Reserve the bottom viewport for the panel; the body scrolls above it.',
+			categories: {
+				necessary: 'always on',
+				statistics: ['analytics_storage'],
+				marketing: ['ad_storage', 'ad_user_data'],
+				personalization: ['ad_personalization']
+			},
+			defaults: {
+				mode: 'basic',
+				retentionDays: 180,
+				ownMeasurement: 'statistics',
+				missingOfflineConsent: 'DENIED'
+			},
+			cookie:
+				'cs_consent; host-only; SameSite=Lax; Secure on HTTPS; invalidated by expiry or policyVersion change',
+			measurement:
+				'Statistics requires opt-in by default. A minimal visit and cs_vid after a choice are necessary only to bind consent evidence. Lead submission and booking remain available.'
 		},
 		cta: {
 			selector: '[data-cs-action="cta"]',
@@ -222,7 +253,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 				'data-cs-video-title': 'Accessible video title, maximum 120 characters.'
 			},
 			behavior:
-				'Campaign Studio validates the video ID and initializes a privacy-enhanced YouTube player from www.youtube-nocookie.com directly in the placeholder when the page loads, with native controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube’s own play control once; there is no Campaign Studio load button. YouTube resources load before visitor activation. Place the placeholder in normal document flow; do not add modal, lightbox, overlay, or separate play-link wrappers. On first confirmed playback, the runtime records a video CTA event with key video-<youtubeId>, section videos, and the title or video ID as label. Do not add CTA tracking to the widget or its ancestors, or author an iframe, embed URL, player parameters, or YouTube API code.',
+				'Campaign Studio validates the video ID and initializes a privacy-enhanced YouTube player from www.youtube-nocookie.com directly in the placeholder when the page loads, with native controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube’s own play control once; there is no Campaign Studio load button. On live v6 pages YouTube resources wait for Marketing consent; otherwise the widget offers a Cookie-Einstellungen button. Legacy v4/v5 resources load on page initialization. Place the placeholder in normal document flow; do not add modal, lightbox, overlay, or separate play-link wrappers. On first confirmed playback, the runtime records a video CTA event with key video-<youtubeId>, section videos, and the title or video ID as label. Do not add CTA tracking to the widget or its ancestors, or author an iframe, embed URL, player parameters, or YouTube API code.',
 			example:
 				'<div data-cs-widget="youtube-video" data-cs-youtube-id="dQw4w9WgXcQ" data-cs-video-title="Campaign introduction"></div>'
 		}
@@ -472,11 +503,11 @@ Open the returned preview URL for human review. Preview disables visits, engagem
 
 ### 6a. Configure GTM for each campaign
 
-For every campaign being created or migrated to runtime v5, read \`GET /api/public/v1/campaigns/{id}/tracking\` with the campaign-write token before publishing. Tracking settings belong to the campaign and are shared by its artifact versions; they are not global. New or unconfigured campaigns default to \`gtmContainerId: null\`, which disables GTM loading. Uploading, finalizing, and republishing do not set or inherit a container ID.
+For every campaign being created or migrated to runtime v6, read \`GET /api/public/v1/campaigns/{id}/tracking\` with the campaign-write token before publishing. Tracking settings belong to the campaign and are shared by its artifact versions; they are not global. New or unconfigured campaigns default to \`gtmContainerId: null\`, which disables GTM loading. Uploading, finalizing, and republishing do not set or inherit a container ID.
 
 For this deployment, the owner-approved existing container is \`GTM-MCDDK28B\`. Set \`gtmContainerId\` through \`PUT /api/public/v1/campaigns/{id}/tracking\`, preserving the complete mappings array returned by GET. Do not copy illustrative Ads mappings or clear existing mappings. If a campaign has a different container or explicitly disabled tracking, confirm the intended change before replacing it. This API setup needs the campaign-write token; it does not require Google Ads OAuth access. Never insert GTM snippets into artifact HTML.
 
-If configuration cannot be read or saved, report tracking setup as incomplete. Preview intentionally loads no GTM and cannot verify this step. See the runtime v5 tracking guide below for the configuration schema and Google container setup.
+If configuration cannot be read or saved, report tracking setup as incomplete. Preview intentionally loads no GTM and cannot verify this step. Install the platform consent template from /campaign-runtime/consent-v6.tpl in the configured container before verifying measurement. See the runtime v6 tracking guide below for the configuration schema and Google container setup.
 
 ### 7. Publish, rollback, or unpublish
 
@@ -485,7 +516,7 @@ curl -sS -X POST "${origin}/api/public/v1/artifact-versions/$CAMPAIGN_PAGE_ID/pu
   -H "Authorization: Bearer $CAMPAIGN_WRITE_TOKEN"
 \`\`\`
 
-After publishing a v5 artifact, check \`GET /api/runtime/v1/tracking?pageId={campaignPageId}\` returns the expected container, then open the live page and verify a request to \`https://www.googletagmanager.com/gtm.js?id=GTM-MCDDK28B\` and connection in Tag Assistant. Repeat for every affected campaign. A successful publish or a dataLayer event alone does not prove GTM loaded. Report any verification you could not perform. Configuration changes apply on the next page load without republishing.
+After publishing a v6 artifact and accepting an optional consent category (or selecting advanced mode), check \`GET /api/runtime/v1/tracking?pageId={campaignPageId}\` returns the expected container, then open the live page and verify a request to \`https://www.googletagmanager.com/gtm.js?id=GTM-MCDDK28B\` and connection in Tag Assistant. Repeat for every affected campaign. A successful publish or a dataLayer event alone does not prove GTM loaded. Report any verification you could not perform. Configuration changes apply on the next page load without republishing.
 
 The returned \`data.liveUrl\` is the canonical \`/{slug}\` URL. Publication is atomic. To perform rollback, publish an older finalized \`campaignPageId\`; immutable artifact objects are not changed.
 
@@ -533,7 +564,7 @@ Lead submissions reuse Campaign Studio's lead, attribution, journey, qualificati
 
 The booking placeholder is replaced with the maintained same-origin booking widget. In preview, it renders a clear disabled-booking notice; booking mutations are unavailable.
 
-The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. YouTube resources load before visitor activation. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v5, then preview and publish it. v3 retains its two-step click-to-load behavior.
+The YouTube placeholder is replaced directly with the privacy-enhanced \`www.youtube-nocookie.com\` player for the validated video ID when the page loads. Like the section renderer's YouTube grid, runtime v4 displays the native player with controls, autoplay disabled, and inline playback enabled. The visitor clicks YouTube's own play control once; there is no Campaign Studio load button. On live v6 pages YouTube resources wait for Marketing consent; otherwise the widget offers a Cookie-Einstellungen button. Legacy v4/v5 resources load on page initialization. Place the placeholder in normal document flow with a responsive 16:9 area; do not wrap it in a modal, lightbox, overlay, or separate play link. On first confirmed playback, the runtime records one \`cta_click\` event with type \`video\`, key \`video-<youtubeId>\`, section \`videos\`, and the authored title (or video ID) as label. Loading the player, pauses, resumes, seeks, and replays do not create additional events for that rendered widget. Do not add CTA tracking to the widget or its ancestors: the runtime owns confirmed-play tracking. Existing finalized versions retain their pinned runtime; upload and finalize a new artifact version to adopt v6, then preview and publish it. v3 retains its two-step click-to-load behavior.
 
 Do not reproduce these behaviors in authored code. Authored JavaScript is rejected, and platform IDs are resolved from signed/injected runtime context.
 

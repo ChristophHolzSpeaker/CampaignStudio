@@ -1,7 +1,8 @@
+import { consentBannerMarkup, consentBannerStyle } from './consent-banner';
 import type { ArtifactPageRecord } from './repository';
 import { createBookingWidgetToken } from './widget-token';
 
-const ARTIFACT_RENDERER_REVISION = 'r6';
+const ARTIFACT_RENDERER_REVISION = 'r7';
 
 type ArtifactPublicContext = {
 	runtimeVersion: string;
@@ -30,7 +31,8 @@ function serializeInertJson(value: unknown): string {
 export function injectArtifactRuntime(
 	html: string,
 	page: ArtifactPageRecord,
-	preview: boolean
+	preview: boolean,
+	consentInitiallyHidden = false
 ): string {
 	const context: ArtifactPublicContext = {
 		runtimeVersion: page.runtimeVersion,
@@ -53,11 +55,17 @@ export function injectArtifactRuntime(
 		}
 	};
 	const fontStylesheet = `<link rel="stylesheet" href="/campaign-runtime/fonts/${page.runtimeVersion}.css" data-cs-platform-fonts>`;
-	const emailHelper = preview ? '' : '<script src="/campaign-runtime/email-v1.js" defer></script>';
-	const injection = `<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="/campaign-runtime/${page.runtimeVersion}.js" defer></script>${emailHelper}`;
+	const emailHelper =
+		preview || page.runtimeVersion === 'v6'
+			? ''
+			: '<script src="/campaign-runtime/email-v1.js" defer></script>';
+	const injection = `${page.runtimeVersion === 'v6' ? (consentInitiallyHidden && !preview ? consentBannerMarkup.replace('id="cs-consent"', 'id="cs-consent" hidden') : consentBannerMarkup) : ''}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="/campaign-runtime/${page.runtimeVersion}.js" defer></script>${emailHelper}`;
 	const documentWithFonts = /<\/head\s*>/i.test(html)
-		? html.replace(/<\/head\s*>/i, `${fontStylesheet}</head>`)
-		: `${fontStylesheet}${html}`;
+		? html.replace(
+				/<\/head\s*>/i,
+				`${fontStylesheet}${page.runtimeVersion === 'v6' ? consentBannerStyle : ''}</head>`
+			)
+		: `${fontStylesheet}${page.runtimeVersion === 'v6' ? consentBannerStyle : ''}${html}`;
 	if (/<\/body\s*>/i.test(documentWithFonts))
 		return documentWithFonts.replace(/<\/body\s*>/i, `${injection}</body>`);
 	return `${documentWithFonts}${injection}`;
@@ -80,11 +88,14 @@ export function artifactResponseHeaders(
 	const frameAncestors = preview ? '*' : "'none'";
 	return {
 		'Content-Type': 'text/html; charset=utf-8',
-		'Cache-Control': preview
-			? 'private, no-store'
-			: 'public, s-maxage=60, stale-while-revalidate=300',
-		ETag: `"${page.contentSha256}-${page.runtimeVersion}-${ARTIFACT_RENDERER_REVISION}"`,
-		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self' https://www.youtube.com${page.runtimeVersion === 'v5' && !preview ? ' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com' : ''}; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'${page.runtimeVersion === 'v5' && !preview ? ' https://pagead2.googlesyndication.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://www.google.de https://*.doubleclick.net' : ''}; form-action 'self'; frame-src 'self' https://www.youtube-nocookie.com${page.runtimeVersion === 'v5' && !preview ? ' https://www.googletagmanager.com https://td.doubleclick.net https://www.google.com' : ''}; frame-ancestors ${frameAncestors}`,
+		'Cache-Control':
+			preview || page.runtimeVersion === 'v6'
+				? 'private, no-store'
+				: 'public, s-maxage=60, stale-while-revalidate=300',
+		...(page.runtimeVersion === 'v6'
+			? {}
+			: { ETag: `"${page.contentSha256}-${page.runtimeVersion}-${ARTIFACT_RENDERER_REVISION}"` }),
+		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self' https://www.youtube.com${['v5', 'v6'].includes(page.runtimeVersion) && !preview ? ' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com' : ''}; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'${['v5', 'v6'].includes(page.runtimeVersion) && !preview ? ' https://pagead2.googlesyndication.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://www.google.de https://*.doubleclick.net' : ''}; form-action 'self'; frame-src 'self' https://www.youtube-nocookie.com${['v5', 'v6'].includes(page.runtimeVersion) && !preview ? ' https://www.googletagmanager.com https://td.doubleclick.net https://www.google.com' : ''}; frame-ancestors ${frameAncestors}`,
 		'Referrer-Policy': 'strict-origin-when-cross-origin',
 		'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
 		'X-Content-Type-Options': 'nosniff',

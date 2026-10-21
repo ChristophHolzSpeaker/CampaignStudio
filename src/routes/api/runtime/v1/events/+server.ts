@@ -1,3 +1,5 @@
+import { visitConsentPolicy } from '$lib/server/tracking/consent-policy';
+import { browserStatisticsAllowed } from '$lib/server/tracking/browser-consent';
 import { json } from '@sveltejs/kit';
 import { z } from 'zod';
 import { db } from '$lib/server/db';
@@ -52,6 +54,9 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 			{ ok: false, error: 'Visit does not belong to this browser/page' },
 			{ status: 403 }
 		);
+	const policy = await visitConsentPolicy(visit);
+	if (policy && !browserStatisticsAllowed(cookies, policy))
+		return json({ ok: false, error: 'Statistics consent required' }, { status: 403 });
 	const journey = await journeyForVisit(visit);
 	await db
 		.insert(tracking_events)

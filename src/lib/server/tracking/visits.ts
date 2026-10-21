@@ -1,4 +1,5 @@
-import { and, desc, eq, lte } from 'drizzle-orm';
+import { effectiveVisitConsent, visitConsentPolicy } from './consent-policy';
+import { and, desc, eq, lte, inArray } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import {
@@ -7,7 +8,8 @@ import {
 	visit_ad_clicks,
 	visit_ad_consent,
 	tracking_events,
-	conversion_deliveries
+	conversion_deliveries,
+	page_artifacts
 } from '$lib/server/db/schema';
 import {
 	findMapping,
@@ -42,14 +44,12 @@ export async function visitAttribution(visitId: number, before = new Date()) {
 		.select()
 		.from(visit_ad_consent)
 		.where(eq(visit_ad_consent.campaign_visit_id, visitId));
-	return { visit, clicks: clicks.map((c) => c.click), consent };
-}
-
-export function consentBlock(
-	consent: typeof visit_ad_consent.$inferSelect | undefined
-): string | null {
-	if (!consent) return null; // Owner-selected default, not a visitor consent record.
-	return consent.ad_user_data === 'GRANTED' ? null : 'consent_denied';
+	return {
+		visit,
+		clicks: clicks.map((c) => c.click),
+		consent,
+		effectiveConsent: await effectiveVisitConsent(visitId, consent)
+	};
 }
 
 export async function recordVisitConsent(
@@ -70,18 +70,57 @@ export async function recordVisitConsent(
 		)
 		.limit(1);
 	if (!visit) throw new OutcomeError(404, 'Visit not found');
+	const policy = await visitConsentPolicy(visitId);
+	if (
+		policy &&
+		(input.policyVersion !== policy.policyVersion ||
+			!input.expiresAt ||
+			new Date(input.expiresAt).getTime() <= Date.now() ||
+			new Date(input.expiresAt).getTime() > Date.now() + policy.retentionDays * 86400000)
+	)
+		throw new OutcomeError(400, 'Consent policy or expiry is invalid');
 	const values = {
+		expires_at: input.expiresAt ? new Date(input.expiresAt) : null,
 		campaign_visit_id: visitId,
 		ad_user_data: input.adUserDataConsent,
 		evidence_ref: input.evidenceRef,
 		policy_version: input.policyVersion,
 		recorded_at: new Date()
 	};
-	const [row] = await db
-		.insert(visit_ad_consent)
-		.values(values)
-		.onConflictDoUpdate({ target: visit_ad_consent.campaign_visit_id, set: values })
-		.returning();
+	const row = await db.transaction(async (tx) => {
+		const [saved] = await tx
+			.insert(visit_ad_consent)
+			.values(values)
+			.onConflictDoUpdate({ target: visit_ad_consent.campaign_visit_id, set: values })
+			.returning();
+		if (policy && input.adUserDataConsent === 'DENIED') {
+			// Host-wide policy withdrawal also invalidates older grants owned by this browser.
+			const owned = tx
+				.select({ id: campaign_visits.id })
+				.from(campaign_visits)
+				.innerJoin(
+					page_artifacts,
+					eq(page_artifacts.campaign_page_id, campaign_visits.campaign_page_id)
+				)
+				.where(
+					and(
+						eq(campaign_visits.ip_hash_or_session_identifier, owner.visitorIdentifier),
+						eq(page_artifacts.runtime_version, 'v6')
+					)
+				);
+			const { campaign_visit_id: _visitId, ...decision } = values;
+			await tx
+				.update(visit_ad_consent)
+				.set(decision)
+				.where(
+					and(
+						inArray(visit_ad_consent.campaign_visit_id, owned),
+						eq(visit_ad_consent.policy_version, input.policyVersion)
+					)
+				);
+		}
+		return saved;
+	});
 	return {
 		adUserDataConsent: row.ad_user_data,
 		recordedAt: row.recorded_at,
@@ -96,7 +135,7 @@ export async function visitReadiness(
 	const before = query.occurredAt ? new Date(query.occurredAt) : new Date();
 	const attribution = await visitAttribution(visitId, before);
 	if (!attribution) return null;
-	const { visit, clicks, consent } = attribution;
+	const { visit, clicks } = attribution;
 	const mapping = findMapping(
 		await getTrackingConfig(visit.campaign_id),
 		'offline',
@@ -110,7 +149,8 @@ export async function visitReadiness(
 	const click = clicks[0];
 	if (!click) reasons.push('missing_click_id');
 	else if (Date.now() - click.captured_at.getTime() > 90 * 86400000) reasons.push('click_expired');
-	const blocked = consentBlock(consent);
+	const blocked =
+		attribution.effectiveConsent.adUserDataConsent === 'GRANTED' ? null : 'consent_denied';
 	if (blocked) reasons.push(blocked);
 	if (!env.CRM_WRITE_API_TOKEN) reasons.push('crm_write_not_configured');
 	if (!googleConfigured()) reasons.push('google_not_configured');
@@ -140,12 +180,7 @@ export async function getVisitTracking(
 		visitId,
 		campaignId: result.visit.campaign_id,
 		clicks: result.clicks.map((c) => ({ kind: c.kind, capturedAt: c.captured_at })),
-		consent: {
-			adUserDataConsent: result.consent?.ad_user_data ?? 'GRANTED',
-			source: result.consent ? 'visitor_record' : 'owner_default',
-			recordedAt: result.consent?.recorded_at ?? null,
-			policyVersion: result.consent?.policy_version ?? null
-		},
+		consent: result.effectiveConsent,
 		readiness: {
 			ready: result.reasons.length === 0,
 			reasons: result.reasons,
