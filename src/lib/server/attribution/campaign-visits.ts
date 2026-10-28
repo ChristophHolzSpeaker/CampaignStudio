@@ -1,8 +1,9 @@
+import { OutcomeError } from '$lib/server/tracking/errors';
 import { captureAdClicks } from '$lib/server/tracking/attribution';
 import { db } from '$lib/server/db';
 import { campaign_visits } from '$lib/server/db/schema';
 import type { Cookies } from '@sveltejs/kit';
-import { and, desc, eq, gte, lte } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, isNull, or } from 'drizzle-orm';
 
 const VISITOR_COOKIE_NAME = 'cs_vid';
 const VISITOR_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
@@ -107,43 +108,79 @@ export async function logCampaignVisit(input: {
 	slug: string;
 	searchParams: URLSearchParams;
 	headers: Headers;
-	visitorIdentifier: string;
+	visitorIdentifier: string | null;
+	// Only supplied after verification of the page-scoped receipt.
+	receiptVisitId?: number;
 	consentOnly?: boolean;
 	captureAds?: boolean;
 }): Promise<{ logged: boolean; visitId: number | null }> {
-	const captureAds = input.captureAds ?? !input.consentOnly;
+	const captureAds = input.visitorIdentifier !== null && (input.captureAds ?? !input.consentOnly);
 	const measurement = input.consentOnly
 		? {}
 		: {
-				referrer: input.headers.get('referer'),
+				referrer: input.visitorIdentifier ? input.headers.get('referer') : null,
 				utm_source: readUtm(input.searchParams, 'utm_source'),
 				utm_medium: readUtm(input.searchParams, 'utm_medium'),
 				utm_campaign: readUtm(input.searchParams, 'utm_campaign'),
 				utm_term: readUtm(input.searchParams, 'utm_term'),
 				utm_content: readUtm(input.searchParams, 'utm_content'),
-				user_agent: input.headers.get('user-agent'),
+				user_agent: input.visitorIdentifier ? input.headers.get('user-agent') : null,
 				ip_address: readFirstForwardedIp(input.headers),
 				country: readVercelGeoHeader(input.headers, 'x-vercel-ip-country'),
-				city: readVercelGeoHeader(input.headers, 'x-vercel-ip-city')
+				city: input.visitorIdentifier
+					? readVercelGeoHeader(input.headers, 'x-vercel-ip-city')
+					: null
 			};
 	// page_view source of truth: we intentionally model page views in campaign_visits
 	// (deduped by visitor and time window) instead of duplicating every view into lead_events.
 	const dedupeWindowStart = new Date(Date.now() - VISIT_DEDUPE_WINDOW_MINUTES * 60 * 1000);
 
-	const [existingVisit] = await db
-		.select({ id: campaign_visits.id, consentOnly: campaign_visits.is_consent_only })
-		.from(campaign_visits)
-		.where(
-			and(
-				eq(campaign_visits.campaign_id, input.campaignId),
-				eq(campaign_visits.campaign_page_id, input.campaignPageId),
-				eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier),
-				gte(campaign_visits.visited_at, dedupeWindowStart)
-			)
-		)
-		.limit(1);
+	const [existingVisit] =
+		input.visitorIdentifier === null
+			? []
+			: await db
+					.select({ id: campaign_visits.id, consentOnly: campaign_visits.is_consent_only })
+					.from(campaign_visits)
+					.where(
+						and(
+							eq(campaign_visits.campaign_id, input.campaignId),
+							eq(campaign_visits.campaign_page_id, input.campaignPageId),
+							input.receiptVisitId
+								? and(
+										eq(campaign_visits.id, input.receiptVisitId),
+										or(
+											isNull(campaign_visits.ip_hash_or_session_identifier),
+											eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier)
+										)
+									)
+								: eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier),
+							gte(campaign_visits.visited_at, dedupeWindowStart)
+						)
+					)
+					.limit(1);
 
+	if (input.receiptVisitId && !existingVisit)
+		throw new OutcomeError(409, 'Visit receipt is no longer claimable');
 	if (existingVisit) {
+		if (input.receiptVisitId) {
+			const [claimed] = await db
+				.update(campaign_visits)
+				.set({
+					ip_hash_or_session_identifier: input.visitorIdentifier,
+					...(!input.consentOnly ? measurement : {})
+				})
+				.where(
+					and(
+						eq(campaign_visits.id, existingVisit.id),
+						or(
+							isNull(campaign_visits.ip_hash_or_session_identifier),
+							eq(campaign_visits.ip_hash_or_session_identifier, input.visitorIdentifier!)
+						)
+					)
+				)
+				.returning({ id: campaign_visits.id });
+			if (!claimed) throw new OutcomeError(409, 'Visit receipt is no longer claimable');
+		}
 		if (existingVisit.consentOnly && !input.consentOnly) {
 			await db
 				.update(campaign_visits)
@@ -152,7 +189,12 @@ export async function logCampaignVisit(input: {
 					and(eq(campaign_visits.id, existingVisit.id), eq(campaign_visits.is_consent_only, true))
 				);
 		}
-		if (captureAds) await captureAdClicks({ ...input, visitId: existingVisit.id });
+		if (captureAds)
+			await captureAdClicks({
+				...input,
+				visitorIdentifier: input.visitorIdentifier!,
+				visitId: existingVisit.id
+			});
 		return { logged: false, visitId: existingVisit.id };
 	}
 
@@ -168,7 +210,12 @@ export async function logCampaignVisit(input: {
 		})
 		.returning({ id: campaign_visits.id });
 
-	if (createdVisit && captureAds) await captureAdClicks({ ...input, visitId: createdVisit.id });
+	if (createdVisit && captureAds)
+		await captureAdClicks({
+			...input,
+			visitorIdentifier: input.visitorIdentifier!,
+			visitId: createdVisit.id
+		});
 	return { logged: true, visitId: createdVisit?.id ?? null };
 }
 
