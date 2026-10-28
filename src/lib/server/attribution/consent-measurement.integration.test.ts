@@ -50,6 +50,53 @@ describe.skipIf(!process.env.CS_TEST_DATABASE_URL)('consent ownership and report
 		await db.delete(campaign_pages).where(eq(campaign_pages.id, pageId));
 		await db.delete(campaigns).where(eq(campaigns.id, campaignId));
 	});
+	it('counts a cookieless IP visit and claims it after consent without duplication', async () => {
+		const owner = crypto.randomUUID();
+		visitors.push(owner);
+		const input = {
+			campaignId,
+			campaignPageId: pageId,
+			slug: 'consent-measurement-' + visitor,
+			searchParams: new URLSearchParams('utm_source=baseline&gclid=not-permitted'),
+			headers: new Headers({ 'x-forwarded-for': '203.0.113.12' }),
+			captureAds: false
+		};
+		const baseline = await logCampaignVisit({ ...input, visitorIdentifier: null });
+		const read = () =>
+			db.select().from(campaign_visits).where(eq(campaign_visits.id, baseline.visitId!));
+		expect((await read())[0]).toMatchObject({
+			ip_address: '203.0.113.12',
+			utm_source: 'baseline',
+			ip_hash_or_session_identifier: null,
+			is_consent_only: false
+		});
+		expect(
+			await db
+				.select()
+				.from(vw_visit_enriched)
+				.where(eq(vw_visit_enriched.visit_id, baseline.visitId!))
+		).toHaveLength(1);
+		const claimed = await logCampaignVisit({
+			...input,
+			visitorIdentifier: owner,
+			receiptVisitId: baseline.visitId!
+		});
+		expect(claimed).toEqual({ logged: false, visitId: baseline.visitId });
+		expect(await read()).toHaveLength(1);
+		expect((await read())[0].ip_hash_or_session_identifier).toBe(owner);
+		await expect(
+			logCampaignVisit({
+				...input,
+				visitorIdentifier: 'another-browser',
+				receiptVisitId: baseline.visitId!
+			})
+		).rejects.toThrow('no longer claimable');
+		expect(await db.select().from(ad_clicks).where(eq(ad_clicks.visitor_id, owner))).toHaveLength(
+			0
+		);
+		// Isolate the pre-existing reporting assertions below.
+		await db.delete(campaign_visits).where(eq(campaign_visits.id, baseline.visitId!));
+	});
 	it('excludes rejected ownership records, upgrades once on opt-in, and preserves historical measurements on withdrawal', async () => {
 		const input = {
 			campaignId,

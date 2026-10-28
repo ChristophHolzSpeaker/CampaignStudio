@@ -24,6 +24,37 @@ describe('logCampaignVisit', () => {
 		mockedDb.update.mockReset();
 	});
 
+	it('records IP and UTM without a visitor identifier, dedupe query or ad capture', async () => {
+		const values = vi.fn().mockReturnValue({ returning: vi.fn().mockResolvedValue([{ id: 88 }]) });
+		mockedDb.insert.mockReturnValueOnce({ values } as never);
+		await expect(
+			logCampaignVisit({
+				campaignId: 44,
+				campaignPageId: 55,
+				slug: 'landing',
+				searchParams: new URLSearchParams('utm_source=test&gclid=must-not-capture'),
+				headers: new Headers({
+					'x-forwarded-for': '203.0.113.12',
+					'user-agent': 'ignored',
+					'x-vercel-ip-city': 'ignored'
+				}),
+				visitorIdentifier: null,
+				captureAds: false
+			})
+		).resolves.toEqual({ logged: true, visitId: 88 });
+		expect(values).toHaveBeenCalledWith(
+			expect.objectContaining({
+				ip_address: '203.0.113.12',
+				utm_source: 'test',
+				ip_hash_or_session_identifier: null,
+				is_consent_only: false,
+				user_agent: null,
+				city: null
+			})
+		);
+		expect(mockedDb.select).not.toHaveBeenCalled();
+		expect(mockedDb.insert).toHaveBeenCalledTimes(1);
+	});
 	it('dedupes repeated visits in the window', async () => {
 		const where = vi.fn().mockReturnThis();
 		const limit = vi.fn().mockResolvedValueOnce([{ id: 1 }]);

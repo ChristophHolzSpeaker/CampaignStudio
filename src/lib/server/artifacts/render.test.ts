@@ -92,6 +92,9 @@ describe('artifact response security headers', () => {
 		expect(injectArtifactRuntime(html, v6, false, true)).toContain('id="cs-consent" hidden');
 		expect(injectArtifactRuntime(html, v6, true, true)).not.toContain('id="cs-consent" hidden');
 		expect(injectArtifactRuntime(html, v6, false)).toContain('data-cs-consent-style');
+		expect(injectArtifactRuntime(html, v6, false)).toContain(
+			'/campaign-runtime/v6.js?revision=visit-ip-1'
+		);
 		expect(injectArtifactRuntime(html, page, false)).not.toContain('id="cs-consent"');
 		const headers = new Headers(artifactResponseHeaders(v6, false, 'https://assets.example.com'));
 		expect(headers.get('cache-control')).toBe('private, no-store');

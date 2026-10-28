@@ -74,13 +74,15 @@ async function mount(
 				})
 			);
 		}
-		if (url === '/visits' && options.deferVisit)
+		if (url === '/visits' && options.deferVisit && JSON.parse(String(init?.body)).baselineOnly)
 			return new Promise<Response>((resolve) => {
 				finishVisit = resolve;
 			});
 		if (url === '/api/runtime/v1/consent' && options.failConsent)
 			return new Response(null, { status: 503 });
-		return new Response(JSON.stringify({ data: { visitId: 17, message: 'Danke' } }));
+		return new Response(
+			JSON.stringify({ data: { visitId: 17, visitReceipt: 'page-receipt', message: 'Danke' } })
+		);
 	});
 	Object.assign(win, {
 		fetch,
@@ -163,7 +165,10 @@ async function mount(
 		click,
 		settle,
 		finishTracking: () => finishTracking(),
-		finishVisit: () => finishVisit(new Response(JSON.stringify({ data: { visitId: 17 } }))),
+		finishVisit: () =>
+			finishVisit(
+				new Response(JSON.stringify({ data: { visitId: 17, visitReceipt: 'page-receipt' } }))
+			),
 		host: win.document.querySelector<HTMLElement>('#cs-consent')!,
 		posts: (url: string) =>
 			fetch.mock.calls
@@ -182,6 +187,15 @@ const saved = (extra: Record<string, unknown> = {}) => ({
 });
 
 describe('runtime v6 consent', () => {
+	it('records a cookieless baseline visit before any consent choice', async () => {
+		const app = await mount();
+		expect(app.posts('/visits')).toEqual([
+			{ campaignPageId: 222, pageUrl: '/landing?gclid=test', baselineOnly: true }
+		]);
+		expect(app.win.document.cookie).not.toContain('cs_vid=');
+		expect(app.order).not.toContain('script');
+		expect(app.posts('/api/runtime/v1/events')).toHaveLength(0);
+	});
 	it('does not request YouTube resources in preview or before Marketing consent', async () => {
 		for (const preview of [true, false]) {
 			const app = await mount({ preview, youtube: true });
@@ -211,15 +225,21 @@ describe('runtime v6 consent', () => {
 		)!.checked = true;
 		await app.click('[data-cs-consent-save]');
 		expect(app.posts('/visits')).toEqual([
-			{ campaignPageId: 222, pageUrl: '/landing?gclid=test', consentOnly: true }
+			{ campaignPageId: 222, pageUrl: '/landing?gclid=test', baselineOnly: true },
+			{
+				campaignPageId: 222,
+				pageUrl: '/landing?gclid=test',
+				consentOnly: true,
+				visitReceipt: 'page-receipt'
+			}
 		]);
 		expect(app.posts('/api/runtime/v1/events')).toHaveLength(0);
 		const later = await mount();
 		await later.click('[data-cs-consent-reject]');
 		await later.click('main [data-cs-consent-open]');
 		await later.click('[data-cs-consent-accept]');
-		expect(later.posts('/visits')).toHaveLength(2);
-		expect(later.posts('/visits')[1].pageUrl).toBe('/landing?gclid=test');
+		expect(later.posts('/visits')).toHaveLength(3);
+		expect(later.posts('/visits')[2].pageUrl).toBe('/landing?gclid=test');
 	});
 	it('does not persist an obsolete grant while visit creation is still pending', async () => {
 		const app = await mount({ deferVisit: true });
@@ -278,7 +298,7 @@ describe('runtime v6 consent', () => {
 		expect(app.layer()[1]).toMatchObject({ 0: 'set', 1: 'ads_data_redaction', 2: true });
 		expect(app.layer()[2]).toMatchObject({ 0: 'set', 1: 'url_passthrough', 2: true });
 		expect(app.order).not.toContain('script');
-		expect(app.posts('/visits')).toHaveLength(0);
+		expect(app.posts('/visits')).toHaveLength(1);
 		expect(app.host.hidden).toBe(false);
 	});
 
@@ -294,7 +314,7 @@ describe('runtime v6 consent', () => {
 		const app = await mount({ settings: { ownMeasurement: 'necessary' } });
 		await app.click('[data-cs-consent-close]');
 		expect(app.host.hidden).toBe(true);
-		expect(app.posts('/visits')).toHaveLength(1);
+		expect(app.posts('/visits')).toHaveLength(2);
 		expect(app.layer().filter((e) => e[0] === 'consent')).toHaveLength(1);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
 	});
@@ -304,7 +324,7 @@ describe('runtime v6 consent', () => {
 		expect(app.host.hidden).toBe(true);
 		expect(app.layer().filter((e) => e[0] === 'consent')).toHaveLength(1);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
-		expect(app.posts('/visits')).toHaveLength(0);
+		expect(app.posts('/visits')).toHaveLength(1);
 		expect(app.win.document.cookie).not.toContain('cs_consent=');
 		await app.click('main [data-cs-consent-open]');
 		expect(app.host.hidden).toBe(false);
@@ -350,13 +370,14 @@ describe('runtime v6 consent', () => {
 		expect(app.host.hidden).toBe(true);
 		expect(app.win.document.querySelector('script[src*="gtm.js"]')).not.toBeNull();
 	});
-	it('rejects all without GTM or analytics and creates only consent ownership context', async () => {
+	it('rejects optional measurement while keeping the baseline visit and recording consent', async () => {
 		const app = await mount();
 		await app.click('[data-cs-consent-reject]');
 		expect(app.signals()).toMatchObject({ ad_storage: 'denied', analytics_storage: 'denied' });
 		expect(app.order).not.toContain('script');
 		expect(app.posts('/visits')).toEqual([
-			{ campaignPageId: 222, pageUrl: '/landing', consentOnly: true }
+			{ campaignPageId: 222, pageUrl: '/landing?gclid=test', baselineOnly: true },
+			{ campaignPageId: 222, pageUrl: '/landing', consentOnly: true, visitReceipt: 'page-receipt' }
 		]);
 		expect(app.posts('/api/runtime/v1/consent')[0]).toMatchObject({ adUserDataConsent: 'DENIED' });
 		expect(app.posts('/api/runtime/v1/events')).toHaveLength(0);
@@ -386,7 +407,7 @@ describe('runtime v6 consent', () => {
 		const app = await mount({ settings: { mode: 'advanced' } });
 		expect(app.order).toContain('script');
 		expect(app.layer()[0]).toMatchObject({ 0: 'consent', 1: 'default' });
-		expect(app.posts('/visits')).toHaveLength(0);
+		expect(app.posts('/visits')).toHaveLength(1);
 		expect(app.layer().find((e) => e.cs_event_name === 'page_view')).toBeDefined();
 	});
 	it('restores only current unexpired choices and records them on the new visit', async () => {
@@ -400,7 +421,7 @@ describe('runtime v6 consent', () => {
 		]) {
 			const invalid = await mount({ cookie });
 			expect(invalid.host.hidden).toBe(false);
-			expect(invalid.posts('/visits')).toHaveLength(0);
+			expect(invalid.posts('/visits')).toHaveLength(1);
 		}
 	});
 	it('never sends preview consent, visits, Google tags or cookies', async () => {
