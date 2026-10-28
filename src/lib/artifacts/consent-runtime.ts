@@ -43,6 +43,10 @@ export const consentRuntimeSource = String.raw`
     googleScript.src='https://www.googletagmanager.com/gtm.js?id='+trackingConfig.gtmContainerId;
     document.head.appendChild(googleScript);
   };
+  let baselineReceipt = null;
+  const baselineVisitPromise = context.preview ? Promise.resolve(null) : post(context.endpoints.visits,{
+    campaignPageId:context.campaignPageId,pageUrl:location.pathname+location.search,baselineOnly:true
+  }).then(result=>{baselineReceipt=result?.data?.visitReceipt || null;return result?.data?.visitId || null;}).catch(()=>null);
   let visitPromise = null;
   let measuredVisit = false;
   let advertisingVisit = false;
@@ -53,8 +57,8 @@ export const consentRuntimeSource = String.raw`
     if (visitPromise) return visitPromise;
     const measuring=statisticsAllowed();
     const advertising=choice?.marketing===true;
-    visitPromise=post(context.endpoints.visits,{campaignPageId:context.campaignPageId,pageUrl:(measuring || advertising)?location.pathname+location.search:location.pathname,consentOnly:!measuring})
-      .then(result=>{visitId=result?.data?.visitId || null;measuredVisit=measuring;advertisingVisit=advertising;if(visitId && statisticsAllowed() && !emailCleanup)emailCleanup=startEmailAttribution(context.campaignPageId);return visitId;})
+    visitPromise=baselineVisitPromise.then(()=>post(context.endpoints.visits,{campaignPageId:context.campaignPageId,pageUrl:(measuring || advertising)?location.pathname+location.search:location.pathname,consentOnly:!measuring,...(baselineReceipt?{visitReceipt:baselineReceipt}:{})}))
+      .then(result=>{visitId=result?.data?.visitId || null;if(visitId)baselineReceipt=null;measuredVisit=measuring;advertisingVisit=advertising;if(visitId && statisticsAllowed() && !emailCleanup)emailCleanup=startEmailAttribution(context.campaignPageId);return visitId;})
       .finally(()=>{visitPromise=null;if(visitId && ((statisticsAllowed() && !measuredVisit) || (choice?.marketing && !advertisingVisit)))ensureVisit().catch(()=>undefined);});
     return visitPromise;
   };

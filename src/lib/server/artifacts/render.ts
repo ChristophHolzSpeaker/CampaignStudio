@@ -59,7 +59,9 @@ export function injectArtifactRuntime(
 		preview || page.runtimeVersion === 'v6'
 			? ''
 			: '<script src="/campaign-runtime/email-v1.js" defer></script>';
-	const injection = `${page.runtimeVersion === 'v6' ? (consentInitiallyHidden && !preview ? consentBannerMarkup.replace('id="cs-consent"', 'id="cs-consent" hidden') : consentBannerMarkup) : ''}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="/campaign-runtime/${page.runtimeVersion}.js" defer></script>${emailHelper}`;
+	// Runtime scripts are cached immutably; v6 fixes need a fresh browser/CDN URL.
+	const runtimeUrl = `/campaign-runtime/${page.runtimeVersion}.js${page.runtimeVersion === 'v6' ? '?revision=visit-ip-1' : ''}`;
+	const injection = `${page.runtimeVersion === 'v6' ? (consentInitiallyHidden && !preview ? consentBannerMarkup.replace('id="cs-consent"', 'id="cs-consent" hidden') : consentBannerMarkup) : ''}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="${runtimeUrl}" defer></script>${emailHelper}`;
 	const documentWithFonts = /<\/head\s*>/i.test(html)
 		? html.replace(
 				/<\/head\s*>/i,
