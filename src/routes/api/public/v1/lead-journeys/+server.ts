@@ -7,7 +7,7 @@ import {
 	publicApiJson,
 	requirePublicApiRequest
 } from '$lib/server/public-api/http';
-import { and, desc, eq, gte, lt, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, sql, type SQL } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 
 const DEFAULT_LIMIT = 50;
@@ -23,7 +23,9 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	const updatedAfter = parseOptionalDate(url.searchParams.get('updated_after'));
 	const updatedBefore = parseOptionalDate(url.searchParams.get('updated_before'));
 
-	const whereClauses: SQL[] = [];
+	const whereClauses: SQL[] = [
+		sql`${lead_journeys.outcome} is distinct from 'outbound_email_import'`
+	];
 	if (campaignId) whereClauses.push(eq(lead_journeys.campaign_id, campaignId));
 	if (stage) whereClauses.push(eq(lead_journeys.current_stage, stage));
 	if (updatedAfter) whereClauses.push(gte(lead_journeys.updated_at, updatedAfter));
