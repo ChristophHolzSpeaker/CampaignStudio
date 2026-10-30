@@ -10,6 +10,7 @@ const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'ar
 const JOURNEY_MATCH_WINDOW_DAYS = 30;
 
 type LeadJourneyRow = {
+	outcome: string | null;
 	id: string;
 	campaign_id: number | null;
 	campaign_page_id: number | null;
@@ -36,11 +37,13 @@ export type InboundJourneyResolutionResult = {
 
 async function getJourneyById(env: WorkerEnv, journeyId: string): Promise<LeadJourneyRow | null> {
 	const query = new URLSearchParams({
-		select: 'id,campaign_id,campaign_page_id,contact_email,updated_at',
+		select: 'id,campaign_id,campaign_page_id,contact_email,updated_at,outcome',
 		id: `eq.${journeyId}`,
 		limit: '1'
 	});
-	return selectOne<LeadJourneyRow>(env, 'lead_journeys', query);
+	const journey = await selectOne<LeadJourneyRow>(env, 'lead_journeys', query);
+	// A real customer reply must not inherit a hidden self-contact import.
+	return journey?.outcome === 'outbound_email_import' ? null : journey;
 }
 
 async function findJourneyByThread(
