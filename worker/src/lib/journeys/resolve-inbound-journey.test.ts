@@ -25,6 +25,38 @@ describe('resolveInboundJourney', () => {
 		mockedPersistAttribution.mockReset();
 	});
 
+	it('starts a customer journey rather than reviving an archived outbound import', async () => {
+		mockedSelectOne
+			.mockResolvedValueOnce({ lead_journey_id: 'false-import' })
+			.mockResolvedValueOnce({
+				id: 'false-import',
+				contact_email: 'keynote@christophholz.com',
+				campaign_id: null,
+				campaign_page_id: null,
+				outcome: 'outbound_email_import'
+			});
+		mockedInsertOne.mockResolvedValue({
+			id: 'customer-journey',
+			contact_email: 'customer@example.org',
+			campaign_id: null,
+			campaign_page_id: null
+		});
+		const result = await resolveInboundJourney(makeTestEnv(), {
+			providerThreadId: 'outreach-thread',
+			normalizedSenderEmail: 'customer@example.org',
+			senderDisplayName: 'Customer',
+			toRecipients: ['speakerlp@christophholz.com']
+		});
+		expect(result).toMatchObject({
+			lead_journey_id: 'customer-journey',
+			created_new_journey: true
+		});
+		expect(mockedInsertOne).toHaveBeenCalledWith(
+			expect.anything(),
+			'lead_journeys',
+			expect.objectContaining({ contact_email: 'customer@example.org' })
+		);
+	});
 	it('resolves the campaign from the page id in a Campaign Studio alias', async () => {
 		mockedSelectOne
 			.mockResolvedValueOnce(null)
