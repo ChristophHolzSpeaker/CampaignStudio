@@ -160,3 +160,9 @@ The existing 15-minute scheduled handler also triggers the app's durable convers
 ### Google Data Manager relay
 
 Set `GOOGLE_DATA_MANAGER_TOKEN` to a dedicated random secret, and set the app's `GOOGLE_DATA_MANAGER_WORKER_TOKEN` to the same value and `GOOGLE_DATA_MANAGER_WORKER_URL` to this worker's HTTPS origin. Protected POST routes under `/google/conversions/` support `ingest`, `status`, and `validate`. They do not accept the general internal API token. Credentials remain in the worker; JWTs for Data Manager omit the Gmail/Calendar delegated user. The `validate` route always uses Google's `validateOnly: true` and cannot create a conversion. Application readiness only checks configuration; validate Google access separately before a real upload.
+
+## Outgoing keynote mail and false lead imports
+
+`keynote@christophholz.com` (including plus aliases) is a managed sender for direction detection. Gmail's `SENT` label also identifies outbound messages, even when a send-as alias is not in the managed list. Outbound messages never enter inbound journey creation. Recognising a sender does not add it to the autoresponse sender list.
+
+Historical false imports can be retained with `current_stage = archived` and `outcome = outbound_email_import`. The internal leads list and its journey counters exclude this outcome. Archive only reviewed records without genuine customer messages, campaign attribution, bookings or downstream activity; preserve the original stage/outcome for rollback. Existing messages and events remain intact. Worker deployment is required for the import fix; Vercel deployment is required for the list filter.
