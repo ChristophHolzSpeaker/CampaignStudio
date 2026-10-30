@@ -176,7 +176,9 @@ export function normalizeGmailMessage(
 	const fromEmail = sender.email || fromEmails[0] || '';
 	const toEmail = toEmails.join(',');
 
-	const outbound = fromEmails.some((email) => isManagedSpeakerSender(email, gmailUser));
+	const outbound =
+		message.labelIds?.includes('SENT') === true ||
+		fromEmails.some((email) => isManagedSpeakerSender(email, gmailUser));
 	const direction: 'inbound' | 'outbound' = outbound ? 'outbound' : 'inbound';
 	const contactEmail = outbound ? (toEmails[0] ?? null) : (fromEmails[0] ?? null);
 

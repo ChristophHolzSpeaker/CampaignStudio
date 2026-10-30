@@ -120,6 +120,31 @@ describe('normalizeGmailMessage', () => {
 		expect(normalized?.contact_email).toBe('client@example.com');
 	});
 
+	it.each([
+		{ sender: 'keynote@christophholz.com', labels: [] },
+		{ sender: 'keynote+outreach@christophholz.com', labels: [] },
+		{ sender: 'other-alias@example.org', labels: ['SENT'] }
+	])('keeps outgoing mail from $sender out of inbound lead processing', ({ sender, labels }) => {
+		const normalized = normalizeGmailMessage(
+			{
+				id: 'outreach',
+				threadId: 'outreach-thread',
+				labelIds: labels,
+				internalDate: '1713268800000',
+				payload: {
+					headers: [
+						{ name: 'From', value: sender },
+						{ name: 'To', value: 'customer@example.org' }
+					]
+				}
+			},
+			'speaker@christophholz.com'
+		);
+		expect(normalized?.direction).toBe('outbound');
+		expect(normalized?.contact_email).toBe('customer@example.org');
+		expect(normalized?.received_at).toBeNull();
+		expect(normalized?.sent_at).not.toBeNull();
+	});
 	it('falls back to text extracted from html when plain text is unavailable', () => {
 		const message = {
 			id: 'msg_3',

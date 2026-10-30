@@ -25,6 +25,8 @@ import type { PageServerLoad } from './$types';
 const CLOSED_STAGES = ['won', 'lost', 'cancelled', 'closed', 'disqualified', 'archived'] as const;
 const ACTIVE_WINDOW_DAYS = 7;
 const JOURNEY_LIMIT = 50;
+// Preserve erroneous outbound imports for audit, without presenting them as leads.
+const visibleJourney = sql`${lead_journeys.outcome} is distinct from 'outbound_email_import'`;
 
 type JourneyListRow = {
 	id: string;
@@ -202,12 +204,15 @@ export const load: PageServerLoad = async ({ url }) => {
 			.select({ id: campaigns.id, name: campaigns.name })
 			.from(campaigns)
 			.orderBy(asc(campaigns.name)),
-		db.select({ stage: lead_journeys.current_stage }).from(lead_journeys),
-		db.select({ count: sql<number>`count(*)::integer` }).from(lead_journeys),
+		db.select({ stage: lead_journeys.current_stage }).from(lead_journeys).where(visibleJourney),
 		db
 			.select({ count: sql<number>`count(*)::integer` })
 			.from(lead_journeys)
-			.where(notInArray(lead_journeys.current_stage, [...CLOSED_STAGES])),
+			.where(visibleJourney),
+		db
+			.select({ count: sql<number>`count(*)::integer` })
+			.from(lead_journeys)
+			.where(and(visibleJourney, notInArray(lead_journeys.current_stage, [...CLOSED_STAGES]))),
 		db
 			.select({ count: sql<number>`count(*)::integer` })
 			.from(lead_messages)
@@ -219,14 +224,14 @@ export const load: PageServerLoad = async ({ url }) => {
 		db
 			.select({ count: sql<number>`count(*)::integer` })
 			.from(lead_journeys)
-			.where(isNotNull(lead_journeys.auto_response_sent_at))
+			.where(and(visibleJourney, isNotNull(lead_journeys.auto_response_sent_at)))
 	]);
 
 	const stageOptions = Array.from(
 		new Set(stageRows.map((row) => row.stage).filter((value): value is string => Boolean(value)))
 	).sort((left, right) => left.localeCompare(right));
 
-	const journeyWhereClauses: SQL[] = [];
+	const journeyWhereClauses: SQL[] = [visibleJourney];
 
 	if (searchPattern) {
 		const searchClause = or(
