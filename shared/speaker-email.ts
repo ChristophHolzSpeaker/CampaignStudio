@@ -11,7 +11,8 @@ export const MANAGED_SPEAKER_SENDERS = [
 	SPEAKER_EMAIL.primary,
 	SPEAKER_EMAIL.campaignStudio,
 	SPEAKER_EMAIL.webflow,
-	SPEAKER_EMAIL.crm
+	SPEAKER_EMAIL.crm,
+	SPEAKER_EMAIL.keynote
 ] as const;
 
 export const AUTORESPONSE_SPEAKER_SENDERS = [
