@@ -1,4 +1,6 @@
 import { json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { fingerprintToken } from './auth';
 import { sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { public_api_rate_limits } from '$lib/server/db/schema';
@@ -24,10 +26,14 @@ type RateLimitResult =
 			retryAfterSeconds: number;
 	  };
 
-const RATE_LIMIT_WINDOWS: RateLimitWindow[] = [
-	{ name: 'minute', limit: 60, windowMs: 60_000 },
-	{ name: 'day', limit: 1_000, windowMs: 24 * 60 * 60_000 }
-];
+function rateLimitWindows(tokenFingerprint: string): RateLimitWindow[] {
+	const writeToken = env.CAMPAIGN_WRITE_API_TOKEN;
+	const isWriteToken = Boolean(writeToken && fingerprintToken(writeToken) === tokenFingerprint);
+	return [
+		{ name: 'minute', limit: 60, windowMs: 60_000 },
+		{ name: 'day', limit: isWriteToken ? 5_000 : 1_000, windowMs: 24 * 60 * 60_000 }
+	];
+}
 
 function getWindowStart(now: Date, windowMs: number): Date {
 	return new Date(Math.floor(now.getTime() / windowMs) * windowMs);
@@ -89,7 +95,7 @@ export async function enforcePublicApiRateLimit(
 	const now = new Date();
 	const results: RateLimitResult[] = [];
 
-	for (const window of RATE_LIMIT_WINDOWS) {
+	for (const window of rateLimitWindows(tokenFingerprint)) {
 		results.push(await incrementWindow(tokenFingerprint, window, now));
 	}
 

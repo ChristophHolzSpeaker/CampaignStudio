@@ -11,6 +11,8 @@ The deployed application publishes the client-facing sources of truth at:
 
 These four read-only resources are public and contain no credentials or private campaign data. Creation, upload, preview discovery, lifecycle, reporting, and lead operations remain bearer-authenticated. The JSON contract is authoritative for changing artifact rules; OpenAPI is authoritative for HTTP shapes.
 
+The authenticated campaign-write token is limited to 60 requests per minute and 5,000 per UTC day, counted per token across public API calls. Other tokens retain the 1,000-per-day limit. On HTTP 429, use `Retry-After` and `X-RateLimit-Reset` before retrying. Rejected requests also count against the window.
+
 ## Prerequisites
 
 - A campaign created for the artifact or selected from `GET /api/public/v1/campaigns`.
