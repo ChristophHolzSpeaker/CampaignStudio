@@ -85,6 +85,22 @@ describe('artifact response security headers', () => {
 		expect(liveHeaders.get('content-security-policy')).toContain("frame-ancestors 'none'");
 		expect(liveHeaders.get('x-frame-options')).toBe('DENY');
 	});
+	it('renders the floating v7 banner without changing the pinned v6 layout', () => {
+		const v7 = { ...page, runtimeVersion: 'v7' };
+		const html = '<html><head></head><body></body></html>';
+		const result = injectArtifactRuntime(html, v7, false);
+		expect(result).toContain('width:min(400px,100%)');
+		expect(result).toContain('top:50%;left:50%');
+		expect(result).not.toContain('--cs-consent-space');
+		expect(result).toContain('/campaign-runtime/v7.js');
+		expect(injectArtifactRuntime(html, v7, false, true)).toContain('id="cs-consent" hidden');
+		expect(
+			new Headers(artifactResponseHeaders(v7, false, 'https://assets.example.com')).get(
+				'Cache-Control'
+			)
+		).toBe('private, no-store');
+	});
+
 	it('injects the v6 banner with reserved viewport CSS and suppresses returning-visitor flashes', () => {
 		const v6 = { ...page, runtimeVersion: 'v6' };
 		const html = '<html><head></head><body><form>Lead form</form></body></html>';

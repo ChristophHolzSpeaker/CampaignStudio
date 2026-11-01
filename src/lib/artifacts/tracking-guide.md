@@ -1,3 +1,7 @@
+## Runtime v7: floating consent banner
+
+Newly finalized artifacts use v7. Its floating, centered banner retains the v6 consent choices, policy and Google bridge; the existing v6 GTM consent template continues to work. Previously finalized pages stay pinned to their runtime. Deploy the application, preview the new version, then republish each page to adopt v7. Validate the live HTTPS page with Tag Assistant and network inspection before broad rollout. Existing valid choices remain in effect.
+
 ## Runtime v6: consent, events, Google Tag Manager, and CRM conversions
 
 Runtime v6 adds a platform-managed Consent Mode v2 banner. v1–v5 remain pinned and retain their behavior. Upload/finalize a new version, preview, then publish to adopt v6. Existing live pages must be republished; deployment alone does not upgrade them. Do not add authored JavaScript, GTM snippets, iframe code, credentials, Google labels, or platform IDs to artifact HTML. Preview emits no measurement, loads no GTM, and submits no leads.
