@@ -49,3 +49,32 @@ export const consentBannerMarkup = `<aside id="cs-consent" aria-label="Cookie-Ei
 <p role="status" data-cs-consent-status></p></div>
 <div class="cs-consent-actions"><button type="button" data-cs-consent-accept>Alle akzeptieren</button><button type="button" data-cs-consent-reject>Nur notwendige</button><button type="button" data-cs-consent-settings>Einstellungen</button><button type="button" data-cs-consent-save hidden>Auswahl speichern</button></div>
 </div></aside>`;
+
+// v7 uses the same trusted controls without resizing the page viewport.
+export const floatingConsentBannerStyle = `<style data-cs-consent-style>
+#cs-consent{all:initial;box-sizing:border-box;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2147483647;width:min(400px,100%);max-height:calc(100dvh - 16px);overflow:auto;background:#fff;color:#09090b;box-shadow:0 8px 32px rgb(0 0 0 / 22%);font:400 14px/1.45 var(--cs-font-sans,'Bureau Grot',system-ui,sans-serif);color-scheme:light;isolation:isolate}
+#cs-consent[hidden],#cs-consent [hidden]{display:none!important}
+#cs-consent *{box-sizing:border-box;font:inherit;color:inherit;letter-spacing:normal;text-transform:none}
+#cs-consent .cs-consent-inner{padding:28px 24px 24px;display:grid;gap:20px}
+#cs-consent .cs-consent-copy{display:flex;flex-direction:column;gap:10px}
+#cs-consent h2{font:700 22px/1.1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;margin:0 28px 10px 0}
+#cs-consent p{margin:0}
+#cs-consent .cs-consent-links{display:flex;gap:8px;font-size:12px;color:#44444b}
+#cs-consent a{text-decoration:underline;text-underline-offset:3px}
+#cs-consent .cs-consent-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+#cs-consent button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:48px;padding:6px 4px;border:1px solid #09090b;background:#fff;color:#09090b;font:500 16px/1.1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;text-align:center;overflow-wrap:anywhere}
+#cs-consent button:hover{background:#e2183b;border-color:#e2183b;color:#fff}
+#cs-consent .cs-consent-close{position:absolute;top:6px;right:6px;width:36px;height:36px;min-height:36px;padding:9px;border:0;background:transparent;color:#44444b}
+#cs-consent .cs-consent-close:hover{background:#f1f1f2;color:#09090b}
+#cs-consent .cs-consent-close svg{display:block;width:18px;height:18px;pointer-events:none}
+#cs-consent :is(button,a,input,.cs-consent-copy):focus-visible{outline:2px solid #09090b;outline-offset:3px}
+#cs-consent [data-cs-consent-preferences]{display:grid;gap:10px}
+#cs-consent label{display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+#cs-consent input{appearance:none;display:grid;place-items:center;border:1px solid #696970;background:#fff;width:20px;height:20px;margin:0;flex:none;cursor:pointer}
+#cs-consent input:checked{background:#09090b;border-color:#09090b}
+#cs-consent input:checked::after{content:'';width:11px;height:8px;clip-path:polygon(0 38%,18% 17%,41% 48%,83% 0,100% 17%,40% 100%);background:#fff}
+#cs-consent input:disabled{cursor:default;opacity:.65}
+#cs-consent [role=status]{color:#a40f29;font-size:12px}
+#cs-consent [role=status]:empty{display:none}
+@media(max-width:400px){#cs-consent .cs-consent-inner{padding:26px 16px 18px}}
+</style>`;

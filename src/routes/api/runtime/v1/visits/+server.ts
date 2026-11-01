@@ -40,9 +40,10 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	const pageUrl = new URL(parsed.data.pageUrl, url.origin);
 	if (pageUrl.origin !== url.origin || pageUrl.pathname !== `/${page.slug}`)
 		return json({ ok: false, error: 'Page context mismatch' }, { status: 400 });
-	const baseline = page.runtimeVersion === 'v6' && Boolean(parsed.data.baselineOnly);
+	const baseline =
+		['v6', 'v7'].includes(page.runtimeVersion ?? '') && Boolean(parsed.data.baselineOnly);
 	const policy =
-		page.runtimeVersion === 'v6' && !baseline
+		['v6', 'v7'].includes(page.runtimeVersion ?? '') && !baseline
 			? (await getTrackingConfig(page.campaignId)).consent
 			: null;
 	const statisticsAllowed = !policy || browserStatisticsAllowed(cookies, policy);
