@@ -573,3 +573,7 @@ Release requires owner/DPO approval of texts and policy settings, the authentica
 ## Restore baseline visit/IP capture (October 2026)
 
 Published v6 pages shall again record visits, IPs and UTM parameters in the existing visit model without waiting for Statistik or GTM acceptance. Initial capture shall not create `cs_vid` or store a visitor identifier. A short-lived signed receipt held in runtime memory allows a later consent choice to claim the same visit without duplication. Optional engagement, events and additional visit metadata retain their existing Statistik gate; advertising capture retains its Marketing gate. Previews remain measurement-free. Company resolution continues in the existing external dashboard. This supersedes the v6 requirement that all visit/IP recording wait for Statistik and does not reclassify `ownMeasurement` as necessary.
+
+## Floating consent banner (runtime v7, November 2026)
+
+New artifact versions use a centered, floating white consent box approximately 400px wide, full width on narrow screens, with a close control and equal-weight accept, necessary-only and settings actions. It overlays the page without reserving a bottom strip. Runtime v6 and earlier versions remain pinned. The v6 consent decisions, defaults, GTM bridge, video gating, tracking and withdrawal rules remain in effect for v7. Existing valid consent choices continue to apply.

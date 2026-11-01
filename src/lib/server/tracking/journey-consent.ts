@@ -36,10 +36,9 @@ export async function journeyConsent(journeyId: string, before = new Date()) {
 					.where(eq(page_artifacts.campaign_page_id, pageId))
 					.limit(1)
 			: [];
-		const consent =
-			page?.runtime === 'v6'
-				? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
-				: null;
+		const consent = ['v6', 'v7'].includes(page?.runtime ?? '')
+			? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
+			: null;
 		return {
 			denied: consent?.missingOfflineConsent === 'DENIED',
 			source: 'owner_default' as const
@@ -59,11 +58,14 @@ export async function journeyConsent(journeyId: string, before = new Date()) {
 			)
 		);
 	if (!rows.length) return fallback();
-	const policy = rows.some((row) => row.runtime === 'v6')
+	const policy = rows.some((row) => ['v6', 'v7'].includes(row.runtime ?? ''))
 		? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
 		: null;
 	const decisions = rows.map((row) =>
-		evaluateConsent(row.record ?? undefined, row.runtime === 'v6' ? policy : null)
+		evaluateConsent(
+			row.record ?? undefined,
+			['v6', 'v7'].includes(row.runtime ?? '') ? policy : null
+		)
 	);
 	return {
 		denied: decisions.some((decision) => decision.adUserDataConsent !== 'GRANTED'),
