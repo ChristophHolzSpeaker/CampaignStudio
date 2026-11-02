@@ -85,18 +85,27 @@ describe('artifact response security headers', () => {
 		expect(liveHeaders.get('content-security-policy')).toContain("frame-ancestors 'none'");
 		expect(liveHeaders.get('x-frame-options')).toBe('DENY');
 	});
-	it('renders v8 with the floating consent banner and private response policy', () => {
-		const v8 = { ...page, runtimeVersion: 'v8' };
-		const html = injectArtifactRuntime('<html><head></head><body></body></html>', v8, false);
-		expect(html).toContain('width:min(400px,100%)');
-		expect(html).toContain('/campaign-runtime/v8.js');
-		expect(
-			injectArtifactRuntime('<html><head></head><body></body></html>', v8, false, true)
-		).toContain('id="cs-consent" hidden');
-		const headers = new Headers(artifactResponseHeaders(v8, false, 'https://assets.example.com'));
-		expect(headers.get('Cache-Control')).toBe('private, no-store');
-		expect(headers.get('Content-Security-Policy')).toContain('https://www.googletagmanager.com');
-	});
+	it.each(['v8', 'v9'])(
+		'renders %s with the floating consent banner and private response policy',
+		(version) => {
+			const runtimePage = { ...page, runtimeVersion: version };
+			const html = injectArtifactRuntime(
+				'<html><head></head><body></body></html>',
+				runtimePage,
+				false
+			);
+			expect(html).toContain('width:min(400px,100%)');
+			expect(html).toContain(`/campaign-runtime/${version}.js`);
+			expect(
+				injectArtifactRuntime('<html><head></head><body></body></html>', runtimePage, false, true)
+			).toContain('id="cs-consent" hidden');
+			const headers = new Headers(
+				artifactResponseHeaders(runtimePage, false, 'https://assets.example.com')
+			);
+			expect(headers.get('Cache-Control')).toBe('private, no-store');
+			expect(headers.get('Content-Security-Policy')).toContain('https://www.googletagmanager.com');
+		}
+	);
 
 	it('renders the floating v7 banner without changing the pinned v6 layout', () => {
 		const v7 = { ...page, runtimeVersion: 'v7' };
