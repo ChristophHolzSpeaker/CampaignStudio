@@ -1,4 +1,4 @@
-// Included only in immutable runtime v6; keep browser code self-contained.
+// Shared source for pinned consent runtimes; keep browser code self-contained.
 export const consentRuntimeSource = String.raw`
   const consentHost = document.getElementById('cs-consent');
   const consentSettings = {mode:'basic',policyVersion:'cs-consent-v1',retentionDays:180,ownMeasurement:'statistics',missingOfflineConsent:'DENIED'};

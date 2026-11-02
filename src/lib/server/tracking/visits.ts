@@ -105,7 +105,7 @@ export async function recordVisitConsent(
 				.where(
 					and(
 						eq(campaign_visits.ip_hash_or_session_identifier, owner.visitorIdentifier),
-						inArray(page_artifacts.runtime_version, ['v6', 'v7'])
+						inArray(page_artifacts.runtime_version, ['v6', 'v7', 'v8'])
 					)
 				);
 			const { campaign_visit_id: _visitId, ...decision } = values;

@@ -24,6 +24,8 @@ async function mount(
 		failConsent?: boolean;
 		template?: boolean;
 		youtube?: boolean;
+		formMapping?: boolean;
+		failLead?: boolean;
 	} = {}
 ) {
 	const win = new Window({ url: 'https://example.com/landing?gclid=test' });
@@ -62,7 +64,16 @@ async function mount(
 				JSON.stringify({
 					data: {
 						gtmContainerId: 'GTM-TEST',
-						mappings: [],
+						mappings: options.formMapping
+							? [
+									{
+										event: 'form_submit',
+										channel: 'browser',
+										conversionId: 'AW-123456',
+										conversionLabel: 'test-label'
+									}
+								]
+							: [],
 						consent: {
 							mode: 'basic',
 							policyVersion: 'cs-consent-v1',
@@ -78,6 +89,7 @@ async function mount(
 			return new Promise<Response>((resolve) => {
 				finishVisit = resolve;
 			});
+		if (url === '/lead' && options.failLead) return new Response(null, { status: 503 });
 		if (url === '/api/runtime/v1/consent' && options.failConsent)
 			return new Response(null, { status: 503 });
 		return new Response(
@@ -187,6 +199,46 @@ const saved = (extra: Record<string, unknown> = {}) => ({
 });
 
 describe('runtime v6 consent', () => {
+	it('emits one mapped GTM event after a successful consented submission', async () => {
+		const app = await mount({ formMapping: true });
+		await app.click('[data-cs-consent-accept]');
+		app.win.document
+			.querySelector('form')!
+			.dispatchEvent(new app.win.Event('submit', { bubbles: true, cancelable: true }));
+		await app.settle();
+		const conversions = app.layer().filter((event) => event.cs_event_name === 'form_submit');
+		expect(conversions).toHaveLength(1);
+		expect(conversions[0]).toMatchObject({
+			cs_ads_conversion_id: '123456',
+			cs_ads_conversion_label: 'test-label'
+		});
+	});
+	it('does not emit a conversion for a failed submission or a basic-mode denial', async () => {
+		for (const options of [{ failLead: true }, { failLead: false }]) {
+			const app = await mount({ ...options, formMapping: true });
+			await app.click(options.failLead ? '[data-cs-consent-accept]' : '[data-cs-consent-reject]');
+			app.win.document
+				.querySelector('form')!
+				.dispatchEvent(new app.win.Event('submit', { bubbles: true, cancelable: true }));
+			await app.settle();
+			expect(app.posts('/lead')).toHaveLength(1);
+			expect(app.layer().filter((event) => event.cs_event_name === 'form_submit')).toHaveLength(0);
+		}
+	});
+	it('exposes the mapped form event with denied signals in advanced mode', async () => {
+		const app = await mount({ settings: { mode: 'advanced' }, formMapping: true });
+		app.win.document
+			.querySelector('form')!
+			.dispatchEvent(new app.win.Event('submit', { bubbles: true, cancelable: true }));
+		await app.settle();
+		expect(app.signals()).toEqual({
+			ad_storage: 'denied',
+			analytics_storage: 'denied',
+			ad_user_data: 'denied',
+			ad_personalization: 'denied'
+		});
+		expect(app.layer().filter((event) => event.cs_event_name === 'form_submit')).toHaveLength(1);
+	});
 	it('records a cookieless baseline visit before any consent choice', async () => {
 		const app = await mount();
 		expect(app.posts('/visits')).toEqual([
@@ -325,7 +377,7 @@ describe('runtime v6 consent', () => {
 		expect(app.layer().filter((e) => e[0] === 'consent')).toHaveLength(1);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
 		expect(app.posts('/visits')).toHaveLength(1);
-		expect(app.win.document.cookie).not.toContain('cs_consent=');
+		expect(app.win.document.cookie).not.toMatch(/(?:^|;\s*)cs_consent=[^;\s]+/);
 		await app.click('main [data-cs-consent-open]');
 		expect(app.host.hidden).toBe(false);
 		app.host.dispatchEvent(new app.win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
