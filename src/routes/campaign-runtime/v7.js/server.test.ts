@@ -410,6 +410,42 @@ describe('runtime v7 consent', () => {
 		expect(app.posts('/visits')).toHaveLength(1);
 		expect(app.layer().find((e) => e.cs_event_name === 'page_view')).toBeDefined();
 	});
+	it('updates all Google consent signals through the advanced v7 choice lifecycle', async () => {
+		const app = await mount({ settings: { mode: 'advanced' } });
+		const denied = {
+			ad_storage: 'denied',
+			analytics_storage: 'denied',
+			ad_user_data: 'denied',
+			ad_personalization: 'denied'
+		};
+		const granted = {
+			ad_storage: 'granted',
+			analytics_storage: 'granted',
+			ad_user_data: 'granted',
+			ad_personalization: 'granted'
+		};
+		expect(app.host.hidden).toBe(false);
+		expect(app.signals()).toEqual(denied);
+		expect(app.order).toContain('script');
+		expect(app.layer().some((e) => e.cs_event_name === 'page_view')).toBe(true);
+
+		await app.click('[data-cs-consent-accept]');
+		expect(app.signals()).toEqual(granted);
+		await app.click('main [data-cs-consent-open]');
+		await app.click('[data-cs-consent-save]');
+		expect(app.signals()).toEqual(granted);
+		await app.click('main [data-cs-consent-open]');
+		for (const category of ['statistics', 'marketing', 'personalization']) {
+			app.win.document.querySelector<HTMLInputElement>(
+				`[data-cs-consent-category="${category}"]`
+			)!.checked = false;
+		}
+		await app.click('[data-cs-consent-save]');
+		expect(app.signals()).toEqual(denied);
+		expect(app.posts('/api/runtime/v1/consent').at(-1)).toMatchObject({
+			adUserDataConsent: 'DENIED'
+		});
+	});
 	it('restores only current unexpired choices and records them on the new visit', async () => {
 		const app = await mount({ cookie: saved() });
 		expect(app.host.hidden).toBe(true);
