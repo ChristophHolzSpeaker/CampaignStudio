@@ -7,6 +7,7 @@ import {
 	campaign_visits,
 	lead_events
 } from '$lib/server/db/schema';
+import { latestFormConsentEvidence } from '$lib/server/tracking/form-consent-evidence';
 import { journeyClicks } from '$lib/server/tracking/attribution';
 import { deliveryView } from '$lib/server/tracking/outcomes';
 import {
@@ -78,9 +79,20 @@ export const GET: RequestHandler = async ({ request, params, url }) => {
 					)
 				)
 		: [];
+	let consentAtLatestSubmission: Awaited<ReturnType<typeof latestFormConsentEvidence>> = null;
+	let consentEvidenceStatus: 'recorded' | 'unknown' | 'unavailable' = 'unknown';
+	try {
+		consentAtLatestSubmission = await latestFormConsentEvidence(params.id);
+		consentEvidenceStatus = consentAtLatestSubmission ? 'recorded' : 'unknown';
+	} catch {
+		consentEvidenceStatus = 'unavailable';
+		console.error('form_consent_evidence_lookup_failed');
+	}
 	return reply({
 		ok: true,
 		data: {
+			consentAtLatestSubmission,
+			consentEvidenceStatus,
 			clicks: result.clicks.map((c) => ({
 				kind: c.kind,
 				clickId: c.click_id,

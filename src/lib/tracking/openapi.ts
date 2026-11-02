@@ -6,6 +6,54 @@ const response = {
 	description:
 		'JSON response with ok and data; see /llms-full.txt for delivery states and pagination.'
 };
+const journeyTrackingResponse = {
+	description:
+		'Private journey tracking. A null consent snapshot means unknown or expired; the browser-reported snapshot is diagnostic and does not authorize advertising.',
+	content: {
+		'application/json': {
+			schema: {
+				type: 'object',
+				properties: {
+					ok: { const: true },
+					data: {
+						type: 'object',
+						properties: {
+							consentEvidenceStatus: {
+								type: 'string',
+								enum: ['recorded', 'unknown', 'unavailable']
+							},
+							consentAtLatestSubmission: {
+								anyOf: [
+									{ type: 'null' },
+									{
+										type: 'object',
+										properties: {
+											source: { const: 'browser_reported' },
+											marketingAllowed: { type: 'boolean' },
+											policyVersion: { type: 'string' },
+											observedAt: { type: 'string', format: 'date-time' },
+											expiresAt: { type: 'string', format: 'date-time' }
+										},
+										required: [
+											'source',
+											'marketingAllowed',
+											'policyVersion',
+											'observedAt',
+											'expiresAt'
+										]
+									}
+								]
+							},
+							clicks: { type: 'array', items: { type: 'object' } },
+							events: { type: 'array', items: { type: 'object' } },
+							deliveries: { type: 'array', items: { type: 'object' } }
+						}
+					}
+				}
+			}
+		}
+	}
+};
 const visitParameters = [
 	{ name: 'id', in: 'path', required: true, schema: { type: 'integer', minimum: 1 } }
 ];
@@ -241,7 +289,7 @@ export const trackingApiPaths = {
 				},
 				{ name: 'cursor', in: 'query', schema: { type: 'string' } }
 			],
-			responses: { '200': response, '404': { description: 'Journey not found' } }
+			responses: { '200': journeyTrackingResponse, '404': { description: 'Journey not found' } }
 		}
 	}
 };
