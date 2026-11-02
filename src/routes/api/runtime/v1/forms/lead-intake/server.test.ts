@@ -83,6 +83,18 @@ it('returns a page-bound receipt after the lead is saved', async () => {
 		})
 	);
 });
+it('preserves form consent evidence and attribution receipts for v9', async () => {
+	mocks.page.mockResolvedValue({
+		campaignId: 3,
+		campaignPageId: 22,
+		slug: 'test',
+		runtimeVersion: 'v9'
+	});
+	const response = await call();
+	expect(response.status).toBe(200);
+	expect((await response.json()).data.attributionReceipt).toBe('signed-receipt');
+	expect(mocks.evidence).toHaveBeenCalled();
+});
 it('preserves a successful submission even if receipt creation fails', async () => {
 	mocks.receipt.mockImplementation(() => {
 		throw Error('not configured');

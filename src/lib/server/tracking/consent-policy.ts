@@ -17,7 +17,7 @@ export async function visitConsentPolicy(visitId: number) {
 		.leftJoin(page_artifacts, eq(page_artifacts.campaign_page_id, campaign_visits.campaign_page_id))
 		.where(eq(campaign_visits.id, visitId))
 		.limit(1);
-	if (!['v6', 'v7', 'v8'].includes(page?.runtime ?? '')) return null;
+	if (!['v6', 'v7', 'v8', 'v9'].includes(page?.runtime ?? '')) return null;
 	return (await getTrackingConfig(page.campaignId)).consent;
 }
 
@@ -53,7 +53,7 @@ export async function pageConsentPolicy(pageId: number) {
 		.innerJoin(page_artifacts, eq(page_artifacts.campaign_page_id, campaign_pages.id))
 		.where(eq(campaign_pages.id, pageId))
 		.limit(1);
-	return ['v6', 'v7', 'v8'].includes(page?.runtime ?? '')
+	return ['v6', 'v7', 'v8', 'v9'].includes(page?.runtime ?? '')
 		? (await getTrackingConfig(page.campaignId)).consent
 		: null;
 }

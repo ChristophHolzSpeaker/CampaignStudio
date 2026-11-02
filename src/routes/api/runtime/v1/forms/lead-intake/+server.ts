@@ -58,7 +58,7 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 			cta: { key: parsed.data.formKey, section: 'artifact_form' }
 		});
 		let attributionReceipt: string | undefined;
-		if (page.runtimeVersion === 'v8') {
+		if (['v8', 'v9'].includes(page.runtimeVersion)) {
 			// Never leave an already-saved lead waiting indefinitely for optional diagnostics.
 			const prepareAttribution = async (): Promise<string | undefined> => {
 				try {
