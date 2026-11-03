@@ -143,7 +143,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			'Preview is tokenized and non-indexable. Visit, engagement, CTA, and lead submission side effects are disabled in preview.',
 		automaticAnalytics: {
 			pageVisit:
-				'Runtime v6: after Statistik opt-in by default; a choice without Statistik creates only a minimal consent ownership visit. Legacy runtimes record on load.',
+				'Runtime v6 and later record a baseline visit on load without a visitor identifier or advertising click capture. Optional measurement requires Statistik by default; advertising click capture independently requires Marketing consent.',
 			engagement: 'Recorded after 10 seconds or on page exit after a runtime interaction.',
 			ctaClick: 'Recorded for the closest ancestor marked data-cs-action="cta".',
 			youtubeVideoPlay:
@@ -508,7 +508,7 @@ Open the returned preview URL for human review. Preview disables visits, engagem
 
 ### 6a. Configure GTM for each campaign
 
-For every campaign being created or migrated to runtime v6, read \`GET /api/public/v1/campaigns/{id}/tracking\` with the campaign-write token before publishing. Tracking settings belong to the campaign and are shared by its artifact versions; they are not global. New or unconfigured campaigns default to \`gtmContainerId: null\`, which disables GTM loading. Uploading, finalizing, and republishing do not set or inherit a container ID.
+For every campaign being created or migrated to runtime v6 or later, read \`GET /api/public/v1/campaigns/{id}/tracking\` with the campaign-write token before publishing. Tracking settings belong to the campaign and are shared by its artifact versions; they are not global. New or unconfigured campaigns default to \`gtmContainerId: null\`, which disables GTM loading. Uploading, finalizing, and republishing do not set or inherit a container ID.
 
 For this deployment, the owner-approved existing container is \`GTM-MCDDK28B\`. Set \`gtmContainerId\` through \`PUT /api/public/v1/campaigns/{id}/tracking\`, preserving the complete mappings array returned by GET. Do not copy illustrative Ads mappings or clear existing mappings. If a campaign has a different container or explicitly disabled tracking, confirm the intended change before replacing it. This API setup needs the campaign-write token; it does not require Google Ads OAuth access. Never insert GTM snippets into artifact HTML.
 
@@ -521,7 +521,7 @@ curl -sS -X POST "${origin}/api/public/v1/artifact-versions/$CAMPAIGN_PAGE_ID/pu
   -H "Authorization: Bearer $CAMPAIGN_WRITE_TOKEN"
 \`\`\`
 
-After publishing a v6 artifact and accepting an optional consent category (or selecting advanced mode), check \`GET /api/runtime/v1/tracking?pageId={campaignPageId}\` returns the expected container, then open the live page and verify a request to \`https://www.googletagmanager.com/gtm.js?id=GTM-MCDDK28B\` and connection in Tag Assistant. Repeat for every affected campaign. A successful publish or a dataLayer event alone does not prove GTM loaded. Report any verification you could not perform. Configuration changes apply on the next page load without republishing.
+After publishing a v6-or-later artifact and accepting an optional consent category (or selecting advanced mode), check \`GET /api/runtime/v1/tracking?pageId={campaignPageId}\` returns the expected container, then open the live page and verify a request to \`https://www.googletagmanager.com/gtm.js?id=GTM-MCDDK28B\` and connection in Tag Assistant. Repeat for every affected campaign. A successful publish or a dataLayer event alone does not prove GTM loaded. Report any verification you could not perform. Configuration changes apply on the next page load without republishing.
 
 The returned \`data.liveUrl\` is the canonical \`/{slug}\` URL. Publication is atomic. To perform rollback, publish an older finalized \`campaignPageId\`; immutable artifact objects are not changed.
 

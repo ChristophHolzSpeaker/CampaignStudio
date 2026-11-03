@@ -25,7 +25,7 @@ export type LeadIntakeServiceInput = {
 
 export async function submitLeadIntake(
 	input: LeadIntakeServiceInput
-): Promise<{ journeyId: string; intentApproved: boolean }> {
+): Promise<{ journeyId: string; intentApproved: boolean; formEventId: string }> {
 	const intake = {
 		...input.intake,
 		name: input.intake.name ?? '',
@@ -95,7 +95,9 @@ export async function submitLeadIntake(
 			anonymousId: input.visitorIdentifier,
 			eventPayload: { creation_source: 'form_submission', booking_surface: input.surface }
 		});
+	const formEventId = crypto.randomUUID();
 	await logLeadEvent({
+		eventId: formEventId,
 		leadJourneyId: journey.id,
 		campaignVisitId,
 		campaignId: input.campaignId,
@@ -148,5 +150,5 @@ export async function submitLeadIntake(
 			});
 		}
 	}
-	return { journeyId: journey.id, intentApproved };
+	return { journeyId: journey.id, intentApproved, formEventId };
 }

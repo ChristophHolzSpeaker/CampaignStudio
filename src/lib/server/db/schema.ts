@@ -630,6 +630,23 @@ export const lead_events = pgTable(
 	})
 );
 
+// A minimal, time-limited snapshot of an explicit browser-reported Marketing choice.
+// Missing rows mean unknown, not denial; this is not an authorization for advertising.
+export const form_consent_evidence = pgTable(
+	'form_consent_evidence',
+	{
+		form_event_id: uuid('form_event_id')
+			.primaryKey()
+			.references(() => lead_events.id, { onDelete: 'cascade' }),
+		marketing_allowed: boolean('marketing_allowed').notNull(),
+		policy_version: text('policy_version').notNull(),
+		evidence_ref: text('evidence_ref').notNull(),
+		observed_at: timestamp('observed_at', { withTimezone: true }).notNull().defaultNow(),
+		expires_at: timestamp('expires_at', { withTimezone: true }).notNull()
+	},
+	(table) => ({ expiryIdx: index('form_consent_evidence_expiry_idx').on(table.expires_at) })
+).enableRLS();
+
 export const ab_experiments = pgTable(
 	'ab_experiments',
 	{

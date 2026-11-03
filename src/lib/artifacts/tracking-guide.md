@@ -1,10 +1,18 @@
+## Runtime v9: early consent and asynchronous form attribution
+
+Runtime v9 keeps an explicit consent choice made while campaign settings load and applies it once the policy arrives. Consent remains denied until then; if settings cannot be loaded, visitors are asked to reload. Existing v8 pages stay pinned.
+
+Runtime v8 introduced asynchronous form attribution, which v9 retains. After a successful lead submission, the runtime can link the exact form event to a delayed same-browser visit using a short-lived, page-bound receipt; it never waits for that link before submitting the form. Attribution is best effort, requires the current measurement or Marketing permission and browser ownership, and can fail if the browser closes or cookies or requests are blocked. Google click IDs still require Marketing consent. The v6/v7 consent decisions, v7 banner, GTM bridge and browser `form_submit` conversion remain unchanged. Existing versions stay pinned until republished. Do not add a server-side conversion for the form submission.
+
+For a v8 or v9 form submission, the server retains an explicit browser-reported Marketing choice, policy version and expiry until the choice expires. `GET /api/public/v1/lead-journeys/{id}/tracking` exposes `consentAtLatestSubmission` to authorized lead readers while evidence is current. `consentEvidenceStatus` is `recorded`, `unknown`, or `unavailable`; a null snapshot is not denial. The scheduled conversion processor deletes expired records in bounded batches; physical cleanup depends on scheduler availability. This snapshot is diagnostic, not legal proof or a grant for offline delivery, and it cannot establish whether an ad click ID was present. It does not capture a GCLID without Marketing consent or infer historic choices. Apply `supabase/migrations/051_form_consent_evidence.sql` before application deployment and confirm the privacy notice and retention settings with the owner/DPO.
+
 ## Runtime v7: floating consent banner
 
-Newly finalized artifacts use v7. Its floating, centered banner retains the v6 consent choices, policy and Google bridge; the existing v6 GTM consent template continues to work. Previously finalized pages stay pinned to their runtime. Deploy the application, preview the new version, then republish each page to adopt v7. Validate the live HTTPS page with Tag Assistant and network inspection before broad rollout. Existing valid choices remain in effect.
+Runtime v7 introduced a floating, centered banner that retains the v6 consent choices, policy and Google bridge; the existing v6 GTM consent template continues to work. Previously finalized pages stay pinned to their runtime. Deploy the application, preview the new version, then republish each page to adopt v7. Validate the live HTTPS page with Tag Assistant and network inspection before broad rollout. Existing valid choices remain in effect.
 
 ## Runtime v6: consent, events, Google Tag Manager, and CRM conversions
 
-Runtime v6 adds a platform-managed Consent Mode v2 banner. v1–v5 remain pinned and retain their behavior. Upload/finalize a new version, preview, then publish to adopt v6. Existing live pages must be republished; deployment alone does not upgrade them. Do not add authored JavaScript, GTM snippets, iframe code, credentials, Google labels, or platform IDs to artifact HTML. Preview emits no measurement, loads no GTM, and submits no leads.
+Runtime v6 adds a platform-managed Consent Mode v2 banner. v1–v5 remain pinned and retain their behavior. Upload/finalize a new version, preview, then publish to adopt the current runtime. Existing live pages must be republished; deployment alone does not upgrade them. Do not add authored JavaScript, GTM snippets, iframe code, credentials, Google labels, or platform IDs to artifact HTML. Preview emits no measurement, loads no GTM, and submits no leads.
 
 ### Authoring attributes
 

@@ -7,6 +7,7 @@ import type { ExperimentAttribution } from '$lib/experiments/types';
 export type LeadEventPayload = Record<string, unknown>;
 
 type LeadEventInput = {
+	eventId?: string;
 	leadJourneyId?: string | null;
 	campaignVisitId?: number | null;
 	campaignId?: number | null;
@@ -28,6 +29,7 @@ type LeadEventInput = {
 
 export async function logLeadEvent(input: LeadEventInput): Promise<void> {
 	await db.insert(lead_events).values({
+		...(input.eventId ? { id: input.eventId } : {}),
 		lead_journey_id: input.leadJourneyId ?? null,
 		campaign_visit_id: input.campaignVisitId ?? null,
 		campaign_id: input.campaignId ?? null,

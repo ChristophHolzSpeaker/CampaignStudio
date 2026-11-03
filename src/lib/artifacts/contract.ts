@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ARTIFACT_RUNTIME_VERSION = 'v7';
+export const ARTIFACT_RUNTIME_VERSION = 'v9';
 export const ARTIFACT_SUPPORTED_RUNTIME_VERSIONS = [
 	'v1',
 	'v2',
@@ -8,6 +8,8 @@ export const ARTIFACT_SUPPORTED_RUNTIME_VERSIONS = [
 	'v4',
 	'v5',
 	'v6',
+	'v7',
+	'v8',
 	ARTIFACT_RUNTIME_VERSION
 ] as const;
 export const ARTIFACT_SOURCE_BUCKET = 'page-artifact-source';
@@ -146,6 +148,7 @@ export const RESERVED_ARTIFACT_SLUGS = [
 	'campaign-runtime',
 	'campaigns',
 	'confirm',
+	'consent-demo',
 	'embed',
 	'favicon.ico',
 	'login',
