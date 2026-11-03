@@ -19,6 +19,28 @@ const page = {
 } satisfies ArtifactPageRecord;
 
 describe('artifact response security headers', () => {
+	it('renders v9 generic campaign email links with the current page alias before consent', () => {
+		const document =
+			'<html><head></head><body><a href="mailto:speakerlp@christophholz.com?subject=Hello&amp;body=Test">Contact</a><a href="mailto:speakerlp+356@christophholz.com">Explicit other page</a><a href="mailto:someone@example.com">Other</a><p>speakerlp@christophholz.com</p><button aria-label="Copy speakerlp@christophholz.com to clipboard"></button></body></html>';
+		const v9 = injectArtifactRuntime(
+			document,
+			{ ...page, runtimeVersion: 'v9', campaignPageId: 379 },
+			false
+		);
+		expect(v9).toContain(
+			'href="mailto:speakerlp+379@christophholz.com?subject=Hello&amp;body=Test"'
+		);
+		expect(v9).toContain('aria-label="Copy speakerlp+379@christophholz.com to clipboard"');
+		expect(v9).toContain('href="mailto:someone@example.com"');
+		expect(v9).toContain('href="mailto:speakerlp+356@christophholz.com"');
+		expect(v9).toContain('<p>speakerlp@christophholz.com</p>');
+		const old = injectArtifactRuntime(
+			document,
+			{ ...page, runtimeVersion: 'v6', campaignPageId: 356 },
+			false
+		);
+		expect(old).toContain('href="mailto:speakerlp@christophholz.com?subject=Hello&amp;body=Test"');
+	});
 	it('permits Google tags only on published v5 artifacts without allowing authored inline scripts', () => {
 		const live = new Headers(
 			artifactResponseHeaders(
