@@ -32,12 +32,25 @@ function serializeInertJson(value: unknown): string {
 	);
 }
 
+// The page ID is assigned after upload. Render the approved generic address as
+// the current page alias even before a visitor makes a consent choice.
+function renderPageEmailAlias(html: string, pageId: number): string {
+	const address = `speakerlp+${pageId}@christophholz.com`;
+	return html
+		.replace(/(\s+href\s*=\s*["']mailto:)speakerlp@christophholz\.com(?=[?"'#])/gi, `$1${address}`)
+		.replace(
+			/(\s+aria-label\s*=\s*"[^"]*)speakerlp@christophholz\.com(?=[^"]*")/gi,
+			`$1${address}`
+		);
+}
+
 export function injectArtifactRuntime(
 	html: string,
 	page: ArtifactPageRecord,
 	preview: boolean,
 	consentInitiallyHidden = false
 ): string {
+	if (page.runtimeVersion === 'v9') html = renderPageEmailAlias(html, page.campaignPageId);
 	const context: ArtifactPublicContext = {
 		runtimeVersion: page.runtimeVersion,
 		campaignId: page.campaignId,

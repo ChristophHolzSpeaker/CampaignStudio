@@ -89,7 +89,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 		example:
 			'<a href="mailto:speakerlp@christophholz.com?subject=Vortragsanfrage">E-Mail senden</a>',
 		behavior:
-			'Campaign Studio supplies speakerlp+{campaignPageId}@christophholz.com and appends an opaque visit reference to the composed email body. Authors must not generate references, add visitor IDs or embed Google click IDs. No extra markup attributes are required.',
+			'For v9 artifacts, Campaign Studio renders the generic address as speakerlp+{campaignPageId}@christophholz.com before consent and appends an opaque visit reference when permitted. Authors must not generate references, add visitor IDs or embed Google click IDs. No extra markup attributes are required.',
 		copyBehavior:
 			'Copy only the short page email address. Address-only copy preserves campaign attribution but cannot guarantee visitor/ad attribution.',
 		preview: 'No visitor references or attribution requests in preview.'
