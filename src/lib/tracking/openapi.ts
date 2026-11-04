@@ -1,5 +1,10 @@
 import { z } from 'zod';
-import { trackingConfigSchema, outcomeSchema, visitConsentSchema } from './contract';
+import {
+	consentBannerLinksSchema,
+	trackingConfigSchema,
+	outcomeSchema,
+	visitConsentSchema
+} from './contract';
 const security = [{ bearerAuth: [] }];
 const parameters = [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }];
 const response = {
@@ -252,6 +257,29 @@ export const trackingApiPaths = {
 			responses: {
 				'200': response,
 				'400': { description: 'Invalid or duplicate mapping' },
+				'404': { description: 'Campaign not found' }
+			}
+		},
+		patch: {
+			operationId: 'patchCampaignConsentBannerLinks',
+			summary: 'Update only the consent banner legal links (campaign-write token)',
+			description:
+				'Both URLs must use HTTPS with no embedded credentials. Set consentBannerLinks to null to restore default links. Other campaign tracking settings are unchanged.',
+			security,
+			parameters,
+			requestBody: {
+				required: true,
+				content: {
+					'application/json': {
+						schema: z.toJSONSchema(
+							z.object({ consentBannerLinks: consentBannerLinksSchema.nullable() }).strict()
+						)
+					}
+				}
+			},
+			responses: {
+				'200': response,
+				'400': { description: 'Invalid legal links or unrelated fields' },
 				'404': { description: 'Campaign not found' }
 			}
 		}

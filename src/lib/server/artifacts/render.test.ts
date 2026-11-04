@@ -19,6 +19,31 @@ const page = {
 } satisfies ArtifactPageRecord;
 
 describe('artifact response security headers', () => {
+	it.each(['v6', 'v7', 'v8', 'v9'])(
+		'renders configured legal links for %s without changing authored links',
+		(version) => {
+			const document =
+				'<html><head></head><body><a href="https://www.christophholz.com/impressum">Authored link</a></body></html>';
+			const links = {
+				privacyUrl: 'https://speaker.christophholz.com/datenschutz?x=1&y=2',
+				imprintUrl: 'https://speaker.christophholz.com/impressum'
+			};
+			for (const preview of [false, true]) {
+				const html = injectArtifactRuntime(
+					document,
+					{ ...page, runtimeVersion: version },
+					preview,
+					false,
+					links
+				);
+				expect(html).toContain('href="https://speaker.christophholz.com/datenschutz?x=1&amp;y=2"');
+				expect(html).toContain('href="https://speaker.christophholz.com/impressum"');
+				expect(html).toContain(
+					'<a href="https://www.christophholz.com/impressum">Authored link</a>'
+				);
+			}
+		}
+	);
 	it('permits Google tags only on published v5 artifacts without allowing authored inline scripts', () => {
 		const live = new Headers(
 			artifactResponseHeaders(
