@@ -65,6 +65,26 @@ export const consentSettingsSchema = z
 	})
 	.strict();
 export type ConsentSettings = z.infer<typeof consentSettingsSchema>;
+const legalPageUrl = z
+	.string()
+	.trim()
+	.max(2048)
+	.url()
+	.refine((value) => {
+		try {
+			const url = new URL(value);
+			return url.protocol === 'https:' && !url.username && !url.password;
+		} catch {
+			return false;
+		}
+	}, 'Legal page URL must be HTTPS and contain no credentials');
+export const consentBannerLinksSchema = z
+	.object({
+		privacyUrl: legalPageUrl,
+		imprintUrl: legalPageUrl
+	})
+	.strict();
+export type ConsentBannerLinks = z.infer<typeof consentBannerLinksSchema>;
 export const trackingConfigSchema = z
 	.object({
 		gtmContainerId: z
@@ -73,6 +93,7 @@ export const trackingConfigSchema = z
 			.nullable()
 			.default(null),
 		consent: consentSettingsSchema.prefault({}),
+		consentBannerLinks: consentBannerLinksSchema.optional(),
 		mappings: z.array(mappingSchema).max(200).default([])
 	})
 	.strict()

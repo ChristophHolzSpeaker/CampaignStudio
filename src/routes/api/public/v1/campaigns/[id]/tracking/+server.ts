@@ -1,10 +1,11 @@
 import { db } from '$lib/server/db';
 import { campaigns, campaign_tracking } from '$lib/server/db/schema';
 import { getTrackingConfig } from '$lib/server/tracking/config';
-import { trackingConfigSchema } from '$lib/tracking/contract';
+import { consentBannerLinksSchema, trackingConfigSchema } from '$lib/tracking/contract';
 import { requirePublicApiWriteRequest, publicApiJson } from '$lib/server/public-api/http';
 import { readLimitedJson } from '$lib/server/runtime/http';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import type { RequestHandler } from './$types';
 const handle: RequestHandler = async ({ request, params }) => {
 	const guard = await requirePublicApiWriteRequest(request);
@@ -27,6 +28,32 @@ const handle: RequestHandler = async ({ request, params }) => {
 	} catch {
 		return reply({ ok: false, error: 'Invalid JSON' }, 400);
 	}
+	if (request.method === 'PATCH') {
+		const parsed = z
+			.object({ consentBannerLinks: consentBannerLinksSchema.nullable() })
+			.strict()
+			.safeParse(body);
+		if (!parsed.success)
+			return reply(
+				{ ok: false, error: 'Invalid consent banner links', issues: parsed.error.issues },
+				400
+			);
+		const links = parsed.data.consentBannerLinks;
+		const config = links ? { consentBannerLinks: links } : {};
+		await db
+			.insert(campaign_tracking)
+			.values({ campaign_id: id, config })
+			.onConflictDoUpdate({
+				target: campaign_tracking.campaign_id,
+				set: {
+					config: links
+						? sql`jsonb_set(${campaign_tracking.config}, '{consentBannerLinks}', ${JSON.stringify(links)}::jsonb, true)`
+						: sql`${campaign_tracking.config} - 'consentBannerLinks'`,
+					updated_at: new Date()
+				}
+			});
+		return reply({ ok: true, data: await getTrackingConfig(id) });
+	}
 	const parsed = trackingConfigSchema.safeParse(body);
 	if (!parsed.success)
 		return reply(
@@ -44,3 +71,4 @@ const handle: RequestHandler = async ({ request, params }) => {
 };
 export const GET = handle;
 export const PUT = handle;
+export const PATCH = handle;

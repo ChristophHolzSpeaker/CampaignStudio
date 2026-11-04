@@ -57,6 +57,19 @@ Every push uses `event: "cs_event"` plus the fields above. Optional fields are e
 
 ### Campaign mapping API (for Claude and the marketing team)
 
+The consent banner's legal links can be set independently for each campaign. Use `PATCH /api/public/v1/campaigns/{id}/tracking` with the campaign-write token and this complete JSON body:
+
+```json
+{
+	"consentBannerLinks": {
+		"privacyUrl": "https://speaker.christophholz.com/datenschutz",
+		"imprintUrl": "https://speaker.christophholz.com/impressum"
+	}
+}
+```
+
+Both links must be absolute HTTPS URLs without embedded credentials. This atomic update changes only `consentBannerLinks`; it does not replace the GTM container, consent settings or conversion mappings. Send `{ "consentBannerLinks": null }` to remove the override and restore the previous homepage links. The existing GET and full PUT remain available. The platform renders the configured links on the initial page and in previews for v6–v9 artifacts. Changes take effect on the next page load, without republishing the artifact or changing the consent policy version. These settings affect banner links only; authored footer links remain part of the page bundle.
+
 Use `Authorization: Bearer <CAMPAIGN_WRITE_API_TOKEN>` server-side:
 
 - `GET /api/public/v1/campaigns/{id}/tracking`: current configuration.

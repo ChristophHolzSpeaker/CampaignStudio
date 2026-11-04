@@ -1,3 +1,5 @@
+import type { ConsentBannerLinks } from '$lib/tracking/contract';
+
 // Trusted platform markup. Artifact authors cannot provide scripts or customize this panel.
 export const consentBannerStyle = `<style data-cs-consent-style>
 html:has(#cs-consent){height:100%;overflow:hidden;--cs-consent-space:min(120px,45dvh)}
@@ -49,6 +51,25 @@ export const consentBannerMarkup = `<aside id="cs-consent" aria-label="Cookie-Ei
 <p role="status" data-cs-consent-status></p></div>
 <div class="cs-consent-actions"><button type="button" data-cs-consent-accept>Alle akzeptieren</button><button type="button" data-cs-consent-reject>Nur notwendige</button><button type="button" data-cs-consent-settings>Einstellungen</button><button type="button" data-cs-consent-save hidden>Auswahl speichern</button></div>
 </div></aside>`;
+
+export function renderConsentBanner(links?: ConsentBannerLinks): string {
+	if (!links) return consentBannerMarkup;
+	const escape = (value: string) =>
+		value.replace(
+			/[&<>"']/g,
+			(character) =>
+				({
+					'&': '&amp;',
+					'<': '&lt;',
+					'>': '&gt;',
+					'"': '&quot;',
+					"'": '&#39;'
+				})[character]!
+		);
+	return consentBannerMarkup
+		.replace('https://www.christophholz.com/datenschutzerklarung', () => escape(links.privacyUrl))
+		.replace('https://www.christophholz.com/impressum', () => escape(links.imprintUrl));
+}
 
 // v7 uses the same trusted controls without resizing the page viewport.
 export const floatingConsentBannerStyle = `<style data-cs-consent-style>

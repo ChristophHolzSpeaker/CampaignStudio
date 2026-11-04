@@ -19,12 +19,18 @@ export const GET: RequestHandler = async ({ params, request, cookies }) => {
 	)
 		return new Response(null, { status: 304, headers });
 	try {
-		const policy = ['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '')
-			? (await getTrackingConfig(page.campaignId)).consent
+		const config = ['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '')
+			? await getTrackingConfig(page.campaignId)
 			: null;
-		const remembered = policy ? Boolean(readBrowserConsent(cookies, policy)) : false;
+		const remembered = config ? Boolean(readBrowserConsent(cookies, config.consent)) : false;
 		return new Response(
-			injectArtifactRuntime(await readVerifiedArtifactHtml(page), page, false, remembered),
+			injectArtifactRuntime(
+				await readVerifiedArtifactHtml(page),
+				page,
+				false,
+				remembered,
+				config?.consentBannerLinks
+			),
 			{
 				headers
 			}
