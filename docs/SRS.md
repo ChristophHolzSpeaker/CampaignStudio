@@ -587,3 +587,7 @@ At an artifact form submission, v8 and v9 may record only a valid explicit brows
 ## Consent while campaign settings load (runtime v9)
 
 The banner must retain an explicit choice made while campaign consent settings are loading and apply it only after the applicable policy is available. Until then optional consent remains denied. Dismissing the banner cancels any pending selection; configuration failure must not apply a choice under a guessed policy. Existing runtime versions remain pinned.
+
+## Consent banner legal links
+
+Campaign tracking configuration may supply HTTPS privacy and imprint URLs for the platform consent banner. The server renders the configured links on the initial response and in artifact previews for consent-enabled runtime versions. Omitting the setting preserves the previous links. Updating the links does not alter consent choices, policy versions, authored content or existing runtime versions.

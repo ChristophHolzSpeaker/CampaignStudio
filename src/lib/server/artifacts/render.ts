@@ -1,9 +1,10 @@
 import {
-	consentBannerMarkup,
+	renderConsentBanner,
 	consentBannerStyle,
 	floatingConsentBannerStyle
 } from './consent-banner';
 import type { ArtifactPageRecord } from './repository';
+import type { ConsentBannerLinks } from '$lib/tracking/contract';
 import { createBookingWidgetToken } from './widget-token';
 
 const ARTIFACT_RENDERER_REVISION = 'r7';
@@ -36,7 +37,8 @@ export function injectArtifactRuntime(
 	html: string,
 	page: ArtifactPageRecord,
 	preview: boolean,
-	consentInitiallyHidden = false
+	consentInitiallyHidden = false,
+	consentBannerLinks?: ConsentBannerLinks
 ): string {
 	const context: ArtifactPublicContext = {
 		runtimeVersion: page.runtimeVersion,
@@ -65,7 +67,8 @@ export function injectArtifactRuntime(
 			: '<script src="/campaign-runtime/email-v1.js" defer></script>';
 	// Runtime scripts are cached immutably; v6 fixes need a fresh browser/CDN URL.
 	const runtimeUrl = `/campaign-runtime/${page.runtimeVersion}.js${page.runtimeVersion === 'v6' ? '?revision=visit-ip-1' : ''}`;
-	const injection = `${['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '') ? (consentInitiallyHidden && !preview ? consentBannerMarkup.replace('id="cs-consent"', 'id="cs-consent" hidden') : consentBannerMarkup) : ''}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="${runtimeUrl}" defer></script>${emailHelper}`;
+	const banner = renderConsentBanner(consentBannerLinks);
+	const injection = `${['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '') ? (consentInitiallyHidden && !preview ? banner.replace('id="cs-consent"', 'id="cs-consent" hidden') : banner) : ''}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="${runtimeUrl}" defer></script>${emailHelper}`;
 	const documentWithFonts = /<\/head\s*>/i.test(html)
 		? html.replace(
 				/<\/head\s*>/i,

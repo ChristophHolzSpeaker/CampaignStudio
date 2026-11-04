@@ -1,6 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { findMapping, trackingConfigSchema, outcomeSchema, measurementSchema } from './contract';
 describe('tracking contract', () => {
+	it('accepts only safe HTTPS campaign consent-banner legal links', () => {
+		const links = {
+			privacyUrl: 'https://speaker.christophholz.com/datenschutz',
+			imprintUrl: 'https://speaker.christophholz.com/impressum'
+		};
+		expect(trackingConfigSchema.parse({ consentBannerLinks: links }).consentBannerLinks).toEqual(
+			links
+		);
+		for (const privacyUrl of [
+			'javascript:alert(1)',
+			'http://example.com/privacy',
+			'https://user:password@example.com/'
+		]) {
+			expect(
+				trackingConfigSchema.safeParse({ consentBannerLinks: { ...links, privacyUrl } }).success
+			).toBe(false);
+		}
+		expect(trackingConfigSchema.parse({}).consentBannerLinks).toBeUndefined();
+	});
 	it('accepts dynamic names and preserves case-sensitive YouTube action IDs', () => {
 		expect(
 			measurementSchema.parse({

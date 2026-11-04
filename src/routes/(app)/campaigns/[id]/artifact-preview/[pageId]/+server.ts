@@ -2,6 +2,7 @@ import { error } from '@sveltejs/kit';
 import { artifactResponseHeaders, injectArtifactRuntime } from '$lib/server/artifacts/render';
 import { getArtifactPageById, readVerifiedArtifactHtml } from '$lib/server/artifacts/repository';
 import { getArtifactAssetPublicOrigin } from '$lib/server/artifacts/storage';
+import { getTrackingConfig } from '$lib/server/tracking/config';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -16,7 +17,19 @@ export const GET: RequestHandler = async ({ params }) => {
 		throw error(404, 'Artifact preview not found');
 	}
 
-	return new Response(injectArtifactRuntime(await readVerifiedArtifactHtml(page), page, true), {
-		headers: artifactResponseHeaders(page, true, getArtifactAssetPublicOrigin())
-	});
+	const config = ['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion)
+		? await getTrackingConfig(page.campaignId)
+		: null;
+	return new Response(
+		injectArtifactRuntime(
+			await readVerifiedArtifactHtml(page),
+			page,
+			true,
+			false,
+			config?.consentBannerLinks
+		),
+		{
+			headers: artifactResponseHeaders(page, true, getArtifactAssetPublicOrigin())
+		}
+	);
 };
