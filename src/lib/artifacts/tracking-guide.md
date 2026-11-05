@@ -1,10 +1,14 @@
+## Runtime v10: YouTube playback on demand
+
+Visitors can start a YouTube video using its play button without granting Marketing consent. Until they click, the runtime keeps the authored still and makes no YouTube player request. Playback connects the browser to YouTube; privacy-enhanced mode is not a promise that no data is sent. This action never changes Google Consent Mode or the stored category choices. Campaign Studio only emits its confirmed-play event when Marketing is granted. Existing v9 and earlier pages remain pinned until republished.
+
 ## Runtime v9: early consent and asynchronous form attribution
 
 Runtime v9 keeps an explicit consent choice made while campaign settings load and applies it once the policy arrives. Consent remains denied until then; if settings cannot be loaded, visitors are asked to reload. Existing v8 pages stay pinned.
 
 Runtime v8 introduced asynchronous form attribution, which v9 retains. After a successful lead submission, the runtime can link the exact form event to a delayed same-browser visit using a short-lived, page-bound receipt; it never waits for that link before submitting the form. Attribution is best effort, requires the current measurement or Marketing permission and browser ownership, and can fail if the browser closes or cookies or requests are blocked. Google click IDs still require Marketing consent. The v6/v7 consent decisions, v7 banner, GTM bridge and browser `form_submit` conversion remain unchanged. Existing versions stay pinned until republished. Do not add a server-side conversion for the form submission.
 
-For a v8 or v9 form submission, the server retains an explicit browser-reported Marketing choice, policy version and expiry until the choice expires. `GET /api/public/v1/lead-journeys/{id}/tracking` exposes `consentAtLatestSubmission` to authorized lead readers while evidence is current. `consentEvidenceStatus` is `recorded`, `unknown`, or `unavailable`; a null snapshot is not denial. The scheduled conversion processor deletes expired records in bounded batches; physical cleanup depends on scheduler availability. This snapshot is diagnostic, not legal proof or a grant for offline delivery, and it cannot establish whether an ad click ID was present. It does not capture a GCLID without Marketing consent or infer historic choices. Apply `supabase/migrations/051_form_consent_evidence.sql` before application deployment and confirm the privacy notice and retention settings with the owner/DPO.
+For a v8, v9 or v10 form submission, the server retains an explicit browser-reported Marketing choice, policy version and expiry until the choice expires. `GET /api/public/v1/lead-journeys/{id}/tracking` exposes `consentAtLatestSubmission` to authorized lead readers while evidence is current. `consentEvidenceStatus` is `recorded`, `unknown`, or `unavailable`; a null snapshot is not denial. The scheduled conversion processor deletes expired records in bounded batches; physical cleanup depends on scheduler availability. This snapshot is diagnostic, not legal proof or a grant for offline delivery, and it cannot establish whether an ad click ID was present. It does not capture a GCLID without Marketing consent or infer historic choices. Apply `supabase/migrations/051_form_consent_evidence.sql` before application deployment and confirm the privacy notice and retention settings with the owner/DPO.
 
 ## Runtime v7: floating consent banner
 
@@ -68,7 +72,7 @@ The consent banner's legal links can be set independently for each campaign. Use
 }
 ```
 
-Both links must be absolute HTTPS URLs without embedded credentials. This atomic update changes only `consentBannerLinks`; it does not replace the GTM container, consent settings or conversion mappings. Send `{ "consentBannerLinks": null }` to remove the override and restore the previous homepage links. The existing GET and full PUT remain available. The platform renders the configured links on the initial page and in previews for v6–v9 artifacts. Changes take effect on the next page load, without republishing the artifact or changing the consent policy version. These settings affect banner links only; authored footer links remain part of the page bundle.
+Both links must be absolute HTTPS URLs without embedded credentials. This atomic update changes only `consentBannerLinks`; it does not replace the GTM container, consent settings or conversion mappings. Send `{ "consentBannerLinks": null }` to remove the override and restore the previous homepage links. The existing GET and full PUT remain available. The platform renders the configured links on the initial page and in previews for v6–v10 artifacts. Changes take effect on the next page load, without republishing the artifact or changing the consent policy version. These settings affect banner links only; authored footer links remain part of the page bundle.
 
 Use `Authorization: Bearer <CAMPAIGN_WRITE_API_TOKEN>` server-side:
 

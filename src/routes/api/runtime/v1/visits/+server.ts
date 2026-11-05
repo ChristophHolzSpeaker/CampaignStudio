@@ -41,10 +41,10 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	if (pageUrl.origin !== url.origin || pageUrl.pathname !== `/${page.slug}`)
 		return json({ ok: false, error: 'Page context mismatch' }, { status: 400 });
 	const baseline =
-		['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '') &&
+		['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '') &&
 		Boolean(parsed.data.baselineOnly);
 	const policy =
-		['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '') && !baseline
+		['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '') && !baseline
 			? (await getTrackingConfig(page.campaignId)).consent
 			: null;
 	const statisticsAllowed = !policy || browserStatisticsAllowed(cookies, policy);

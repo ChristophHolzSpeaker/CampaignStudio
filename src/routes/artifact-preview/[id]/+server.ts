@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
 		throw error(404, 'Artifact preview not found');
 	const page = await getArtifactPageById(campaignPageId);
 	if (!page) throw error(404, 'Artifact preview not found');
-	const config = ['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion)
+	const config = ['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion)
 		? await getTrackingConfig(page.campaignId)
 		: null;
 	return new Response(
