@@ -105,8 +105,8 @@ it('links only a verified browser-owned visit to the signed submission', async (
 		expect.objectContaining({ journeyId: 'journey-id', campaignId: 3 })
 	);
 });
-it('accepts the signed attribution flow for v9 pages', async () => {
-	mocks.page.mockResolvedValue({ campaignId: 3, runtimeVersion: 'v9' });
+it.each(['v9', 'v10'])('accepts the signed attribution flow for %s pages', async (version) => {
+	mocks.page.mockResolvedValue({ campaignId: 3, runtimeVersion: version });
 	expect((await call()).status).toBe(200);
 	expect(mocks.update).toHaveBeenCalled();
 });

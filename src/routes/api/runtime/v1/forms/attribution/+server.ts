@@ -50,7 +50,7 @@ export const POST: RequestHandler = async ({ request, url, cookies }) => {
 	if (!receipt || verifyVisitReceipt(visitReceipt, campaignPageId) !== visitId)
 		return reply({ ok: false, error: 'Invalid attribution receipt' }, 403);
 	const page = await getPublishedArtifactPageById(campaignPageId);
-	if (!page || !['v8', 'v9'].includes(page.runtimeVersion))
+	if (!page || !['v8', 'v9', 'v10'].includes(page.runtimeVersion))
 		return reply({ ok: false, error: 'Page not found' }, 404);
 	const settings = (await getTrackingConfig(page.campaignId)).consent;
 	const choice = readBrowserConsent(cookies, settings);
