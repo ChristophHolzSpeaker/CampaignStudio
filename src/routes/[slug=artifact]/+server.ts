@@ -19,7 +19,7 @@ export const GET: RequestHandler = async ({ params, request, cookies }) => {
 	)
 		return new Response(null, { status: 304, headers });
 	try {
-		const config = ['v6', 'v7', 'v8', 'v9'].includes(page.runtimeVersion ?? '')
+		const config = ['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '')
 			? await getTrackingConfig(page.campaignId)
 			: null;
 		const remembered = config ? Boolean(readBrowserConsent(cookies, config.consent)) : false;

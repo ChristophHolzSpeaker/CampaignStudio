@@ -582,7 +582,7 @@ New artifact versions use a centered, floating white consent box approximately 4
 
 A successful artifact lead submission must not wait for optional visit attribution. Runtime v8 may use a short-lived, signed and page-bound receipt returned after a successful form submission to link that exact form event to a same-browser owned visit after the visit is available. The server must recheck consent and page/visit ownership; invalid, expired, cross-page or conflicting claims must not change attribution. The link is best effort and must not block or retry the lead submission. It does not alter click-ID consent rules, send a server-side form conversion, infer missing click IDs, or change existing v6/v7 versions.
 
-At an artifact form submission, v8 and v9 may record only a valid explicit browser-reported Marketing choice, its policy version, opaque evidence reference and expiry. Absence, expiry, errors or dismissal remain unknown and are never represented as denial or as proof of missing click-ID cause. Evidence is not an advertising authorization and never replaces the existing consent checks. Its expiry is the original consent expiry; authenticated lead tracking omits expired records and the existing scheduled processor removes expired evidence in bounded batches. Cleanup depends on scheduler availability. No historical consent is inferred or backfilled.
+At an artifact form submission, v8–v10 may record only a valid explicit browser-reported Marketing choice, its policy version, opaque evidence reference and expiry. Absence, expiry, errors or dismissal remain unknown and are never represented as denial or as proof of missing click-ID cause. Evidence is not an advertising authorization and never replaces the existing consent checks. Its expiry is the original consent expiry; authenticated lead tracking omits expired records and the existing scheduled processor removes expired evidence in bounded batches. Cleanup depends on scheduler availability. No historical consent is inferred or backfilled.
 
 ## Consent while campaign settings load (runtime v9)
 
@@ -591,3 +591,7 @@ The banner must retain an explicit choice made while campaign consent settings a
 ## Consent banner legal links
 
 Campaign tracking configuration may supply HTTPS privacy and imprint URLs for the platform consent banner. The server renders the configured links on the initial response and in artifact previews for consent-enabled runtime versions. Omitting the setting preserves the previous links. Updating the links does not alter consent choices, policy versions, authored content or existing runtime versions.
+
+## YouTube playback on demand (runtime v10)
+
+A visitor can play a YouTube video without changing Marketing or other consent choices. The authored still remains visible until the visitor activates the play control; only then does the runtime load the privacy-enhanced YouTube player. The runtime does not record a platform video-play event without Marketing consent and does not change consent signals. Existing runtime versions remain pinned.

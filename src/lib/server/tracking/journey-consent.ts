@@ -36,7 +36,7 @@ export async function journeyConsent(journeyId: string, before = new Date()) {
 					.where(eq(page_artifacts.campaign_page_id, pageId))
 					.limit(1)
 			: [];
-		const consent = ['v6', 'v7', 'v8', 'v9'].includes(page?.runtime ?? '')
+		const consent = ['v6', 'v7', 'v8', 'v9', 'v10'].includes(page?.runtime ?? '')
 			? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
 			: null;
 		return {
@@ -58,13 +58,13 @@ export async function journeyConsent(journeyId: string, before = new Date()) {
 			)
 		);
 	if (!rows.length) return fallback();
-	const policy = rows.some((row) => ['v6', 'v7', 'v8', 'v9'].includes(row.runtime ?? ''))
+	const policy = rows.some((row) => ['v6', 'v7', 'v8', 'v9', 'v10'].includes(row.runtime ?? ''))
 		? (await getTrackingConfig(journey.campaign_id ?? journey.first_campaign_id ?? -1)).consent
 		: null;
 	const decisions = rows.map((row) =>
 		evaluateConsent(
 			row.record ?? undefined,
-			['v6', 'v7', 'v8', 'v9'].includes(row.runtime ?? '') ? policy : null
+			['v6', 'v7', 'v8', 'v9', 'v10'].includes(row.runtime ?? '') ? policy : null
 		)
 	);
 	return {

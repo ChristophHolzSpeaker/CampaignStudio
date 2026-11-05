@@ -19,7 +19,29 @@ const page = {
 } satisfies ArtifactPageRecord;
 
 describe('artifact response security headers', () => {
-	it.each(['v6', 'v7', 'v8', 'v9'])(
+	it('binds a generic email link to the v10 page before consent without changing explicit links', () => {
+		const document =
+			'<html><head></head><body><a href="mailto:speakerlp@christophholz.com?subject=Hello&amp;body=Test">Contact</a><a href="mailto:speakerlp+356@christophholz.com">Explicit other page</a><a href="mailto:someone@example.com">Other</a><p>speakerlp@christophholz.com</p><button aria-label="Copy speakerlp@christophholz.com to clipboard"></button></body></html>';
+		const v10 = injectArtifactRuntime(
+			document,
+			{ ...page, runtimeVersion: 'v10', campaignPageId: 379 },
+			false
+		);
+		expect(v10).toContain(
+			'href="mailto:speakerlp+379@christophholz.com?subject=Hello&amp;body=Test"'
+		);
+		expect(v10).toContain('aria-label="Copy speakerlp+379@christophholz.com to clipboard"');
+		expect(v10).toContain('href="mailto:speakerlp+356@christophholz.com"');
+		expect(v10).toContain('href="mailto:someone@example.com"');
+		expect(v10).toContain('<p>speakerlp@christophholz.com</p>');
+		const old = injectArtifactRuntime(
+			document,
+			{ ...page, runtimeVersion: 'v9', campaignPageId: 356 },
+			false
+		);
+		expect(old).toContain('href="mailto:speakerlp@christophholz.com?subject=Hello&amp;body=Test"');
+	});
+	it.each(['v6', 'v7', 'v8', 'v9', 'v10'])(
 		'renders configured legal links for %s without changing authored links',
 		(version) => {
 			const document =
@@ -110,7 +132,7 @@ describe('artifact response security headers', () => {
 		expect(liveHeaders.get('content-security-policy')).toContain("frame-ancestors 'none'");
 		expect(liveHeaders.get('x-frame-options')).toBe('DENY');
 	});
-	it.each(['v8', 'v9'])(
+	it.each(['v8', 'v9', 'v10'])(
 		'renders %s with the floating consent banner and private response policy',
 		(version) => {
 			const runtimePage = { ...page, runtimeVersion: version };
