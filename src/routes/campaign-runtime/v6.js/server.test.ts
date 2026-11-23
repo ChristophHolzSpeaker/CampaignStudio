@@ -354,26 +354,27 @@ describe('runtime v6 consent', () => {
 		expect(app.host.hidden).toBe(false);
 	});
 
-	it('keeps an early dismissal closed when tracking settings finish loading', async () => {
+	it('keeps the banner open after an outside click before tracking settings load', async () => {
 		const app = await mount({ deferTracking: true });
-		await app.click('[data-cs-consent-close]');
+		await app.click('main');
 		app.finishTracking();
 		await app.settle();
-		expect(app.host.hidden).toBe(true);
+		expect(app.host.hidden).toBe(false);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
 	});
-	it('does not turn necessary platform measurement into advertising consent when dismissed', async () => {
+	it('keeps advertising consent denied while necessary platform measurement runs', async () => {
 		const app = await mount({ settings: { ownMeasurement: 'necessary' } });
-		await app.click('[data-cs-consent-close]');
-		expect(app.host.hidden).toBe(true);
+		await app.click('main');
+		expect(app.host.hidden).toBe(false);
 		expect(app.posts('/visits')).toHaveLength(2);
 		expect(app.layer().filter((e) => e[0] === 'consent')).toHaveLength(1);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
 	});
-	it('dismisses without granting or recording a choice and can reopen from the footer', async () => {
+	it('requires a choice after an outside click or Escape', async () => {
 		const app = await mount();
-		await app.click('[data-cs-consent-close]');
-		expect(app.host.hidden).toBe(true);
+		expect(app.host.querySelector('[data-cs-consent-close]')).toBeNull();
+		await app.click('main');
+		expect(app.host.hidden).toBe(false);
 		expect(app.layer().filter((e) => e[0] === 'consent')).toHaveLength(1);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
 		expect(app.posts('/visits')).toHaveLength(1);
@@ -381,10 +382,10 @@ describe('runtime v6 consent', () => {
 		await app.click('main [data-cs-consent-open]');
 		expect(app.host.hidden).toBe(false);
 		app.host.dispatchEvent(new app.win.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-		expect(app.host.hidden).toBe(true);
+		expect(app.host.hidden).toBe(false);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(0);
 	});
-	it('keeps a remembered choice when unsaved preference changes are dismissed', async () => {
+	it('keeps a remembered choice until preference changes are saved', async () => {
 		const app = await mount({ cookie: saved() });
 		const cookie = app.win.document.cookie;
 		const signals = app.signals();
@@ -393,8 +394,8 @@ describe('runtime v6 consent', () => {
 		app.win.document.querySelector<HTMLInputElement>(
 			'[data-cs-consent-category="marketing"]'
 		)!.checked = false;
-		await app.click('[data-cs-consent-close]');
-		expect(app.host.hidden).toBe(true);
+		await app.click('main');
+		expect(app.host.hidden).toBe(false);
 		expect(app.signals()).toEqual(signals);
 		expect(app.win.document.cookie).toBe(cookie);
 		expect(app.posts('/api/runtime/v1/consent')).toHaveLength(posts);
