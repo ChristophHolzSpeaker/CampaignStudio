@@ -5,7 +5,6 @@ export const consentRuntimeV9Source = String.raw`
   let consentReady = false;
   let consentUnavailable = false;
   let pendingSelection = null;
-  let consentDismissed = false;
   let choice = null;
   let consentSequence = Promise.resolve();
   let consentOpener = null;
@@ -121,21 +120,10 @@ export const consentRuntimeV9Source = String.raw`
     applyChoice({statistics,marketing,personalization,policyVersion:consentSettings.policyVersion,
       evidenceRef:'cs:'+crypto.randomUUID(),expiresAt:Date.now()+consentSettings.retentionDays*86400000},true);
   };
-  const dismissConsent = () => {
-    if(!consentHost)return;
-    pendingSelection=null;
-    consentHost.querySelector('[data-cs-consent-status]').textContent='';
-    consentDismissed=true;
-    consentHost.hidden=true;
-    const target=consentOpener && !consentHost.contains(consentOpener) ? consentOpener : document.querySelector('[data-cs-consent-open]');
-    target?.focus({preventScroll:true});
-    consentOpener=null;
-  };
   const openConsent = (opener) => {
     if(!consentHost)return;
     pendingSelection=null;
     consentHost.querySelector('[data-cs-consent-status]').textContent=consentUnavailable?'Die Cookie-Einstellungen konnten nicht geladen werden. Bitte laden Sie die Seite neu.':'';
-    consentDismissed=false;
     consentOpener=opener || null;
     consentHost.hidden=false;
     consentHost.querySelector('[data-cs-consent-summary]').hidden=true;
@@ -148,7 +136,6 @@ export const consentRuntimeV9Source = String.raw`
     consentHost.querySelector('.cs-consent-copy').scrollTop=0;
   };
   if(consentHost){
-    consentHost.querySelector('[data-cs-consent-close]').addEventListener('click',dismissConsent);
     consentHost.querySelector('[data-cs-consent-accept]').addEventListener('click',()=>selectConsent(true,true,true));
     consentHost.querySelector('[data-cs-consent-reject]').addEventListener('click',()=>selectConsent(false,false,false));
     consentHost.querySelector('[data-cs-consent-settings]').addEventListener('click',e=>openConsent(e.currentTarget));
@@ -157,9 +144,6 @@ export const consentRuntimeV9Source = String.raw`
       consentHost.querySelector('[data-cs-consent-category="marketing"]').checked,
       consentHost.querySelector('[data-cs-consent-category="personalization"]').checked));
   }
-  consentHost?.addEventListener('keydown',event=>{
-    if(event.key==='Escape')dismissConsent();
-  });
   document.addEventListener('click',event=>{
     const opener=event.target instanceof Element?event.target.closest('[data-cs-consent-open]'):null;
     if(opener){event.preventDefault();openConsent(opener);}
@@ -180,7 +164,7 @@ export const consentRuntimeV9Source = String.raw`
       && saved.expiresAt<=Date.now()+consentSettings.retentionDays*86400000
       && ['statistics','marketing','personalization'].every(k=>typeof saved[k]==='boolean') && /^cs:[a-f0-9-]{36}$/.test(saved.evidenceRef || ''))applyChoice(saved,false);
     else {
-      if(consentHost)consentHost.hidden=consentDismissed;
+      if(consentHost)consentHost.hidden=false;
       document.cookie='cs_consent=; Path=/; Max-Age=0; SameSite=Lax';
       updateGoogleConsent(deniedSignals);
       loadGoogle();
@@ -190,7 +174,7 @@ export const consentRuntimeV9Source = String.raw`
   const consentLoadFailed = () => {
     consentUnavailable=true;
     pendingSelection=null;
-    if(consentHost && !consentDismissed){
+    if(consentHost){
       consentHost.hidden=false;
       consentHost.querySelector('[data-cs-consent-status]').textContent='Die Cookie-Einstellungen konnten nicht geladen werden. Bitte laden Sie die Seite neu.';
     }

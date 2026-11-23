@@ -8,6 +8,13 @@ import type { ConsentBannerLinks } from '$lib/tracking/contract';
 import { createBookingWidgetToken } from './widget-token';
 
 const ARTIFACT_RENDERER_REVISION = 'r7';
+const CONSENT_RUNTIME_VERSIONS = ['v6', 'v7', 'v8', 'v9', 'v10'];
+
+export function artifactRuntimeScriptUrl(version: string): string {
+	// The scripts are cached immutably. The new banner needs the matching handlers.
+	const revision = CONSENT_RUNTIME_VERSIONS.includes(version) ? '?revision=explicit-consent-1' : '';
+	return `/campaign-runtime/${version}.js${revision}`;
+}
 
 type ArtifactPublicContext = {
 	runtimeVersion: string;
@@ -74,20 +81,21 @@ export function injectArtifactRuntime(
 		}
 	};
 	const fontStylesheet = `<link rel="stylesheet" href="/campaign-runtime/fonts/${page.runtimeVersion}.css" data-cs-platform-fonts>`;
+	const hasConsent = CONSENT_RUNTIME_VERSIONS.includes(page.runtimeVersion);
 	const emailHelper =
-		preview || ['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '')
-			? ''
-			: '<script src="/campaign-runtime/email-v1.js" defer></script>';
-	// Runtime scripts are cached immutably; v6 fixes need a fresh browser/CDN URL.
-	const runtimeUrl = `/campaign-runtime/${page.runtimeVersion}.js${page.runtimeVersion === 'v6' ? '?revision=visit-ip-1' : ''}`;
-	const banner = renderConsentBanner(consentBannerLinks);
-	const injection = `${['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '') ? (consentInitiallyHidden && !preview ? banner.replace('id="cs-consent"', 'id="cs-consent" hidden') : banner) : ''}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="${runtimeUrl}" defer></script>${emailHelper}`;
+		preview || hasConsent ? '' : '<script src="/campaign-runtime/email-v1.js" defer></script>';
+	let banner = hasConsent ? renderConsentBanner(consentBannerLinks) : '';
+	if (consentInitiallyHidden && !preview)
+		banner = banner.replace('id="cs-consent"', 'id="cs-consent" hidden');
+	const bannerStyle = hasConsent
+		? page.runtimeVersion === 'v6'
+			? consentBannerStyle
+			: floatingConsentBannerStyle
+		: '';
+	const injection = `${banner}<script id="cs-page-context" type="application/json">${serializeInertJson(context)}</script><script src="${artifactRuntimeScriptUrl(page.runtimeVersion)}" defer></script>${emailHelper}`;
 	const documentWithFonts = /<\/head\s*>/i.test(html)
-		? html.replace(
-				/<\/head\s*>/i,
-				`${fontStylesheet}${['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '') ? (page.runtimeVersion === 'v6' ? consentBannerStyle : floatingConsentBannerStyle) : ''}</head>`
-			)
-		: `${fontStylesheet}${['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '') ? (page.runtimeVersion === 'v6' ? consentBannerStyle : floatingConsentBannerStyle) : ''}${html}`;
+		? html.replace(/<\/head\s*>/i, `${fontStylesheet}${bannerStyle}</head>`)
+		: `${fontStylesheet}${bannerStyle}${html}`;
 	if (/<\/body\s*>/i.test(documentWithFonts))
 		return documentWithFonts.replace(/<\/body\s*>/i, `${injection}</body>`);
 	return `${documentWithFonts}${injection}`;
@@ -108,13 +116,14 @@ export function artifactResponseHeaders(
 ): HeadersInit {
 	const publicAssetOrigin = normalizeCspOrigin(assetOrigin);
 	const frameAncestors = preview ? '*' : "'none'";
+	const hasConsent = CONSENT_RUNTIME_VERSIONS.includes(page.runtimeVersion);
 	return {
 		'Content-Type': 'text/html; charset=utf-8',
 		'Cache-Control':
-			preview || ['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '')
+			preview || hasConsent
 				? 'private, no-store'
 				: 'public, s-maxage=60, stale-while-revalidate=300',
-		...(['v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion ?? '')
+		...(hasConsent
 			? {}
 			: { ETag: `"${page.contentSha256}-${page.runtimeVersion}-${ARTIFACT_RENDERER_REVISION}"` }),
 		'Content-Security-Policy': `default-src 'none'; base-uri 'none'; object-src 'none'; script-src 'self' https://www.youtube.com${['v5', 'v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion) && !preview ? ' https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com' : ''}; style-src 'self' 'unsafe-inline' https: ${publicAssetOrigin}; img-src 'self' data: blob: https: ${publicAssetOrigin}; font-src 'self' data: https: ${publicAssetOrigin}; media-src 'self' blob: https: ${publicAssetOrigin}; connect-src 'self'${['v5', 'v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion) && !preview ? ' https://pagead2.googlesyndication.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com https://www.googleadservices.com https://googleads.g.doubleclick.net https://www.google.com https://www.google.de https://*.doubleclick.net' : ''}; form-action 'self'; frame-src 'self' https://www.youtube-nocookie.com${['v5', 'v6', 'v7', 'v8', 'v9', 'v10'].includes(page.runtimeVersion) && !preview ? ' https://www.googletagmanager.com https://td.doubleclick.net https://www.google.com' : ''}; frame-ancestors ${frameAncestors}`,

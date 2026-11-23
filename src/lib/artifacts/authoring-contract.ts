@@ -159,7 +159,7 @@ export const ARTIFACT_AUTHORING_CONTRACT = {
 			settings: 'GET/PUT /api/public/v1/campaigns/{id}/tracking, consent field',
 			reopenSelector: '[data-cs-consent-open]',
 			dismissal:
-				'The top-right close button and Escape dismiss for this page view without changing consent or recording a choice. Defaults remain denied when no previous choice exists; the footer hook reopens preferences.',
+				'The banner closes after the visitor accepts all, chooses necessary cookies only, or saves custom preferences. Outside clicks and Escape leave it open. The footer hook reopens preferences.',
 			appearance:
 				'Uses the platform Bureau Grot body and condensed display fonts, square equal-weight outlined controls, a white surface and the Christoph Holz red accent. On narrow screens the content scrolls while choice buttons stay visible.',
 			example: '<button type="button" data-cs-consent-open>Cookie-Einstellungen</button>',
