@@ -10,7 +10,7 @@ html:has(#cs-consent[hidden]) body{height:100dvh!important}
 #cs-consent *{box-sizing:border-box;font:inherit;color:inherit;letter-spacing:normal;text-transform:none}
 #cs-consent .cs-consent-inner{max-width:1344px;margin:auto;padding:10px 32px;height:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;align-items:center}
 #cs-consent .cs-consent-copy{grid-column:1;grid-row:1;min-height:0;max-height:100%;overflow:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:4px}
-#cs-consent h2{font:700 20px/1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;letter-spacing:-.02em;margin:0 0 4px;padding-right:28px}
+#cs-consent h2{font:700 20px/1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;letter-spacing:-.02em;margin:0 0 4px}
 #cs-consent p{margin:0}
 #cs-consent .cs-consent-links{display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.35;color:#44444b}
 #cs-consent a{text-decoration:underline;text-underline-offset:3px;font:inherit;text-transform:none;letter-spacing:normal}
@@ -18,9 +18,6 @@ html:has(#cs-consent[hidden]) body{height:100dvh!important}
 #cs-consent a:hover{color:#bd1230}
 #cs-consent .cs-consent-actions{grid-column:2;grid-row:1;display:grid;grid-template-columns:repeat(3,114px);gap:6px;align-self:center}
 #cs-consent button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:44px;padding:6px 8px;border:1px solid #09090b;border-radius:0;background:#fff;color:#09090b;font:500 16px/1.1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;letter-spacing:-.02em;text-align:center;transition:background-color .15s,color .15s,border-color .15s}
-#cs-consent .cs-consent-close{position:absolute;top:4px;right:6px;width:32px;height:32px;min-height:32px;padding:8px;border:0;background:transparent;color:#44444b;z-index:1}
-#cs-consent .cs-consent-close:hover{background:#f1f1f2;color:#09090b}
-#cs-consent .cs-consent-close svg{display:block;width:16px;height:16px;pointer-events:none}
 #cs-consent button:hover{background:#e2183b;border-color:#e2183b;color:#fff}
 #cs-consent :is(button,a,input):focus-visible{outline:2px solid #09090b;outline-offset:3px}
 #cs-consent [data-cs-consent-preferences]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:16px;row-gap:6px}
@@ -38,7 +35,6 @@ html:has(#cs-consent[hidden]) body{height:100dvh!important}
 </style>`;
 
 export const consentBannerMarkup = `<aside id="cs-consent" aria-label="Cookie-Einstellungen" lang="de" data-cs-track-ignore>
-<button type="button" class="cs-consent-close" data-cs-consent-close aria-label="Cookie-Banner schließen" title="Ohne neue Auswahl schließen"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
 <div class="cs-consent-inner"><div class="cs-consent-copy" tabindex="0" role="region" aria-label="Informationen zu Cookies">
 <div data-cs-consent-summary><h2>Ihre Cookie-Auswahl</h2><p>Wir verwenden Cookies und ähnliche Technologien, um die Nutzung dieser Seite zu messen und den Erfolg unserer Anzeigen auszuwerten. Sie entscheiden, was erlaubt ist — Ihre Auswahl können Sie jederzeit über „Cookie-Einstellungen“ ändern.</p></div>
 <div data-cs-consent-preferences hidden><h2 tabindex="-1">Cookie-Einstellungen</h2>
@@ -78,16 +74,13 @@ export const floatingConsentBannerStyle = `<style data-cs-consent-style>
 #cs-consent *{box-sizing:border-box;font:inherit;color:inherit;letter-spacing:normal;text-transform:none}
 #cs-consent .cs-consent-inner{padding:28px 24px 24px;display:grid;gap:20px}
 #cs-consent .cs-consent-copy{display:flex;flex-direction:column;gap:10px}
-#cs-consent h2{font:700 22px/1.1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;margin:0 28px 10px 0}
+#cs-consent h2{font:700 22px/1.1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;margin:0 0 10px}
 #cs-consent p{margin:0}
 #cs-consent .cs-consent-links{display:flex;gap:8px;font-size:12px;color:#44444b}
 #cs-consent a{text-decoration:underline;text-underline-offset:3px}
 #cs-consent .cs-consent-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 #cs-consent button{all:unset;box-sizing:border-box;display:flex;align-items:center;justify-content:center;cursor:pointer;min-height:48px;padding:6px 4px;border:1px solid #09090b;background:#fff;color:#09090b;font:500 16px/1.1 var(--cs-font-display,'Bureau Grot Compressed','Bureau Grot',sans-serif);text-transform:uppercase;text-align:center;overflow-wrap:anywhere}
 #cs-consent button:hover{background:#e2183b;border-color:#e2183b;color:#fff}
-#cs-consent .cs-consent-close{position:absolute;top:6px;right:6px;width:36px;height:36px;min-height:36px;padding:9px;border:0;background:transparent;color:#44444b}
-#cs-consent .cs-consent-close:hover{background:#f1f1f2;color:#09090b}
-#cs-consent .cs-consent-close svg{display:block;width:18px;height:18px;pointer-events:none}
 #cs-consent :is(button,a,input,.cs-consent-copy):focus-visible{outline:2px solid #09090b;outline-offset:3px}
 #cs-consent [data-cs-consent-preferences]{display:grid;gap:10px}
 #cs-consent label{display:flex;gap:8px;align-items:flex-start;line-height:1.4}

@@ -142,7 +142,7 @@ describe('artifact response security headers', () => {
 				false
 			);
 			expect(html).toContain('width:min(400px,100%)');
-			expect(html).toContain(`/campaign-runtime/${version}.js`);
+			expect(html).toContain(`/campaign-runtime/${version}.js?revision=explicit-consent-1`);
 			expect(
 				injectArtifactRuntime('<html><head></head><body></body></html>', runtimePage, false, true)
 			).toContain('id="cs-consent" hidden');
@@ -161,7 +161,7 @@ describe('artifact response security headers', () => {
 		expect(result).toContain('width:min(400px,100%)');
 		expect(result).toContain('top:50%;left:50%');
 		expect(result).not.toContain('--cs-consent-space');
-		expect(result).toContain('/campaign-runtime/v7.js');
+		expect(result).toContain('/campaign-runtime/v7.js?revision=explicit-consent-1');
 		expect(injectArtifactRuntime(html, v7, false, true)).toContain('id="cs-consent" hidden');
 		expect(
 			new Headers(artifactResponseHeaders(v7, false, 'https://assets.example.com')).get(
@@ -178,7 +178,7 @@ describe('artifact response security headers', () => {
 		expect(injectArtifactRuntime(html, v6, true, true)).not.toContain('id="cs-consent" hidden');
 		expect(injectArtifactRuntime(html, v6, false)).toContain('data-cs-consent-style');
 		expect(injectArtifactRuntime(html, v6, false)).toContain(
-			'/campaign-runtime/v6.js?revision=visit-ip-1'
+			'/campaign-runtime/v6.js?revision=explicit-consent-1'
 		);
 		expect(injectArtifactRuntime(html, page, false)).not.toContain('id="cs-consent"');
 		const headers = new Headers(artifactResponseHeaders(v6, false, 'https://assets.example.com'));
